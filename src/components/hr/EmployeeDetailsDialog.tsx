@@ -32,7 +32,8 @@ import {
   AlertCircle,
   Save,
   UserCog,
-  CheckCircle2
+  CheckCircle2,
+  Edit
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';

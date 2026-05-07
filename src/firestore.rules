@@ -28,10 +28,9 @@ service cloud.firestore {
     // --- USER PROFILES & DIRECTORY ---
 
     match /users/{userId} {
-      // Allow any authenticated user to create, read, and update profiles.
-      // This supports the collaborative directory and flat hierarchy.
-      allow read, list, create, update: if isAuthenticated();
-      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      // Allow any authenticated user to manage profiles collaboratively.
+      // This supports the flat hierarchy for workforce termination and updates.
+      allow read, list, create, update, delete: if isAuthenticated();
 
       // Sub-collections (Deliveries, Payments, Notifications, Chat)
       match /{subcollection}/{docId} {
@@ -53,11 +52,11 @@ service cloud.firestore {
 
     match /hr_companies/{companyId} {
       // Allow any authenticated user to manage HR data for their organization.
-      // We rely on the application to filter by companyId for now to keep rules flexible.
-      allow read, write: if isAuthenticated();
+      // Full collaborative access for all team members.
+      allow read, write, delete: if isAuthenticated();
       
       match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated();
+        allow read, write, delete: if isAuthenticated();
       }
     }
 
