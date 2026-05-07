@@ -21,7 +21,7 @@ import { LiveSupportDialog } from '@/components/dashboard/dialogs/LiveSupportDia
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { MobileNav } from '@/components/dashboard/layout/MobileNav';
 import { PaymentDialog } from '@/components/dashboard/dialogs/PaymentDialog';
-import { Logo } from '@/components/icons';
+import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 
@@ -212,11 +212,8 @@ export default function DashboardLayout({
   return (
       <div className="flex flex-col h-full bg-slate-50/50">
           <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg group">
-              <div className="flex items-center gap-2">
-                <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
-                <span className="hidden sm:block text-slate-900">River Business</span>
-              </div>
+            <Link href="/dashboard" className="flex items-center group">
+              <LogoBlack className="h-8 w-32 transition-transform group-hover:scale-105" />
             </Link>
             <div className="flex-1" />
             

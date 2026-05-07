@@ -15,7 +15,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Logo } from '@/components/icons';
+import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
@@ -72,10 +72,9 @@ export default function AdminLayout({
   return (
     <div className="flex flex-col h-screen bg-slate-50/50">
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-        <Link href="/admin" className="flex items-center gap-2 font-bold text-lg group">
+        <Link href="/admin" className="flex items-center group">
             <div className="flex items-center gap-2">
-                <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
-                <span className="hidden sm:block text-slate-900">River Command</span>
+                <LogoBlack className="h-8 w-32 transition-transform group-hover:scale-105" />
                 <Badge variant="outline" className="text-[10px] uppercase font-black bg-blue-50 text-blue-600 border-blue-200 px-2 py-0">Admin</Badge>
             </div>
         </Link>

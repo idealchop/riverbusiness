@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -23,7 +22,7 @@ import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
-import { Logo } from '@/components/icons';
+import { LogoBlack } from '@/components/icons';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
@@ -87,14 +86,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="hidden md:flex w-72 flex-col border-r bg-white shrink-0">
         <div className="p-6">
-          <Link href="/dashboard" className="flex items-center gap-2 group mb-8">
-            <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
-            <div className="flex flex-col">
-              <span className="font-bold text-base tracking-tight text-slate-900 leading-none">River Business</span>
-              <span className="text-xs font-medium text-green-600 mt-1">
-                {isManagement ? 'Management' : 'My Workspace'}
-              </span>
-            </div>
+          <Link href="/dashboard" className="flex items-center group mb-8">
+            <LogoBlack className="h-8 w-32 transition-transform group-hover:scale-105" />
           </Link>
 
           <nav className="space-y-1">
@@ -127,7 +120,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
         <header className="h-16 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-4">
              <div className="md:hidden">
-                <Logo className="h-8 w-8" />
+                <LogoBlack className="h-6 w-24" />
              </div>
              <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-slate-400">Environment:</span>
