@@ -78,21 +78,21 @@ export default function EmployeesPage() {
   }, [employees, searchTerm]);
 
   if (isUserLoading || (user && !isManagement)) {
-    return <FullScreenLoader text="Verifying credentials..." />;
+    return <FullScreenLoader text="Verifying Credentials..." />;
   }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employee directory</h1>
-          <p className="text-slate-500 font-medium">Manage your workforce and employment details.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employee Directory</h1>
+          <p className="text-slate-500 font-medium">Manage Your Workforce And Employment Details.</p>
         </div>
         <Button 
             onClick={() => setIsAddDialogOpen(true)}
             className="rounded-xl h-11 px-6 font-bold shadow-sm"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add employee
+          <Plus className="mr-2 h-4 w-4" /> Add Employee
         </Button>
       </div>
 
@@ -102,7 +102,7 @@ export default function EmployeesPage() {
             <div className="relative w-full md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
-                placeholder="Search by name, email or position..." 
+                placeholder="Search By Name, Email, Or Position..." 
                 className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -120,13 +120,13 @@ export default function EmployeesPage() {
                 <TableHead className="pl-6 font-bold text-xs text-slate-400">Employee</TableHead>
                 <TableHead className="font-bold text-xs text-slate-400">Position</TableHead>
                 <TableHead className="font-bold text-xs text-slate-400">Status</TableHead>
-                <TableHead className="font-bold text-xs text-slate-400">Salary type</TableHead>
+                <TableHead className="font-bold text-xs text-slate-400">Salary Type</TableHead>
                 <TableHead className="text-right pr-6 font-bold text-xs text-slate-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-medium">Syncing directory...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-medium">Syncing Directory...</TableCell></TableRow>
               ) : filteredEmployees.length > 0 ? (
                 filteredEmployees.map((emp) => (
                 <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
@@ -137,7 +137,7 @@ export default function EmployeesPage() {
                       </div>
                       <div className="space-y-0.5">
                         <p className="text-sm font-semibold text-slate-900">{emp.name || 'Untitled Profile'}</p>
-                        <p className="text-xs font-medium text-slate-400 lowercase">{emp.email || 'No email'}</p>
+                        <p className="text-xs font-medium text-slate-400 lowercase">{emp.email || 'No Email'}</p>
                       </div>
                     </div>
                   </TableCell>
@@ -172,10 +172,10 @@ export default function EmployeesPage() {
                         <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200 p-1">
                             <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2">Management</DropdownMenuLabel>
                             <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 cursor-pointer" onClick={() => setSelectedEmployee(emp)}>
-                                <Briefcase className="h-4 w-4 opacity-50" /> View full profile
+                                <Briefcase className="h-4 w-4 opacity-50" /> View Full Profile
                             </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 cursor-pointer">
-                                <Calendar className="h-4 w-4 opacity-50" /> Attendance record
+                                <Calendar className="h-4 w-4 opacity-50" /> Attendance Record
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-50" />
                             <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 text-red-600 focus:text-red-600 cursor-pointer">
@@ -191,7 +191,7 @@ export default function EmployeesPage() {
                   <TableCell colSpan={5} className="text-center py-20">
                     <div className="flex flex-col items-center gap-2 opacity-20">
                         <Users className="h-10 w-10 text-slate-400" />
-                        <p className="text-sm font-bold uppercase tracking-widest">No employees found</p>
+                        <p className="text-sm font-bold uppercase tracking-widest">No Employees Found</p>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -16,7 +15,8 @@ import {
   LogOut,
   ShieldCheck,
   MapPin,
-  ScanLine
+  ScanLine,
+  Database
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,7 +95,7 @@ export default function HRDashboard() {
 
   const handleTimeIn = async () => {
     if (!firestore || !user?.id || !companyId) {
-        toast({ variant: 'destructive', title: 'System error', description: 'Could not resolve employee identity.' });
+        toast({ variant: 'destructive', title: 'System Error', description: 'Could Not Resolve Employee Identity.' });
         return;
     }
     setIsProcessing(true);
@@ -115,9 +115,9 @@ export default function HRDashboard() {
             status: status
         });
 
-        toast({ title: 'Clock-in successful', description: `Good morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
+        toast({ title: 'Clock-In Successful', description: `Good Morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not clock in.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Could Not Clock In.' });
     } finally {
         setIsProcessing(false);
     }
@@ -138,9 +138,9 @@ export default function HRDashboard() {
             timeOut: serverTimestamp(),
             totalMinutes: totalMinutes
         });
-        toast({ title: 'Clock-out successful', description: 'Have a great evening!' });
+        toast({ title: 'Clock-Out Successful', description: 'Have A Great Evening!' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not clock out.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Could Not Clock Out.' });
     } finally {
         setIsProcessing(false);
     }
@@ -178,18 +178,18 @@ export default function HRDashboard() {
   const stats = useMemo(() => {
     if (isManagement) {
         return [
-            { label: 'Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed staff', trendType: 'up' },
-            { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live attendance', trendType: 'up' },
-            { label: 'On Leave', value: '0', icon: CalendarDays, trend: 'Scheduled away', trendType: 'down' },
-            { label: 'Pending Leaves', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action required', trendType: 'warn' },
+            { label: 'Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed Staff', trendType: 'up' },
+            { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live Attendance', trendType: 'up' },
+            { label: 'On Leave', value: '0', icon: CalendarDays, trend: 'Scheduled Away', trendType: 'down' },
+            { label: 'Pending Leaves', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
         ];
     } else {
         const streak = myAttendance?.filter(a => a.status === 'present').length || 0;
         return [
-            { label: 'Attendance Streak', value: streak, icon: TrendingUp, trend: 'Days present', trendType: 'up' },
-            { label: 'Performance', value: '100%', icon: FileCheck, trend: 'Reliability score', trendType: 'up' },
-            { label: 'Work Shifts', value: myAttendance?.length || 0, icon: Activity, trend: 'Total logs', trendType: 'up' },
-            { label: 'Personal profile', value: '360°', icon: UserCircle, trend: 'Secure records', trendType: 'up' },
+            { label: 'Attendance Streak', value: streak, icon: TrendingUp, trend: 'Days Present', trendType: 'up' },
+            { label: 'Performance', value: '100%', icon: FileCheck, trend: 'Reliability Score', trendType: 'up' },
+            { label: 'Work Shifts', value: myAttendance?.length || 0, icon: Activity, trend: 'Total Logs', trendType: 'up' },
+            { label: 'Personal Profile', value: '360°', icon: UserCircle, trend: 'Secure Records', trendType: 'up' },
         ];
     }
   }, [isManagement, employees, todayAttendance, pendingLeaves, myAttendance]);
@@ -199,10 +199,10 @@ export default function HRDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">
-            {isManagement ? 'Workforce Intelligence' : 'My workspace'}
+            {isManagement ? 'Workforce Intelligence' : 'My Workspace'}
           </h1>
           <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">
-            {isManagement ? `Central control for ${user?.businessName || 'Organization'}` : `Hello, ${user?.name?.split(' ')[0] || 'Employee'} • Shift Control`}
+            {isManagement ? `Central Control For ${user?.businessName || 'Organization'}` : `Hello, ${user?.name?.split(' ')[0] || 'Employee'} • Shift Control`}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -245,7 +245,7 @@ export default function HRDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-lg font-black uppercase tracking-tight">Recent Activity Feed</CardTitle>
-                            <CardDescription className="text-xs font-medium text-slate-500">Real-time operational summary</CardDescription>
+                            <CardDescription className="text-xs font-medium text-slate-500">Real-Time Operational Summary</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -259,7 +259,7 @@ export default function HRDashboard() {
                                         <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-sm">{log.employeeName?.charAt(0)}</div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date), 'MMM d, yyyy')}</p>
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{log.method} verification</p>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{log.method} Verification</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -274,7 +274,7 @@ export default function HRDashboard() {
                         {!(isManagement ? todayAttendance : myAttendance)?.length && (
                             <div className="py-20 text-center opacity-20">
                                 <Activity className="h-10 w-10 mx-auto mb-2" />
-                                <p className="text-sm font-black uppercase tracking-widest">No activity found</p>
+                                <p className="text-sm font-black uppercase tracking-widest">No Activity Found</p>
                             </div>
                         )}
                     </div>
@@ -331,7 +331,7 @@ export default function HRDashboard() {
                                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                                 <div>
                                     <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Shift Secured</p>
-                                    <p className="text-[9px] font-bold text-green-600/70 uppercase">Daily logs finalized.</p>
+                                    <p className="text-[9px] font-bold text-green-600/70 uppercase">Daily Logs Finalized.</p>
                                 </div>
                             </div>
                         )}
@@ -347,14 +347,14 @@ export default function HRDashboard() {
                         <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center"><Timer className="h-5 w-5 text-green-400" /></div>
                         <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase tracking-wider text-white">Shift Accuracy</p>
-                            <p className="text-[9px] text-white/50 font-bold leading-relaxed">Logs after 09:00 AM are flagged for manual review.</p>
+                            <p className="text-[9px] text-white/50 font-bold leading-relaxed">Logs After 09:00 AM Are Flagged For Manual Review.</p>
                         </div>
                     </div>
                     <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
                         <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center"><MapPin className="h-5 w-5 text-blue-400" /></div>
                         <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase tracking-wider text-white">Station Verification</p>
-                            <p className="text-[9px] text-white/50 font-bold leading-relaxed">IP and geolocation verified for every authorization.</p>
+                            <p className="text-[9px] text-white/50 font-bold leading-relaxed">IP And Geolocation Verified For Every Authorization.</p>
                         </div>
                     </div>
                 </CardContent>

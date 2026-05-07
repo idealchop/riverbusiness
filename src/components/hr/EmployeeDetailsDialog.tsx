@@ -91,7 +91,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                         </div>
                     </div>
                 </div>
-                <DialogDescription className="sr-only">360-degree employment overview for {employee.name}</DialogDescription>
+                <DialogDescription className="sr-only">360-Degree Employment Overview For {employee.name}</DialogDescription>
             </DialogHeader>
         </div>
 
@@ -124,7 +124,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                         <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
                                         <div className="space-y-0.5">
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
-                                            <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No record'}</p>
+                                            <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -203,7 +203,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                             const timeOut = log.timeOut instanceof Timestamp ? log.timeOut.toDate() : (log.timeOut ? new Date(log.timeOut) : null);
                                             return (
                                                 <TableRow key={log.id} className="hover:bg-white transition-colors border-b border-slate-50 last:border-0 group">
-                                                    <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'No date'}</TableCell>
+                                                    <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'No Date'}</TableCell>
                                                     <TableCell className="text-sm font-semibold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
                                                     <TableCell className="text-sm font-semibold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
                                                     <TableCell className="text-right pr-6">
@@ -220,7 +220,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={4} className="text-center py-20 text-sm font-medium text-slate-300">
-                                                No attendance data has been logged for this period.
+                                                No Attendance Data Has Been Logged For This Period.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -260,7 +260,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                             ) : (
                                 <div className="py-24 text-center flex flex-col items-center gap-4 opacity-20">
                                     <CalendarDays className="h-12 w-12 text-slate-400" />
-                                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Request history is clear</p>
+                                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Request History Is Clear</p>
                                 </div>
                             )}
                          </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -90,22 +89,22 @@ export default function AttendancePage() {
     );
   }, [attendanceLogs, searchTerm]);
 
-  if (isUserLoading) return <FullScreenLoader text="loading records..." />;
+  if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-             Attendance history
+             Attendance History
           </h1>
           <p className="text-slate-500 font-medium text-sm">
-             view your records for work, leave, and payments
+             View Your Records For Work, Leave, and Payments
           </p>
         </div>
         <div className="flex gap-2">
             <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-200 shadow-sm" onClick={() => window.print()}>
-                <Download className="mr-2 h-4 w-4" /> export records
+                <Download className="mr-2 h-4 w-4" /> Export Records
             </Button>
         </div>
       </div>
@@ -113,13 +112,13 @@ export default function AttendancePage() {
       <Tabs value={activeCategory} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-slate-100 p-1 rounded-2xl h-12 border shadow-inner w-full md:w-auto">
           <TabsTrigger value="attendance" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            attendance
+            Attendance
           </TabsTrigger>
           <TabsTrigger value="leaves" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            leave logs
+            Leave Logs
           </TabsTrigger>
           <TabsTrigger value="payroll" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            payroll
+            Payroll
           </TabsTrigger>
         </TabsList>
 
@@ -129,7 +128,7 @@ export default function AttendancePage() {
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder="search by name or date..." 
+                  placeholder="Search by Name or Date..." 
                   className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -137,7 +136,7 @@ export default function AttendancePage() {
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">live update active</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Live Update Active</span>
               </div>
             </div>
           </CardHeader>
@@ -148,17 +147,17 @@ export default function AttendancePage() {
               <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">date</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">time-in</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">time-out</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">duration</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">status</TableHead>
+                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Date</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time-In</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time-Out</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Duration</TableHead>
+                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingAttendance ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">loading logs...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Logs...</TableCell></TableRow>
                   ) : filteredAttendance.length > 0 ? (
                     filteredAttendance.map((log) => {
                       const timeIn = toSafeDate(log.timeIn);
@@ -168,7 +167,7 @@ export default function AttendancePage() {
                           <TableCell className="pl-6 py-4">
                              <div className="flex flex-col">
                                 <span className="font-bold text-slate-900 text-sm">{format(new Date(log.date), 'MMM d, yyyy')}</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">id: {log.id.substring(0, 6)}</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: {log.id.substring(0, 6)}</span>
                              </div>
                           </TableCell>
                           <TableCell>
@@ -191,7 +190,7 @@ export default function AttendancePage() {
                               "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
                               log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                             )}>
-                              {log.status || 'n/a'}
+                              {log.status || 'N/A'}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -201,7 +200,7 @@ export default function AttendancePage() {
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-32 opacity-20">
                         <Clock className="h-12 w-12 mx-auto mb-4" />
-                        <p className="font-bold uppercase tracking-widest text-xs">no records found</p>
+                        <p className="font-bold uppercase tracking-widest text-xs">No Records Found</p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -214,22 +213,22 @@ export default function AttendancePage() {
                <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">period</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">category</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">reason</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">status</TableHead>
+                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Period</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Category</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
+                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingLeaves ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">loading logs...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Logs...</TableCell></TableRow>
                   ) : leaveRequests && leaveRequests.length > 0 ? (
                     leaveRequests.map(req => (
                       <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                         <TableCell className="pl-6 py-4">
                           <p className="text-sm font-bold text-slate-900">{format(new Date(req.startDate), 'MMM d')} - {format(new Date(req.endDate), 'MMM d')}</p>
-                          <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">applied {req.appliedAt ? format(toSafeDate(req.appliedAt) || new Date(), 'PP') : ''}</p>
+                          <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Applied {req.appliedAt ? format(toSafeDate(req.appliedAt) || new Date(), 'PP') : ''}</p>
                         </TableCell>
                         <TableCell className="text-sm font-semibold text-slate-700">{req.employeeName}</TableCell>
                         <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
@@ -249,7 +248,7 @@ export default function AttendancePage() {
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-32 opacity-20">
                         <CalendarDays className="h-12 w-12 mx-auto mb-4" />
-                        <p className="font-bold uppercase tracking-widest text-xs">no leave history found</p>
+                        <p className="font-bold uppercase tracking-widest text-xs">No Leave History Found</p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -262,32 +261,32 @@ export default function AttendancePage() {
                <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">period</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">total salary</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">date processed</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">details</TableHead>
+                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Period</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Salary</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Date Processed</TableHead>
+                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingPayroll ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">loading records...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Records...</TableCell></TableRow>
                   ) : payrollRuns && payrollRuns.length > 0 ? (
                     payrollRuns.map(run => (
                       <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                         <TableCell className="pl-6 py-4">
                           <p className="text-sm font-bold text-slate-900">{format(new Date(run.periodStart), 'MMM d')} - {format(new Date(run.periodEnd), 'MMM d, yyyy')}</p>
-                          <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100">settled</Badge>
+                          <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100">Settled</Badge>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary.toLocaleString()}</span>
                         </TableCell>
                         <TableCell className="text-xs font-medium text-slate-400 uppercase">
-                           {run.createdAt ? format(toSafeDate(run.createdAt) || new Date(), 'MMM d, p') : 'pending'}
+                           {run.createdAt ? format(toSafeDate(run.createdAt) || new Date(), 'MMM d, p') : 'Pending'}
                         </TableCell>
                         <TableCell className="text-right pr-6">
                             <Button size="sm" variant="ghost" className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                                 <FileText className="h-3.5 w-3.5" />
-                                payslips
+                                Payslips
                             </Button>
                         </TableCell>
                       </TableRow>
@@ -296,7 +295,7 @@ export default function AttendancePage() {
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-32 opacity-20">
                         <DollarSign className="h-12 w-12 mx-auto mb-4" />
-                        <p className="font-bold uppercase tracking-widest text-xs">no payment history found</p>
+                        <p className="font-bold uppercase tracking-widest text-xs">No Payment History Found</p>
                       </TableCell>
                     </TableRow>
                   )}
