@@ -1,77 +1,224 @@
-sh
-# River Business: Smart Water Management Platform
+# 🌊 River Apps
 
-River Business is a comprehensive B2B management platform designed for water refilling businesses and their clients. It provides a dual-interface system: a client-facing dashboard for end-users to manage their water consumption, and a powerful admin panel for business owners to oversee operations, manage users, and ensure compliance.
+> The all-in-one business operating system built for real-world operations, modern teams, and scalable companies.
 
-The platform is built on a modern, serverless architecture using Next.js and Firebase, making it scalable, secure, and easy to maintain.
+River Apps is a unified platform that connects **operations, people, collaboration, security, and digital infrastructure** into one ecosystem.
 
-## Key Features
+Instead of juggling multiple tools, River Apps gives businesses one place to run everything.
 
-### Client Dashboard (`/dashboard`)
-- **Consumption Analytics:** Visualize water usage with weekly and monthly charts.
-- **Real-time Balance:** Track remaining water credits (liters) for the current billing cycle.
-- **Delivery Management:** View delivery history, schedule one-time deliveries, and manage auto-refill settings.
-- **Invoice & Payments:** Access a full history of invoices and submit proof-of-payment through a multi-option payment portal (GCash, BPI, etc.).
-- **Account Management:** Update personal and business details, change passwords, and upload a profile photo.
-- **Support & Feedback:** Contact support, submit feedback, and request to switch water providers.
-- **Compliance & Quality:** View water quality compliance reports and sanitation visit schedules for their assigned station.
-- **Multi-Branch Functionality:**
-    - **Parent Accounts:** Manage a central, top-up balance of water credits for all linked branches. View a detailed transaction history of all top-ups and branch consumption deductions. Oversee all associated branch accounts from a single dashboard.
-    - **Branch Accounts:** Enjoy the full standard dashboard experience for managing their own deliveries and consumption, with a billing history that is view-only and clearly marked as "Covered by Parent Account".
-
-### Admin Panel (`/admin`)
-- **User Management:** View, search, and manage all client accounts, with clear indicators for 'Parent' and 'Branch' account types.
-- **Multi-Branch Management:** Create and link 'Parent' and 'Branch' accounts. Top-up water credits (liters) to a Parent account's central balance. View linked branches and transaction histories for any Parent account.
-- **Detailed User View:** Access a comprehensive profile for each user, including their plan, consumption details, and assigned station.
-- **Administrative Actions:** Assign water stations to users, adjust water balances (add/deduct liters), and attach contracts.
-- **Delivery Oversight:** Create, edit, and delete delivery records for any user. Upload proof of delivery on behalf of the team.
-- **Station Management:** Create and manage water refilling stations, upload partnership agreements, and manage compliance documents.
-- **Refill Requests:** View and manage one-time refill requests from clients.
-
-## Technology Stack
-
-- **Frontend:** Next.js, React, TypeScript
-- **UI:** ShadCN UI, Tailwind CSS
-- **Backend & Database:** Firebase (Authentication, Firestore, Cloud Storage, Cloud Functions for Firebase)
-- **Generative AI:** Google's Genkit for AI-powered features like consumption prediction.
-- **Deployment:** Firebase App Hosting
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v20 or later)
-- npm or yarn
-- Firebase CLI (`npm install -g firebase-tools`)
-
-### 1. Installation
-Install the project dependencies:
-```bash
-npm install
-```
-
-### 2. Running the Development Server
-To run the application locally for development:
-```bash
-npm run dev
-```
-The application will be available at `http://localhost:9002`.
-
-The Genkit AI flows can be run in watch mode simultaneously with:
-```bash
-npm run genkit:watch
-```
-
-### 3. Deploying Cloud Functions
-The project includes server-side Cloud Functions written in TypeScript. To deploy them, you first need to be authenticated with Firebase.
-
-**Build and Deploy:**
-The provided script handles both compiling the TypeScript to JavaScript and deploying the functions.
-```bash
-npm run deploy:functions
-```
-This command will:
-1. Navigate to the `functions` directory.
-2. Compile the TypeScript source from `functions/src` into JavaScript in `functions/lib`.
-3. Deploy the compiled functions to your Firebase project.
 ---
-*This project was prototyped in Firebase Studio.*
+
+# 🚀 What River Apps Is
+
+River Apps is a **modular multi-tenant SaaS platform** designed to help businesses operate smarter by combining core operational systems into one connected environment.
+
+It is built for companies that need:
+
+- Operational control (water refilling businesses and service operations)
+- HR and employee management
+- Internal collaboration and documentation
+- Secure file storage and sharing
+- Sensitive data protection
+- Scalable system upgrades over time
+
+---
+
+# 🧠 Core Philosophy
+
+Traditional businesses use fragmented tools:
+
+- HR software
+- Google Drive / Dropbox
+- Notion / Docs
+- Spreadsheets
+- Manual operations
+
+River Apps replaces this with:
+
+> **One ecosystem. One data layer. One operating system for your business.**
+
+---
+
+# 🏗️ River Apps Modules
+
+## 1. 💧 Water Refill (Operations Core)
+
+The operational backbone for water refilling businesses.
+
+### Features:
+- Order & delivery management
+- Queueing system (walk-in, delivery, priority)
+- Customer tracking
+- Rider/driver assignment
+- Sales monitoring
+- POS integration-ready
+- Device support (QR scanners, kiosks, receipt systems)
+
+### Goal:
+Digitize and optimize real-world water refilling operations end-to-end.
+
+---
+
+## 2. 👥 HR Management
+
+A complete HR system for managing company workforce.
+
+### Features:
+- Employee management
+- Attendance & time tracking
+- Payroll computation
+- Leave management
+- Role-based access control (Owner / Admin / Employee)
+- Company-level data isolation
+
+### Goal:
+Automate and simplify workforce management inside one system.
+
+---
+
+## 3. 🧩 Collaboration
+
+A next-generation operational workspace.
+
+### Features:
+- Live collaborative documents
+- Page-based workspace system
+- Block-based editor (text, tables, charts, widgets)
+- Real-time presence indicators (who is viewing/editing)
+- Comments, mentions, and activity logs
+- Workflow-style documents (approvals, checklists)
+- AI-assisted content generation
+
+### Goal:
+Replace traditional docs with **interactive operational canvases**.
+
+---
+
+## 4. 📁 Files
+
+A secure file storage and sharing system.
+
+### Features:
+- Secure file upload (images, videos, documents)
+- Encrypted storage
+- Company-level storage limit (15GB per company)
+- Folder and tagging system
+- In-app preview (video, image, PDF)
+- Shareable links with expiration
+- Role-based access control
+- Branded share pages (River Apps identity)
+
+### Goal:
+Provide a secure, controlled, and professional file infrastructure for businesses.
+
+---
+
+## 5. 🔐 PS Vault (Private Secure Vault)
+
+A high-security data storage layer for sensitive business information.
+
+### Features:
+- Encrypted credential storage
+- Secure notes and secrets management
+- Access-controlled vault entries
+- Audit logs (who accessed what and when)
+- Role-restricted visibility
+- Time-based access controls (optional)
+- Emergency access recovery system
+
+### Goal:
+Store and protect critical business data securely inside the ecosystem.
+
+---
+
+## 6. 🚀 Upgrades (Platform Evolution Layer)
+
+A system layer that continuously improves and extends River Apps.
+
+### Features:
+- Feature rollout system (per company or global)
+- Module activation/deactivation
+- Premium feature unlocking
+- A/B testing for features
+- Versioned system upgrades
+- Scalable architecture expansion
+
+### Goal:
+Allow River Apps to evolve without breaking existing systems.
+
+---
+
+# 🧬 System Architecture
+
+[ Client Apps ]
+↓
+[ API Gateway ]
+↓
+| Auth & RBAC |
+| Water Refill System |
+| HR Management System |
+| Collaboration System |
+| File Management System |
+| Vault Security System |
+| Upgrade & Feature System |
+  ↓
+
+[ PostgreSQL + Object Storage ]
+
+
+---
+
+# 🔐 Security Principles
+
+- Every data record is isolated by `company_id`
+- Role-Based Access Control (RBAC) enforced everywhere
+- Encrypted sensitive storage (Vault + Files)
+- Signed URLs for file access
+- Expiring share links
+- Full audit logging system
+
+---
+
+# 🧭 Design Philosophy
+
+River Apps is built on three principles:
+
+### 1. Unification
+Everything runs in one system, not separate tools.
+
+### 2. Operational Intelligence
+Not just storage or UI—real business workflows.
+
+### 3. Scalability
+Each module can evolve independently without breaking the system.
+
+---
+
+# 🌍 Vision
+
+River Apps aims to become:
+
+> A complete operating system for real-world businesses.
+
+From water refilling stations to enterprise teams, River Apps connects operations, people, and data into one intelligent platform.
+
+---
+
+# ⚙️ Tech Direction (High-Level)
+
+- Backend: Modular Monolith (NestJS)
+- Database: PostgreSQL
+- Storage: S3-compatible object storage
+- Auth: JWT + RBAC
+- Realtime: WebSockets
+- Frontend: React / Next.js
+
+---
+
+# 🔥 Summary
+
+River Apps is not just software.
+
+It is:
+
+> A unified business operating system that connects operations, people, collaboration, files, and security into one intelligent ecosystem.
