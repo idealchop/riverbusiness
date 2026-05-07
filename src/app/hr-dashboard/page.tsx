@@ -102,6 +102,7 @@ export default function HRDashboard() {
         const attendanceCol = collection(firestore, 'hr_companies', companyId, 'attendance');
         const now = new Date();
         const hour = now.getHours();
+        // Check if clocked in after 9:00 AM
         const status = hour >= 9 ? 'late' : 'present';
 
         await addDoc(attendanceCol, {
@@ -116,7 +117,7 @@ export default function HRDashboard() {
 
         toast({ title: 'Clock In Successful', description: `Good Morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could Not Clock In.' });
+        toast({ variant: 'destructive', title: 'Operation Failed', description: 'Could Not Clock In.' });
     } finally {
         setIsProcessing(false);
     }
@@ -137,9 +138,9 @@ export default function HRDashboard() {
             timeOut: serverTimestamp(),
             totalMinutes: totalMinutes
         });
-        toast({ title: 'Clock Out Successful', description: 'Have A Great Evening!' });
+        toast({ title: 'Clock Out Successful', description: 'Shift Summary Saved To Attendance.' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could Not Clock Out.' });
+        toast({ variant: 'destructive', title: 'Operation Failed', description: 'Could Not Clock Out.' });
     } finally {
         setIsProcessing(false);
     }
