@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,12 +26,20 @@ import {
   UserCircle,
   CalendarDays,
   Clock,
-  LayoutDashboard
+  LayoutDashboard,
+  TrendingUp,
+  Activity,
+  AlertCircle,
+  Save,
+  UserCog
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Safe date conversion helper
 const toSafeDate = (val: any): Date | null => {
@@ -46,10 +55,32 @@ interface EmployeeDetailsDialogProps {
   employee: AppUser | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: string;
 }
 
-export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: EmployeeDetailsDialogProps) {
+export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialTab = 'overview' }: EmployeeDetailsDialogProps) {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Editable fields state
+  const [editData, setEditData] = useState<any>({});
+
+  React.useEffect(() => {
+      if (isOpen && employee) {
+          setActiveTab(initialTab);
+          setEditData({
+              position: employee.hrProfile?.position || '',
+              department: employee.hrProfile?.department || '',
+              rate: employee.hrProfile?.rate || 0,
+              salaryType: employee.hrProfile?.salaryType || 'monthly',
+              status: employee.hrProfile?.status || 'Active'
+          });
+          setIsEditing(false);
+      }
+  }, [isOpen, employee, initialTab]);
 
   const companyId = employee?.companyId || 'default';
   
@@ -73,6 +104,39 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
   );
   const { data: leaveRequests } = useCollection<HRLeaveRequest>(leaveQuery);
 
+  // Performance Calculations
+  const metrics = useMemo(() => {
+    if (!attendanceLogs) return { punctuality: 100, hoursWorked: 0, attendanceCount: 0 };
+    const logs = attendanceLogs || [];
+    const onTime = logs.filter(l => l.status === 'present').length;
+    const total = logs.length;
+    const punctuality = total > 0 ? (onTime / total) * 100 : 100;
+    const hours = logs.reduce((sum, l) => sum + (l.totalMinutes || 0), 0) / 60;
+    
+    return { punctuality, hoursWorked: hours, attendanceCount: total };
+  }, [attendanceLogs]);
+
+  const handleSaveProfile = async () => {
+    if (!firestore || !employee) return;
+    setIsSaving(true);
+    try {
+        const userRef = doc(firestore, 'users', employee.id);
+        await updateDoc(userRef, {
+            'hrProfile.position': editData.position,
+            'hrProfile.department': editData.department,
+            'hrProfile.rate': Number(editData.rate),
+            'hrProfile.salaryType': editData.salaryType,
+            'hrProfile.status': editData.status
+        });
+        toast({ title: 'Profile Updated', description: 'Employment details have been synchronized.' });
+        setIsEditing(false);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save changes to profile.' });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   if (!employee) return null;
 
   const profile = employee.hrProfile;
@@ -80,36 +144,44 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col max-h-[90vh] bg-white">
+      <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col max-h-[90vh] bg-white shadow-3xl">
         <div className="p-8 pb-4">
             <DialogHeader>
-                <div className="flex items-center gap-6 mb-6">
-                    <div className="h-20 w-20 rounded-3xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 shadow-inner">
-                        {initials}
-                    </div>
-                    <div className="space-y-1">
-                        <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
-                        <div className="flex items-center gap-3">
-                            <Badge className={cn(
-                                "border-none text-[10px] font-bold px-3 py-1",
-                                profile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
-                            )}>
-                                {profile?.status || 'Active'}
-                            </Badge>
-                            <span className="text-sm font-medium text-slate-500">
-                                {profile?.position || 'Unassigned'} • {profile?.department || 'General'}
-                            </span>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-6">
+                        <div className="h-20 w-20 rounded-3xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 shadow-inner">
+                            {initials}
+                        </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
+                            <div className="flex items-center gap-3">
+                                <Badge className={cn(
+                                    "border-none text-[10px] font-bold px-3 py-1",
+                                    profile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+                                )}>
+                                    {profile?.status || 'Active'}
+                                </Badge>
+                                <span className="text-sm font-medium text-slate-500">
+                                    {profile?.position || 'Unassigned'} • {profile?.department || 'General'}
+                                </span>
+                            </div>
                         </div>
                     </div>
+                    {!isEditing && (
+                        <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-100 bg-slate-50/50 hover:bg-slate-50" onClick={() => setIsEditing(true)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                        </Button>
+                    )}
                 </div>
                 <DialogDescription className="sr-only">360-Degree Employment Overview For {employee.name}</DialogDescription>
             </DialogHeader>
         </div>
 
-        <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-8 border-b border-slate-50">
                 <TabsList className="bg-transparent h-12 p-0 gap-8">
                     <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Overview</TabsTrigger>
+                    <TabsTrigger value="performance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Performance</TabsTrigger>
                     <TabsTrigger value="attendance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Attendance Logs</TabsTrigger>
                     <TabsTrigger value="leaves" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Leave History</TabsTrigger>
                 </TabsList>
@@ -118,84 +190,187 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
             <ScrollArea className="flex-1">
                 <div className="p-8">
                     <TabsContent value="overview" className="mt-0 space-y-10 animate-in fade-in duration-500">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                            <div className="space-y-6">
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                    <UserCircle className="h-4 w-4" /> Personal & Contact
-                                </h4>
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-4 group">
-                                        <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
-                                        <div className="space-y-0.5">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Primary Email</p>
-                                            <p className="text-sm font-semibold text-slate-700">{employee.email || 'N/A'}</p>
+                        {isEditing ? (
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position Title</Label>
+                                        <Input value={editData.position} onChange={(e) => setEditData({...editData, position: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-slate-100" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</Label>
+                                        <Select value={editData.department} onValueChange={(v) => setEditData({...editData, department: v})}>
+                                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                <SelectItem value="Logistics">Logistics</SelectItem>
+                                                <SelectItem value="Support">Support</SelectItem>
+                                                <SelectItem value="Fleet">Fleet</SelectItem>
+                                                <SelectItem value="Admin">Admin</SelectItem>
+                                                <SelectItem value="Compliance">Compliance</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Salary Type</Label>
+                                        <Select value={editData.salaryType} onValueChange={(v) => setEditData({...editData, salaryType: v})}>
+                                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                <SelectItem value="daily">Daily Rate</SelectItem>
+                                                <SelectItem value="monthly">Monthly Fixed</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pay Rate (PHP)</Label>
+                                        <Input type="number" value={editData.rate} onChange={(e) => setEditData({...editData, rate: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-slate-100" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Status</Label>
+                                        <Select value={editData.status} onValueChange={(v) => setEditData({...editData, status: v})}>
+                                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                <SelectItem value="Active">Active</SelectItem>
+                                                <SelectItem value="Terminated">Terminated</SelectItem>
+                                                <SelectItem value="On Leave">On Leave</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 justify-end">
+                                    <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-8 font-bold text-xs">Cancel</Button>
+                                    <Button onClick={handleSaveProfile} disabled={isSaving} className="rounded-xl h-11 px-10 font-bold text-xs shadow-lg">
+                                        {isSaving ? 'Processing...' : 'Save Profile Changes'}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="space-y-6">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                            <UserCircle className="h-4 w-4" /> Personal & Contact
+                                        </h4>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-4 group">
+                                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Primary Email</p>
+                                                    <p className="text-sm font-semibold text-slate-700">{employee.email || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4 group">
+                                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
+                                                    <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4 group">
-                                        <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
-                                        <div className="space-y-0.5">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
-                                            <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
+
+                                    <div className="space-y-6">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                            <DollarSign className="h-4 w-4" /> Compensation Profile
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
+                                                <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
+                                                <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-6">
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4" /> Compensation Profile
-                                </h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
-                                        <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
-                                    </div>
-                                    <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
-                                        <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-6">
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                        <ShieldCheck className="h-4 w-4" /> Employment Intelligence
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                        <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 rounded-2xl bg-blue-50 text-primary">
+                                                <Calendar className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-900">Date Signed</p>
+                                                <p className="text-xs font-medium text-slate-400 mt-1">
+                                                {profile?.startDate ? (toSafeDate(profile.startDate) ? format(toSafeDate(profile.startDate)!, 'MMMM do, yyyy') : 'Invalid Date') : 'Pending'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 rounded-2xl bg-green-50 text-green-600">
+                                                <Clock className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-900">Shift Coverage</p>
+                                                <p className="text-xs font-medium text-slate-400 mt-1">9:00 AM - 6:00 PM</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
+                                                <LayoutDashboard className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-900">Workstation</p>
+                                                <p className="text-xs font-medium text-slate-400 mt-1">{profile?.department || 'Main Hub'}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="performance" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="p-2 rounded-xl bg-white shadow-sm text-green-600"><TrendingUp className="h-5 w-5" /></div>
+                                    <p className="text-[10px] font-bold text-green-600 uppercase">Punctuality</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.punctuality.toFixed(0)}%</p>
+                                    <p className="text-xs font-medium text-slate-400">On-time arrival rate</p>
+                                </div>
+                            </Card>
+                            <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="p-2 rounded-xl bg-white shadow-sm text-primary"><Activity className="h-5 w-5" /></div>
+                                    <p className="text-[10px] font-bold text-primary uppercase">Volume</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.hoursWorked.toFixed(1)}h</p>
+                                    <p className="text-xs font-medium text-slate-400">Total hours logged</p>
+                                </div>
+                            </Card>
+                            <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="p-2 rounded-xl bg-white shadow-sm text-amber-600"><AlertCircle className="h-5 w-5" /></div>
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase">Shifts</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.attendanceCount}</p>
+                                    <p className="text-xs font-medium text-slate-400">Total records found</p>
+                                </div>
+                            </Card>
                         </div>
 
-                        <Separator className="bg-slate-50" />
-
-                        <div className="space-y-6">
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                <ShieldCheck className="h-4 w-4" /> Employment Intelligence
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
-                                    <div className="p-3 rounded-2xl bg-blue-50 text-primary">
-                                        <Calendar className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-900">Date Signed</p>
-                                        <p className="text-xs font-medium text-slate-400 mt-1">
-                                          {profile?.startDate ? (toSafeDate(profile.startDate) ? format(toSafeDate(profile.startDate)!, 'MMMM do, yyyy') : 'Invalid Date') : 'Pending'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
-                                    <div className="p-3 rounded-2xl bg-green-50 text-green-600">
-                                        <Clock className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-900">Shift Coverage</p>
-                                        <p className="text-xs font-medium text-slate-400 mt-1">9:00 AM - 6:00 PM</p>
-                                    </div>
-                                </div>
-                                <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
-                                    <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
-                                        <LayoutDashboard className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-900">Workstation</p>
-                                        <p className="text-xs font-medium text-slate-400 mt-1">{profile?.department || 'Main Hub'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <Card className="rounded-[2.5rem] border-slate-50 shadow-sm overflow-hidden bg-white">
+                            <CardHeader className="bg-slate-50/30 p-8 border-b">
+                                <CardTitle className="text-lg font-bold">Logistics Efficiency</CardTitle>
+                                <CardDescription className="text-xs">Visualizing performance against operational benchmarks.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-12 flex flex-col items-center justify-center text-center gap-4">
+                                <div className="h-32 w-32 rounded-full border-8 border-slate-50 border-t-primary animate-spin" />
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Generating detailed trend graph...</p>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     <TabsContent value="attendance" className="mt-0 animate-in fade-in duration-500">
@@ -300,9 +475,6 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                 </div>
                 <div className="flex gap-3 shrink-0">
                     <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-bold h-11 px-8 rounded-2xl">Dismiss</Button>
-                    <Button className="rounded-2xl h-11 px-10 font-bold text-sm shadow-lg">
-                        Edit Employment Profile
-                    </Button>
                 </div>
             </div>
         </div>

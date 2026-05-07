@@ -31,9 +31,10 @@ import {
 } from '@/components/ui/form';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Mail } from 'lucide-react';
+import { CheckCircle2, UserCog } from 'lucide-react';
+import type { AppUser } from '@/lib/types';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -52,9 +53,10 @@ interface HREmployeeDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   companyId: string;
+  employeeToEdit?: AppUser | null;
 }
 
-export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployeeDialogProps) {
+export function HREmployeeDialog({ isOpen, onOpenChange, companyId, employeeToEdit }: HREmployeeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -70,10 +72,63 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
     }
   });
 
+  React.useEffect(() => {
+    if (isOpen && employeeToEdit) {
+      form.reset({
+        name: employeeToEdit.name,
+        email: employeeToEdit.email,
+        position: employeeToEdit.hrProfile?.position || '',
+        department: employeeToEdit.hrProfile?.department || '',
+        salaryType: employeeToEdit.hrProfile?.salaryType || 'monthly',
+        rate: employeeToEdit.hrProfile?.rate || 0,
+        startDate: employeeToEdit.hrProfile?.startDate || new Date().toISOString().split('T')[0],
+        contactNumber: employeeToEdit.contactNumber || '',
+      });
+    } else if (isOpen) {
+      form.reset({
+          salaryType: 'monthly',
+          rate: 0,
+          startDate: new Date().toISOString().split('T')[0],
+          contactNumber: '',
+      });
+    }
+  }, [isOpen, employeeToEdit, form]);
+
   const onSubmit = (values: EmployeeFormValues) => {
     if (!firestore || !companyId) return;
     setIsSubmitting(true);
     
+    if (employeeToEdit) {
+      const userRef = doc(firestore, 'users', employeeToEdit.id);
+      const updateData = {
+          name: values.name,
+          email: values.email?.toLowerCase().trim(),
+          contactNumber: values.contactNumber ?? '',
+          'hrProfile.position': values.position,
+          'hrProfile.department': values.department,
+          'hrProfile.salaryType': values.salaryType,
+          'hrProfile.rate': Number(values.rate),
+          'hrProfile.startDate': values.startDate
+      };
+      
+      updateDoc(userRef, updateData)
+        .then(() => {
+            toast({ title: 'Profile Updated', description: 'Employee credentials have been saved.' });
+            setIsSubmitting(false);
+            onOpenChange(false);
+        })
+        .catch(async (err) => {
+            const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setIsSubmitting(false);
+        });
+      return;
+    }
+
     const invitationRef = doc(collection(firestore, 'unclaimedEmployees'));
     
     const invitationData = {
@@ -100,7 +155,6 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       }
     };
 
-    // Follow the Non-Blocking Mutation Pattern
     setDoc(invitationRef, invitationData)
       .then(() => {
         setIsSuccess(true);
@@ -144,8 +198,17 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
         ) : (
           <div className="p-8">
             <DialogHeader className="mb-8">
-                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Add new employee</DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium">Create an employment profile and dispatch an invitation.</DialogDescription>
+                <div className="flex items-center gap-4 mb-2">
+                    <div className="p-2 rounded-lg bg-blue-50 text-primary">
+                        <UserCog className="h-5 w-5" />
+                    </div>
+                    <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">
+                        {employeeToEdit ? 'Edit credentials' : 'Add new employee'}
+                    </DialogTitle>
+                </div>
+                <DialogDescription className="text-slate-500 font-medium">
+                    {employeeToEdit ? 'Update core credentials and profile metadata.' : 'Create an employment profile and dispatch an invitation.'}
+                </DialogDescription>
             </DialogHeader>
             
             <Form {...form}>
@@ -246,7 +309,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="ghost" onClick={handleClose} className="text-sm font-semibold px-6 rounded-xl">Cancel</Button>
                         <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-sm shadow-lg shadow-blue-500/10">
-                            {isSubmitting ? 'Processing...' : 'Send invitation'}
+                            {isSubmitting ? 'Processing...' : employeeToEdit ? 'Save updates' : 'Send invitation'}
                         </Button>
                     </DialogFooter>
                 </form>

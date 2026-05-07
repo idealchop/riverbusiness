@@ -76,16 +76,6 @@ export interface HRLeaveRequest {
     appliedAt: any;
 }
 
-export interface HRPayrollRun {
-    id: string;
-    companyId: string;
-    periodStart: string;
-    periodEnd: string;
-    status: 'draft' | 'processed' | 'paid';
-    totalNetSalary: number;
-    createdAt: any;
-}
-
 export interface HRLearningModule {
     id: string;
     companyId: string;
