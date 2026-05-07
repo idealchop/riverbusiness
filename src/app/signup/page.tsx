@@ -73,98 +73,104 @@ function SignupContent() {
   };
 
   return (
-    <div className="flex w-full flex-col lg:flex-row min-h-screen bg-background">
-        {/* Branding Side (Left) */}
-        <div className="relative w-full lg:w-[60%] p-8 sm:p-12 md:p-20 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
+    <div className="flex w-full flex-col lg:flex-row min-h-screen bg-background font-sans overflow-hidden">
+        {/* Branding Side (Left) - 65% width to match Login */}
+        <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
+            {/* Animated Mesh Gradient Background - match Login */}
             <div className="absolute inset-0 z-0">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_50%)]" />
-                <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_80%,rgba(30,58,138,0.15),transparent_50%)]" />
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #fff 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
+                <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[50%] h-[50%] rounded-full bg-primary/5 blur-[140px] pointer-events-none" />
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
+                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+                    <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent absolute left-0 animate-slide-down shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+                </div>
             </div>
 
             <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-4 duration-700">
                 <div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-blue-400">River Philippines</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/80">RIVER PHILIPPINES</span>
                 </div>
                 <div className="space-y-6 max-w-xl">
-                    <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.1]">
-                        The platform to run <span className="text-blue-500">essential needs</span> for business.
+                    <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
+                        The platform to run <span className="text-primary">essential needs</span> for business.
                     </h1>
-                    <p className="text-lg text-slate-400 font-medium leading-relaxed max-md">
+                    <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-md">
                         Simplified management for modern Filipino organizations.
                     </p>
                 </div>
             </div>
         </div>
 
-        {/* Signup Form Side (Right) */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 bg-white">
-            <div className="w-full max-sm space-y-10 animate-in fade-in zoom-in-95 duration-500">
+        {/* Signup Form Side (Right) - 35% width to match Login */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
+            <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
                     {isInvited ? (
                         <>
-                            <div className="flex items-center gap-2 text-blue-600 mb-4 px-3 py-1 rounded-full bg-blue-50 w-fit">
+                            <div className="flex items-center gap-2 text-primary mb-4 px-3 py-1 rounded-full bg-primary/10 w-fit">
                                 <MailCheck className="h-4 w-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Invitation detected</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">Invitation detected</span>
                             </div>
-                            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Join your team</h2>
-                            <p className="text-slate-500 font-medium">Create your password to activate your profile.</p>
+                            <h2 className="text-4xl font-black tracking-tight text-slate-900">Join your team</h2>
+                            <p className="text-slate-500 font-bold text-lg">Create your password to activate your profile.</p>
                         </>
                     ) : (
                         <>
-                            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Create account</h2>
-                            <p className="text-slate-500 font-medium">Start your journey with River Business.</p>
+                            <h2 className="text-4xl font-black tracking-tight text-slate-900">Create account</h2>
+                            <p className="text-slate-500 font-bold text-lg">Start your journey with River Business.</p>
                         </>
                     )}
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email" className="text-xs font-semibold text-slate-500">Email address</Label>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                    <div className="space-y-6">
+                        <div className="space-y-2 group">
+                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Email address</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="name@company.com"
-                                className="h-11 bg-slate-50 border-slate-100 rounded-xl font-medium focus-visible:ring-blue-500/20"
+                                className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base px-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
                                 {...register('email')}
                                 disabled={isSubmitting || isInvited}
                             />
-                            {errors.email && <p className="text-xs font-medium text-destructive mt-1">{errors.email.message}</p>}
+                            {errors.email && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.email.message}</p>}
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="password" className="text-xs font-semibold text-slate-500">Create password</Label>
+                        <div className="space-y-2 group">
+                            <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Create password</Label>
                             <div className="relative">
                                 <Input 
                                     id="password" 
                                     type={showPassword ? 'text' : 'password'} 
                                     placeholder="••••••••"
-                                    className="h-11 bg-slate-50 border-slate-100 rounded-xl font-medium pr-10 focus-visible:ring-blue-500/20"
+                                    className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base pr-14 pl-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
                                     {...register('password')} 
                                     disabled={isSubmitting}
                                 />
                                 <button 
                                     type="button"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-slate-400 hover:text-primary hover:bg-transparent transition-colors flex items-center justify-center"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
-                            {errors.password && <p className="text-xs font-medium text-destructive mt-1">{errors.password.message}</p>}
+                            {errors.password && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.password.message}</p>}
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-full h-11 rounded-xl font-bold shadow-lg shadow-blue-500/10" disabled={isSubmitting}>
+                    <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
                         {isSubmitting ? <Loader className="text-white" /> : 'Activate account'}
                     </Button>
                 </form>
 
                 <div className="text-center pt-4">
-                    <p className="text-sm text-slate-500 font-medium">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                         Already have an account?{" "}
-                        <Link href="/login" className="text-blue-600 font-bold hover:underline underline-offset-4">
+                        <Link href="/login" className="text-primary font-black hover:underline underline-offset-4">
                             Sign in
                         </Link>
                     </p>
