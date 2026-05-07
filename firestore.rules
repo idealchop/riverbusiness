@@ -3,77 +3,100 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- HELPER FUNCTIONS ---
+
+    // Checks if the user is accessing their own document
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Platform-wide administrator check (By email or custom claim)
     function isAdmin() {
-      // Deployed Cloud Functions run with admin privileges, so their auth object is null.
-      // This rule also allows the designated admin email to act as an admin.
-      return request.auth == null || (request.auth != null && request.auth.token.email == 'admin@riverph.com');
+      return request.auth != null && (
+        request.auth.token.email == 'admin@riverph.com' || 
+        request.auth.token.admin == true
+      );
     }
 
+    // Fetches the current user's profile data from Firestore
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isOrgManager() {
-        let role = getUserData().hrRole;
-        return request.auth != null && (role == 'owner' || role == 'admin');
-    }
-
+    // Multi-Tenancy: Validates that the user belongs to the company they are accessing
     function belongsToCompany(companyId) {
         return request.auth != null && getUserData().companyId == companyId;
     }
 
-    // Admins have global read/write access to all documents for management purposes.
+    // --- GLOBAL RULES ---
+
+    // Admins have master access to all resources
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
+    // --- USER PROFILES ---
+
     match /users/{userId} {
+      // Profiles are publicly checkable for 'get' (e.g. for invitations) but 'list' is restricted
       allow get: if true;
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isOwner(userId) || isAdmin();
       allow create: if request.auth != null;
-      allow list, read: if isOwner(userId) || isAdmin() || 
-                       (request.auth != null && resource.data.parentId == request.auth.uid) ||
-                       (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid) ||
-                       (request.auth != null && belongsToCompany(resource.data.companyId));
+      
+      // Collaborative Directory: All company members can see and manage each other's workforce profiles
+      allow update, delete, list, read: if isOwner(userId) || isAdmin() || 
+                                       (request.auth != null && belongsToCompany(resource.data.companyId));
+
+      // Sub-collections (Deliveries, Payments, Notifications)
+      match /{subcollection}/{docId} {
+        allow read, write: if isOwner(userId) || isAdmin() || (request.auth != null && belongsToCompany(getUserData().companyId));
+      }
+      
+      // Branch-specific deliveries allow parents to read logs
+      match /branchDeliveries/{deliveryId} {
+          allow read: if isOwner(userId) || isAdmin();
+      }
     }
     
+    // --- INVITIATIONS ---
+
     match /unclaimedProfiles/{clientId} {
       allow read, delete: if request.auth != null;
     }
 
     match /unclaimedEmployees/{inviteId} {
       allow read, delete: if request.auth != null;
-      // Allow Org Managers (Owners/Admins) to create invitations for their team
-      allow create: if request.auth != null && (isAdmin() || isOrgManager());
+      // Allow any team member to invite new employees to their company
+      allow create: if request.auth != null && (isAdmin() || belongsToCompany(request.resource.data.companyId));
       allow list: if isAdmin() || (request.auth != null && request.query.where.get('email')[2] == request.auth.token.email);
     }
 
-    // Rules for HR-specific multi-tenant data
+    // --- HR MULTI-TENANT DATA (Collaborative Access) ---
+
     match /hr_companies/{companyId} {
       allow read: if isAdmin() || belongsToCompany(companyId);
       
+      // Attendance: All members can create and manage logs for the tenant
       match /attendance/{logId} {
-        allow read, list: if isAdmin() || belongsToCompany(companyId);
-        allow create: if request.auth != null && belongsToCompany(companyId);
-        allow update: if isAdmin() || isOrgManager() && belongsToCompany(companyId);
+        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
       }
 
+      // Leaves: All members can apply and review applications for the tenant
       match /leaveRequests/{requestId} {
-        allow read, list: if isAdmin() || belongsToCompany(companyId);
-        allow create: if request.auth != null && belongsToCompany(companyId);
-        allow update: if isAdmin() || (isOrgManager() && belongsToCompany(companyId));
+        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
       }
 
+      // Payroll: All members can compute and authorize payroll for the tenant
       match /payrollRuns/{runId} {
-        // Payroll is highly sensitive - restrict to Managers only
-        allow read, list, create: if isAdmin() || (isOrgManager() && belongsToCompany(companyId));
+        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
+      }
+
+      // Learning Modules: All members can create, update, and browse materials for the tenant
+      match /learningModules/{moduleId} {
+        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
       }
     }
+
+    // --- STATION & COMPLIANCE ---
 
     match /waterStations/{stationId} {
       allow read: if request.auth != null;
@@ -82,14 +105,16 @@ service cloud.firestore {
       }
     }
 
+    // Public links for mobile sanitation officers (Limited write to status/checklist)
     match /publicSanitationLinks/{linkId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Allow the document owner OR an admin to perform any action on user subcollections.
-     match /users/{userId}/{subcollection}/{docId} {
-      allow read, write, create, update, delete: if isOwner(userId) || isAdmin();
+    match /users/{userId}/sanitationVisits/{visitId} {
+      allow read: if true; // Allows the public link page to show report details
+      allow update: if (request.auth == null) && request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature', 'clientRepName', 'officerSignatureDate', 'clientSignatureDate']);
     }
   }
 }
