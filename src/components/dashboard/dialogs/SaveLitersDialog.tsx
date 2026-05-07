@@ -17,12 +17,8 @@ import {
   ShieldCheck, 
   Droplet, 
   Activity, 
-  Info, 
-  CheckCircle2, 
   Microscope,
-  Zap
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function SaveLitersDialog({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
   const [metrics, setMetrics] = useState({
@@ -88,7 +84,7 @@ export function SaveLitersDialog({ isOpen, onOpenChange }: { isOpen: boolean; on
             </div>
 
             {/* Metrics Grid */}
-            <div className="grid gap-4">
+            <div className="grid gap-4 pb-4">
                 <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/50 group hover:bg-white hover:border-blue-100 hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
                         <div className="p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-primary">
@@ -135,21 +131,6 @@ export function SaveLitersDialog({ isOpen, onOpenChange }: { isOpen: boolean; on
                         <p className="text-lg font-black text-slate-900 tabular-nums">{metrics.tds} <span className="text-[10px] font-bold text-slate-400">ppm</span></p>
                         <Badge variant="outline" className="text-[8px] font-black uppercase h-4 bg-green-50 text-green-600 border-green-100">Clean</Badge>
                     </div>
-                </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-900 text-white flex items-center gap-5 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                    <CheckCircle2 className="h-12 w-12" />
-                </div>
-                <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
-                    <CheckCircle2 className="h-6 w-6 text-primary-light" />
-                </div>
-                <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary-light">Verified Quality</p>
-                    <p className="text-xs font-bold text-white/80 leading-relaxed uppercase tracking-tight">
-                        Drinking Water Approved
-                    </p>
                 </div>
             </div>
         </div>
