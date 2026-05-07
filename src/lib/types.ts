@@ -86,6 +86,19 @@ export interface HRPayrollRun {
     createdAt: any;
 }
 
+export interface HRLearningModule {
+    id: string;
+    companyId: string;
+    title: string;
+    description: string;
+    category: string;
+    contentType: 'video' | 'image' | 'article';
+    contentUrl?: string; // For video or image
+    textContent?: string;
+    createdAt: any;
+    isPublished: boolean;
+}
+
 export interface Delivery {
   id: string;
   userId: string;

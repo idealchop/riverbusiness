@@ -16,7 +16,9 @@ import {
   ScanLine,
   LogIn,
   Database,
-  CheckCircle2
+  CheckCircle2,
+  BookOpen,
+  ArrowRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { AppUser, HRAttendanceLog } from '@/lib/types';
+import Link from 'next/link';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -350,6 +353,29 @@ export default function HRDashboard() {
                 </Card>
 
                 <div className="space-y-6">
+                    <Card asChild className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
+                        <Link href="/hr-dashboard/modules">
+                            <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+                                <BookOpen className="h-32 w-32" />
+                            </div>
+                            <CardHeader className="pt-10">
+                                <div className="p-3 rounded-2xl bg-white/10 w-fit mb-4">
+                                    <BookOpen className="h-6 w-6" />
+                                </div>
+                                <CardTitle className="text-2xl font-black uppercase tracking-tight">Learning Hub</CardTitle>
+                                <CardDescription className="text-white/60 font-bold text-xs uppercase tracking-widest">Training & Company Modules</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pb-10">
+                                <p className="text-xs font-medium text-white/80 leading-relaxed mb-6">
+                                    Access exclusive company modules, technical documentation, and video training materials authorized for your team.
+                                </p>
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                                    Browse Library <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                            </CardContent>
+                        </Link>
+                    </Card>
+
                     <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
                         <CardHeader><CardTitle className="text-lg font-black tracking-tight uppercase">Operational Protocol</CardTitle></CardHeader>
@@ -368,14 +394,6 @@ export default function HRDashboard() {
                                     <p className="text-[9px] text-white/50 font-bold leading-relaxed">IP And Geolocation Verified For Every Authorization.</p>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden border border-slate-100">
-                        <CardHeader className="pb-3"><CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Shift Support</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                             <p className="text-xs font-bold text-slate-600 leading-relaxed">Having issues with your station entry? Contact your Organization Admin or use the Live Support button in the top navigation bar.</p>
-                             <Button variant="outline" className="w-full rounded-xl h-10 font-bold text-xs uppercase tracking-widest" onClick={() => window.dispatchEvent(new CustomEvent('open-live-support'))}>Contact Desk</Button>
                         </CardContent>
                     </Card>
                 </div>

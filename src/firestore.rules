@@ -100,6 +100,12 @@ service cloud.firestore {
       match /payrollRuns/{runId} {
         allow read, list, create: if isAdmin() || (isOrgManager() && belongsToCompany(companyId));
       }
+
+      // Learning Modules: HR can manage; Employees can view published
+      match /learningModules/{moduleId} {
+        allow read, list: if isAdmin() || belongsToCompany(companyId);
+        allow create, update, delete: if isAdmin() || (isOrgManager() && belongsToCompany(companyId));
+      }
     }
 
     // --- STATION & COMPLIANCE ---

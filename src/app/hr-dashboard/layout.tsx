@@ -12,7 +12,8 @@ import {
   ChevronRight,
   ShieldCheck,
   UserCircle,
-  Clock
+  Clock,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const managerNavItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
   { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database },
+  { href: '/hr-dashboard/modules', label: 'Learning Hub', icon: BookOpen },
   { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign },
   { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays },
 ];
@@ -40,6 +42,7 @@ const managerNavItems = [
 const employeeNavItems = [
   { href: '/hr-dashboard', label: 'My Workspace', icon: LayoutDashboard },
   { href: '/hr-dashboard/attendance', label: 'My Records', icon: Database },
+  { href: '/hr-dashboard/modules', label: 'Training Hub', icon: BookOpen },
   { href: '/hr-dashboard/leave', label: 'File Leave', icon: CalendarDays },
 ];
 

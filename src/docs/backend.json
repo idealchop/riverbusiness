@@ -85,6 +85,23 @@
             "createdAt": { "type": "string", "format": "date-time" }
         },
         "required": ["companyId", "periodStart", "periodEnd", "status"]
+    },
+    "HRLearningModule": {
+        "title": "HRLearningModule",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "companyId": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "category": { "type": "string" },
+            "contentType": { "type": "string", "enum": ["video", "image", "article"] },
+            "contentUrl": { "type": "string" },
+            "textContent": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "isPublished": { "type": "boolean" }
+        },
+        "required": ["companyId", "title", "contentType"]
     }
   },
   "auth": {
@@ -106,6 +123,10 @@
     "/hr_companies/{companyId}/payrollRuns/{runId}": {
         "schema": { "$ref": "#/entities/HRPayrollRun" },
         "description": "Historical records of payroll processing."
+    },
+    "/hr_companies/{companyId}/learningModules/{moduleId}": {
+        "schema": { "$ref": "#/entities/HRLearningModule" },
+        "description": "Company training and module materials."
     }
   }
 }
