@@ -198,10 +198,10 @@ export default function HRDashboard() {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 italic">
             {isManagement ? 'Workforce Intelligence' : 'My Workspace'}
           </h1>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+          <p className="text-slate-500 font-bold text-[10px]">
             {isManagement ? `Central Control For ${user?.businessName || 'Organization'}` : `Hello, ${user?.name?.split(' ')[0] || 'Employee'} • Shift Control`}
           </p>
         </div>
