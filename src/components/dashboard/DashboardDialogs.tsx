@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { addDoc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, RefillRequestStatus } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest } from '@/lib/types';
 
-import { WelcomeDialog } from '@/components/dashboard/WelcomeDialog';
 import { DeliveryHistoryDialog } from '@/components/dashboard/dialogs/DeliveryHistoryDialog';
 import { ConsumptionHistoryDialog } from '@/components/dashboard/dialogs/ConsumptionHistoryDialog';
 import { ProofViewerDialog } from '@/components/dashboard/dialogs/ProofViewerDialog';
@@ -64,7 +63,6 @@ export function DashboardDialogs({
     saveLiters: false,
     compliance: false,
     refillStatus: false,
-    welcome: false,
     partnerNotice: false,
     branches: false,
   });
@@ -73,7 +71,6 @@ export function DashboardDialogs({
   const [initialVisitId, setInitialVisitId] = useState<string | null>(null);
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
-  const [welcomeShown, setWelcomeShown] = useState(false);
   const [isRefillRequesting, setIsRefillRequesting] = useState(false);
   const [isSubmitScheduledRefill, setIsSubmitScheduledRefill] = useState(false);
 
@@ -145,13 +142,6 @@ export function DashboardDialogs({
     };
   }, [handleOneClickRefill]);
 
-  useEffect(() => {
-    if (user && !isUserDocLoading && !welcomeShown) {
-      openDialog('welcome');
-      setWelcomeShown(true);
-    }
-  }, [user, isUserDocLoading, welcomeShown]);
-
   const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
@@ -189,7 +179,6 @@ export function DashboardDialogs({
 
   return (
     <>
-      <WelcomeDialog isOpen={dialogState.welcome} onOpenChange={() => closeDialog('welcome')} user={user} />
       <DeliveryHistoryDialog
         isOpen={dialogState.deliveryHistory}
         onOpenChange={() => closeDialog('deliveryHistory')}
