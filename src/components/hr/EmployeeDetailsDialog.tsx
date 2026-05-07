@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import type { AppUser, HRAttendanceLog, HRLeaveRequest } from '@/lib/types';
 import { 
   Briefcase, 
@@ -339,34 +340,40 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                     <TabsContent value="performance" className="mt-0 space-y-8 animate-in fade-in duration-500">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="p-2 rounded-xl bg-white shadow-sm text-green-600"><TrendingUp className="h-5 w-5" /></div>
-                                    <p className="text-[10px] font-bold text-green-600 uppercase">Punctuality</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.punctuality.toFixed(0)}%</p>
-                                    <p className="text-xs font-medium text-slate-400">On-time rate</p>
-                                </div>
+                                <CardContent className="p-0 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="p-2 rounded-xl bg-white shadow-sm text-green-600"><TrendingUp className="h-5 w-5" /></div>
+                                        <p className="text-[10px] font-bold text-green-600 uppercase">Punctuality</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.punctuality.toFixed(0)}%</p>
+                                        <p className="text-xs font-medium text-slate-400">On-time rate</p>
+                                    </div>
+                                </CardContent>
                             </Card>
                             <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="p-2 rounded-xl bg-white shadow-sm text-primary"><Activity className="h-5 w-5" /></div>
-                                    <p className="text-[10px] font-bold text-primary uppercase">Volume</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.hoursWorked.toFixed(1)}h</p>
-                                    <p className="text-xs font-medium text-slate-400">Hours logged</p>
-                                </div>
+                                <CardContent className="p-0 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="p-2 rounded-xl bg-white shadow-sm text-primary"><Activity className="h-5 w-5" /></div>
+                                        <p className="text-[10px] font-bold text-primary uppercase">Volume</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.hoursWorked.toFixed(1)}h</p>
+                                        <p className="text-xs font-medium text-slate-400">Hours logged</p>
+                                    </div>
+                                </CardContent>
                             </Card>
                             <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="p-2 rounded-xl bg-white shadow-sm text-amber-600"><AlertCircle className="h-5 w-5" /></div>
-                                    <p className="text-[10px] font-bold text-amber-600 uppercase">Records</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.attendanceCount}</p>
-                                    <p className="text-xs font-medium text-slate-400">Total shifts</p>
-                                </div>
+                                <CardContent className="p-0 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="p-2 rounded-xl bg-white shadow-sm text-amber-600"><AlertCircle className="h-5 w-5" /></div>
+                                        <p className="text-[10px] font-bold text-amber-600 uppercase">Records</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.attendanceCount}</p>
+                                        <p className="text-xs font-medium text-slate-400">Total shifts</p>
+                                    </div>
+                                </CardContent>
                             </Card>
                         </div>
                     </TabsContent>
