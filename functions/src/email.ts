@@ -2,7 +2,7 @@ import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
 
 interface SendEmailOptions {
-  to: string;
+  to: string | string[];
   cc?: string | string[];
   bcc?: string | string[];
   subject: string;

@@ -100,8 +100,6 @@ async function sendEmail({ to, cc, bcc, subject, text, html, attachments }) {
                 pass: apiKey,
             },
         });
-        const recipients = Array.isArray(to) ? to.join(', ') : to;
-        logger.info(`Attempting to send email to ${recipients}. CC: ${cc || 'None'}. BCC: ${bcc || 'None'}`);
         const info = await transporter.sendMail({
             from: '"River Philippines" <customers@riverph.com>',
             to,

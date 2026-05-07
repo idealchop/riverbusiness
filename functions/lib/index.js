@@ -171,7 +171,7 @@ async function generateDeliveryReceiptPDF(user, delivery) {
         doc.text(`${liters.toFixed(1)} L`, margin + 350, doc.y - 12, { align: 'right', width: 120 });
         // Footer
         doc.moveDown(4);
-        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This document serves as proof of supply fulfillment within the River ecosystem. Digital records are archived in the Command Center.', margin, doc.y, { align: 'center', width: 530 });
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('The platform to run essential needs for business workforce.', margin, doc.y, { align: 'center', width: 530 });
         doc.end();
     });
 }
@@ -620,10 +620,12 @@ exports.onunclaimedemployeecreate = (0, firestore_2.onDocumentCreated)({
     const invite = event.data.data();
     const db = (0, firestore_1.getFirestore)();
     const companyId = invite.companyId;
-    let businessName = "your company";
-    const companyDoc = await db.collection('users').where('clientId', '==', companyId).limit(1).get();
-    if (!companyDoc.empty) {
-        businessName = companyDoc.docs[0].data().businessName;
+    let businessName = invite.inviterBusinessName || "your company";
+    if (!invite.inviterBusinessName) {
+        const companyDoc = await db.collection('users').where('clientId', '==', companyId).limit(1).get();
+        if (!companyDoc.empty) {
+            businessName = companyDoc.docs[0].data().businessName;
+        }
     }
     const signupUrl = `https://app.riverph.com/signup?email=${encodeURIComponent(invite.email)}&type=employee`;
     const template = (0, email_1.getEmployeeInvitationTemplate)(invite.name, businessName, signupUrl);
@@ -663,7 +665,7 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
         // Generate Delivery Receipt PDF
         const pdfBuffer = await generateDeliveryReceiptPDF(userData, delivery);
         await (0, email_1.sendEmail)({
-            to: targetEmails,
+            to: targetEmails.join(','),
             bcc: bccList,
             subject: template.subject,
             text: `Delivery complete`,
@@ -698,7 +700,7 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
         // Generate Delivery Receipt PDF
         const pdfBuffer = await generateDeliveryReceiptPDF(userData, after);
         await (0, email_1.sendEmail)({
-            to: targetEmails,
+            to: targetEmails.join(','),
             bcc: bccList,
             subject: template.subject,
             text: `Delivery complete`,
@@ -744,7 +746,7 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
         const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: targetEmails,
+            to: targetEmails.join(','),
             cc: ccList,
             bcc: bccList,
             subject: template.subject,
@@ -776,7 +778,7 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: targetEmails,
+            to: targetEmails.join(','),
             bcc: bccList,
             subject: template.subject,
             text: `Refill request received`,
@@ -810,7 +812,7 @@ exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, after.status, requestId, after.requestedDate);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: targetEmails,
+            to: targetEmails.join(','),
             bcc: bccList,
             subject: template.subject,
             text: `Refill request updated`,
@@ -835,7 +837,7 @@ exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
         const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: targetEmails,
+            to: targetEmails.join(','),
             bcc: bccList,
             subject: template.subject,
             text: `Visit scheduled`,
@@ -884,7 +886,7 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
             const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr, passRate);
             const bccList = getBCCList();
             await (0, email_1.sendEmail)({
-                to: targetEmails,
+                to: targetEmails.join(','),
                 bcc: bccList,
                 subject: template.subject,
                 text: `Report ready. Score: ${passRate}`,
