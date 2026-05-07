@@ -322,7 +322,7 @@ export default function HRDashboard() {
                     <CardHeader className="bg-slate-50/30 pb-6 border-b">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="text-lg font-black uppercase tracking-tight">Recent Activity Feed</CardTitle>
+                                <CardTitle className="text-lg font-black tracking-tight">Recent Activity Feed</CardTitle>
                                 <CardDescription className="text-xs font-medium text-slate-500">Real-Time Operational Summary</CardDescription>
                             </div>
                         </div>
@@ -355,7 +355,7 @@ export default function HRDashboard() {
                 <div className="space-y-6">
                     <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
-                        <CardHeader><CardTitle className="text-lg font-black tracking-tight uppercase">Operational Protocol</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="text-lg font-black tracking-tight">Operational Protocol</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
                                 <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-green-400"><Timer className="h-5 w-5" /></div>
