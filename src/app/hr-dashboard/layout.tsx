@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -31,6 +31,7 @@ import { NotificationPopover } from '@/components/dashboard/layout/NotificationP
 import { signOut } from 'firebase/auth';
 import type { Notification as NotificationType, AppUser } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { useMounted } from '@/hooks/use-mounted';
 
 const navItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -46,6 +47,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const isMounted = useMounted();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -59,20 +63,25 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isUserLoading && !authUser) {
+    if (!isUserLoading && !authUser && !isLoggingOut) {
       router.push('/login');
     }
-  }, [authUser, isUserLoading, router]);
+  }, [authUser, isUserLoading, router, isLoggingOut]);
 
-  if (isUserLoading || isUserDocLoading) {
-    return <FullScreenLoader />;
+  const handleLogout = async () => {
+    if (!auth) return;
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout failed", error);
+      setIsLoggingOut(false);
+    }
   }
 
-  const handleLogout = () => {
-    if (!auth) return;
-    signOut(auth).then(() => {
-      router.push('/login');
-    })
+  if (isUserLoading || isUserDocLoading || !isMounted || isLoggingOut) {
+    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
   }
 
   return (

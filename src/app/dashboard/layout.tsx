@@ -37,6 +37,8 @@ export default function DashboardLayout({
   const isMounted = useMounted();
   const auth = useAuth();
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
@@ -106,15 +108,15 @@ export default function DashboardLayout({
   useEffect(() => {
     if (isUserLoading) return;
   
-    if (!authUser) {
+    if (!authUser && !isLoggingOut) {
       router.push('/login');
       return;
     }
   
-    if (user === null && !isUserDocLoading) {
+    if (user === null && !isUserDocLoading && authUser) {
       router.push('/claim-account');
     }
-  }, [authUser, user, isUserLoading, isUserDocLoading, router]);
+  }, [authUser, user, isUserLoading, isUserDocLoading, router, isLoggingOut]);
 
   useEffect(() => {
     if (!userDocRef || !auth || !auth.currentUser) return;
@@ -138,15 +140,16 @@ export default function DashboardLayout({
     };
   }, [userDocRef, auth]);
 
-  if (isUserLoading || isUserDocLoading || !isMounted || !auth || !authUser || !user) {
-    return <FullScreenLoader />;
-  }
-  
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (!auth) return;
-    signOut(auth).then(() => {
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
       router.push('/login');
-    })
+    } catch (error) {
+      console.error("Logout failed", error);
+      setIsLoggingOut(false);
+    }
   }
 
   const handleMessageSubmit = async (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => {
@@ -205,6 +208,10 @@ export default function DashboardLayout({
 
   const handleComplianceClick = () => {
       window.dispatchEvent(new CustomEvent('open-compliance', { detail: { tab: 'compliance' } }));
+  }
+
+  if (isUserLoading || isUserDocLoading || !isMounted || !auth || isLoggingOut || !authUser || !user) {
+    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
   }
 
   const userFirstName = user?.name?.split(' ')[0] || 'friend';

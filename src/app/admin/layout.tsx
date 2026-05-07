@@ -33,6 +33,8 @@ export default function AdminLayout({
   const firestore = useFirestore();
   const isMounted = useMounted();
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
@@ -47,16 +49,21 @@ export default function AdminLayout({
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   
   React.useEffect(() => {
-    if (!isUserLoading && !authUser) {
+    if (!isUserLoading && !authUser && !isLoggingOut) {
       router.push('/login');
     }
-  }, [authUser, isUserLoading, router]);
+  }, [authUser, isUserLoading, router, isLoggingOut]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (!auth) return;
-    signOut(auth).then(() => {
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
       router.push('/login');
-    })
+    } catch (error) {
+      console.error("Logout failed", error);
+      setIsLoggingOut(false);
+    }
   }
 
   const handleNotificationClick = (notification: NotificationType) => {
@@ -65,8 +72,8 @@ export default function AdminLayout({
     }
   };
 
-  if (!isMounted || !auth || isUserLoading) {
-    return <FullScreenLoader />;
+  if (!isMounted || !auth || isUserLoading || isLoggingOut) {
+    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
   }
 
   return (
