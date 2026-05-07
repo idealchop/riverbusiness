@@ -27,7 +27,6 @@ export default function AttendancePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
-  // Use useEffect to handle clock ticking to avoid hydration mismatches
   useEffect(() => {
     setCurrentTime(new Date());
     const timer = setInterval(() => {
@@ -51,7 +50,10 @@ export default function AttendancePage() {
   const currentLog = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs[0] : null;
 
   const handleTimeIn = async () => {
-    if (!firestore || !user || !companyId) return;
+    if (!firestore || !user?.id || !companyId) {
+        toast({ variant: 'destructive', title: 'System error', description: 'Could not resolve employee identity.' });
+        return;
+    }
     setIsProcessing(true);
     try {
         const attendanceCol = collection(firestore, 'hr_companies', companyId, 'attendance');
@@ -63,7 +65,7 @@ export default function AttendancePage() {
         await addDoc(attendanceCol, {
             companyId,
             employeeId: user.id,
-            employeeName: user.name,
+            employeeName: user.name || 'Anonymous Employee',
             date: today,
             timeIn: serverTimestamp(),
             method: 'QR',
@@ -106,7 +108,6 @@ export default function AttendancePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white group">
            <CardContent className="p-8 md:p-12 flex flex-col items-center text-center space-y-8 relative">
-              {/* Decorative Background */}
               <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
               
               <div className="h-32 w-32 rounded-full bg-slate-50 border-4 border-white flex items-center justify-center relative shadow-xl z-10 transition-transform group-hover:scale-105">

@@ -16,11 +16,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { AppUser, HRAttendanceLog, HRLeaveRequest } from '@/lib/types';
+
+const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+};
 
 export default function HRDashboard() {
   const { user } = useUser();
@@ -89,6 +97,16 @@ export default function HRDashboard() {
         ];
     }
   }, [isManagement, employees, todayAttendance, pendingLeaves, myAttendance, myLeaves]);
+
+  const recentLogs = useMemo(() => {
+      const logs = isManagement ? todayAttendance : myAttendance;
+      if (!logs) return [];
+      return [...logs].sort((a, b) => {
+          const dateA = toSafeDate(a.timeIn)?.getTime() || 0;
+          const dateB = toSafeDate(b.timeIn)?.getTime() || 0;
+          return dateB - dateA;
+      }).slice(0, 5);
+  }, [isManagement, todayAttendance, myAttendance]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -163,28 +181,31 @@ export default function HRDashboard() {
           </CardHeader>
           <CardContent className="p-0">
              <div className="divide-y divide-slate-50">
-                {(isManagement ? todayAttendance : myAttendance?.slice(0, 5))?.length ? (isManagement ? todayAttendance : myAttendance?.slice(0, 5))?.map((log) => (
-                   <div key={log.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400 uppercase text-sm">
-                            {log.employeeName.charAt(0)}
+                {recentLogs.length > 0 ? recentLogs.map((log) => {
+                    const timeInDate = toSafeDate(log.timeIn);
+                    return (
+                        <div key={log.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                           <div className="flex items-center gap-4">
+                             <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400 uppercase text-sm">
+                                 {log.employeeName?.charAt(0) || '?'}
+                             </div>
+                             <div>
+                                <p className="text-sm font-semibold text-slate-900">{isManagement ? (log.employeeName || 'Anonymous') : (log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'No date')}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">{log.method || 'Unknown'} verification</p>
+                             </div>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-sm font-bold text-slate-900">{timeInDate ? format(timeInDate, 'hh:mm a') : '--:--'}</p>
+                             <Badge variant="outline" className={cn(
+                                 "text-[9px] h-5 font-bold uppercase px-2",
+                                 log.status === 'present' ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                             )}>
+                                 {log.status === 'present' ? 'On time' : (log.status || 'Waiting')}
+                             </Badge>
+                           </div>
                         </div>
-                        <div>
-                           <p className="text-sm font-semibold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date), 'MMM d, yyyy')}</p>
-                           <p className="text-[10px] text-slate-400 font-bold uppercase">{log.method} verification</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900">{log.timeIn ? (typeof log.timeIn.toDate === 'function' ? format(log.timeIn.toDate(), 'hh:mm a') : '--:--') : '--:--'}</p>
-                        <Badge variant="outline" className={cn(
-                            "text-[9px] h-5 font-bold uppercase px-2",
-                            log.status === 'present' ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-amber-50 text-amber-700 border-amber-100"
-                        )}>
-                            {log.status === 'present' ? 'On time' : 'Late'}
-                        </Badge>
-                      </div>
-                   </div>
-                )) : (
+                    );
+                }) : (
                     <div className="p-20 text-center opacity-30">
                         <Clock className="h-10 w-10 mx-auto mb-2 text-slate-300" />
                         <p className="text-sm font-semibold text-slate-400">No records found</p>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
   Search, 
@@ -64,13 +64,18 @@ export default function EmployeesPage() {
   );
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
-  const filteredEmployees = employees?.filter(emp => {
-    const search = searchTerm.toLowerCase();
-    return (
-      emp.name?.toLowerCase().includes(search) ||
-      emp.hrProfile?.position?.toLowerCase().includes(search)
-    );
-  });
+  const filteredEmployees = useMemo(() => {
+    const list = employees || [];
+    const search = searchTerm.toLowerCase().trim();
+    if (!search) return list;
+    return list.filter(emp => {
+      return (
+        emp.name?.toLowerCase().includes(search) ||
+        emp.hrProfile?.position?.toLowerCase().includes(search) ||
+        emp.email?.toLowerCase().includes(search)
+      );
+    });
+  }, [employees, searchTerm]);
 
   if (isUserLoading || (user && !isManagement)) {
     return <FullScreenLoader text="Verifying credentials..." />;
@@ -97,7 +102,7 @@ export default function EmployeesPage() {
             <div className="relative w-full md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
-                placeholder="Search by name or position..." 
+                placeholder="Search by name, email or position..." 
                 className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -122,7 +127,7 @@ export default function EmployeesPage() {
             <TableBody>
               {isLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-medium">Syncing directory...</TableCell></TableRow>
-              ) : filteredEmployees && filteredEmployees.length > 0 ? (
+              ) : filteredEmployees.length > 0 ? (
                 filteredEmployees.map((emp) => (
                 <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                   <TableCell className="pl-6 py-4">
@@ -131,8 +136,8 @@ export default function EmployeesPage() {
                         {emp.name?.split(' ').map(n => n[0]).join('') || '?'}
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-sm font-semibold text-slate-900">{emp.name}</p>
-                        <p className="text-xs font-medium text-slate-400 lowercase">{emp.email}</p>
+                        <p className="text-sm font-semibold text-slate-900">{emp.name || 'Untitled Profile'}</p>
+                        <p className="text-xs font-medium text-slate-400 lowercase">{emp.email || 'No email'}</p>
                       </div>
                     </div>
                   </TableCell>

@@ -47,7 +47,7 @@ export default function LeavePage() {
         if (isManagement) {
             return query(col, orderBy('appliedAt', 'desc'));
         } else {
-            return query(col, where('employeeId', '==', user?.id), orderBy('appliedAt', 'desc'));
+            return query(col, where('employeeId', '==', user?.id || ''), orderBy('appliedAt', 'desc'));
         }
     },
     [firestore, companyId, isManagement, user?.id]
@@ -55,13 +55,13 @@ export default function LeavePage() {
   const { data: leaveRequests, isLoading } = useCollection<HRLeaveRequest>(leaveQuery);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
-    if (!firestore || !companyId) return;
+    if (!firestore || !companyId || !requestId) return;
     try {
         const leaveRef = doc(firestore, 'hr_companies', companyId, 'leaveRequests', requestId);
         await updateDoc(leaveRef, { status: newStatus });
         toast({ title: `Request ${newStatus}`, description: `The leave request has been processed.` });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action Failed' });
+        toast({ variant: 'destructive', title: 'Action failed', description: 'Permission error or network issue.' });
     }
   };
 
@@ -122,14 +122,16 @@ export default function LeavePage() {
                            <TableCell className="pl-6 py-5">
                               <div className="flex items-center gap-3">
                                  <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
-                                    {request.employeeName.charAt(0)}
+                                    {request.employeeName?.charAt(0) || '?'}
                                  </div>
-                                 <p className="text-sm font-semibold text-slate-900">{request.employeeName}</p>
+                                 <p className="text-sm font-semibold text-slate-900">{request.employeeName || 'Untitled Employee'}</p>
                               </div>
                            </TableCell>
                            <TableCell>
-                              <p className="text-xs font-bold text-slate-900">{request.type}</p>
-                              <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">{format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d')}</p>
+                              <p className="text-xs font-bold text-slate-900">{request.type || 'General'}</p>
+                              <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">
+                                  {request.startDate ? format(new Date(request.startDate), 'MMM d') : '??'} - {request.endDate ? format(new Date(request.endDate), 'MMM d') : '??'}
+                              </p>
                            </TableCell>
                            <TableCell>
                               <p className="text-xs text-slate-500 font-medium italic max-w-[200px] truncate">"{request.reason || 'No reason provided'}"</p>
@@ -140,7 +142,7 @@ export default function LeavePage() {
                                  request.status === 'approved' ? "bg-green-50 text-green-700" : 
                                  request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
                               )}>
-                                 {request.status}
+                                 {request.status || 'Pending'}
                               </Badge>
                            </TableCell>
                            <TableCell className="text-right pr-6">
@@ -173,7 +175,7 @@ export default function LeavePage() {
                       <TableRow>
                          <TableCell colSpan={5} className="text-center py-24">
                             <div className="flex flex-col items-center gap-3 opacity-20">
-                               <Clock className="h-10 w-10 text-slate-400" />
+                               <CalendarDays className="h-10 w-10 text-slate-400" />
                                <p className="text-sm font-bold uppercase tracking-widest">No leave requests found</p>
                             </div>
                          </TableCell>

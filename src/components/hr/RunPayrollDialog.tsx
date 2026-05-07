@@ -86,19 +86,21 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
       const attendanceSnap = await getDocs(attendanceQuery);
       const allLogs = attendanceSnap.docs.map(doc => doc.data());
 
-      // 3. Automated Computation Logic
+      // 3. Automated Computation Logic (with runtime safety)
       const totalNet = employees.reduce((sum, emp: any) => {
-        const profile = emp.hrProfile;
+        const profile = emp?.hrProfile;
         if (!profile) return sum;
 
         let employeeSalary = 0;
+        const rate = Number(profile?.rate) || 0;
+        
         if (profile.salaryType === 'daily') {
           // Count unique present days for this employee in the period
-          const daysWorked = allLogs.filter(log => log.employeeId === emp.id).length;
-          employeeSalary = daysWorked * (profile.rate || 0);
+          const daysWorked = allLogs.filter(log => log?.employeeId === emp.id).length;
+          employeeSalary = daysWorked * rate;
         } else {
-          // Fixed monthly rate (MVP logic)
-          employeeSalary = profile.rate || 0;
+          // Fixed monthly rate (basic logic)
+          employeeSalary = rate;
         }
 
         return sum + employeeSalary;

@@ -23,7 +23,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
@@ -54,7 +54,7 @@ export default function PayrollPage() {
 
   const totalDisbursed = useMemo(() => {
     if (!payrollRuns) return 0;
-    return payrollRuns.reduce((sum, run) => sum + (run.totalNetSalary || 0), 0);
+    return payrollRuns.reduce((sum, run) => sum + (Number(run?.totalNetSalary) || 0), 0);
   }, [payrollRuns]);
 
   const isOwner = user?.hrRole === 'owner';
@@ -126,19 +126,19 @@ export default function PayrollPage() {
                       payrollRuns.map(run => (
                         <TableRow key={run.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0">
                           <TableCell className="pl-6 py-4">
-                            <p className="text-sm font-semibold text-slate-900">{format(new Date(run.periodStart), 'MMM d')} - {format(new Date(run.periodEnd), 'MMM d, yyyy')}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Processed {run.createdAt ? format(run.createdAt.toDate(), 'PP') : 'Today'}</p>
+                            <p className="text-sm font-semibold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : 'N/A'} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : 'N/A'}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Processed {run.createdAt instanceof Timestamp ? format(run.createdAt.toDate(), 'PP') : (run.createdAt ? format(new Date(run.createdAt), 'PP') : 'Recently')}</p>
                           </TableCell>
                           <TableCell>
                             <Badge className={cn(
                               "text-[9px] font-bold uppercase border-none px-2 h-5",
                               run.status === 'paid' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
                             )}>
-                              {run.status}
+                              {run.status || 'Pending'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-slate-900 tabular-nums">₱{(Number(run.totalNetSalary) || 0).toLocaleString()}</span>
                           </TableCell>
                           <TableCell className="text-right pr-6">
                             <Button variant="outline" size="sm" className="rounded-lg h-8 text-[10px] font-bold uppercase tracking-wider border-slate-200">

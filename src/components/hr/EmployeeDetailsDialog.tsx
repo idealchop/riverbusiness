@@ -77,7 +77,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                         {employee.name?.split(' ').map(n => n[0]).join('') || '?'}
                     </div>
                     <div className="space-y-1">
-                        <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name}</DialogTitle>
+                        <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
                         <div className="flex items-center gap-3">
                             <Badge className={cn(
                                 "border-none text-[10px] font-bold px-3 py-1",
@@ -117,7 +117,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                         <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
                                         <div className="space-y-0.5">
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Primary Email</p>
-                                            <p className="text-sm font-semibold text-slate-700">{employee.email}</p>
+                                            <p className="text-sm font-semibold text-slate-700">{employee.email || 'N/A'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4 group">
@@ -137,7 +137,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
-                                        <p className="text-lg font-bold text-slate-900">₱{profile?.rate?.toLocaleString() || '0'}</p>
+                                        <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
                                     </div>
                                     <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
@@ -198,21 +198,25 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                 </TableHeader>
                                 <TableBody>
                                     {attendanceLogs && attendanceLogs.length > 0 ? (
-                                        attendanceLogs.map(log => (
-                                            <TableRow key={log.id} className="hover:bg-white transition-colors border-b border-slate-50 last:border-0 group">
-                                                <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">{format(new Date(log.date), 'MMM d, yyyy')}</TableCell>
-                                                <TableCell className="text-sm font-semibold text-slate-700">{log.timeIn instanceof Timestamp ? format(log.timeIn.toDate(), 'hh:mm a') : '--:--'}</TableCell>
-                                                <TableCell className="text-sm font-semibold text-slate-700">{log.timeOut instanceof Timestamp ? format(log.timeOut.toDate(), 'hh:mm a') : '--:--'}</TableCell>
-                                                <TableCell className="text-right pr-6">
-                                                    <Badge className={cn(
-                                                        "text-[10px] font-bold uppercase border-none px-3 py-1",
-                                                        log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                                                    )}>
-                                                        {log.status}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
+                                        attendanceLogs.map(log => {
+                                            const timeIn = log.timeIn instanceof Timestamp ? log.timeIn.toDate() : (log.timeIn ? new Date(log.timeIn) : null);
+                                            const timeOut = log.timeOut instanceof Timestamp ? log.timeOut.toDate() : (log.timeOut ? new Date(log.timeOut) : null);
+                                            return (
+                                                <TableRow key={log.id} className="hover:bg-white transition-colors border-b border-slate-50 last:border-0 group">
+                                                    <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'No date'}</TableCell>
+                                                    <TableCell className="text-sm font-semibold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
+                                                    <TableCell className="text-sm font-semibold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                                                    <TableCell className="text-right pr-6">
+                                                        <Badge className={cn(
+                                                            "text-[10px] font-bold uppercase border-none px-3 py-1",
+                                                            log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                                                        )}>
+                                                            {log.status || 'N/A'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={4} className="text-center py-20 text-sm font-medium text-slate-300">
@@ -235,9 +239,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                                 <CalendarDays className="h-6 w-6" />
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="text-base font-bold text-slate-900">{request.type}</p>
+                                                <p className="text-base font-bold text-slate-900">{request.type || 'Leave'}</p>
                                                 <p className="text-xs font-semibold text-slate-400">
-                                                    {format(new Date(request.startDate), 'MMM d')} — {format(new Date(request.endDate), 'MMM d, yyyy')}
+                                                    {request.startDate ? format(new Date(request.startDate), 'MMM d') : '?'} — {request.endDate ? format(new Date(request.endDate), 'MMM d, yyyy') : '?'}
                                                 </p>
                                             </div>
                                         </div>
@@ -247,9 +251,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                                 request.status === 'approved' ? "bg-green-50 text-green-700" : 
                                                 request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
                                             )}>
-                                                {request.status}
+                                                {request.status || 'Pending'}
                                             </Badge>
-                                            <p className="text-[10px] text-slate-400 font-medium italic">Applied {format(request.appliedAt?.toDate() || new Date(), 'PP')}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium italic">Applied {request.appliedAt ? format(request.appliedAt.toDate(), 'PP') : 'Today'}</p>
                                         </div>
                                     </div>
                                 ))
