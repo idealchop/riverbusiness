@@ -7,19 +7,17 @@ import {
   CalendarDays, 
   Timer,
   AlertCircle,
-  ArrowUpRight,
   TrendingUp,
   FileCheck,
   UserCircle,
   Activity,
   LogOut,
-  ShieldCheck,
   MapPin,
   ScanLine,
-  Database,
-  LogIn
+  LogIn,
+  Database
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -28,7 +26,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { AppUser, HRAttendanceLog, HRLeaveRequest } from '@/lib/types';
+import type { AppUser, HRAttendanceLog } from '@/lib/types';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -116,7 +114,7 @@ export default function HRDashboard() {
             status: status
         });
 
-        toast({ title: 'Clock-In Successful', description: `Good Morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
+        toast({ title: 'Clock In Successful', description: `Good Morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could Not Clock In.' });
     } finally {
@@ -139,7 +137,7 @@ export default function HRDashboard() {
             timeOut: serverTimestamp(),
             totalMinutes: totalMinutes
         });
-        toast({ title: 'Clock-Out Successful', description: 'Have A Great Evening!' });
+        toast({ title: 'Clock Out Successful', description: 'Have A Great Evening!' });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could Not Clock Out.' });
     } finally {
@@ -234,10 +232,6 @@ export default function HRDashboard() {
                     <span className="text-[10px] font-black uppercase tracking-widest">Shift Secured</span>
                 </div>
             )}
-
-            <Button onClick={() => router.push('/hr-dashboard/attendance')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
-                <Database className="mr-2 h-4 w-4 text-slate-400" /> Attendance
-            </Button>
             
             {isManagement && (
                 <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
