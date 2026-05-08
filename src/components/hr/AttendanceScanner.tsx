@@ -37,13 +37,13 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const companyId = user?.companyId || user?.clientId;
 
   useEffect(() => {
-    if (isOpen && step === 'scan') {
+    if (isOpen && step === 'scan' && companyId) {
       const startScanner = async () => {
         try {
-          // Ensure element exists before initializing
           const element = document.getElementById("qr-reader");
           if (!element) return;
 
+          // Initialize with low-level API to prevent ghost buttons/UI
           const scanner = new Html5Qrcode("qr-reader");
           scannerRef.current = scanner;
 
@@ -58,7 +58,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
               handleScanSuccess(decodedText);
             },
             () => {
-              // Silent for standard non-detections
+              // Standard scanning loop
             }
           );
         } catch (err) {
@@ -72,11 +72,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       return () => {
         clearTimeout(timer);
         if (scannerRef.current) {
-          scannerRef.current.stop().catch(err => console.warn("Scanner cleanup error:", err));
+          scannerRef.current.stop().catch(e => console.warn("Cleanup warning:", e));
         }
       };
     }
-  }, [isOpen, step]);
+  }, [isOpen, step, companyId]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // Earth radius in meters
@@ -96,23 +96,23 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const handleScanSuccess = async (decodedText: string) => {
     if (!firestore || !companyId) return;
 
-    // Stop camera immediately to prevent multiple scans
-    if (scannerRef.current) {
-        await scannerRef.current.stop().catch(e => console.warn(e));
-    }
-
-    // Verify QR Format Handshake
-    if (!decodedText.startsWith(`RIVER_OFFICE_QR:${companyId}`)) {
-      setErrorMsg("Unauthorized QR Code. This does not match your company terminal.");
+    // 1. Secure Handshake Check
+    const expectedHandshake = `RIVER_OFFICE_QR:${companyId}`;
+    if (decodedText.trim() !== expectedHandshake) {
+      setErrorMsg("Security Mismatch: This QR code does not belong to your company terminal.");
       setFormStep('error');
       return;
+    }
+
+    if (scannerRef.current) {
+        await scannerRef.current.stop().catch(e => console.warn(e));
     }
 
     setFormStep('validate');
     setIsProcessing(true);
 
     try {
-      // 1. Capture High-Precision GPS
+      // 2. High-Precision GPS Proof
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -123,12 +123,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
 
       const { latitude, longitude } = position.coords;
 
-      // 2. Fetch Geo-Fence Anchor
+      // 3. Anchor Points Check
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
       const locationSnap = await getDocs(locationsCol);
       
       if (locationSnap.empty) {
-        setErrorMsg("Office coordinates not found. Admin must set the Geo-Fence first.");
+        setErrorMsg("Operational Block: Office coordinates not set. Admin must configure geo-fence.");
         setFormStep('error');
         return;
       }
@@ -137,14 +137,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
       const radius = office.radius_meters || 100;
 
-      // 3. Radius Validation
+      // 4. Radius Hard-Validation
       if (distance > radius) {
-        setErrorMsg(`Location Denied. You are ${Math.round(distance)}m away. Allowed radius: ${radius}m.`);
+        setErrorMsg(`Location Rejected: You are ${Math.round(distance)}m away. Allowed radius: ${radius}m.`);
         setFormStep('error');
         return;
       }
 
-      // 4. Sequence Detection (IN or OUT)
+      // 5. Intelligence: Sequence Detection
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const logsQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
@@ -159,7 +159,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const nextAction = lastAction === 'IN' ? 'OUT' : 'IN';
       setActionType(nextAction);
 
-      // 5. Record Transaction
+      // 6. Record Transaction to Ledger
       const logData: Omit<HRAttendanceLog, 'id'> = {
         companyId,
         employeeId: user.id,
@@ -177,10 +177,10 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
 
       setFormStep('success');
-      toast({ title: `Verified: Clocked ${nextAction}` });
+      toast({ title: `Handshake Verified: Clocked ${nextAction}` });
 
     } catch (err: any) {
-      setErrorMsg(err.message || "GPS connection failed. Ensure location services are active.");
+      setErrorMsg(err.message || "Precision GPS error. Ensure high-accuracy location services are active.");
       setFormStep('error');
     } finally {
       setIsProcessing(false);
