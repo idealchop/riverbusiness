@@ -89,6 +89,12 @@
       "description": "A clean, modern water refilling station.",
       "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FApp%20Image%2FRiver_v1.png?alt=media&token=dee32636-aaaf-4a4f-8780-cc43f54f8d27",
       "imageHint": "water station"
+    },
+    {
+      "id": "hr-hero-banner",
+      "description": "Team collaborating in a modern office",
+      "imageUrl": "https://picsum.photos/seed/hrdashboard1/1200/600",
+      "imageHint": "team office"
     }
   ]
 }

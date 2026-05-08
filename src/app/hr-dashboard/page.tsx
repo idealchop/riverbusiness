@@ -8,7 +8,8 @@ import {
   Activity,
   LogOut,
   LogIn,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { HRAttendanceLog } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -199,7 +202,6 @@ export default function HRDashboard() {
             }
         });
     } else {
-        // Fallback to demo feed if no real data
         return DEMO_FEED;
     }
     return items.sort((a, b) => (b.time?.getTime() || 0) - (a.time?.getTime() || 0));
@@ -217,6 +219,8 @@ export default function HRDashboard() {
         { label: 'Work Shifts', value: attCount, icon: Activity, trend: 'Total Logs Today', trendType: 'up' },
     ];
   }, [employees, todayAttendance, pendingLeaves]);
+
+  const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -270,105 +274,137 @@ export default function HRDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-sm rounded-2xl bg-white group hover:shadow-md transition-shadow">
-                        <CardContent className="p-6">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-colors">
-                                    <stat.icon className="h-5 w-5" />
-                                </div>
-                                <div className={cn("text-[9px] font-bold uppercase tracking-wider", stat.trendType === 'up' ? "text-green-600" : stat.trendType === 'warn' ? "text-amber-600" : "text-slate-400")}>
-                                    {stat.trend}
+      <div className="space-y-8">
+            {/* Top Section: Hero Banner with Image and Calendar */}
+            <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
+                <div className="grid grid-cols-1 lg:grid-cols-12 h-full min-h-[340px]">
+                    <div className="lg:col-span-8 relative h-64 lg:h-auto overflow-hidden">
+                        {heroImage && (
+                            <Image 
+                                src={heroImage.imageUrl} 
+                                alt={heroImage.description} 
+                                fill 
+                                className="object-cover transition-transform duration-700 hover:scale-105"
+                                data-ai-hint={heroImage.imageHint}
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
+                        <div className="absolute bottom-10 left-10 text-white space-y-2">
+                            <Badge className="bg-primary text-white border-none font-black text-[10px] uppercase tracking-[0.2em] px-3">Operational Command</Badge>
+                            <h2 className="text-4xl font-black tracking-tight leading-none uppercase">Manage your <br/>Workforce</h2>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-4 p-8 flex flex-col items-center justify-center bg-slate-50/50">
+                        <div className="space-y-4 w-full">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Team Calendar</h3>
+                                <Badge variant="outline" className="bg-white border-slate-200 text-primary font-bold text-[9px] uppercase">{format(new Date(), 'MMMM yyyy')}</Badge>
+                            </div>
+                            <Calendar
+                                mode="single"
+                                selected={new Date()}
+                                className="rounded-3xl border-none p-0 mx-auto"
+                                classNames={{
+                                    day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl",
+                                    day_today: "bg-blue-100 text-primary font-black rounded-xl",
+                                    day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-200 transition-colors",
+                                    head_cell: "text-slate-400 font-black uppercase text-[10px] tracking-widest",
+                                    caption_label: "hidden" // Hide the redundant month label since we have the badge
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Stats and Activity */}
+                <div className="lg:col-span-8 space-y-8">
+                    {/* Stat Cards Sub-grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {stats.map((stat, idx) => (
+                            <Card key={idx} className="border-none shadow-sm rounded-3xl bg-white group hover:shadow-md transition-all active:scale-[0.99]">
+                                <CardContent className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="p-3 rounded-2xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                                            <stat.icon className="h-6 w-6" />
+                                        </div>
+                                        <div className={cn("text-[10px] font-black uppercase tracking-widest", stat.trendType === 'up' ? "text-green-600" : stat.trendType === 'warn' ? "text-amber-600" : "text-slate-400")}>
+                                            {stat.trend}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-4xl font-black text-slate-900 tabular-nums tracking-tighter">{stat.value}</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Activity Feed */}
+                    <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
+                        <CardHeader className="bg-slate-50/30 p-8 border-b">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-xl font-bold tracking-tight text-slate-900">Recent Activity Feed</CardTitle>
+                                    <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Real-Time Operational Summary</CardDescription>
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">{stat.value}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">{stat.label}</p>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="divide-y divide-slate-50">
+                                {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => (
+                                    <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                        <div className="flex items-center gap-5">
+                                            <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-lg shadow-inner">{item.employeeName?.charAt(0)}</div>
+                                            <div>
+                                                <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                                                  {item.action} • {item.method} Verification
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right space-y-1">
+                                            <p className="text-sm font-black text-slate-900">{item.time ? format(item.time, 'hh:mm a') : '--:--'}</p>
+                                            <Badge className={cn("text-[9px] h-5 font-black uppercase px-3 shadow-none border-none", item.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+                                                {item.status}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="py-24 text-center flex flex-col items-center gap-4 opacity-30">
+                                        <Activity className="h-12 w-12 text-slate-300" />
+                                        <p className="text-xs font-black uppercase tracking-[0.3em]">Feed is quiet today</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
-                ))}
-            </div>
+                </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Calendar Card */}
-                <Card className="lg:col-span-4 border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
-                    <CardHeader className="bg-slate-50/30 pb-6 border-b">
-                        <CardTitle className="text-lg font-bold tracking-tight flex items-center gap-2 text-slate-900">
-                            <CalendarDays className="h-5 w-5 text-primary" />
-                            Work Calendar
-                        </CardTitle>
-                        <CardDescription className="text-xs font-medium text-slate-500">Scheduled Shifts & Timeline</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6 flex flex-col items-center">
-                        <Calendar
-                            mode="single"
-                            selected={new Date()}
-                            className="rounded-3xl border-none p-0 scale-100 origin-top"
-                            classNames={{
-                                day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl",
-                                day_today: "bg-blue-50 text-primary font-black rounded-xl border border-blue-100",
-                                day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-colors",
-                                head_cell: "text-slate-400 font-black uppercase text-[10px] tracking-widest",
-                                caption_label: "text-sm font-black uppercase tracking-widest text-slate-900"
-                            }}
-                        />
-                        <div className="w-full mt-6 pt-6 border-t border-slate-50 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Focus</span>
-                                <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest bg-blue-50/50 text-primary border-blue-100 px-2 h-5">Today</Badge>
-                            </div>
-                            <p className="text-sm font-bold text-slate-700 leading-tight">
-                                {format(new Date(), 'EEEE, MMMM do')}
+                {/* Right Column: Empty or Sidebar Info */}
+                <div className="lg:col-span-4 space-y-8">
+                    <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                             <CheckCircle2 className="h-24 w-24" />
+                        </div>
+                        <CardHeader className="p-8">
+                            <CardTitle className="text-lg font-bold tracking-tight">Focus: Today</CardTitle>
+                            <CardDescription className="text-white/50 font-medium">{format(new Date(), 'EEEE, MMMM do')}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-8 pt-0 space-y-4 relative z-10">
+                            <p className="text-sm font-medium text-white/80 leading-relaxed italic">
+                                "Efficiency is doing things right; effectiveness is doing the right things."
                             </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-8 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-                    <CardHeader className="bg-slate-50/30 pb-6 border-b">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="text-lg font-bold tracking-tight">Recent Activity Feed</CardTitle>
-                                <CardDescription className="text-xs font-medium text-slate-500">Real-Time Operational Summary</CardDescription>
+                            <div className="pt-4 border-t border-white/10">
+                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40">River Workforce Management</p>
                             </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="divide-y divide-slate-50">
-                            {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => (
-                                <div key={item.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-sm">{item.employeeName?.charAt(0)}</div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900">{item.employeeName}</p>
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
-                                              {item.action} • {item.method} Verification
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-black text-slate-900">{item.time ? format(item.time, 'hh:mm a') : '--:--'}</p>
-                                        <Badge className={cn("text-[9px] h-5 font-black uppercase px-2 shadow-none border-none", item.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
-                                            {item.status}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
-                                    <Activity className="h-10 w-10 text-slate-300" />
-                                    <p className="text-xs font-bold uppercase tracking-widest">Feed is quiet today</p>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
       </div>
     </div>
   );
 }
-
-import { AlertCircle } from 'lucide-react';
