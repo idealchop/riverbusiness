@@ -281,25 +281,25 @@ export default function HRDashboard() {
             {/* Top Section: Hero Banner with Image and Calendar (60/40 split) */}
             <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
                 <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[380px]">
-                    <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden">
+                    <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden bg-slate-50 flex items-center justify-center p-8">
                         {heroImage && (
                             <Image 
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover transition-transform duration-[20s] hover:scale-110"
+                                className="object-contain p-12 transition-transform duration-[20s] hover:scale-105"
                                 data-ai-hint={heroImage.imageHint}
                             />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent" />
-                        <div className="absolute bottom-10 left-10 text-white space-y-3">
-                            <Badge className="bg-primary/20 backdrop-blur-md text-white border-white/20 font-black text-[10px] uppercase tracking-[0.3em] px-4 h-7">
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute bottom-10 left-10 text-slate-900 space-y-3 z-10">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px] uppercase tracking-[0.3em] px-4 h-7">
                                 Organization Command
                             </Badge>
-                            <h2 className="text-5xl font-black tracking-tight leading-none uppercase">
+                            <h2 className="text-5xl font-black tracking-tight leading-none uppercase text-slate-900 drop-shadow-sm">
                                 Unified <br/>Workforce
                             </h2>
-                            <p className="text-sm font-medium text-white/70 max-w-md">
+                            <p className="text-sm font-bold text-slate-500 max-w-sm">
                                 Real-time monitoring and administrative oversight for the modern business ecosystem.
                             </p>
                         </div>

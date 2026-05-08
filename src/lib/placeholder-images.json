@@ -92,9 +92,9 @@
     },
     {
       "id": "hr-hero-banner",
-      "description": "Team collaborating in a modern office",
-      "imageUrl": "https://picsum.photos/seed/hrdashboard1/1200/600",
-      "imageHint": "team office"
+      "description": "Professional team leadership illustration",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Image-app%2FTeam%20Leader.svg?alt=media&token=2de315f2-b86d-4b05-a46e-713313a497e4",
+      "imageHint": "team leadership"
     }
   ]
 }
