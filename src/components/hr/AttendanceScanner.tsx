@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import React, { useEffect, useState, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { 
   Dialog, 
   DialogContent, 
@@ -32,52 +32,50 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const [errorMsg, setErrorMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionType, setActionType] = useState<'IN' | 'OUT' | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const companyId = user?.companyId || user?.clientId;
 
   useEffect(() => {
-    let scanner: Html5QrcodeScanner | null = null;
-
-    const setupScanner = () => {
-        if (isOpen && step === 'scan') {
+    if (isOpen && step === 'scan') {
+      const startScanner = async () => {
+        try {
+          // Ensure element exists before initializing
           const element = document.getElementById("qr-reader");
-          if (!element) {
-              setTimeout(setupScanner, 50);
-              return;
-          }
+          if (!element) return;
 
-          // Optimized scanner config for faster detection
-          scanner = new Html5QrcodeScanner(
-            "qr-reader",
+          const scanner = new Html5Qrcode("qr-reader");
+          scannerRef.current = scanner;
+
+          await scanner.start(
+            { facingMode: "environment" },
             { 
               fps: 15, 
               qrbox: { width: 250, height: 250 },
-              aspectRatio: 1.0
+              aspectRatio: 1.0 
             },
-            false
-          );
-
-          scanner.render(
             (decodedText) => {
               handleScanSuccess(decodedText);
-              scanner?.clear().catch(err => console.warn("Scanner clear failed", err));
             },
-            (error) => {
-              // Silent fail for scanning errors
+            () => {
+              // Silent for standard non-detections
             }
           );
+        } catch (err) {
+          console.error("Scanner start error:", err);
+          setErrorMsg("Camera initialization failed. Please check permissions.");
+          setFormStep('error');
         }
-    };
+      };
 
-    if (isOpen) {
-        setupScanner();
+      const timer = setTimeout(startScanner, 300);
+      return () => {
+        clearTimeout(timer);
+        if (scannerRef.current) {
+          scannerRef.current.stop().catch(err => console.warn("Scanner cleanup error:", err));
+        }
+      };
     }
-
-    return () => {
-      if (scanner) {
-        scanner.clear().catch(err => console.warn("Scanner cleanup failed", err));
-      }
-    };
   }, [isOpen, step]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -98,10 +96,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const handleScanSuccess = async (decodedText: string) => {
     if (!firestore || !companyId) return;
 
-    // QR Format Check: RIVER_OFFICE_QR:<COMPANY_ID>
-    // This connects directly to the QR produced by the owner
+    // Stop camera immediately to prevent multiple scans
+    if (scannerRef.current) {
+        await scannerRef.current.stop().catch(e => console.warn(e));
+    }
+
+    // Verify QR Format Handshake
     if (!decodedText.startsWith(`RIVER_OFFICE_QR:${companyId}`)) {
-      setErrorMsg("Invalid QR Code. This does not belong to your company's official terminal.");
+      setErrorMsg("Unauthorized QR Code. This does not match your company terminal.");
       setFormStep('error');
       return;
     }
@@ -110,7 +112,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setIsProcessing(true);
 
     try {
-      // 1. Get Employee Geolocation
+      // 1. Capture High-Precision GPS
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -121,12 +123,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
 
       const { latitude, longitude } = position.coords;
 
-      // 2. Fetch Company Location Settings
+      // 2. Fetch Geo-Fence Anchor
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
       const locationSnap = await getDocs(locationsCol);
       
       if (locationSnap.empty) {
-        setErrorMsg("Office coordinates not set. Admin must configure the Geo-Fence.");
+        setErrorMsg("Office coordinates not found. Admin must set the Geo-Fence first.");
         setFormStep('error');
         return;
       }
@@ -135,13 +137,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
       const radius = office.radius_meters || 100;
 
+      // 3. Radius Validation
       if (distance > radius) {
-        setErrorMsg(`Geo-Fence Denied. You are currently ${Math.round(distance)}m away from ${office.office_name}.`);
+        setErrorMsg(`Location Denied. You are ${Math.round(distance)}m away. Allowed radius: ${radius}m.`);
         setFormStep('error');
         return;
       }
 
-      // 3. Determine IN vs OUT logic based on daily ledger
+      // 4. Sequence Detection (IN or OUT)
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const logsQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
@@ -156,7 +159,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const nextAction = lastAction === 'IN' ? 'OUT' : 'IN';
       setActionType(nextAction);
 
-      // 4. Save Record
+      // 5. Record Transaction
       const logData: Omit<HRAttendanceLog, 'id'> = {
         companyId,
         employeeId: user.id,
@@ -171,22 +174,20 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
         office_id: office.id
       };
 
-      const logRef = collection(firestore, 'hr_companies', companyId, 'attendance');
-      await addDoc(logRef, logData);
+      await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
 
       setFormStep('success');
-      toast({ title: `Attendance Recorded: Clocked ${nextAction}` });
+      toast({ title: `Verified: Clocked ${nextAction}` });
 
     } catch (err: any) {
-      console.error("Attendance validation error:", err);
-      setErrorMsg(err.message || "Precision GPS required for validation. Check your device settings.");
+      setErrorMsg(err.message || "GPS connection failed. Ensure location services are active.");
       setFormStep('error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const resetScanner = () => {
+  const resetTerminal = () => {
     setFormStep('scan');
     setErrorMsg('');
     setActionType(null);
@@ -194,7 +195,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) resetScanner();
+        if (!open) resetTerminal();
         onOpenChange(open);
     }}>
       <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
@@ -215,13 +216,9 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                 {step === 'scan' && (
                     <>
                         <div id="qr-reader" className="w-full h-full" />
-                        {/* High-Fidelity Scanning Overlay */}
                         <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center">
                             <div className="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
-                                {/* Scanner Pulse Line */}
                                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-slide-down" />
-                                
-                                {/* Corner Accents */}
                                 <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-xl" />
                                 <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-xl" />
                                 <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
@@ -240,7 +237,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         </div>
                         <div className="text-center space-y-3">
                             <p className="text-lg font-black uppercase tracking-[0.2em] text-white">Validating</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed text-center">
                                 Capturing high-precision GPS proof...<br/>Verifying office radius synchronization.
                             </p>
                         </div>
@@ -274,7 +271,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         </div>
                         <Button 
                             variant="outline" 
-                            onClick={resetScanner} 
+                            onClick={resetTerminal} 
                             className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 border-white/10 text-white hover:bg-white hover:text-slate-900 transition-all"
                         >
                             Retry Validation
@@ -303,4 +300,3 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     </Dialog>
   );
 }
-
