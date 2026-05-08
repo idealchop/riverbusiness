@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -20,6 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { 
   Form, 
   FormControl, 
