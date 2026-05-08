@@ -31,6 +31,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { AppUser, HRAttendanceLog } from '@/lib/types';
 import Link from 'next/link';
+import { Calendar } from '@/components/ui/calendar';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -39,6 +40,12 @@ const toSafeDate = (val: any): Date | null => {
     const d = new Date(val);
     return isNaN(d.getTime()) ? null : d;
 };
+
+function subHours(date: Date, hours: number) {
+    const result = new Date(date);
+    result.setHours(result.getHours() - hours);
+    return result;
+}
 
 // Demo data for activity feed
 const DEMO_FEED = [
@@ -296,8 +303,42 @@ export default function HRDashboard() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Calendar Card */}
+                <Card className="lg:col-span-4 border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+                    <CardHeader className="bg-slate-50/30 pb-6 border-b">
+                        <CardTitle className="text-lg font-bold tracking-tight flex items-center gap-2 text-slate-900">
+                            <CalendarDays className="h-5 w-5 text-primary" />
+                            Work Calendar
+                        </CardTitle>
+                        <CardDescription className="text-xs font-medium text-slate-500">Scheduled Shifts & Timeline</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6 flex flex-col items-center">
+                        <Calendar
+                            mode="single"
+                            selected={new Date()}
+                            className="rounded-3xl border-none p-0 scale-100 origin-top"
+                            classNames={{
+                                day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl",
+                                day_today: "bg-blue-50 text-primary font-black rounded-xl border border-blue-100",
+                                day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-colors",
+                                head_cell: "text-slate-400 font-black uppercase text-[10px] tracking-widest",
+                                caption_label: "text-sm font-black uppercase tracking-widest text-slate-900"
+                            }}
+                        />
+                        <div className="w-full mt-6 pt-6 border-t border-slate-50 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Focus</span>
+                                <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest bg-blue-50/50 text-primary border-blue-100 px-2 h-5">Today</Badge>
+                            </div>
+                            <p className="text-sm font-bold text-slate-700 leading-tight">
+                                {format(new Date(), 'EEEE, MMMM do')}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-5 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                     <CardHeader className="bg-slate-50/30 pb-6 border-b">
                         <div className="flex items-center justify-between">
                             <div>
@@ -336,10 +377,10 @@ export default function HRDashboard() {
                     </CardContent>
                 </Card>
 
-                <div className="space-y-6">
+                <div className="lg:col-span-3 space-y-6">
                     <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
-                        <CardHeader><CardTitle className="text-lg font-bold tracking-tight">Recent Activity Feed</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="text-lg font-bold tracking-tight">Security & Insights</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
                                 <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-green-400"><Timer className="h-5 w-5" /></div>
@@ -362,10 +403,4 @@ export default function HRDashboard() {
       </div>
     </div>
   );
-}
-
-function subHours(date: Date, hours: number) {
-    const result = new Date(date);
-    result.setHours(result.getHours() - hours);
-    return result;
 }
