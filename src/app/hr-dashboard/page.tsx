@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -21,7 +20,8 @@ import {
   Calendar as CalendarIcon,
   Search,
   Bell,
-  Send
+  Send,
+  UserCircle
 } from 'lucide-react';
 import { 
     Card, 
@@ -34,7 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { format, isSameDay, addMonths, subMonths, startOfMonth } from 'date-fns';
+import { format, isSameDay, addMonths, subMonths, startOfMonth, addDays, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -72,10 +72,11 @@ function subHours(date: Date, hours: number) {
     return result;
 }
 
-// Philippine Holidays Registry
+// Philippine Holidays Registry (Standard National Holidays)
 const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2024, 0, 1), name: "New Year's Day" },
     { date: new Date(2024, 1, 9), name: "Chinese New Year" },
+    { date: new Date(2024, 1, 25), name: "EDSA People Power Revolution Anniversary" },
     { date: new Date(2024, 2, 28), name: "Maundy Thursday" },
     { date: new Date(2024, 2, 29), name: "Good Friday" },
     { date: new Date(2024, 3, 9), name: "Araw ng Kagitingan" },
@@ -84,10 +85,14 @@ const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2024, 7, 21), name: "Ninoy Aquino Day" },
     { date: new Date(2024, 7, 26), name: "National Heroes Day" },
     { date: new Date(2024, 10, 1), name: "All Saints' Day" },
+    { date: new Date(2024, 10, 2), name: "All Souls' Day" },
+    { date: new Date(2024, 11, 8), name: "Feast of the Immaculate Conception" },
     { date: new Date(2024, 11, 25), name: "Christmas Day" },
     { date: new Date(2024, 11, 30), name: "Rizal Day" },
+    // 2025
     { date: new Date(2025, 0, 1), name: "New Year's Day" },
     { date: new Date(2025, 0, 29), name: "Chinese New Year" },
+    { date: new Date(2025, 1, 25), name: "EDSA People Power Revolution Anniversary" },
     { date: new Date(2025, 3, 9), name: "Araw ng Kagitingan" },
     { date: new Date(2025, 3, 17), name: "Maundy Thursday" },
     { date: new Date(2025, 3, 18), name: "Good Friday" },
@@ -97,17 +102,24 @@ const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2025, 7, 25), name: "National Heroes Day" },
     { date: new Date(2025, 10, 1), name: "All Saints' Day" },
     { date: new Date(2025, 10, 30), name: "Bonifacio Day" },
+    { date: new Date(2025, 11, 8), name: "Feast of the Immaculate Conception" },
     { date: new Date(2025, 11, 25), name: "Christmas Day" },
     { date: new Date(2025, 11, 30), name: "Rizal Day" },
 ];
 
-// Enhanced Leave Data with Names
-const MOCK_LEAVES_DATA = [
-    { date: new Date(2024, 4, 15), name: 'Marcus Rivera', type: 'Vacation' },
-    { date: new Date(2024, 4, 16), name: 'Marcus Rivera', type: 'Vacation' },
-    { date: new Date(2024, 4, 22), name: 'Elena Cruz', type: 'Sick Leave' },
-    { date: new Date(2025, 4, 10), name: 'Sarah Jenkins', type: 'Emergency' },
-];
+// Generate Dynamic Mock Leave Data centered around "today"
+const getMockLeaves = () => {
+    const today = new Date();
+    return [
+        { date: addDays(today, 2), name: 'Marcus Rivera', type: 'Vacation', status: 'approved' },
+        { date: addDays(today, 3), name: 'Marcus Rivera', type: 'Vacation', status: 'approved' },
+        { date: subDays(today, 2), name: 'Elena Cruz', type: 'Sick Leave', status: 'approved' },
+        { date: addDays(today, 5), name: 'Sarah Jenkins', type: 'Emergency', status: 'pending' },
+        { date: addDays(today, 1), name: 'Leo Castelo', type: 'Personal', status: 'pending' },
+    ];
+};
+
+const MOCK_LEAVES_DATA = getMockLeaves();
 
 // Demo data for activity feed
 const DEMO_FEED = [
@@ -142,16 +154,16 @@ export default function HRDashboard() {
   }, []);
 
   const companyId = user?.companyId || user?.clientId || 'default';
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   // --- Clock Logic ---
   const todayLogQuery = useMemoFirebase(
     () => (firestore && user?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
-        where('date', '==', today)
+        where('date', '==', todayStr)
     ) : null,
-    [firestore, companyId, user?.id, today]
+    [firestore, companyId, user?.id, todayStr]
   );
   const { data: attendanceLogs } = useCollection<HRAttendanceLog>(todayLogQuery);
   const currentLog = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs[0] : null;
@@ -194,7 +206,7 @@ export default function HRDashboard() {
             companyId,
             employeeId: user.id,
             employeeName: user.name || 'Anonymous Employee',
-            date: today,
+            date: todayStr,
             timeIn: serverTimestamp(),
             method: 'QR',
             status: status
@@ -251,8 +263,8 @@ export default function HRDashboard() {
   const { data: pendingLeaves } = useCollection(leavesQuery);
   
   const companyAttendanceQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', today)) : null,
-    [firestore, companyId, today]
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', todayStr)) : null,
+    [firestore, companyId, todayStr]
   );
   const { data: todayAttendance } = useCollection<HRAttendanceLog>(companyAttendanceQuery);
 
@@ -297,7 +309,7 @@ export default function HRDashboard() {
 
   const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
-  // Calendar modifiers
+  // Calendar modifiers - Use date-fns isSameDay for reliable matching
   const modifiers = {
     holiday: (date: Date) => PHILIPPINE_HOLIDAYS.some(h => isSameDay(h.date, date)),
     leave: (date: Date) => MOCK_LEAVES_DATA.some(l => isSameDay(l.date, date)),
@@ -362,7 +374,7 @@ export default function HRDashboard() {
 
       <div className="space-y-8">
             <Card className="border-none rounded-[2.5rem] overflow-hidden bg-white shadow-none">
-                <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[380px]">
+                <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[400px]">
                     <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden bg-slate-50 flex items-center justify-center p-8">
                         {heroImage && (
                             <Image 
@@ -439,13 +451,18 @@ export default function HRDashboard() {
                                         </div>
                                     )}
                                     {selectedDateInfo.leaves.map((leave, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className="h-6 w-6 rounded-lg bg-blue-50 text-primary flex items-center justify-center">
+                                        <div key={i} className="flex items-center gap-3 mb-1 last:mb-0">
+                                            <div className={cn(
+                                                "h-6 w-6 rounded-lg flex items-center justify-center",
+                                                leave.status === 'approved' ? "bg-blue-50 text-primary" : "bg-slate-50 text-slate-400"
+                                            )}>
                                                 <UserCircle className="h-3.5 w-3.5" />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900">{leave.name}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{leave.type}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                                    {leave.type} • <span className={cn(leave.status === 'approved' ? "text-primary" : "text-slate-400")}>{leave.status}</span>
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
