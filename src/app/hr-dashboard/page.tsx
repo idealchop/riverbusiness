@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -277,43 +278,67 @@ export default function HRDashboard() {
       </div>
 
       <div className="space-y-8">
-            {/* Top Section: Hero Banner with Image and Calendar */}
+            {/* Top Section: Hero Banner with Image and Calendar (70/30 split) */}
             <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
-                <div className="grid grid-cols-1 lg:grid-cols-12 h-full min-h-[340px]">
-                    <div className="lg:col-span-8 relative h-64 lg:h-auto overflow-hidden">
+                <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[380px]">
+                    <div className="lg:col-span-7 relative h-64 lg:h-auto overflow-hidden">
                         {heroImage && (
                             <Image 
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-cover transition-transform duration-700 hover:scale-105"
+                                className="object-cover transition-transform duration-[20s] hover:scale-110"
                                 data-ai-hint={heroImage.imageHint}
                             />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
-                        <div className="absolute bottom-10 left-10 text-white space-y-2">
-                            <Badge className="bg-primary text-white border-none font-black text-[10px] uppercase tracking-[0.2em] px-3">Operational Command</Badge>
-                            <h2 className="text-4xl font-black tracking-tight leading-none uppercase">Manage your <br/>Workforce</h2>
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent" />
+                        <div className="absolute bottom-10 left-10 text-white space-y-3">
+                            <Badge className="bg-primary/20 backdrop-blur-md text-white border-white/20 font-black text-[10px] uppercase tracking-[0.3em] px-4 h-7">
+                                Organization Command
+                            </Badge>
+                            <h2 className="text-5xl font-black tracking-tight leading-none uppercase">
+                                Unified <br/>Workforce
+                            </h2>
+                            <p className="text-sm font-medium text-white/70 max-w-md">
+                                Real-time monitoring and administrative oversight for the modern business ecosystem.
+                            </p>
                         </div>
                     </div>
-                    <div className="lg:col-span-4 p-8 flex flex-col items-center justify-center bg-slate-50/50">
-                        <div className="space-y-4 w-full">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Team Calendar</h3>
-                                <Badge variant="outline" className="bg-white border-slate-200 text-primary font-bold text-[9px] uppercase">{format(new Date(), 'MMMM yyyy')}</Badge>
+                    <div className="lg:col-span-3 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
+                        <div className="space-y-6 w-full">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Company Calendar</h3>
+                                    <p className="text-lg font-black text-slate-900 leading-tight">
+                                        {format(new Date(), 'MMMM yyyy')}
+                                    </p>
+                                </div>
+                                <div className="h-10 w-10 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+                                    <CalendarDays className="h-5 w-5 text-primary" />
+                                </div>
                             </div>
-                            <Calendar
-                                mode="single"
-                                selected={new Date()}
-                                className="rounded-3xl border-none p-0 mx-auto"
-                                classNames={{
-                                    day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl",
-                                    day_today: "bg-blue-100 text-primary font-black rounded-xl",
-                                    day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-200 transition-colors",
-                                    head_cell: "text-slate-400 font-black uppercase text-[10px] tracking-widest",
-                                    caption_label: "hidden" 
-                                }}
-                            />
+                            
+                            <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100">
+                                <Calendar
+                                    mode="single"
+                                    selected={new Date()}
+                                    className="rounded-[1.5rem] border-none p-0 mx-auto"
+                                    classNames={{
+                                        day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl font-black",
+                                        day_today: "bg-blue-50 text-primary font-black rounded-xl border border-blue-100",
+                                        day: "h-9 w-9 p-0 font-bold text-[11px] uppercase rounded-xl hover:bg-slate-50 transition-all",
+                                        head_cell: "text-slate-300 font-black uppercase text-[9px] tracking-widest pb-3",
+                                        caption_label: "hidden",
+                                        nav: "hidden" // Keep it minimal as a dashboard anchor
+                                    }}
+                                />
+                            </div>
+                            
+                            <div className="pt-2">
+                                <Button variant="ghost" className="w-full justify-between rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all">
+                                    Full Schedule <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
