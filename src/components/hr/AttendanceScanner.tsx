@@ -56,6 +56,13 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const startCameraFlow = async () => {
     if (!companyId) return;
     
+    // Check for hardware support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setErrorMsg("Your browser doesn't support camera access. Please try a modern mobile browser.");
+        setFormStep('error');
+        return;
+    }
+
     setErrorMsg("");
     setCameraLoading(true);
     setShowManualStart(false);
@@ -96,17 +103,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     let manualTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
-      // Small delay to allow dialog opening animation to stabilize DOM
+      // Increased delay to allow dialog opening animation and DOM stabilization
       mountTimeout = setTimeout(() => {
         startCameraFlow();
         // Manual override backup if hardware takes too long
         manualTimeout = setTimeout(() => {
-            setCameraLoading(prev => {
-                if (prev) setShowManualStart(true);
-                return prev;
-            });
-        }, 6000);
-      }, 800);
+            setShowManualStart(true);
+        }, 5000);
+      }, 1200);
     }
 
     return () => {
@@ -234,6 +238,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setActionType(null);
     setLastActionTime(null);
     setCameraLoading(false);
+    setShowManualStart(false);
   };
 
   return (
@@ -271,7 +276,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         <div id="qr-reader" className="absolute inset-0 w-full h-full z-10" />
                         
                         {(cameraLoading || showManualStart) && (
-                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black text-white gap-6">
+                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 text-white gap-6">
                               {cameraLoading && <Loader2 className="h-10 w-10 animate-spin text-primary" />}
                               <div className="text-center space-y-3">
                                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Activating terminal...</p>
@@ -280,7 +285,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                                         variant="outline" 
                                         size="sm" 
                                         onClick={startCameraFlow}
-                                        className="rounded-xl border-white/20 text-white h-9 font-bold text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900 px-6"
+                                        className="rounded-xl border-white/20 text-white h-9 font-bold text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900 px-6 mt-4"
                                     >
                                         <Camera className="mr-2 h-3.5 w-3.5" /> Start manual scan
                                     </Button>
@@ -385,3 +390,5 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     </Dialog>
   );
 }
+
+import { LogIn, LogOut } from 'lucide-react';
