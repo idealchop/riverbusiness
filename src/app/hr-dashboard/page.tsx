@@ -294,7 +294,7 @@ export default function HRDashboard() {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-transparent to-transparent pointer-events-none" />
                         <div className="absolute bottom-10 left-10 text-slate-900 z-10">
-                            <h2 className="text-6xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
+                            <h2 className="text-6xl font-black tracking-tighter text-slate-900">
                                 The Workforce
                             </h2>
                         </div>
