@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -312,12 +313,13 @@ export default function HRDashboard() {
                                 </div>
                             </div>
                             
-                            <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100">
+                            <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex justify-center overflow-hidden">
                                 <Calendar
                                     mode="single"
                                     selected={new Date()}
-                                    className="rounded-[1.5rem] border-none p-0 mx-auto"
+                                    className="w-fit rounded-[1.5rem] border-none p-0"
                                     classNames={{
+                                        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                                         day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl font-black",
                                         day_today: "bg-blue-50 text-primary font-black rounded-xl border border-blue-100",
                                         day: "h-9 w-9 p-0 font-bold text-[11px] uppercase rounded-xl hover:bg-slate-50 transition-all",
