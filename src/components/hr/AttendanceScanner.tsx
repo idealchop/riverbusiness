@@ -60,7 +60,8 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       
       const initializeScanner = async () => {
         // Wait for Dialog animation to finish and DOM to be ready
-        await new Promise(resolve => mountTimeout = setTimeout(resolve, 500));
+        // Mobile browsers need a bit more time for the UI to stabilize before hardware requests
+        await new Promise(resolve => mountTimeout = setTimeout(resolve, 800));
 
         let attempts = 0;
         const maxAttempts = 15;

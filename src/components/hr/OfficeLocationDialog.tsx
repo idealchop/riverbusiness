@@ -31,6 +31,7 @@ import { MapPin, QrCode, Download, Printer, ShieldCheck, Map as MapIcon, Info } 
 import { QRCodeSVG } from 'qrcode.react';
 import type { HRCompanyLocation } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const locationSchema = z.object({
   office_name: z.string().min(1, 'Office name is required'),
