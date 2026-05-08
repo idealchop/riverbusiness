@@ -232,7 +232,7 @@ export default function LeavePage() {
                               </div>
                            </TableCell>
                            <TableCell>
-                              <p className="text-xs font-bold text-slate-900">{request.type || 'General'}</p>
+                              <p className="text-xs font-bold text-slate-900">{request.type || 'Leave'}</p>
                               <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">
                                   {request.startDate ? format(new Date(request.startDate), 'MMM d') : '??'} - {request.endDate ? format(new Date(request.endDate), 'MMM d, yyyy') : '??'}
                               </p>
@@ -372,22 +372,46 @@ export default function LeavePage() {
                         <div className="p-4 space-y-3">
                             {selectedCalendarDate && selectedDateLeaves.length > 0 ? (
                                 selectedDateLeaves.map(leave => (
-                                    <div key={leave.id} className="p-3 rounded-2xl border border-slate-50 bg-slate-50/50 flex items-center justify-between group hover:bg-white hover:border-primary/20 transition-all">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center font-black text-slate-400 text-[10px] shadow-sm">
-                                                {leave.employeeName?.charAt(0)}
+                                    <div key={leave.id} className="p-3 rounded-2xl border border-slate-50 bg-slate-50/50 flex flex-col gap-3 group hover:bg-white hover:border-primary/20 transition-all">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center font-black text-slate-400 text-[10px] shadow-sm">
+                                                    {leave.employeeName?.charAt(0)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-black text-slate-900 leading-tight truncate">{leave.employeeName}</p>
+                                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate">{leave.type}</p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-black text-slate-900 leading-tight truncate">{leave.employeeName}</p>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate">{leave.type}</p>
-                                            </div>
+                                            <Badge className={cn(
+                                                "text-[8px] font-black uppercase border-none px-2 h-4 shrink-0",
+                                                leave.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                                leave.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                                            )}>
+                                                {leave.status === 'approved' ? 'Active' : leave.status === 'pending' ? 'Wait' : 'Deny'}
+                                            </Badge>
                                         </div>
-                                        <Badge className={cn(
-                                            "text-[8px] font-black uppercase border-none px-2 h-4 shrink-0",
-                                            leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
-                                        )}>
-                                            {leave.status === 'approved' ? 'Active' : 'Wait'}
-                                        </Badge>
+                                        
+                                        {leave.status === 'pending' && (
+                                            <div className="flex items-center gap-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="flex-1 h-7 text-[8px] font-black uppercase tracking-widest bg-green-50 text-green-700 border-green-100 hover:bg-green-100"
+                                                    onClick={() => handleStatusUpdate(leave.id, 'approved')}
+                                                >
+                                                    Approve
+                                                </Button>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="flex-1 h-7 text-[8px] font-black uppercase tracking-widest bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
+                                                    onClick={() => handleStatusUpdate(leave.id, 'rejected')}
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (
