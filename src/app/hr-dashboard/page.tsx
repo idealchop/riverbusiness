@@ -292,14 +292,10 @@ export default function HRDashboard() {
                             />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-transparent to-transparent pointer-events-none" />
-                        <div className="absolute bottom-10 left-10 text-slate-900 space-y-3 z-10">
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Organization Hub</p>
-                            <h2 className="text-6xl font-black tracking-tighter leading-[0.85] uppercase text-slate-900 drop-shadow-sm">
-                                The <br/>Workforce
+                        <div className="absolute bottom-10 left-10 text-slate-900 z-10">
+                            <h2 className="text-6xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
+                                The Workforce
                             </h2>
-                            <p className="text-sm font-bold text-slate-500 max-w-xs pt-2">
-                                Manage and monitor your team in one unified workspace.
-                            </p>
                         </div>
                     </div>
                     <div className="lg:col-span-4 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
