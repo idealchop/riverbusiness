@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -251,6 +250,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                                 <SelectContent className="rounded-xl">
                                                     <SelectItem value="daily">Daily Rate</SelectItem>
                                                     <SelectItem value="weekly">Weekly Rate</SelectItem>
+                                                    <SelectItem value="bimonthly">Bimonthly Rate</SelectItem>
                                                     <SelectItem value="monthly">Monthly Fixed</SelectItem>
                                                 </SelectContent>
                                             </Select>

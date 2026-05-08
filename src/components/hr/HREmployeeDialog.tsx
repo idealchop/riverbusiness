@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -51,7 +50,7 @@ const employeeSchema = z.object({
   email: z.string().email('Invalid email address'),
   position: z.string().min(1, 'Position is required'),
   department: z.string().min(1, 'Department is required'),
-  salaryType: z.enum(['daily', 'weekly', 'monthly']),
+  salaryType: z.enum(['daily', 'weekly', 'monthly', 'bimonthly']),
   rate: z.coerce.number().min(1, 'Rate must be greater than zero'),
   startDate: z.string().min(1, 'Start date is required'),
   contactNumber: z.string().optional(),
@@ -345,6 +344,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
                                         <SelectContent className="rounded-xl">
                                             <SelectItem value="daily">Daily rate</SelectItem>
                                             <SelectItem value="weekly">Weekly rate</SelectItem>
+                                            <SelectItem value="bimonthly">Bimonthly rate</SelectItem>
                                             <SelectItem value="monthly">Monthly fixed</SelectItem>
                                         </SelectContent>
                                         </Select>

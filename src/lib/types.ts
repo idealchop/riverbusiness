@@ -1,4 +1,3 @@
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -44,7 +43,7 @@ export interface HREmployeeProfile {
     firstName: string;
     lastName: string;
     employeeNumber: string; // Auto-generated ID: EMP-YYYY-XXXX
-    salaryType: 'daily' | 'weekly' | 'monthly';
+    salaryType: 'daily' | 'weekly' | 'monthly' | 'bimonthly';
     rate: number;
     startDate: string;
     position: string;
@@ -212,7 +211,7 @@ export interface HRPayrollBreakdownItem {
     amount: number;
     daysWorked?: number;
     rate: number;
-    type: 'daily' | 'weekly' | 'monthly';
+    type: 'daily' | 'weekly' | 'monthly' | 'bimonthly';
     adjustment?: number;
     adjustmentRemarks?: string;
 }
