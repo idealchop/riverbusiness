@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -13,9 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, differenceInMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { HRCompanyLocation, HRAttendanceLog } from '@/lib/types';
 
@@ -193,30 +194,43 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
         where('date', '==', todayStr),
-        orderBy('timestamp', 'desc'),
+        orderBy('timeIn', 'desc'),
         limit(1)
       );
       
       const logsSnap = await getDocs(logsQuery);
-      const lastAction = logsSnap.empty ? null : (logsSnap.docs[0].data() as HRAttendanceLog).action;
-      const nextAction = lastAction === 'IN' ? 'OUT' : 'IN';
+      const latestLog = logsSnap.empty ? null : { id: logsSnap.docs[0].id, ...(logsSnap.docs[0].data() as HRAttendanceLog) };
+      
+      // If action is IN and we have a session without timeOut, the next action is OUT
+      const nextAction = (latestLog && !latestLog.timeOut) ? 'OUT' : 'IN';
       setActionType(nextAction);
 
-      const logData: Omit<HRAttendanceLog, 'id'> = {
-        companyId,
-        employeeId: user.id,
-        employeeName: user.name,
-        date: todayStr,
-        timestamp: serverTimestamp(),
-        action: nextAction,
-        gps_lat: latitude,
-        gps_long: longitude,
-        validation_status: 'Valid',
-        method: 'QR',
-        office_id: office.id
-      };
+      if (nextAction === 'IN') {
+          const logData: Omit<HRAttendanceLog, 'id'> = {
+            companyId,
+            employeeId: user.id,
+            employeeName: user.name,
+            date: todayStr,
+            timeIn: serverTimestamp(),
+            status: 'present',
+            validation_status: 'Valid',
+            method: 'QR',
+            office_id: office.id,
+            action: 'IN'
+          };
+          await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
+      } else if (latestLog) {
+          const timeOut = Timestamp.now();
+          const timeIn = latestLog.timeIn instanceof Timestamp ? latestLog.timeIn : Timestamp.now();
+          const minutes = differenceInMinutes(timeOut.toDate(), timeIn.toDate());
+          
+          await updateDoc(doc(firestore, 'hr_companies', companyId, 'attendance', latestLog.id), {
+              timeOut: serverTimestamp(),
+              totalMinutes: minutes,
+              action: 'OUT'
+          });
+      }
 
-      await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
       setFormStep('success');
       toast({ title: `Verified: ${nextAction} Success` });
 

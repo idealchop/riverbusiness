@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -32,7 +33,7 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
+} from '@/table';
 import { 
     Dialog, 
     DialogContent, 
@@ -51,6 +52,7 @@ import type { AppUser, HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/l
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -60,10 +62,17 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+const formatDuration = (minutes?: number) => {
+    if (!minutes) return '--:--';
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hrs}h ${mins}m`;
+};
+
 const DEMO_ATTENDANCE: HRAttendanceLog[] = [
-    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timestamp: Timestamp.now(), action: 'IN', validation_status: 'Valid', method: 'QR' },
-    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timestamp: Timestamp.now(), action: 'IN', validation_status: 'Valid', method: 'QR' },
-    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timestamp: Timestamp.now(), action: 'IN', validation_status: 'Valid', method: 'manual' },
+    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'QR', validation_status: 'Valid' },
+    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'QR', validation_status: 'Valid' },
+    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'manual', validation_status: 'Valid' },
 ];
 
 const DEMO_LEAVES: HRLeaveRequest[] = [
@@ -83,6 +92,7 @@ export default function AttendancePage() {
   const [activeCategory, setActiveTab] = useState('attendance');
   const [selectedRun, setSelectedRun] = useState<HRPayrollRun | null>(null);
   const [isPayslipOpen, setIsPayslipOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -104,6 +114,12 @@ export default function AttendancePage() {
     [firestore, companyId]
   );
   const { data: payrollRuns, isLoading: loadingPayroll } = useCollection<HRPayrollRun>(payrollQuery);
+
+  const usersQuery = useMemoFirebase(
+      () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+      [firestore, companyId]
+  );
+  const { data: allUsers } = useCollection<AppUser>(usersQuery);
 
   // Fetch the owner's profile to get official branding (Business Name and Address)
   const ownerQuery = useMemoFirebase(
@@ -147,6 +163,13 @@ export default function AttendancePage() {
   const handleOpenPayslip = (run: HRPayrollRun) => {
     setSelectedRun(run);
     setIsPayslipOpen(true);
+  };
+
+  const handleEmployeeClick = (employeeId: string) => {
+    const found = allUsers?.find(u => u.id === employeeId);
+    if (found) {
+        setSelectedEmployee(found);
+    }
   };
 
   const handleDownloadPDF = (run: HRPayrollRun) => {
@@ -259,7 +282,9 @@ export default function AttendancePage() {
                   <TableRow className="border-none hover:bg-transparent">
                     <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Date</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Handshake</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time In</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time Out</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Time</TableHead>
                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -267,6 +292,8 @@ export default function AttendancePage() {
                   {loadingAttendance ? (
                     <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading ledger...</TableCell></TableRow>
                   ) : displayAttendance.map((log) => {
+                    const timeIn = toSafeDate(log.timeIn);
+                    const timeOut = toSafeDate(log.timeOut);
                     return (
                       <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                         <TableCell className="pl-6 py-4">
@@ -275,20 +302,22 @@ export default function AttendancePage() {
                            </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs uppercase">
+                          <button onClick={() => handleEmployeeClick(log.employeeId)} className="flex items-center gap-3 hover:text-primary transition-colors text-left outline-none group/name">
+                            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs uppercase group-hover/name:bg-primary/10 group-hover/name:text-primary">
                               {log.employeeName?.charAt(0) || 'E'}
                             </div>
-                            <p className="text-sm font-bold text-slate-700">{log.employeeName}</p>
-                          </div>
+                            <p className="text-sm font-bold text-slate-700 group-hover/name:text-primary underline-offset-4 group-hover/name:underline">{log.employeeName}</p>
+                          </button>
                         </TableCell>
-                        <TableCell className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{log.method} • {log.action}</TableCell>
+                        <TableCell className="text-xs font-semibold text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
+                        <TableCell className="text-xs font-semibold text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                        <TableCell className="text-xs font-black text-primary uppercase tracking-tighter">{formatDuration(log.totalMinutes)}</TableCell>
                         <TableCell className="text-right pr-6">
                           <Badge className={cn(
                             "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
                             log.validation_status === 'Valid' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                           )}>
-                            {log.validation_status || 'N/A'}
+                            {log.status || 'present'}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -312,12 +341,14 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingLeaves ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
-                  ) : (leaveRequests || DEMO_LEAVES).map(req => (
+                  ) : displayLeaves.map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
                       </TableCell>
-                      <TableCell className="text-sm font-bold text-slate-700">{req.employeeName}</TableCell>
+                      <TableCell>
+                        <button onClick={() => handleEmployeeClick(req.employeeId)} className="text-sm font-bold text-slate-700 hover:text-primary transition-colors underline-offset-4 hover:underline">{req.employeeName}</button>
+                      </TableCell>
                       <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
                       <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
                       <TableCell className="text-right pr-6">
@@ -464,6 +495,12 @@ export default function AttendancePage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmployeeDetailsDialog 
+        employee={selectedEmployee}
+        isOpen={!!selectedEmployee}
+        onOpenChange={(open) => !open && setSelectedEmployee(null)}
+      />
     </div>
   );
 }

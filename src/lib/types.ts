@@ -56,13 +56,16 @@ export interface HRAttendanceLog {
     companyId: string;
     employeeId: string;
     employeeName: string;
-    date: string;
-    timestamp: any;
-    action: 'IN' | 'OUT';
+    date: string; // yyyy-MM-dd
+    timeIn: any;
+    timeOut?: any;
+    totalMinutes?: number;
+    action?: 'IN' | 'OUT'; // for session state tracking
     gps_lat?: number;
     gps_long?: number;
     validation_status: 'Valid' | 'Invalid';
     method: 'QR' | 'manual';
+    status: 'present' | 'late' | 'absent' | 'leave';
     office_id?: string;
 }
 
@@ -177,4 +180,15 @@ export interface SanitationVisit {
   officerSignatureDate?: string;
   clientSignatureDate?: string;
   proofUrls?: string[];
+}
+
+export interface HRPayrollRun {
+    id: string;
+    companyId: string;
+    periodStart: string;
+    periodEnd: string;
+    status: 'draft' | 'processed' | 'paid';
+    totalNetSalary: number;
+    employeeCount?: number;
+    createdAt: any;
 }
