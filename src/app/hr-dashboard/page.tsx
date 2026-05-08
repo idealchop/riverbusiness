@@ -399,8 +399,8 @@ export default function HRDashboard() {
                             <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">
                                 Team Workforce
                             </h2>
-                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                Unified workforce and operational monitoring.
+                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 tracking-widest leading-relaxed">
+                                Unified workforce and operational monitoring for modern teams.
                             </p>
                         </div>
                     </div>
@@ -579,30 +579,41 @@ export default function HRDashboard() {
       </div>
 
       {/* Mobile FAB for Clock In/Out */}
-      <div className="sm:hidden fixed bottom-6 right-6 z-50 flex flex-col gap-3 items-end">
+      <div className="sm:hidden fixed bottom-8 right-6 z-50 flex flex-col gap-2 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
           {!currentLog ? (
+            <>
               <Button 
                   onClick={handleTimeIn} 
                   disabled={isProcessing} 
-                  className="w-16 h-16 rounded-full shadow-2xl bg-primary text-white hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center p-0"
+                  className="w-14 h-14 rounded-full shadow-2xl bg-primary text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-4 border-white"
               >
                   <LogIn className="h-6 w-6" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">Clock In</span>
               </Button>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Clock In</span>
+            </>
           ) : !currentLog.timeOut ? (
-              <Button 
+            <>
+               {/* Live Status HUD */}
+               <div className="mb-1 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full border border-blue-100 shadow-sm flex items-center gap-2 animate-pulse">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  <span className="text-[9px] font-black text-blue-600 tabular-nums">{liveDuration}</span>
+               </div>
+               <Button 
                   onClick={handleTimeOut} 
                   disabled={isProcessing} 
-                  className="w-16 h-16 rounded-full shadow-2xl bg-destructive text-white hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center p-0"
+                  className="w-14 h-14 rounded-full shadow-2xl bg-destructive text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-4 border-white"
               >
                   <LogOut className="h-6 w-6" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">Out</span>
               </Button>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Out</span>
+            </>
           ) : (
-              <div className="w-16 h-16 rounded-full shadow-xl bg-green-500 text-white flex flex-col items-center justify-center gap-0.5">
+            <>
+              <div className="w-14 h-14 rounded-full shadow-xl bg-green-500 text-white flex items-center justify-center border-4 border-white">
                   <CheckCircle2 className="h-6 w-6" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">Saved</span>
               </div>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-green-600 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Saved</span>
+            </>
           )}
       </div>
 
