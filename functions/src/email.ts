@@ -300,3 +300,23 @@ export function getPaymentReminderTemplate(businessName: string, amount: string,
     html: getEmailWrapper(content, 'Financial Follow-up', '', 'Settle via Workspace')
   };
 }
+
+export function getEmployeePayslipTemplate(employeeName: string, businessName: string, period: string, amount: number) {
+  const content = `
+    <p class="body-text">Hello <strong>${employeeName}</strong>,</p>
+    <p class="body-text">
+      Transparency and operational excellence are core to the River ecosystem. Your official payslip for the cycle <strong>${period}</strong> has been generated and verified by <strong>${businessName}</strong>.
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; margin-top: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Net Disbursement</p>
+      <p style="margin: 4px 0 0 0; font-size: 32px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    </div>
+    <p class="body-text" style="margin-top: 24px;">
+      Attached to this email is a high-fidelity PDF copy of your disbursement record for your personal files and bank confirmation purposes.
+    </p>
+  `;
+  return {
+    subject: `Employee Payslip: ${businessName} — ${period} 🌊`,
+    html: getEmailWrapper(content, 'Payroll Disbursement Verified', `<p style="text-align: center; color: #64748b; font-size: 14px;">Authorized Digital Record</p>`, 'View Team Workspace')
+  };
+}

@@ -22,7 +22,8 @@ import {
     getSanitationScheduledTemplate,
     getSanitationReportTemplate,
     getPaymentReminderTemplate,
-    getEmployeeInvitationTemplate
+    getEmployeeInvitationTemplate,
+    getEmployeePayslipTemplate
 } from './email';
 
 // Export all billing functions
@@ -428,6 +429,56 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
     });
 }
 
+/**
+ * Generates an Individual Employee Payslip PDF.
+ */
+export async function generatePayslipPDF(companyName: string, companyAddress: string, signatory: string, item: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 40 });
+        const chunks: Buffer[] = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (err) => reject(err));
+
+        const margin = 40;
+        const pageWidth = 612;
+
+        // Header
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 120).fill();
+        doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text(companyName, margin, 45);
+        doc.fontSize(9).font('Helvetica').text(companyAddress, margin, 75);
+        doc.text(`Authorized signatory: ${signatory}`, margin, 87);
+
+        doc.fillColor('#000000').moveDown(6);
+        doc.fontSize(16).font('Helvetica-Bold').text('Employee Payslip Certificate', margin);
+        
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica').text(`Statement Period: ${format(new Date(item.periodStart), 'MMM d')} - ${format(new Date(item.periodEnd), 'MMM d, yyyy')}`);
+        doc.text(`Employee: ${item.employeeName}`);
+        doc.text(`Reference: ${item.runId}`);
+
+        // Table
+        doc.moveDown(2);
+        const tableTop = doc.y;
+        doc.rect(margin, tableTop, 530, 20).fill(BRAND_PRIMARY);
+        doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+        doc.text('Component', margin + 5, tableTop + 6);
+        doc.text('Basis', margin + 200, tableTop + 6);
+        doc.text('Amount', margin + 400, tableTop + 6, { align: 'right', width: 120 });
+
+        doc.y = tableTop + 25;
+        doc.fillColor('#000000').font('Helvetica').fontSize(10);
+        doc.text('Basic Salary', margin + 5, doc.y);
+        doc.text(item.type === 'daily' ? `${item.daysWorked} days @ P${item.rate}` : 'Monthly Fixed', margin + 200, doc.y);
+        doc.text(`P ${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin + 400, doc.y, { align: 'right', width: 120 });
+
+        doc.moveDown(4);
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This is an individual disbursement record authorized by the company administrator. Authorized for bank confirmation.', margin, doc.y + 40, { align: 'center', width: 530 });
+        
+        doc.end();
+    });
+}
+
 // --- TRIGGERS ---
 
 /**
@@ -628,6 +679,65 @@ export const onmanualreceiptcreate = onDocumentCreated({
 
     } catch (error) {
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
+    }
+});
+
+export const onpaysliprequestcreate = onDocumentCreated({
+    document: "hr_companies/{companyId}/payslipRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const { companyId, requestId } = event.params;
+    const requestData = event.data.data();
+    const db = getFirestore();
+
+    logger.info(`Processing payslip request ${requestId} for company ${companyId}`);
+
+    // Fetch company info (from owner user)
+    const ownerSnap = await db.collection('users').where('companyId', '==', companyId).where('hrRole', '==', 'owner').limit(1).get();
+    if (ownerSnap.empty) {
+        logger.error(`Owner for company ${companyId} not found`);
+        return;
+    }
+    const ownerData = ownerSnap.docs[0].data();
+    const companyName = ownerData.businessName || 'River Philippines';
+    const companyAddress = ownerData.address || 'Authorized Entity';
+
+    // Fetch employee info
+    const employeeDoc = await db.collection('users').doc(requestData.employeeId).get();
+    if (!employeeDoc.exists) {
+        logger.error(`Employee ${requestData.employeeId} not found`);
+        return;
+    }
+    const employeeData = employeeDoc.data();
+    const recipientEmail = employeeData?.email;
+
+    if (!recipientEmail) {
+        logger.error(`Recipient email missing for employee ${requestData.employeeId}`);
+        return;
+    }
+
+    const period = `${format(new Date(requestData.periodStart), 'MMM d')} - ${format(new Date(requestData.periodEnd), 'MMM d, yyyy')}`;
+    
+    try {
+        const pdfBuffer = await generatePayslipPDF(companyName, companyAddress, requestData.adminName, requestData);
+        const template = getEmployeePayslipTemplate(requestData.employeeName, companyName, period, requestData.amount);
+
+        await sendEmail({
+            to: recipientEmail,
+            subject: template.subject,
+            text: `Your payslip for ${period} is ready.`,
+            html: template.html,
+            attachments: [{
+                filename: `Payslip_${requestData.employeeName.replace(/\s/g, '_')}_${requestData.runId}.pdf`,
+                content: pdfBuffer
+            }]
+        });
+
+        await event.data.ref.update({ status: 'completed', dispatchedAt: FieldValue.serverTimestamp() });
+        logger.info(`Payslip dispatched to ${recipientEmail}`);
+    } catch (error) {
+        logger.error(`Failed to process payslip request ${requestId}`, error);
     }
 });
 

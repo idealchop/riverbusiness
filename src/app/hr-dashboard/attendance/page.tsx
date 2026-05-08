@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -19,7 +18,9 @@ import {
   MapPin,
   Briefcase,
   UserCircle,
-  Filter
+  Filter,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp, where, limit } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { format, subDays, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
@@ -61,6 +62,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin', 'Compliance', 'Operations'];
 
@@ -125,11 +127,13 @@ const ITEMS_PER_PAGE = 10;
 export default function AttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveTab] = useState('attendance');
   const [selectedDisbursement, setSelectedDisbursement] = useState<any | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
   const [selectedDept, setSelectedDept] = useState('All Departments');
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
 
   // Pagination states for each tab
   const [attendancePage, setAttendancePage] = useState(1);
@@ -259,6 +263,29 @@ export default function AttendancePage() {
     }
   };
 
+  const handleSendEmail = async (item: any) => {
+    if (!firestore || !companyId || !user) return;
+    setSendingEmailId(`${item.runId}-${item.employeeId}`);
+    
+    try {
+        const requestsCol = collection(firestore, 'hr_companies', companyId, 'payslipRequests');
+        await addDoc(requestsCol, {
+            ...item,
+            companyId,
+            adminName: user.name,
+            requestedAt: serverTimestamp(),
+            status: 'pending'
+        });
+
+        toast({ title: 'Dispatch Authorized', description: `Payslip for ${item.employeeName} is being prepared for delivery.` });
+    } catch (error) {
+        console.error("Failed to trigger payslip email:", error);
+        toast({ variant: 'destructive', title: 'Action Failed' });
+    } finally {
+        setTimeout(() => setSendingEmailId(null), 2000);
+    }
+  };
+
   const handleDownloadIndividualPDF = (item: any) => {
     const doc = new jsPDF('p', 'pt');
     const pageWidth = doc.internal.pageSize.width;
@@ -342,7 +369,7 @@ export default function AttendancePage() {
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder={`Search in ${activeCategory}...`} 
+                  placeholder={`Search by employee name...`} 
                   className="pl-10 h-11 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                   value={searchTerm}
                   onChange={(e) => {
@@ -497,7 +524,9 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingPayroll ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
-                  ) : paginatedPayroll.map((item, idx) => (
+                  ) : paginatedPayroll.map((item, idx) => {
+                    const isSending = sendingEmailId === `${item.runId}-${item.employeeId}`;
+                    return (
                     <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <button onClick={() => handleEmployeeClick(item.employeeId)} className="text-sm font-bold text-slate-700 hover:text-primary transition-colors">{item.employeeName}</button>
@@ -515,13 +544,28 @@ export default function AttendancePage() {
                         <span className="text-sm font-bold text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                          <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
-                              <FileText className="h-3.5 w-3.5" />
-                              Statement
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                                <FileText className="h-3.5 w-3.5" />
+                                Statement
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                disabled={isSending}
+                                onClick={() => handleSendEmail(item)}
+                                className={cn(
+                                    "h-8 font-bold text-[10px] uppercase tracking-widest gap-2 shadow-sm",
+                                    sendingEmailId && "opacity-50"
+                                )}
+                            >
+                                {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                                {isSending ? "Sending" : "Send Email"}
+                            </Button>
+                          </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                   {!loadingPayroll && paginatedPayroll.length === 0 && (
                       <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No individual disbursement logs found.</TableCell></TableRow>
                   )}
@@ -670,4 +714,3 @@ function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItem
         </CardFooter>
     );
 }
-
