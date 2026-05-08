@@ -30,13 +30,21 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
+import { 
+    Popover, 
+    PopoverContent, 
+    PopoverTrigger 
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, UserCog, HeartPulse } from 'lucide-react';
+import { CheckCircle2, UserCog, HeartPulse, CalendarIcon } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { format, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -359,9 +367,32 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
                                     control={form.control}
                                     name="startDate"
                                     render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="flex flex-col">
                                         <FormLabel className="text-xs font-semibold text-slate-600">Start date</FormLabel>
-                                        <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary" {...field} /></FormControl>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary text-left font-normal",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                                                        {field.value ? format(parseISO(field.value), "PPP") : <span>Pick a date</span>}
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value ? parseISO(field.value) : undefined}
+                                                    onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                     )}
