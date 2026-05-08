@@ -133,28 +133,25 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             </nav>
         </div>
 
-        {/* Learning Hub Card (Prominent) */}
+        {/* Learning Hub Card (1x1 Compact Version) */}
         <div className="p-6 mt-auto">
-            <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
+            <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all aspect-square flex flex-col items-center justify-center text-center p-0">
                 <Link href="/hr-dashboard/modules" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                        <BookOpen className="h-20 w-20" />
+                    <div className="absolute inset-0 opacity-10 flex items-center justify-center group-hover:rotate-12 transition-transform duration-500">
+                        <BookOpen className="h-32 w-32" />
                     </div>
-                    <CardHeader className="p-5">
-                        <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
-                            <BookOpen className="h-5 w-5" />
+                    <div className="relative z-10 flex flex-col items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-white/10 shadow-sm backdrop-blur-sm">
+                            <BookOpen className="h-8 w-8 text-white" />
                         </div>
-                        <CardTitle className="text-base font-bold tracking-tight leading-tight text-white">Learning Hub</CardTitle>
-                        <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-5 pt-0">
-                        <p className="text-[11px] font-medium text-white/80 leading-relaxed mb-4">
-                            Access exclusive technical documentation and video training.
-                        </p>
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
-                            Open Library <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                        <div className="space-y-1">
+                            <CardTitle className="text-base font-black tracking-tighter text-white uppercase leading-none">Learning Hub</CardTitle>
+                            <CardDescription className="text-white/60 font-black text-[9px] uppercase tracking-widest">Training Assets</CardDescription>
                         </div>
-                    </CardContent>
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest pt-2 opacity-80">
+                            Launch <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </div>
                 </Link>
             </Card>
         </div>
