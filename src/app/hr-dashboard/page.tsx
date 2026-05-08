@@ -312,12 +312,14 @@ export default function HRDashboard() {
   // Calendar modifiers - Use date-fns isSameDay for reliable matching
   const modifiers = {
     holiday: (date: Date) => PHILIPPINE_HOLIDAYS.some(h => isSameDay(h.date, date)),
-    leave: (date: Date) => MOCK_LEAVES_DATA.some(l => isSameDay(l.date, date)),
+    approvedLeave: (date: Date) => MOCK_LEAVES_DATA.some(l => isSameDay(l.date, date) && l.status === 'approved'),
+    pendingLeave: (date: Date) => MOCK_LEAVES_DATA.some(l => isSameDay(l.date, date) && l.status === 'pending'),
   };
 
   const modifiersStyles = {
-    holiday: { color: 'white', backgroundColor: '#ef4444' },
-    leave: { color: 'white', backgroundColor: 'hsl(var(--primary))' },
+    holiday: { color: 'white', backgroundColor: '#ef4444' }, // Red
+    approvedLeave: { color: 'white', backgroundColor: 'hsl(var(--primary))' }, // Blue
+    pendingLeave: { color: 'white', backgroundColor: '#f59e0b' }, // Amber
   };
 
   return (
@@ -426,7 +428,7 @@ export default function HRDashboard() {
                                     classNames={{
                                         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                                         day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl font-black",
-                                        day_today: "bg-blue-50 text-primary font-black rounded-xl border border-blue-100",
+                                        day_today: "bg-blue-50 text-primary font-black rounded-xl border border-primary/20",
                                         day: "h-9 w-9 p-0 font-bold text-[11px] uppercase rounded-xl hover:bg-slate-50 transition-all",
                                         head_cell: "text-slate-300 font-black uppercase text-[9px] tracking-widest pb-3",
                                         caption_label: "hidden",
@@ -454,14 +456,14 @@ export default function HRDashboard() {
                                         <div key={i} className="flex items-center gap-3 mb-1 last:mb-0">
                                             <div className={cn(
                                                 "h-6 w-6 rounded-lg flex items-center justify-center",
-                                                leave.status === 'approved' ? "bg-blue-50 text-primary" : "bg-slate-50 text-slate-400"
+                                                leave.status === 'approved' ? "bg-blue-50 text-primary" : "bg-amber-50 text-amber-600"
                                             )}>
                                                 <UserCircle className="h-3.5 w-3.5" />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900">{leave.name}</p>
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                                                    {leave.type} • <span className={cn(leave.status === 'approved' ? "text-primary" : "text-slate-400")}>{leave.status}</span>
+                                                    {leave.type} • <span className={cn(leave.status === 'approved' ? "text-primary" : "text-amber-600")}>{leave.status}</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -660,26 +662,33 @@ export default function HRDashboard() {
                                                     head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-[0.2em] pb-6 w-12",
                                                     day: "h-12 w-12 p-0 font-bold text-xs uppercase rounded-2xl hover:bg-slate-50 transition-all m-0.5",
                                                     day_selected: "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20",
-                                                    day_today: "bg-blue-50 text-primary border border-blue-100",
+                                                    day_today: "bg-blue-50 text-primary border border-primary/20",
                                                     nav: "hidden"
                                                 }}
                                             />
                                         </div>
                                     </Card>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-5 rounded-2xl bg-white border border-slate-100 flex items-center gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3">
                                             <div className="h-3 w-3 rounded-full bg-red-500" />
                                             <div className="space-y-0.5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Legend</p>
-                                                <p className="text-xs font-bold text-slate-900">National Holidays</p>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Public</p>
+                                                <p className="text-xs font-bold text-slate-900">Holiday</p>
                                             </div>
                                         </div>
-                                        <div className="p-5 rounded-2xl bg-white border border-slate-100 flex items-center gap-4">
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3">
                                             <div className="h-3 w-3 rounded-full bg-primary" />
                                             <div className="space-y-0.5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Legend</p>
-                                                <p className="text-xs font-bold text-slate-900">Approved Leaves</p>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team</p>
+                                                <p className="text-xs font-bold text-slate-900">Approved Leave</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3">
+                                            <div className="h-3 w-3 rounded-full bg-amber-500" />
+                                            <div className="space-y-0.5">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team</p>
+                                                <p className="text-xs font-bold text-slate-900">Pending Leave</p>
                                             </div>
                                         </div>
                                     </div>
