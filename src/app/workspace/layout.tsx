@@ -7,6 +7,7 @@ import { collection, query, where, orderBy, doc, addDoc, serverTimestamp } from 
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Plus, Menu, ChevronRight, LayoutGrid, Search, Bell, Settings, LogOut } from 'lucide-react';
 import type { CollabWorkspace, CollabPage, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -150,6 +151,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         onPayNow={() => {}}
         isOpen={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+        initialTab={undefined}
       />
     </div>
   );
