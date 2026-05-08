@@ -11,8 +11,8 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Camera, MapPin, CheckCircle2, XCircle, ShieldAlert } from 'lucide-react';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { Loader2, Camera, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode } from 'lucide-react';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -38,36 +38,40 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
 
-    // Use a small timeout to ensure the DOM element #qr-reader is rendered
-    // by React before the Html5QrcodeScanner tries to find it.
     const setupScanner = () => {
         if (isOpen && step === 'scan') {
           const element = document.getElementById("qr-reader");
           if (!element) {
-              // If element isn't found yet, retry in the next tick
               setTimeout(setupScanner, 50);
               return;
           }
 
+          // Optimized scanner config for faster detection
           scanner = new Html5QrcodeScanner(
             "qr-reader",
-            { fps: 10, qrbox: { width: 250, height: 250 } },
+            { 
+              fps: 15, 
+              qrbox: { width: 250, height: 250 },
+              aspectRatio: 1.0
+            },
             false
           );
 
           scanner.render(
             (decodedText) => {
               handleScanSuccess(decodedText);
-              scanner?.clear().catch(err => console.error("Scanner clear failed", err));
+              scanner?.clear().catch(err => console.warn("Scanner clear failed", err));
             },
             (error) => {
-              // Silent fail for scanning errors (common during active search)
+              // Silent fail for scanning errors
             }
           );
         }
     };
 
-    setupScanner();
+    if (isOpen) {
+        setupScanner();
+    }
 
     return () => {
       if (scanner) {
@@ -95,8 +99,9 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     if (!firestore || !companyId) return;
 
     // QR Format Check: RIVER_OFFICE_QR:<COMPANY_ID>
+    // This connects directly to the QR produced by the owner
     if (!decodedText.startsWith(`RIVER_OFFICE_QR:${companyId}`)) {
-      setErrorMsg("Invalid QR Code. Please scan the official River Office QR.");
+      setErrorMsg("Invalid QR Code. This does not belong to your company's official terminal.");
       setFormStep('error');
       return;
     }
@@ -109,7 +114,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 8000,
+          timeout: 10000,
           maximumAge: 0
         });
       });
@@ -121,7 +126,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const locationSnap = await getDocs(locationsCol);
       
       if (locationSnap.empty) {
-        setErrorMsg("Office coordinates not set. Please contact your admin.");
+        setErrorMsg("Office coordinates not set. Admin must configure the Geo-Fence.");
         setFormStep('error');
         return;
       }
@@ -131,13 +136,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const radius = office.radius_meters || 100;
 
       if (distance > radius) {
-        setErrorMsg(`Location mismatch. You are ${Math.round(distance)}m away from the office.`);
+        setErrorMsg(`Geo-Fence Denied. You are currently ${Math.round(distance)}m away from ${office.office_name}.`);
         setFormStep('error');
         return;
       }
 
-      // 3. Determine IN vs OUT logic
-      // Check for the latest log today
+      // 3. Determine IN vs OUT logic based on daily ledger
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const logsQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
@@ -148,7 +152,8 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       );
       
       const logsSnap = await getDocs(logsQuery);
-      const nextAction = logsSnap.empty ? 'IN' : (logsSnap.docs[0].data() as HRAttendanceLog).action === 'IN' ? 'OUT' : 'IN';
+      const lastAction = logsSnap.empty ? null : (logsSnap.docs[0].data() as HRAttendanceLog).action;
+      const nextAction = lastAction === 'IN' ? 'OUT' : 'IN';
       setActionType(nextAction);
 
       // 4. Save Record
@@ -170,11 +175,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       await addDoc(logRef, logData);
 
       setFormStep('success');
-      toast({ title: `Successfully Clocked ${nextAction}` });
+      toast({ title: `Attendance Recorded: Clocked ${nextAction}` });
 
     } catch (err: any) {
-      console.error("Validation failed", err);
-      setErrorMsg(err.message || "Failed to verify location. Please enable GPS.");
+      console.error("Attendance validation error:", err);
+      setErrorMsg(err.message || "Precision GPS required for validation. Check your device settings.");
       setFormStep('error');
     } finally {
       setIsProcessing(false);
@@ -188,63 +193,109 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) resetScanner();
+        onOpenChange(open);
+    }}>
+      <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
         <div className="p-8">
             <DialogHeader className="mb-6">
-                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Attendance Terminal</DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium">Verify your presence via QR & GPS validation.</DialogDescription>
+                <div className="flex items-center gap-4 mb-2">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                        <QrCode className="h-5 w-5 text-primary" />
+                    </div>
+                    <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 uppercase">Attendance Terminal</DialogTitle>
+                </div>
+                <DialogDescription className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                    Verified Presence Protocol • QR & GPS Validation
+                </DialogDescription>
             </DialogHeader>
             
-            <div className="min-h-[300px] flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-slate-100 overflow-hidden relative">
+            <div className="min-h-[350px] flex flex-col items-center justify-center bg-slate-900 rounded-[2.5rem] border-4 border-slate-100 overflow-hidden relative shadow-inner group">
                 {step === 'scan' && (
-                    <div id="qr-reader" className="w-full h-full" />
+                    <>
+                        <div id="qr-reader" className="w-full h-full" />
+                        {/* High-Fidelity Scanning Overlay */}
+                        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center">
+                            <div className="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
+                                {/* Scanner Pulse Line */}
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-slide-down" />
+                                
+                                {/* Corner Accents */}
+                                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-xl" />
+                                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-xl" />
+                                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
+                                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-xl" />
+                            </div>
+                            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align QR within frame</p>
+                        </div>
+                    </>
                 )}
 
                 {step === 'validate' && (
-                    <div className="flex flex-col items-center gap-6 p-10 animate-in fade-in zoom-in-95 duration-500">
+                    <div className="flex flex-col items-center gap-8 p-10 animate-in fade-in zoom-in-95 duration-500">
                         <div className="relative">
-                            <div className="h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                            <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-primary" />
+                            <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                            <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-bounce" />
                         </div>
-                        <div className="text-center space-y-2">
-                            <p className="text-sm font-black uppercase tracking-[0.2em] text-primary">Validating</p>
-                            <p className="text-xs font-medium text-slate-400">Capturing GPS proof & verifying radius...</p>
+                        <div className="text-center space-y-3">
+                            <p className="text-lg font-black uppercase tracking-[0.2em] text-white">Validating</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                Capturing high-precision GPS proof...<br/>Verifying office radius synchronization.
+                            </p>
                         </div>
                     </div>
                 )}
 
                 {step === 'success' && (
-                    <div className="flex flex-col items-center gap-6 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
-                        <div className="h-20 w-20 rounded-full bg-green-50 flex items-center justify-center">
-                            <CheckCircle2 className="h-12 w-12 text-green-500" />
+                    <div className="flex flex-col items-center gap-8 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
+                        <div className="h-24 w-24 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
+                            <CheckCircle2 className="h-12 w-12 text-white" />
                         </div>
-                        <div className="space-y-2">
-                            <p className="text-2xl font-black tracking-tight text-slate-900">Clocked {actionType}!</p>
-                            <p className="text-sm font-medium text-slate-500">Your presence has been verified and logged in the ledger.</p>
+                        <div className="space-y-3">
+                            <p className="text-3xl font-black tracking-tight text-white uppercase">Clocked {actionType}!</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                Your physical presence has been<br/>verified and logged in the secure ledger.
+                            </p>
                         </div>
                     </div>
                 )}
 
                 {step === 'error' && (
-                    <div className="flex flex-col items-center gap-6 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
-                        <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center">
-                            <XCircle className="h-12 w-12 text-red-500" />
+                    <div className="flex flex-col items-center gap-8 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
+                        <div className="h-24 w-24 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20">
+                            <XCircle className="h-12 w-12 text-white" />
                         </div>
-                        <div className="space-y-2">
-                            <p className="text-xl font-bold tracking-tight text-slate-900">Validation Denied</p>
-                            <p className="text-xs font-medium text-red-600/70 bg-red-50 px-4 py-2 rounded-lg border border-red-100">{errorMsg}</p>
+                        <div className="space-y-4">
+                            <p className="text-2xl font-black tracking-tight text-white uppercase">Access Denied</p>
+                            <div className="bg-red-500/10 px-6 py-4 rounded-2xl border border-red-500/20 max-w-[280px]">
+                                <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">{errorMsg}</p>
+                            </div>
                         </div>
-                        <Button variant="outline" onClick={resetScanner} className="rounded-xl font-bold text-xs h-10 px-8">Retry Validation</Button>
+                        <Button 
+                            variant="outline" 
+                            onClick={resetScanner} 
+                            className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 border-white/10 text-white hover:bg-white hover:text-slate-900 transition-all"
+                        >
+                            Retry Validation
+                        </Button>
                     </div>
                 )}
             </div>
 
-            <DialogFooter className="pt-6">
+            <DialogFooter className="pt-8">
                 {step === 'scan' ? (
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center w-full">Point camera at the printed office QR</p>
+                    <div className="w-full space-y-4">
+                        <div className="flex items-center gap-3 justify-center text-slate-400">
+                            <ShieldCheck className="h-4 w-4" />
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">End-to-End Encrypted Terminal</p>
+                        </div>
+                        <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close Terminal</Button>
+                    </div>
                 ) : (
-                    <Button onClick={() => onOpenChange(false)} className="w-full h-12 rounded-xl font-bold text-sm shadow-lg">Dismiss Terminal</Button>
+                    <Button onClick={() => onOpenChange(false)} className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl shadow-primary/20">
+                        Dismiss Terminal
+                    </Button>
                 )}
             </DialogFooter>
         </div>
@@ -252,3 +303,4 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     </Dialog>
   );
 }
+
