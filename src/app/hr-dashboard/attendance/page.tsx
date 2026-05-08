@@ -43,11 +43,11 @@ import {
     DialogClose
 } from '@/components/ui/dialog';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, where, limit } from 'firebase/firestore';
 import { format, subDays, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
-import type { HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/lib/types';
+import type { AppUser, HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -105,6 +105,17 @@ export default function AttendancePage() {
   );
   const { data: payrollRuns, isLoading: loadingPayroll } = useCollection<HRPayrollRun>(payrollQuery);
 
+  // Fetch the owner's profile to get official branding (Business Name and Address)
+  const ownerQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId), where('hrRole', '==', 'owner'), limit(1)) : null,
+    [firestore, companyId]
+  );
+  const { data: owners } = useCollection<AppUser>(ownerQuery);
+  const owner = owners?.[0];
+
+  const companyName = owner?.businessName || user?.businessName || 'River Philippines';
+  const companyAddress = owner?.address || user?.address || 'Authorized Business Entity';
+
   // --- Display Logic ---
   const displayAttendance = useMemo(() => {
     const list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : DEMO_ATTENDANCE;
@@ -149,11 +160,11 @@ export default function AttendancePage() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text(user?.businessName || 'River Philippines', margin, 55);
+    doc.text(companyName, margin, 55);
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(user?.address || 'Authorized Business Entity', margin, 75);
+    doc.text(companyAddress, margin, 75);
     doc.text(`Authorized by: ${user?.name || 'System Admin'}`, margin, 87);
     doc.text(`Role: ${user?.hrRole || 'Administrator'}`, margin, 99);
 
@@ -174,7 +185,7 @@ export default function AttendancePage() {
         body: [
             ['Total net disbursement', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
             ['Status', '-', run.status.charAt(0).toUpperCase() + run.status.slice(1)],
-            ['Organization', '-', user?.businessName || 'Standard Client'],
+            ['Organization', '-', companyName],
         ],
         theme: 'striped',
         headStyles: { fillColor: [83, 142, 194], textColor: 255 },
@@ -392,11 +403,11 @@ export default function AttendancePage() {
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
                         <div className="space-y-1">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Statement reference</Label>
+                            <Label className="text-[10px] font-bold text-slate-400">Statement reference</Label>
                             <p className="text-sm font-black text-slate-900">{selectedRun?.id}</p>
                         </div>
                         <div className="space-y-1 text-right">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Reporting period</Label>
+                            <Label className="text-[10px] font-bold text-slate-400">Reporting period</Label>
                             <p className="text-sm font-black text-slate-900">
                                 {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
                             </p>
@@ -410,8 +421,8 @@ export default function AttendancePage() {
                                     <Building className="h-3.5 w-3.5" /> Client organization
                                 </h4>
                                 <div className="space-y-0.5">
-                                    <p className="text-sm font-bold text-slate-900">{user?.businessName || 'N/A'}</p>
-                                    <p className="text-xs text-slate-500">{user?.address || 'No address provided'}</p>
+                                    <p className="text-sm font-bold text-slate-900">{companyName}</p>
+                                    <p className="text-xs text-slate-500">{companyAddress}</p>
                                 </div>
                             </div>
                             <div className="space-y-3">
@@ -427,7 +438,7 @@ export default function AttendancePage() {
 
                         <div className="space-y-4">
                              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Net disbursement</p>
+                                <p className="text-[10px] font-bold text-slate-400">Net disbursement</p>
                                 <p className="text-3xl font-black text-slate-900 tabular-nums">₱{selectedRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100">
