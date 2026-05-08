@@ -405,7 +405,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
                             </Button>
                         </DialogFooter>
                     </form>
-                </巧>
+                </Form>
             </ScrollArea>
           </div>
         )}

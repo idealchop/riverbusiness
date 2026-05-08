@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -127,24 +128,23 @@ export default function HRDashboard() {
   const companyId = user?.companyId || user?.clientId || 'default';
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  // --- Clock Status Logic ---
   const todayLogQuery = useMemoFirebase(
     () => (firestore && user?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
         where('date', '==', todayStr),
-        orderBy('timestamp', 'desc'),
+        orderBy('timeIn', 'desc'),
         limit(1)
     ) : null,
     [firestore, companyId, user?.id, todayStr]
   );
   const { data: latestLogToday } = useCollection<HRAttendanceLog>(todayLogQuery);
-  const currentAction = latestLogToday && latestLogToday.length > 0 ? latestLogToday[0].action : null;
+  const currentAction = (latestLogToday && latestLogToday.length > 0 && !latestLogToday[0].timeOut) ? 'IN' : 'OUT';
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (currentAction === 'IN' && latestLogToday?.[0]?.timestamp) {
-      const startTime = toSafeDate(latestLogToday[0].timestamp);
+    if (currentAction === 'IN' && latestLogToday?.[0]?.timeIn) {
+      const startTime = toSafeDate(latestLogToday[0].timeIn);
       if (startTime) {
         interval = setInterval(() => {
           const now = new Date();
@@ -161,7 +161,6 @@ export default function HRDashboard() {
     return () => clearInterval(interval);
   }, [currentAction, latestLogToday]);
 
-  // --- Dashboard Data ---
   const employeesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
@@ -176,12 +175,12 @@ export default function HRDashboard() {
 
   const feedItems = useMemo(() => {
     if (!todayAttendance || todayAttendance.length === 0) return [];
-    return [...todayAttendance].sort((a, b) => (toSafeDate(b.timestamp)?.getTime() || 0) - (toSafeDate(a.timestamp)?.getTime() || 0));
+    return [...todayAttendance].sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0));
   }, [todayAttendance]);
 
   const stats = useMemo(() => {
     const empCount = employees?.length || 12;
-    const attCount = todayAttendance?.filter(a => a.action === 'IN').length || 8;
+    const attCount = todayAttendance?.length || 8;
     return [
         { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
         { label: 'Present Today', value: attCount, icon: Clock, trend: 'Verified Entry', trendType: 'up' },
@@ -258,7 +257,7 @@ export default function HRDashboard() {
                     <div className="lg:col-span-6 relative flex flex-col lg:block overflow-hidden bg-slate-50 min-h-[300px]">
                         <div className="relative h-64 lg:h-full lg:absolute lg:inset-0 flex items-center justify-center p-8">
                             {heroImage && (
-                                <Image src={heroImage.imageUrl} alt={heroImage.description} fill className="object-contain p-8 md:p-12 transition-transform duration-[20s] hover:scale-105" data-ai-hint={heroImage.imageHint}/>
+                                <Image src={heroImage.imageUrl} alt={heroImage.description} fill className="object-contain p-8 md:p-12 transition-transform duration-1000 hover:scale-105" data-ai-hint={heroImage.imageHint}/>
                             )}
                         </div>
                         <div className="relative p-8 pt-0 lg:p-0 lg:absolute lg:bottom-10 lg:left-10 text-slate-900 z-10 space-y-2 lg:max-w-[80%]">
@@ -398,14 +397,14 @@ export default function HRDashboard() {
                                     <div>
                                         <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
                                         <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                                          CLOCKED {item.action} • {item.validation_status === 'Valid' ? 'GPS VERIFIED' : 'INVALID LOCATION'}
+                                          CLOCKED {item.action || 'SESS'} • {item.validation_status === 'Valid' ? 'GPS VERIFIED' : 'INVALID LOCATION'}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right space-y-1">
-                                    <p className="text-sm font-black text-slate-900">{item.timestamp ? format(toSafeDate(item.timestamp)!, 'hh:mm a') : '--:--'}</p>
+                                    <p className="text-sm font-black text-slate-900">{item.timeIn ? format(toSafeDate(item.timeIn)!, 'hh:mm a') : '--:--'}</p>
                                     <Badge className={cn("text-[9px] h-5 font-black uppercase px-3 shadow-none border-none", item.action === 'IN' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700")}>
-                                        {item.action}
+                                        {item.action || 'SESS'}
                                     </Badge>
                                 </div>
                             </div>

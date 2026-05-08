@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -129,9 +130,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
       <div className="flex w-full flex-col lg:flex-row">
-        {/* Branding Side (Left) - 65% width */}
         <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
-            {/* Animated Mesh Gradient Background */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
@@ -161,7 +160,6 @@ export default function LoginPage() {
             </div>
         </div>
 
-        {/* Login Form Side (Right) - 35% width */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
             <div className="w-full max-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
@@ -230,7 +228,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Forgot Password Dialog */}
       <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
             <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-8">
             <DialogHeader className="space-y-4">
