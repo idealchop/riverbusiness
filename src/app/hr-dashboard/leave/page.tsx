@@ -309,20 +309,20 @@ export default function LeavePage() {
                                 <CalendarDays className="h-6 w-6" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">Organizational Availability</DialogTitle>
-                                <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                                    Visual Intelligence Feed • Multi-Status Tracking
+                                <DialogTitle className="text-2xl font-black tracking-tight">Team Availability</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
+                                    Visual team presence and multi-status tracking.
                                 </DialogDescription>
                             </div>
                         </div>
                         <div className="hidden md:flex items-center gap-4">
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-primary" />
-                                <span className="text-[9px] font-black uppercase text-slate-400">Approved</span>
+                                <span className="text-[9px] font-bold uppercase text-slate-400">Approved</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-amber-500" />
-                                <span className="text-[9px] font-black uppercase text-slate-400">Pending</span>
+                                <span className="text-[9px] font-bold uppercase text-slate-400">Pending</span>
                             </div>
                         </div>
                     </div>
@@ -354,18 +354,12 @@ export default function LeavePage() {
                             }}
                         />
                     </Card>
-                    <div className="mt-8 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex items-start gap-4 max-w-xs">
-                        <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <p className="text-[10px] font-medium text-blue-900/60 leading-relaxed uppercase tracking-tight">
-                            Select a date to see the list of employees scheduled for time off. Highlights indicate active overlapping requests.
-                        </p>
-                    </div>
                 </div>
 
                 <div className="w-full md:w-[320px] bg-slate-50/30 flex flex-col h-full">
                     <div className="p-6 border-b bg-white">
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1">Activity for</p>
-                        <p className="text-lg font-black text-slate-900">{selectedCalendarDate ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'No Date Selected'}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Activity for</p>
+                        <p className="text-lg font-bold text-slate-900">{selectedCalendarDate ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'No Date Selected'}</p>
                     </div>
                     <ScrollArea className="flex-1">
                         <div className="p-6 space-y-4">
@@ -377,11 +371,11 @@ export default function LeavePage() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-900 leading-tight">{leave.employeeName}</p>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{leave.type}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{leave.type}</p>
                                         </div>
                                     </div>
                                     <Badge className={cn(
-                                        "text-[8px] font-black uppercase border-none px-2 h-4",
+                                        "text-[8px] font-bold uppercase border-none px-2 h-4",
                                         leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
                                     )}>
                                         {leave.status}
@@ -390,7 +384,7 @@ export default function LeavePage() {
                             )) : (
                                 <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
                                     <CheckCircle2 className="h-8 w-8" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Full Operations</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Full Operations</p>
                                 </div>
                             )}
                         </div>
@@ -400,7 +394,7 @@ export default function LeavePage() {
 
             <DialogFooter className="p-6 bg-white border-t shrink-0">
                 <DialogClose asChild>
-                    <Button variant="ghost" className="rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
+                    <Button variant="ghost" className="rounded-xl h-11 px-10 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
                         Close Calendar
                     </Button>
                 </DialogClose>
