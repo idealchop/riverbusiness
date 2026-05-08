@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -249,6 +250,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                                 <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
                                                 <SelectContent className="rounded-xl">
                                                     <SelectItem value="daily">Daily Rate</SelectItem>
+                                                    <SelectItem value="weekly">Weekly Rate</SelectItem>
                                                     <SelectItem value="monthly">Monthly Fixed</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -374,7 +376,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                                     <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
                                                 </div>
                                                 <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Type</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
                                                     <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
                                                 </div>
                                             </div>

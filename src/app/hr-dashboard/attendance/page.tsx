@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -330,7 +331,7 @@ export default function AttendancePage() {
         startY: 230,
         head: [['Component', 'Basis', 'Amount']],
         body: [
-            ['Basic salary', item.type === 'daily' ? `${item.daysWorked} days at P${item.rate}` : 'Monthly fixed', `P${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+            ['Basic salary', item.type === 'daily' ? `${item.daysWorked} days at P${item.rate}` : (item.type === 'weekly' ? 'Weekly fixed' : 'Monthly fixed')],
             ['Net payout', 'Total', `P${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
             ['Status', '-', 'Settled'],
         ],
@@ -432,7 +433,7 @@ export default function AttendancePage() {
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time In</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time Out</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Time</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
+                    <TableHead className="text-right pr-6">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -487,7 +488,7 @@ export default function AttendancePage() {
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Category</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
+                    <TableHead className="text-right pr-6">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -531,7 +532,7 @@ export default function AttendancePage() {
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement Cycle</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Basis</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Net Disbursement</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Action</TableHead>
+                    <TableHead className="text-right pr-6">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -550,7 +551,7 @@ export default function AttendancePage() {
                       </TableCell>
                       <TableCell>
                         <p className="text-xs font-medium text-slate-500">
-                            {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : `Fixed Monthly`}
+                            {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : 'Monthly Fixed')}
                         </p>
                       </TableCell>
                       <TableCell>

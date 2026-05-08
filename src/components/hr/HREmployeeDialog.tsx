@@ -43,7 +43,7 @@ const employeeSchema = z.object({
   email: z.string().email('Invalid email address'),
   position: z.string().min(1, 'Position is required'),
   department: z.string().min(1, 'Department is required'),
-  salaryType: z.enum(['daily', 'monthly']),
+  salaryType: z.enum(['daily', 'weekly', 'monthly']),
   rate: z.coerce.number().min(1, 'Rate must be greater than zero'),
   startDate: z.string().min(1, 'Start date is required'),
   contactNumber: z.string().optional(),
@@ -104,7 +104,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
         email: employeeToEdit.email || '',
         position: employeeToEdit.hrProfile?.position || '',
         department: employeeToEdit.hrProfile?.department || '',
-        salaryType: employeeToEdit.hrProfile?.salaryType || 'monthly',
+        salaryType: (employeeToEdit.hrProfile?.salaryType as any) || 'monthly',
         rate: employeeToEdit.hrProfile?.rate || 0,
         startDate: employeeToEdit.hrProfile?.startDate || new Date().toISOString().split('T')[0],
         contactNumber: employeeToEdit.contactNumber || '',
@@ -327,7 +327,11 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
                                         <FormControl>
                                             <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary"><SelectValue /></SelectTrigger>
                                         </FormControl>
-                                        <SelectContent className="rounded-xl"><SelectItem value="daily">Daily rate</SelectItem><SelectItem value="monthly">Monthly fixed</SelectItem></SelectContent>
+                                        <SelectContent className="rounded-xl">
+                                            <SelectItem value="daily">Daily rate</SelectItem>
+                                            <SelectItem value="weekly">Weekly rate</SelectItem>
+                                            <SelectItem value="monthly">Monthly fixed</SelectItem>
+                                        </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>

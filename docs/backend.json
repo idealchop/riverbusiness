@@ -30,20 +30,11 @@
             "properties": {
                 "firstName": { "type": "string" },
                 "lastName": { "type": "string" },
-                "salaryType": { "type": "string", "enum": ["daily", "monthly"] },
+                "salaryType": { "type": "string", "enum": ["daily", "weekly", "monthly"] },
                 "rate": { "type": "number" },
                 "startDate": { "type": "string", "format": "date" },
                 "position": { "type": "string" },
-                "department": { "type": "string" },
-                "status": { "type": "string", "enum": ["Active", "Terminated", "On Leave"] },
-                "sssNumber": { "type": "string" },
-                "philhealthNumber": { "type": "string" },
-                "pagibigNumber": { "type": "string" },
-                "tinNumber": { "type": "string" },
-                "sssDeduction": { "type": "number" },
-                "philhealthDeduction": { "type": "number" },
-                "pagibigDeduction": { "type": "number" },
-                "taxDeduction": { "type": "number" }
+                "department": { "type": "string" }
             }
         }
       },
@@ -58,28 +49,60 @@
             "employeeId": { "type": "string" },
             "employeeName": { "type": "string" },
             "date": { "type": "string", "format": "date" },
-            "timestamp": { "type": "string", "format": "date-time" },
-            "action": { "type": "string", "enum": ["IN", "OUT"] },
-            "gps_lat": { "type": "number" },
-            "gps_long": { "type": "number" },
-            "validation_status": { "type": "string", "enum": ["Valid", "Invalid"] },
+            "timeIn": { "type": "string", "format": "date-time" },
+            "timeOut": { "type": "string", "format": "date-time" },
             "method": { "type": "string", "enum": ["QR", "manual"] },
-            "office_id": { "type": "string" }
+            "status": { "type": "string", "enum": ["present", "late", "absent", "leave"] }
         },
-        "required": ["companyId", "employeeId", "date", "timestamp", "action"]
+        "required": ["companyId", "employeeId", "date", "timeIn"]
     },
-    "HRCompanyLocation": {
-        "title": "HRCompanyLocation",
+    "HRLeaveRequest": {
+        "title": "HRLeaveRequest",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
             "companyId": { "type": "string" },
-            "office_name": { "type": "string" },
-            "latitude": { "type": "number" },
-            "longitude": { "type": "number" },
-            "radius_meters": { "type": "number" }
+            "employeeId": { "type": "string" },
+            "employeeName": { "type": "string" },
+            "type": { "type": "string", "enum": ["Vacation", "Sick", "Emergency", "Maternity/Paternity"] },
+            "startDate": { "type": "string", "format": "date" },
+            "endDate": { "type": "string", "format": "date" },
+            "reason": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+            "appliedAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["companyId", "office_name", "latitude", "longitude"]
+        "required": ["companyId", "employeeId", "type", "startDate", "endDate", "status"]
+    },
+    "HRPayrollRun": {
+        "title": "HRPayrollRun",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "companyId": { "type": "string" },
+            "periodStart": { "type": "string", "format": "date" },
+            "periodEnd": { "type": "string", "format": "date" },
+            "status": { "type": "string", "enum": ["draft", "processed", "paid"] },
+            "totalNetSalary": { "type": "number" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["companyId", "periodStart", "periodEnd", "status"]
+    },
+    "HRLearningModule": {
+        "title": "HRLearningModule",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "companyId": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "category": { "type": "string" },
+            "contentType": { "type": "string", "enum": ["video", "image", "article"] },
+            "contentUrl": { "type": "string" },
+            "textContent": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "isPublished": { "type": "boolean" }
+        },
+        "required": ["companyId", "title", "contentType"]
     }
   },
   "auth": {
@@ -92,11 +115,19 @@
     },
     "/hr_companies/{companyId}/attendance/{logId}": {
         "schema": { "$ref": "#/entities/HRAttendanceLog" },
-        "description": "Individual scan records for time in/out."
+        "description": "Daily attendance logs for a company."
     },
-    "/hr_companies/{companyId}/locations/{locationId}": {
-        "schema": { "$ref": "#/entities/HRCompanyLocation" },
-        "description": "Registered office locations for GPS validation."
+    "/hr_companies/{companyId}/leaveRequests/{requestId}": {
+        "schema": { "$ref": "#/entities/HRLeaveRequest" },
+        "description": "Leave applications from employees."
+    },
+    "/hr_companies/{companyId}/payrollRuns/{runId}": {
+        "schema": { "$ref": "#/entities/HRPayrollRun" },
+        "description": "Historical records of payroll processing."
+    },
+    "/hr_companies/{companyId}/learningModules/{moduleId}": {
+        "schema": { "$ref": "#/entities/HRLearningModule" },
+        "description": "Company training and module materials."
     }
   }
 }

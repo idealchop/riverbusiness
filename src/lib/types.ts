@@ -43,7 +43,7 @@ export interface AppUser {
 export interface HREmployeeProfile {
     firstName: string;
     lastName: string;
-    salaryType: 'daily' | 'monthly';
+    salaryType: 'daily' | 'weekly' | 'monthly';
     rate: number;
     startDate: string;
     position: string;
@@ -210,5 +210,5 @@ export interface HRPayrollBreakdownItem {
     amount: number;
     daysWorked?: number;
     rate: number;
-    type: 'daily' | 'monthly';
+    type: 'daily' | 'weekly' | 'monthly';
 }
