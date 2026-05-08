@@ -42,6 +42,30 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+// Demo data for the payroll engine
+const DEMO_PAYROLL: HRPayrollRun[] = [
+    { 
+        id: 'PR-2025-05-SR', 
+        companyId: 'demo', 
+        periodStart: format(startOfMonth(subMonths(new Date(), 0)), 'yyyy-MM-dd'), 
+        periodEnd: format(endOfMonth(subMonths(new Date(), 0)), 'yyyy-MM-dd'), 
+        status: 'paid', 
+        totalNetSalary: 385000, 
+        employeeCount: 14,
+        createdAt: Timestamp.now() 
+    },
+    { 
+        id: 'PR-2025-04-SR', 
+        companyId: 'demo', 
+        periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), 
+        periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), 
+        status: 'paid', 
+        totalNetSalary: 372400, 
+        employeeCount: 12,
+        createdAt: Timestamp.fromDate(subMonths(new Date(), 1)) 
+    },
+];
+
 export default function PayrollPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -68,7 +92,9 @@ export default function PayrollPage() {
   const companyAddress = owner?.address || user?.address || 'Authorized Business Entity';
 
   const displayPayroll = useMemo(() => {
-    return payrollRuns || [];
+    // If we have live data, use it. Otherwise, show demo data.
+    const live = payrollRuns || [];
+    return live.length > 0 ? live : DEMO_PAYROLL;
   }, [payrollRuns]);
 
   const totalDisbursed = useMemo(() => {
@@ -260,4 +286,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
