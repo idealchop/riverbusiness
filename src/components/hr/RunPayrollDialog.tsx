@@ -175,7 +175,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         <DollarSign className="h-6 w-6" />
                     </div>
                     <div>
-                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Run payroll</DialogTitle>
+                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Run Payroll</DialogTitle>
                         <DialogDescription className="text-slate-500 font-medium">
                           Select the disbursement period to compute team salaries.
                         </DialogDescription>
