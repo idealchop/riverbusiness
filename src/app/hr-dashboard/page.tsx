@@ -237,12 +237,6 @@ export default function HRDashboard() {
                 >
                     <QrCode className="h-4 w-4" /> Attendance Terminal
                 </Button>
-                
-                {user?.hrRole === 'owner' && (
-                    <Button onClick={handleOpenOfficeSettings} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
-                        Office Settings
-                    </Button>
-                )}
             </div>
 
             <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="sm:hidden rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">

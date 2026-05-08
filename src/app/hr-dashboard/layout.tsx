@@ -16,7 +16,8 @@ import {
   BookOpen,
   ArrowRight,
   Menu,
-  GraduationCap
+  GraduationCap,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -134,8 +135,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             </nav>
         </div>
 
-        {/* Learning Hub Card (1x1 Compact Premium Version) */}
-        <div className="p-6 mt-auto">
+        {/* Sidebar Bottom Actions */}
+        <div className="mt-auto space-y-3 p-6">
+            {/* Learning Hub Card (1x1 Compact Premium Version) */}
             <Card asChild className="border-none shadow-2xl rounded-[2rem] bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white overflow-hidden relative cursor-pointer group hover:shadow-primary/20 transition-all duration-500 aspect-square flex flex-col items-center justify-center text-center p-0">
                 <Link href="/hr-dashboard/modules" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform duration-700">
@@ -158,6 +160,31 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                     <div className="absolute -bottom-6 -left-6 h-24 w-24 bg-white/10 rounded-full blur-3xl" />
                 </Link>
             </Card>
+
+            {/* Office Setup Card (0.5x1 Compact Version) */}
+            {user?.hrRole === 'owner' && (
+                <Card 
+                    onClick={() => {
+                        window.dispatchEvent(new CustomEvent('open-office-settings'));
+                        setIsMobileMenuOpen(false);
+                    }}
+                    className="border-none shadow-md rounded-2xl bg-slate-900 text-white cursor-pointer group hover:bg-slate-800 transition-all p-4 flex items-center justify-between overflow-hidden relative h-16 shrink-0"
+                >
+                    <div className="relative z-10 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-white/10 text-primary-light group-hover:bg-white/20 transition-colors">
+                            <MapPin className="h-4 w-4" />
+                        </div>
+                        <div className="space-y-0.5">
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Office Setup</p>
+                            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest opacity-80">Geo-Fence Config</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-700 group-hover:text-white transition-colors relative z-10" />
+                    <div className="absolute -top-1 -right-1 p-2 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <MapPin className="h-10 w-10" />
+                    </div>
+                </Card>
+            )}
         </div>
     </div>
   );
