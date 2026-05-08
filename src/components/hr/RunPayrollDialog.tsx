@@ -33,7 +33,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, ShieldAlert, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Info, Plus, X } from 'lucide-react';
+import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft } from 'lucide-react';
 import type { HRPayrollBreakdownItem, AppUser } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
@@ -41,7 +41,6 @@ import { format, startOfMonth, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 
 const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
@@ -49,6 +48,8 @@ const payrollSchema = z.object({
 });
 
 type PayrollFormValues = z.infer<typeof payrollSchema>;
+
+const ITEMS_PER_PAGE = 5;
 
 interface RunPayrollDialogProps {
   isOpen: boolean;
@@ -63,6 +64,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   const [step, setStep] = useState(0); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComputing, setIsComputing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: startOfMonth(new Date()),
@@ -153,6 +155,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
       setComputedBreakdown(breakdown);
       setStep(1);
+      setCurrentPage(1);
     } catch (error) {
       console.error("Error computing payroll:", error);
       toast({ variant: 'destructive', title: 'Computation Error' });
@@ -161,25 +164,21 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     }
   };
 
-  const handleAdjustmentChange = (index: number, value: string) => {
+  const handleAdjustmentChange = (employeeId: string, value: string) => {
       const num = parseFloat(value) || 0;
-      setComputedBreakdown(prev => {
-          const next = [...prev];
-          next[index].adjustment = num;
-          return next;
-      });
+      setComputedBreakdown(prev => prev.map(item => 
+          item.employeeId === employeeId ? { ...item, adjustment: num } : item
+      ));
   };
 
-  const handleRemarksChange = (index: number, value: string) => {
-      setComputedBreakdown(prev => {
-          const next = [...prev];
-          next[index].adjustmentRemarks = value;
-          return next;
-      });
+  const handleRemarksChange = (employeeId: string, value: string) => {
+      setComputedBreakdown(prev => prev.map(item => 
+          item.employeeId === employeeId ? { ...item, adjustmentRemarks: value } : item
+      ));
   };
 
-  const handleRemoveEmployee = (index: number) => {
-      setComputedBreakdown(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveEmployee = (employeeId: string) => {
+      setComputedBreakdown(prev => prev.filter(item => item.employeeId !== employeeId));
   };
 
   const onSubmit = async () => {
@@ -219,12 +218,20 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   const handleReset = () => {
     setStep(0);
     setComputedBreakdown([]);
+    setCurrentPage(1);
     form.reset();
   };
 
   const totalRunDisbursement = useMemo(() => {
       return computedBreakdown.reduce((sum, item) => sum + (item.amount + (item.adjustment || 0)), 0);
   }, [computedBreakdown]);
+
+  const totalPages = Math.ceil(computedBreakdown.length / ITEMS_PER_PAGE);
+
+  const paginatedBreakdown = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return computedBreakdown.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [computedBreakdown, currentPage]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleReset(); onOpenChange(open); }}>
@@ -339,10 +346,10 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         </div>
 
                         <div className="space-y-4">
-                            {computedBreakdown.map((item, index) => (
-                                <Card key={index} className="border border-slate-100 shadow-none rounded-3xl overflow-hidden group hover:border-primary/20 transition-all relative">
+                            {paginatedBreakdown.map((item) => (
+                                <Card key={item.employeeId} className="border border-slate-100 shadow-none rounded-3xl overflow-hidden group hover:border-primary/20 transition-all relative">
                                     <button 
-                                        onClick={() => handleRemoveEmployee(index)}
+                                        onClick={() => handleRemoveEmployee(item.employeeId)}
                                         className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors z-10"
                                         title="Exclude from run"
                                     >
@@ -370,7 +377,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                                     type="number" 
                                                     placeholder="Adjustment" 
                                                     value={item.adjustment || ''} 
-                                                    onChange={(e) => handleAdjustmentChange(index, e.target.value)}
+                                                    onChange={(e) => handleAdjustmentChange(item.employeeId, e.target.value)}
                                                     className="h-10 pl-10 rounded-xl bg-slate-50 border-none font-bold text-xs shadow-inner"
                                                 />
                                              </div>
@@ -379,7 +386,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                             <Input 
                                                 placeholder="Remarks (optional)" 
                                                 value={item.adjustmentRemarks || ''} 
-                                                onChange={(e) => handleRemarksChange(index, e.target.value)}
+                                                onChange={(e) => handleRemarksChange(item.employeeId, e.target.value)}
                                                 className="h-10 rounded-xl bg-slate-50 border-none text-xs italic"
                                             />
                                         </div>
@@ -400,22 +407,31 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             )}
                         </div>
 
-                        {computedBreakdown.length > 0 && (
-                            <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-1000">
-                                    <ShieldAlert className="h-24 w-24" />
-                                </div>
-                                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-                                    <div className="space-y-2">
-                                        <h5 className="text-xl font-black tracking-tight uppercase">Ready to Disburse?</h5>
-                                        <p className="text-xs font-medium text-slate-400 max-w-sm">
-                                            By finalizing, you are authorizing the system to record these individual payouts and update the organizational financial ledger.
-                                        </p>
-                                    </div>
-                                    <div className="text-right p-6 rounded-[2rem] bg-white/5 border border-white/10 min-w-[220px]">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-light mb-1">Authorization Value</p>
-                                        <p className="text-3xl font-black tabular-nums">₱{totalRunDisbursement.toLocaleString()}</p>
-                                    </div>
+                        {computedBreakdown.length > ITEMS_PER_PAGE && (
+                            <div className="flex items-center justify-between px-2 pt-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                    Showing {paginatedBreakdown.length} of {computedBreakdown.length} Profiles
+                                </p>
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="mr-1 h-3 w-3" /> Previous
+                                    </Button>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">{currentPage} / {totalPages}</span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next <ChevronRight className="ml-1 h-3 w-3" />
+                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -453,4 +469,3 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     </Dialog>
   );
 }
-
