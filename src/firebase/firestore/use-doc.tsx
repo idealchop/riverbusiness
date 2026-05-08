@@ -65,7 +65,6 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        console.error("useDoc error:", err);
         setError(err);
         setData(null);
         setIsLoading(false);
@@ -75,7 +74,7 @@ export function useDoc<T = any>(
     return () => unsubscribe();
   }, [memoizedDocRef]);
 
-  if(memoizedDocRef && !memoizedDocRef.__memo) {
+  if (memoizedDocRef && (typeof memoizedDocRef !== 'object' || !('__memo' in memoizedDocRef))) {
     throw new Error('useDoc: reference was not properly memoized using useMemoFirebase');
   }
 

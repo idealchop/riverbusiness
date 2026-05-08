@@ -69,8 +69,6 @@ export function useCollection<T = any>(
         snapshot.forEach(doc => {
           let itemData: any = { ...(doc.data() as T), id: doc.id };
           if (idField) {
-            // For collection group queries, we can extract the parent ID if needed.
-            // doc.ref.parent is the collection, its parent is the document.
             itemData[idField] = doc.ref.parent.parent?.id;
           }
           results.push(itemData);
@@ -80,7 +78,6 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        console.error("useCollection error:", err);
         setError(err);
         setData(null);
         setIsLoading(false);
@@ -90,7 +87,7 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery, idField]);
   
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
+  if (memoizedTargetRefOrQuery && (typeof memoizedTargetRefOrQuery !== 'object' || !('__memo' in memoizedTargetRefOrQuery))) {
     throw new Error('useCollection: reference was not properly memoized using useMemoFirebase');
   }
   return { data, isLoading, error };
