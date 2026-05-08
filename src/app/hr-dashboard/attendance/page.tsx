@@ -367,19 +367,19 @@ export default function AttendancePage() {
         <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
             <div className="bg-slate-900 text-white p-8">
                 <DialogHeader>
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-4">
                             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
                                 <DollarSign className="h-6 w-6 text-primary-light" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight">Payroll Statement</DialogTitle>
-                                <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                                    High-fidelity disbursement ledger
+                                <DialogTitle className="text-2xl font-bold tracking-tight">Payroll Statement</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
+                                    Statement details for the period.
                                 </DialogDescription>
                             </div>
                         </div>
-                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-black uppercase text-[10px] tracking-widest h-7 px-4">
+                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-bold uppercase text-[10px] tracking-widest h-7 px-4">
                             Released
                         </Badge>
                     </div>
@@ -390,65 +390,45 @@ export default function AttendancePage() {
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
                         <div className="space-y-1">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Statement reference</Label>
-                            <p className="text-sm font-black text-slate-900">{selectedRun?.id}</p>
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Statement Reference</Label>
+                            <p className="text-sm font-bold text-slate-900">{selectedRun?.id}</p>
                         </div>
                         <div className="space-y-1 text-right">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Reporting period</Label>
-                            <p className="text-sm font-black text-slate-900">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Reporting Period</Label>
+                            <p className="text-sm font-bold text-slate-900">
                                 {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
                             </p>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <ShieldCheck className="h-4 w-4 text-primary" />
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Organization summary</h4>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Card className="border-none shadow-md rounded-2xl bg-slate-50/50">
-                                <CardContent className="p-6 space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total disbursed</p>
-                                    <p className="text-3xl font-black text-slate-900">₱{selectedRun?.totalNetSalary.toLocaleString()}</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border-none shadow-md rounded-2xl bg-slate-50/50">
-                                <CardContent className="p-6 space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transaction status</p>
-                                    <p className="text-3xl font-black text-green-600 uppercase tracking-tighter">SUCCESS</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-
-                    <div className="p-6 rounded-[2.5rem] bg-blue-50/50 border border-blue-100 flex items-start gap-4">
-                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <p className="text-xs font-bold text-slate-600 leading-relaxed">
-                            This payroll cycle has been processed and settled across the ecosystem. Individual payslips have been dispatched to employee workspace profiles.
-                        </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="border-none shadow-sm rounded-2xl bg-slate-50/50 border border-slate-100">
+                            <CardContent className="p-6 space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount</p>
+                                <p className="text-2xl font-bold text-slate-900">₱{selectedRun?.totalNetSalary.toLocaleString()}</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm rounded-2xl bg-slate-50/50 border border-slate-100">
+                            <CardContent className="p-6 space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</p>
+                                <p className="text-2xl font-bold text-green-600">Processed</p>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </ScrollArea>
 
-            <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Authorized ledger entry</p>
-                </div>
-                <div className="flex gap-2 w-full md:w-auto">
-                    <Button 
-                        variant="outline" 
-                        onClick={() => selectedRun && handleDownloadPDF(selectedRun)}
-                        className="flex-1 md:flex-none rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-sm"
-                    >
-                        <Download className="mr-2 h-4 w-4" /> Export high-fidelity PDF
-                    </Button>
-                    <DialogClose asChild>
-                        <Button variant="ghost" className="rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900">Dismiss</Button>
-                    </DialogClose>
-                </div>
+            <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-end items-center gap-3">
+                <Button 
+                    variant="outline" 
+                    onClick={() => selectedRun && handleDownloadPDF(selectedRun)}
+                    className="w-full md:w-auto rounded-xl h-11 px-8 font-bold text-xs shadow-sm border-slate-200"
+                >
+                    <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
+                <DialogClose asChild>
+                    <Button variant="ghost" className="w-full md:w-auto rounded-xl h-11 px-10 font-bold text-xs text-slate-400 hover:text-slate-900">Close</Button>
+                </DialogClose>
             </DialogFooter>
         </DialogContent>
       </Dialog>
