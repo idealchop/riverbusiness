@@ -255,7 +255,7 @@ export default function AttendancePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-             Team
+             Team Records
           </h1>
           <p className="text-slate-500 font-medium text-sm">
              Browse work, leave, and payment records across the organization.
