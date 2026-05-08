@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/popover";
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { 
   Form, 
   FormControl, 
