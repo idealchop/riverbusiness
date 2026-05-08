@@ -22,7 +22,8 @@ import {
   Filter,
   Mail,
   Loader2,
-  Send
+  Send,
+  Calendar
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,7 @@ export default function AttendancePage() {
   const [selectedDisbursement, setSelectedDisbursement] = useState<any | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
   const [selectedDept, setSelectedDept] = useState('All Departments');
+  const [selectedCycle, setSelectedCycle] = useState('All Cycles');
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [confirmItem, setConfirmItem] = useState<any | null>(null);
 
@@ -189,6 +191,17 @@ export default function AttendancePage() {
 
   const companyName = owner?.businessName || user?.businessName || 'River Philippines';
   const companyAddress = owner?.address || user?.address || 'Authorized Business Entity';
+
+  // --- Computed Options ---
+  const availableCycles = useMemo(() => {
+    const runs = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
+    const cycles = new Set<string>();
+    runs.forEach(run => {
+        const date = new Date(run.periodStart);
+        cycles.add(format(date, 'MMMM yyyy'));
+    });
+    return ['All Cycles', ...Array.from(cycles)];
+  }, [payrollRuns]);
 
   // --- Filtering Logic ---
   
@@ -245,9 +258,12 @@ export default function AttendancePage() {
         const employee = allUsers?.find(u => u.id === item.employeeId);
         const matchesDept = selectedDept === 'All Departments' || employee?.hrProfile?.department === selectedDept;
         
-        return matchesSearch && matchesDept;
+        const cycleLabel = format(new Date(item.periodStart), 'MMMM yyyy');
+        const matchesCycle = selectedCycle === 'All Cycles' || cycleLabel === selectedCycle;
+        
+        return matchesSearch && matchesDept && matchesCycle;
     });
-  }, [payrollRuns, searchTerm, selectedDept, allUsers]);
+  }, [payrollRuns, searchTerm, selectedDept, allUsers, selectedCycle]);
 
   // --- Pagination Logic ---
   const paginatedAttendance = useMemo(() => {
@@ -395,6 +411,30 @@ export default function AttendancePage() {
                 />
               </div>
               <div className="flex items-center gap-3">
+                {activeCategory === 'payroll' && (
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white h-11 px-4 shadow-sm">
+                              <Calendar className="h-3.5 w-3.5 text-primary" /> {selectedCycle}
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
+                          <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Filter by Cycle</DropdownMenuLabel>
+                          {availableCycles.map(cycle => (
+                              <DropdownMenuItem 
+                                  key={cycle} 
+                                  onClick={() => {
+                                      setSelectedCycle(cycle);
+                                      setPayrollPage(1);
+                                  }}
+                                  className={cn("rounded-lg font-semibold text-xs py-2 cursor-pointer", selectedCycle === cycle && "bg-slate-50")}
+                              >
+                                  {cycle}
+                              </DropdownMenuItem>
+                          ))}
+                      </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white h-11 px-4 shadow-sm">
