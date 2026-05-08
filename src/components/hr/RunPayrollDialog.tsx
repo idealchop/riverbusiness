@@ -175,7 +175,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         <DollarSign className="h-6 w-6" />
                     </div>
                     <div>
-                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Run payroll</DialogTitle>
+                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Run payroll</DialogTitle>
                         <DialogDescription className="text-slate-500 font-medium">
                           Select the disbursement period to compute team salaries.
                         </DialogDescription>
@@ -188,7 +188,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                         {/* Visual Calendar */}
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                 <CalendarIcon className="h-3.5 w-3.5" /> 1. Select Range
                             </Label>
                             <div className="border rounded-[2rem] p-1 bg-slate-50/50 flex justify-center shadow-inner">
@@ -204,7 +204,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         {/* Manual Dropdowns & Verification */}
                         <div className="space-y-6">
                             <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">2. Review Boundaries</Label>
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">2. Review Boundaries</Label>
                                 <div className="grid gap-4">
                                     <FormField
                                         control={form.control}
@@ -294,7 +294,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
                     <DialogFooter className="pt-6 border-t flex items-center justify-between">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-8 rounded-xl h-12">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 min-w-[200px]">
+                        <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-12 px-12 font-bold text-sm shadow-xl shadow-primary/20 min-w-[200px]">
                             {isSubmitting ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
