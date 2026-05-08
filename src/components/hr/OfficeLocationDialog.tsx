@@ -24,7 +24,7 @@ import {
   FormMessage,
   FormDescription
 } from '@/components/ui/form';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, getDocs, query } from 'firebase/firestore';
@@ -39,13 +39,17 @@ import {
   CheckCircle2, 
   Calculator, 
   Database,
-  DollarSign
+  DollarSign,
+  ChevronRight,
+  ChevronLeft,
+  Info
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { HRCompanyLocation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const locationSchema = z.object({
   office_name: z.string().min(1, 'Office name is required'),
@@ -68,6 +72,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [location, setLocation] = useState<HRCompanyLocation | null>(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [infoStep, setInfoStep] = useState(0); // 0: Setup, 1: Arrival, 2: Scan, 3: Additional Info
 
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -165,7 +170,10 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) setShowHowItWorks(false);
+        if (!open) {
+          setShowHowItWorks(false);
+          setInfoStep(0);
+        }
         onOpenChange(open);
     }}>
       <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl flex flex-col h-full sm:h-auto sm:max-h-[90vh]">
@@ -179,7 +187,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                 <div className="p-3 rounded-2xl bg-primary/10">
                                     <MapPin className="h-6 w-6 text-primary" />
                                 </div>
-                                <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900">QR Attendance</DialogTitle>
+                                <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase">QR attendance</DialogTitle>
                             </div>
                             <DialogDescription className="text-slate-500 font-bold text-xs">
                                 Define the physical boundaries for team attendance verification.
@@ -220,7 +228,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
                                 <div className="pt-6 space-y-3">
                                     <Button type="submit" disabled={isSubmitting} className="w-full rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20">
-                                        {isSubmitting ? 'Syncing...' : 'Save QR System'}
+                                        {isSubmitting ? 'Syncing...' : 'Save QR system'}
                                     </Button>
                                     <button 
                                         type="button" 
@@ -243,10 +251,10 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                     </div>
 
                     <div className="text-center space-y-6 max-w-[280px]">
-                        <h4 className="text-2xl font-black tracking-tight uppercase">QR Entry Tag</h4>
+                        <h4 className="text-2xl font-black tracking-tight uppercase">QR entry tag</h4>
                         <div className="flex flex-col gap-3 pt-4">
                             <Button className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" onClick={downloadQR}>
-                                <Download className="h-4 w-4" /> Download QR Code in HD
+                                <Download className="h-4 w-4" /> Download QR code in HD
                             </Button>
                             <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => onOpenChange(false)}>Close asset view</Button>
                         </div>
@@ -256,155 +264,199 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                 </div>
             </div>
         ) : (
-            <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="p-8 border-b bg-white sticky top-0 z-10 flex items-center justify-between">
+            <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[500px]">
+                <div className="p-8 border-b bg-white sticky top-0 z-20 flex items-center justify-between">
                     <button 
-                        onClick={() => setShowHowItWorks(false)}
+                        onClick={() => { setShowHowItWorks(false); setInfoStep(0); }}
                         className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" /> Back to setup
                     </button>
-                    <Badge variant="secondary" className="bg-primary/5 text-primary border-none font-bold uppercase text-[9px] tracking-widest px-3 h-6">Educational Guide</Badge>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                            {[0, 1, 2, 3].map((s) => (
+                                <div key={s} className={cn("h-1.5 w-6 rounded-full transition-all", s === infoStep ? "bg-primary w-10" : "bg-slate-200")} />
+                            ))}
+                        </div>
+                        <Badge variant="secondary" className="bg-primary/5 text-primary border-none font-bold uppercase text-[9px] tracking-widest px-3 h-6">Educational Guide</Badge>
+                    </div>
                 </div>
                 
-                <ScrollArea className="flex-1">
-                    <div className="p-10 max-w-3xl mx-auto space-y-12 pb-20">
-                        <div className="text-center space-y-3">
-                            <h2 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">QR Office Attendance</h2>
-                            <p className="text-slate-500 font-bold text-sm tracking-widest uppercase">How It Works</p>
-                        </div>
-
-                        <div className="grid gap-8">
-                            {/* Step 1 */}
-                            <div className="relative group">
-                                <div className="absolute -left-4 top-0 bottom-0 w-1 bg-primary/20 rounded-full group-hover:bg-primary transition-all" />
-                                <div className="space-y-4 pl-6">
-                                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white text-xs">1</span>
-                                        Owner sets up office
-                                    </h3>
-                                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
-                                        <ul className="grid gap-3 text-sm font-medium text-slate-600">
-                                            <li className="flex items-center gap-3"><CheckCircle2 className="h-4 w-4 text-green-500" /> Admin opens River Apps</li>
-                                            <li className="flex items-center gap-3"><CheckCircle2 className="h-4 w-4 text-green-500" /> Adds office/branch location</li>
-                                            <li className="flex items-center gap-3"><CheckCircle2 className="h-4 w-4 text-green-500" /> Sets allowed GPS radius (ex: 50–100m)</li>
-                                            <li className="flex items-center gap-3"><CheckCircle2 className="h-4 w-4 text-green-500" /> System generates Office QR Code</li>
-                                            <li className="flex items-center gap-3"><CheckCircle2 className="h-4 w-4 text-green-500" /> QR code is printed and placed in the office</li>
+                <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden relative">
+                    {/* Animated Step Container */}
+                    <div className="w-full max-w-4xl h-full flex items-center justify-center">
+                        <div key={infoStep} className="w-full animate-in fade-in slide-in-from-right-8 duration-500">
+                            {infoStep === 0 && (
+                                <div className="space-y-8 text-center max-w-2xl mx-auto">
+                                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-primary text-white shadow-xl shadow-primary/20 mb-4">
+                                        <span className="text-2xl font-black">1</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Owner sets up office</h3>
+                                        <p className="text-slate-500 font-medium">Laying the digital foundation for your workspace.</p>
+                                    </div>
+                                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-8">
+                                        <ul className="grid gap-4 text-left text-sm font-bold text-slate-600">
+                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> Admin opens River Apps</li>
+                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> Adds office/branch location</li>
+                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> Sets allowed GPS radius (ex: 50–100m)</li>
+                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> System generates office QR code</li>
+                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> QR code is printed and placed in the office</li>
                                         </ul>
-                                        <p className="text-[10px] font-black uppercase text-green-600 tracking-[0.2em] pt-2 flex items-center gap-2">
-                                            <CheckCircle2 className="h-3 w-3" /> Office is now ready for scanning
+                                        <div className="mt-8 pt-6 border-t border-slate-50">
+                                            <p className="text-[10px] font-black uppercase text-green-600 tracking-[0.3em] flex items-center justify-center gap-2">
+                                                <CheckCircle2 className="h-4 w-4" /> Ready for scanning
+                                            </p>
+                                        </div>
+                                    </Card>
+                                </div>
+                            )}
+
+                            {infoStep === 1 && (
+                                <div className="space-y-8 text-center max-w-2xl mx-auto">
+                                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-primary text-white shadow-xl shadow-primary/20 mb-4">
+                                        <span className="text-2xl font-black">2</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Employee arrives at office</h3>
+                                        <p className="text-slate-500 font-medium">Physical presence meets digital verification.</p>
+                                    </div>
+                                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 flex flex-col items-center gap-8">
+                                        <div className="p-6 rounded-[2rem] bg-blue-50 text-primary shadow-inner">
+                                            <MapPin className="h-12 w-12" />
+                                        </div>
+                                        <p className="text-lg font-bold text-slate-700 leading-snug">
+                                            Staff member enters the designated physical premises and opens the River Business portal on their device.
                                         </p>
-                                    </div>
+                                    </Card>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Step 2 */}
-                            <div className="relative group">
-                                <div className="absolute -left-4 top-0 bottom-0 w-1 bg-primary/20 rounded-full group-hover:bg-primary transition-all" />
-                                <div className="space-y-4 pl-6">
-                                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white text-xs">2</span>
-                                        Employee arrives at office
-                                    </h3>
-                                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 rounded-2xl bg-blue-50 text-primary"><MapPin className="h-6 w-6" /></div>
-                                            <p className="text-sm font-bold text-slate-600 leading-tight">
-                                                Staff member enters the designated physical premises and opens the River Business portal.
+                            {infoStep === 2 && (
+                                <div className="space-y-8 text-center max-w-2xl mx-auto">
+                                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-primary text-white shadow-xl shadow-primary/20 mb-4">
+                                        <span className="text-2xl font-black">3</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Employee scans office QR</h3>
+                                        <p className="text-slate-500 font-medium">The digital handshake that verifies attendance.</p>
+                                    </div>
+                                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
+                                        <div className="flex items-center justify-center gap-6">
+                                            <div className="p-5 rounded-[1.5rem] bg-blue-50 text-primary shadow-sm"><QrCode className="h-10 w-10" /></div>
+                                            <p className="text-left text-base font-bold text-slate-700 leading-tight flex-1">
+                                                Employee taps “Attendance Terminal” and scans the printed office QR code using their camera.
                                             </p>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Step 3 */}
-                            <div className="relative group">
-                                <div className="absolute -left-4 top-0 bottom-0 w-1 bg-primary/20 rounded-full group-hover:bg-primary transition-all" />
-                                <div className="space-y-4 pl-6">
-                                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white text-xs">3</span>
-                                        Employee scans office QR
-                                    </h3>
-                                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 rounded-2xl bg-blue-50 text-primary"><QrCode className="h-6 w-6" /></div>
-                                            <p className="text-sm font-bold text-slate-600 leading-tight">
-                                                Employee taps “Attendance Terminal” and scans the printed Office QR code.
-                                            </p>
-                                        </div>
-                                        <div className="pt-4 border-t space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest:">Automatic handshake data:</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                <Badge variant="outline" className="bg-slate-50 text-[10px] font-bold">Employee ID</Badge>
-                                                <Badge variant="outline" className="bg-slate-50 text-[10px] font-bold">Office Auth ID</Badge>
-                                                <Badge variant="outline" className="bg-slate-50 text-[10px] font-bold">GPS Coordinates</Badge>
-                                                <Badge variant="outline" className="bg-slate-50 text-[10px] font-bold">Server Timestamp</Badge>
+                                        <div className="pt-8 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Protocol 1</p>
+                                                <Badge variant="outline" className="w-full justify-center bg-slate-50 text-[9px] font-bold border-none h-7">Employee ID</Badge>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Protocol 2</p>
+                                                <Badge variant="outline" className="w-full justify-center bg-slate-50 text-[9px] font-bold border-none h-7">Office ID</Badge>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Protocol 3</p>
+                                                <Badge variant="outline" className="w-full justify-center bg-slate-50 text-[9px] font-bold border-none h-7">GPS Proof</Badge>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Protocol 4</p>
+                                                <Badge variant="outline" className="w-full justify-center bg-slate-50 text-[9px] font-bold border-none h-7">Timestamp</Badge>
                                             </div>
                                         </div>
+                                    </Card>
+                                </div>
+                            )}
+
+                            {infoStep === 3 && (
+                                <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto">
+                                    <div className="text-center space-y-2">
+                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">System intelligence</h3>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em]">Automated Backend Decisions</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
+                                        <Card className="border-none shadow-lg rounded-3xl bg-white p-6 space-y-4 hover:shadow-xl transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600"><ShieldCheck className="h-5 w-5" /></div>
+                                                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Location validation</p>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                                River checks if the employee is within the allowed GPS radius. Scans outside the boundary are rejected to prevent remote spoofing.
+                                            </p>
+                                            <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
+                                                <Badge className="bg-green-50 text-green-700 text-[8px] font-bold uppercase border-none h-5">Verified</Badge>
+                                                <Badge className="bg-red-50 text-red-700 text-[8px] font-bold uppercase border-none h-5">Rejected</Badge>
+                                            </div>
+                                        </Card>
+
+                                        <Card className="border-none shadow-lg rounded-3xl bg-white p-6 space-y-4 hover:shadow-xl transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600"><Calculator className="h-5 w-5" /></div>
+                                                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Session logic</p>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                                The system intelligently decides: the first valid scan of the day is marked as **TIME IN**, and the subsequent valid scan is **TIME OUT**.
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400 italic">No manual action needed by admin.</p>
+                                        </Card>
+
+                                        <Card className="border-none shadow-lg rounded-3xl bg-white p-6 space-y-4 hover:shadow-xl transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600"><Database className="h-5 w-5" /></div>
+                                                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Immutable records</p>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                                Every verified log stores the employee, office entity, and precise GPS proof for a tamper-proof digital audit trail.
+                                            </p>
+                                        </Card>
+
+                                        <Card className="border-none shadow-lg rounded-3xl bg-white p-6 space-y-4 hover:shadow-xl transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 rounded-xl bg-green-50 text-green-600"><DollarSign className="h-5 w-5" /></div>
+                                                <p className="text-xs font-black uppercase tracking-wider text-slate-900">HR synchronization</p>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                                Logs automatically update the attendance ledger, calculate daily work hours, and feed into the payroll computation engine.
+                                            </p>
+                                        </Card>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <Separator className="opacity-40" />
-
-                        {/* Additional Information Section (4-7) */}
-                        <div className="space-y-8">
-                             <div className="flex items-center gap-4">
-                                <div className="h-px flex-1 bg-slate-200" />
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Additional system intelligence</h4>
-                                <div className="h-px flex-1 bg-slate-200" />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-purple-50 text-purple-600"><ShieldCheck className="h-5 w-5" /></div>
-                                        <p className="text-sm font-black uppercase tracking-tight">Location validation</p>
-                                    </div>
-                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                        River checks if the employee is within the allowed GPS radius. Scans outside the boundary are automatically rejected to prevent remote spoofing.
-                                    </p>
-                                </Card>
-
-                                <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-amber-50 text-amber-600"><Calculator className="h-5 w-5" /></div>
-                                        <p className="text-sm font-black uppercase tracking-tight">Automated session logic</p>
-                                    </div>
-                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                        The system intelligently decides: the first valid scan of the day is marked as **TIME IN**, and the subsequent valid scan is **TIME OUT**.
-                                    </p>
-                                </Card>
-
-                                <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-blue-50 text-blue-600"><Database className="h-5 w-5" /></div>
-                                        <p className="text-sm font-black uppercase tracking-tight">Immutable records</p>
-                                    </div>
-                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                        Every verified log stores the employee, office entity, time, and precise GPS proof for a tamper-proof audit trail.
-                                    </p>
-                                </Card>
-
-                                <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-green-50 text-green-600"><DollarSign className="h-5 w-5" /></div>
-                                        <p className="text-sm font-black uppercase tracking-tight">HR synchronization</p>
-                                    </div>
-                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                        Logs automatically update the attendance ledger, calculate daily work hours, flag late entries, and feed into the payroll computation engine.
-                                    </p>
-                                </Card>
-                            </div>
+                            )}
                         </div>
                     </div>
-                </ScrollArea>
+                </div>
                 
-                <div className="p-8 border-t bg-white flex justify-center">
-                    <Button onClick={() => setShowHowItWorks(false)} className="rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-xs px-12 shadow-xl shadow-primary/20">
-                        Continue to configuration
+                {/* Wizard Navigation */}
+                <div className="p-8 border-t bg-white flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setInfoStep(prev => Math.max(0, prev - 1))}
+                        disabled={infoStep === 0}
+                        className="rounded-xl h-12 px-6 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 disabled:opacity-20"
+                    >
+                        <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                     </Button>
+                    
+                    <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">Phase {infoStep + 1} of 4</div>
+                    
+                    {infoStep < 3 ? (
+                        <Button 
+                            onClick={() => setInfoStep(prev => prev + 1)}
+                            className="rounded-2xl h-12 px-10 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20"
+                        >
+                            Next <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <Button 
+                            onClick={() => { setShowHowItWorks(false); setInfoStep(0); }}
+                            className="rounded-2xl h-12 px-10 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-green-600 hover:bg-green-700"
+                        >
+                            Finish guide <CheckCircle2 className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
             </div>
         )}
