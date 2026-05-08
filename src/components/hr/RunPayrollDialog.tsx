@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,8 +26,11 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, ShieldAlert, Loader2 } from 'lucide-react';
+import { DollarSign, ShieldAlert, Loader2, CalendarIcon } from 'lucide-react';
 import type { HRPayrollBreakdownItem } from '@/lib/types';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { format, startOfMonth } from 'date-fns';
 
 const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
@@ -46,14 +49,28 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: startOfMonth(new Date()),
+      to: new Date()
+  });
 
   const form = useForm<PayrollFormValues>({
     resolver: zodResolver(payrollSchema),
     defaultValues: {
-      periodStart: new Date(new Date().setDate(1)).toISOString().split('T')[0],
+      periodStart: startOfMonth(new Date()).toISOString().split('T')[0],
       periodEnd: new Date().toISOString().split('T')[0],
     }
   });
+
+  // Sync Calendar Range with Input Fields
+  useEffect(() => {
+      if (dateRange?.from) {
+          form.setValue('periodStart', format(dateRange.from, 'yyyy-MM-dd'));
+      }
+      if (dateRange?.to) {
+          form.setValue('periodEnd', format(dateRange.to, 'yyyy-MM-dd'));
+      }
+  }, [dateRange, form]);
 
   const onSubmit = async (values: PayrollFormValues) => {
     if (!firestore || !companyId) return;
@@ -151,55 +168,82 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+      <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
         <div className="p-8">
             <DialogHeader className="mb-6">
-                <div className="p-3 w-fit rounded-2xl bg-blue-50 text-primary mb-4">
-                    <DollarSign className="h-6 w-6" />
+                <div className="flex items-center gap-4 mb-2">
+                    <div className="p-3 w-fit rounded-2xl bg-blue-50 text-primary">
+                        <DollarSign className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Run Payroll</DialogTitle>
+                        <DialogDescription className="text-slate-500 font-medium">
+                          Select the disbursement period to compute team salaries.
+                        </DialogDescription>
+                    </div>
                 </div>
-                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Authorize Payroll</DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium">
-                  The system will analyze attendance logs and compute salaries for the selected period.
-                </DialogDescription>
             </DialogHeader>
             
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="periodStart"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Start Date</FormLabel>
-                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="periodEnd"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">End Date</FormLabel>
-                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                        {/* Visual Calendar */}
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                <CalendarIcon className="h-3.5 w-3.5" /> 1. Select Range
+                            </Label>
+                            <div className="border rounded-[2rem] p-1 bg-slate-50/50 flex justify-center shadow-inner">
+                                <Calendar
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    className="rounded-xl border-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Manual Inputs & Details */}
+                        <div className="space-y-6">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">2. Review Boundaries</Label>
+                                <div className="grid gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="periodStart"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs font-semibold text-slate-600">Start Date</FormLabel>
+                                            <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="periodEnd"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs font-semibold text-slate-600">End Date</FormLabel>
+                                            <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-5 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-4">
+                                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                                <p className="text-[11px] font-bold text-amber-900/70 leading-relaxed uppercase tracking-tight">
+                                    Finalizing this run will process disbursements and update the organizational ledger.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-4">
-                        <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-xs font-semibold text-slate-500 leading-relaxed">
-                            Confirming this run will finalize disbursements and lock attendance logs for the selected period.
-                        </p>
-                    </div>
-
-                    <DialogFooter className="pt-4">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-6">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-xs shadow-md min-w-[160px]">
+                    <DialogFooter className="pt-6 border-t">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-8 rounded-xl h-12">Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 min-w-[180px]">
                             {isSubmitting ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
