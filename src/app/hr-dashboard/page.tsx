@@ -278,10 +278,10 @@ export default function HRDashboard() {
       </div>
 
       <div className="space-y-8">
-            {/* Top Section: Hero Banner with Image and Calendar (70/30 split) */}
+            {/* Top Section: Hero Banner with Image and Calendar (60/40 split) */}
             <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
                 <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[380px]">
-                    <div className="lg:col-span-7 relative h-64 lg:h-auto overflow-hidden">
+                    <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden">
                         {heroImage && (
                             <Image 
                                 src={heroImage.imageUrl} 
@@ -304,8 +304,8 @@ export default function HRDashboard() {
                             </p>
                         </div>
                     </div>
-                    <div className="lg:col-span-3 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
-                        <div className="space-y-6 w-full">
+                    <div className="lg:col-span-4 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
+                        <div className="space-y-6 w-full max-w-sm mx-auto">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Company Calendar</h3>
@@ -329,7 +329,7 @@ export default function HRDashboard() {
                                         day: "h-9 w-9 p-0 font-bold text-[11px] uppercase rounded-xl hover:bg-slate-50 transition-all",
                                         head_cell: "text-slate-300 font-black uppercase text-[9px] tracking-widest pb-3",
                                         caption_label: "hidden",
-                                        nav: "hidden" // Keep it minimal as a dashboard anchor
+                                        nav: "hidden" 
                                     }}
                                 />
                             </div>
