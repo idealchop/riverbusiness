@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -57,6 +56,13 @@ const toSafeDate = (val: any): Date | null => {
     if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
     const d = new Date(val);
     return isNaN(d.getTime()) ? null : d;
+};
+
+const formatDuration = (minutes?: number) => {
+    if (!minutes) return '--:--';
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hrs}h ${mins}m`;
 };
 
 interface EmployeeDetailsDialogProps {
@@ -467,12 +473,13 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                         <TableHead className="text-xs font-bold text-slate-400 pl-6">Work Date</TableHead>
                                         <TableHead className="text-xs font-bold text-slate-400">Clock In</TableHead>
                                         <TableHead className="text-xs font-bold text-slate-400">Clock Out</TableHead>
+                                        <TableHead className="text-xs font-bold text-slate-400">Duration</TableHead>
                                         <TableHead className="text-xs font-bold text-slate-400 text-right pr-6">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loadingAttendance ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-12 opacity-50 font-bold uppercase text-[10px]">Syncing logs...</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="text-center py-12 opacity-50 font-bold uppercase text-[10px]">Syncing logs...</TableCell></TableRow>
                                     ) : attendanceLogs && attendanceLogs.length > 0 ? (
                                         attendanceLogs.map(log => {
                                             const workDate = toSafeDate(log.date);
@@ -485,6 +492,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                                     </TableCell>
                                                     <TableCell className="text-sm font-semibold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
                                                     <TableCell className="text-sm font-semibold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                                                    <TableCell className="text-xs font-black text-primary uppercase tracking-tighter">
+                                                        {formatDuration(log.totalMinutes)}
+                                                    </TableCell>
                                                     <TableCell className="text-right pr-6">
                                                         <Badge className={cn(
                                                             "text-[10px] font-bold uppercase border-none px-3 py-1 shadow-none",
@@ -497,7 +507,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                             )
                                         })
                                     ) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-20 text-sm font-medium text-slate-300 uppercase tracking-widest">No Logs Found.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="text-center py-20 text-sm font-medium text-slate-300 uppercase tracking-widest">No Logs Found.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
