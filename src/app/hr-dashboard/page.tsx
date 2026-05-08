@@ -63,6 +63,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AttendanceScanner } from '@/components/hr/AttendanceScanner';
+import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 
 const toSafeDate = (val: any): Date | null => {
@@ -353,12 +354,27 @@ export default function HRDashboard() {
                 </div>
 
                 <div className="lg:col-span-4">
-                    <Card className="h-full border-none rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative group shadow-none">
-                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 className="h-24 w-24" /></div>
-                        <CardHeader className="p-8"><CardTitle className="text-lg font-bold tracking-tight">Focus: Today</CardTitle><CardDescription className="text-white/50 font-medium">{format(new Date(), 'EEEE, MMMM do')}</CardDescription></CardHeader>
+                    <Card className="h-full border-none rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white overflow-hidden relative group shadow-xl">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                            <CheckCircle2 className="h-24 w-24" />
+                        </div>
+                        <CardHeader className="p-8">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Badge className="bg-white/20 text-white border-none font-black text-[10px] uppercase tracking-widest px-3 h-6">
+                                    Active Protocol
+                                </Badge>
+                            </div>
+                            <CardTitle className="text-2xl font-black tracking-tighter uppercase leading-none">Focus: Today</CardTitle>
+                            <CardDescription className="text-blue-100 font-bold text-sm mt-1">{format(new Date(), 'EEEE, MMMM do')}</CardDescription>
+                        </CardHeader>
                         <CardContent className="p-8 pt-0 space-y-4 relative z-10">
-                            <p className="text-sm font-medium text-white/80 leading-relaxed italic">"Physical presence is the anchor of accountability and team alignment."</p>
-                            <div className="pt-4 border-t border-white/10"><p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40">QR & GPS Verification System</p></div>
+                            <p className="text-base font-bold text-white/90 leading-tight italic">
+                                "Physical presence is the anchor of accountability and team alignment."
+                            </p>
+                            <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">QR & GPS Terminal Active</p>
+                                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

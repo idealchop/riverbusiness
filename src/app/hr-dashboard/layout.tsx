@@ -15,7 +15,8 @@ import {
   Clock,
   BookOpen,
   ArrowRight,
-  Menu
+  Menu,
+  GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -133,25 +134,28 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             </nav>
         </div>
 
-        {/* Learning Hub Card (1x1 Compact Version) */}
+        {/* Learning Hub Card (1x1 Compact Premium Version) */}
         <div className="p-6 mt-auto">
-            <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all aspect-square flex flex-col items-center justify-center text-center p-0">
+            <Card asChild className="border-none shadow-2xl rounded-[2rem] bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white overflow-hidden relative cursor-pointer group hover:shadow-primary/20 transition-all duration-500 aspect-square flex flex-col items-center justify-center text-center p-0">
                 <Link href="/hr-dashboard/modules" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="absolute inset-0 opacity-10 flex items-center justify-center group-hover:rotate-12 transition-transform duration-500">
-                        <BookOpen className="h-32 w-32" />
+                    <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform duration-700">
+                        <GraduationCap className="h-16 w-16" />
                     </div>
-                    <div className="relative z-10 flex flex-col items-center gap-3">
-                        <div className="p-3 rounded-2xl bg-white/10 shadow-sm backdrop-blur-sm">
-                            <BookOpen className="h-8 w-8 text-white" />
+                    
+                    <div className="relative z-10 flex flex-col items-center gap-4">
+                        <div className="p-4 rounded-2xl bg-white/20 shadow-lg backdrop-blur-md border border-white/30 group-hover:bg-white/30 transition-colors">
+                            <BookOpen className="h-7 w-7 text-white" />
                         </div>
-                        <div className="space-y-1">
-                            <CardTitle className="text-base font-black tracking-tighter text-white uppercase leading-none">Learning Hub</CardTitle>
-                            <CardDescription className="text-white/60 font-black text-[9px] uppercase tracking-widest">Training Assets</CardDescription>
+                        <div className="space-y-1.5 px-4">
+                            <CardTitle className="text-lg font-black tracking-tighter text-white uppercase leading-none">Learning Hub</CardTitle>
+                            <CardDescription className="text-blue-100 font-bold text-[10px] uppercase tracking-[0.2em] opacity-80">Training Resources</CardDescription>
                         </div>
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest pt-2 opacity-80">
-                            Launch <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pt-2 bg-black/10 px-4 py-1.5 rounded-full border border-white/10 group-hover:bg-black/20 transition-colors">
+                            Open <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </div>
+                    
+                    <div className="absolute -bottom-6 -left-6 h-24 w-24 bg-white/10 rounded-full blur-3xl" />
                 </Link>
             </Card>
         </div>
