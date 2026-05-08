@@ -2,18 +2,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  Database, 
   Search, 
   Clock, 
   CalendarDays, 
   DollarSign, 
-  Filter,
   Download,
   FileText,
+  TrendingUp,
   History,
-  TrendingUp
+  ChevronRight,
+  ShieldCheck,
+  Building,
+  CheckCircle2,
+  Printer
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,12 +29,24 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription,
+    DialogFooter,
+    DialogClose
+} from '@/components/ui/dialog';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { format, subDays, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
 import type { HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/lib/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -42,10 +57,9 @@ const toSafeDate = (val: any): Date | null => {
 };
 
 const DEMO_ATTENDANCE: HRAttendanceLog[] = [
-    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timeIn: subHours(new Date(), 2), status: 'present', method: 'QR' },
-    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timeIn: subHours(new Date(), 1.5), status: 'present', method: 'QR' },
-    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timeIn: subHours(new Date(), 1.2), status: 'late', method: 'manual' },
-    { id: 'att4', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), timeIn: subHours(subDays(new Date(), 1), 8), timeOut: subHours(subDays(new Date(), 1), 1), status: 'present', method: 'QR' },
+    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timestamp: Timestamp.now(), action: 'IN', validation_status: 'Valid', method: 'QR' },
+    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timestamp: Timestamp.now(), action: 'IN', validation_status: 'Valid', method: 'QR' },
+    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timestamp: Timestamp.now(), action: 'IN', validation_status: 'Valid', method: 'manual' },
 ];
 
 const DEMO_LEAVES: HRLeaveRequest[] = [
@@ -54,7 +68,8 @@ const DEMO_LEAVES: HRLeaveRequest[] = [
 ];
 
 const DEMO_PAYROLL: HRPayrollRun[] = [
-    { id: 'pr1', companyId: 'demo', periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 385000, createdAt: Timestamp.now() },
+    { id: 'PR-2025-05', companyId: 'demo', periodStart: format(startOfMonth(new Date()), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(new Date()), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 385000, createdAt: Timestamp.now() },
+    { id: 'PR-2025-04', companyId: 'demo', periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 372000, createdAt: Timestamp.now() },
 ];
 
 export default function AttendancePage() {
@@ -62,24 +77,20 @@ export default function AttendancePage() {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveTab] = useState('attendance');
+  const [selectedRun, setSelectedRun] = useState<HRPayrollRun | null>(null);
+  const [isPayslipOpen, setIsPayslipOpen] = useState(false);
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
   // --- Data Queries ---
   const attendanceQuery = useMemoFirebase(
-    () => {
-        if (!firestore || !companyId) return null;
-        return query(collection(firestore, 'hr_companies', companyId, 'attendance'), orderBy('date', 'desc'));
-    },
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), orderBy('date', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
-    () => {
-        if (!firestore || !companyId) return null;
-        return query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc'));
-    },
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
@@ -101,12 +112,76 @@ export default function AttendancePage() {
   }, [attendanceLogs, searchTerm]);
 
   const displayLeaves = useMemo(() => {
-    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
-  }, [leaveRequests]);
+    const list = leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
+    if (!searchTerm) return list;
+    return list.filter(req => 
+        req.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        req.type.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [leaveRequests, searchTerm]);
 
   const displayPayroll = useMemo(() => {
-    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
-  }, [payrollRuns]);
+    const list = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
+    if (!searchTerm) return list;
+    return list.filter(run => 
+        run.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        run.periodStart.includes(searchTerm)
+    );
+  }, [payrollRuns, searchTerm]);
+
+  const handleOpenPayslip = (run: HRPayrollRun) => {
+    setSelectedRun(run);
+    setIsPayslipOpen(true);
+  };
+
+  const handleDownloadPDF = (run: HRPayrollRun) => {
+    const doc = new jsPDF('p', 'pt');
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 40;
+
+    // Header
+    doc.setFillColor(83, 142, 194);
+    doc.rect(0, 0, pageWidth, 100, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('River Philippines', margin, 45);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('A UNIFIED BUSINESS OPERATING SYSTEM', margin, 65);
+    doc.text(`Fulfillment: ${user?.businessName || 'N/A'}`, margin, 80);
+
+    doc.setTextColor(0);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payroll Disbursement Summary', margin, 140);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Reference ID: ${run.id}`, margin, 160);
+    doc.text(`Statement Period: ${format(new Date(run.periodStart), 'MMM d')} - ${format(new Date(run.periodEnd), 'MMM d, yyyy')}`, margin, 175);
+    doc.text(`Processed Date: ${run.createdAt ? format(toSafeDate(run.createdAt)!, 'PP p') : 'Recently'}`, margin, 190);
+
+    autoTable(doc, {
+        startY: 220,
+        head: [['Description', 'Unit', 'Amount']],
+        body: [
+            ['Total Net Disbursement', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
+            ['Status', '-', run.status.toUpperCase()],
+            ['Total Payees', 'Count', 'Multi-staff Ledger'],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [83, 142, 194], textColor: 255 },
+        margin: { left: margin, right: margin },
+    });
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(150);
+    doc.text('This is an electronically generated statement. High-fidelity verification active.', margin, (doc as any).lastAutoTable.finalY + 40);
+
+    doc.save(`Payslip_${run.id}.pdf`);
+  };
 
   if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
 
@@ -114,10 +189,10 @@ export default function AttendancePage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">
              Attendance
           </h1>
-          <p className="text-slate-500 font-medium text-sm">
+          <p className="text-slate-500 font-bold text-sm">
              Browse Work, Leave, and Payment Records Across the Organization.
           </p>
         </div>
@@ -148,27 +223,26 @@ export default function AttendancePage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
                   placeholder="Search by Employee or Date..." 
-                  className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none"
+                  className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Consolidated View Active</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-primary">Consolidated View Active</span>
               </div>
             </div>
           </CardHeader>
           
           <CardContent className="p-0">
-            <TabsContent value="attendance" className="m-0">
+            <TabsContent value="attendance" className="m-0 focus-visible:ring-0">
               <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
                     <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Date</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Clock In</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Clock Out</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Handshake</TableHead>
                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -176,8 +250,6 @@ export default function AttendancePage() {
                   {loadingAttendance ? (
                     <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Ledger...</TableCell></TableRow>
                   ) : displayAttendance.map((log) => {
-                    const timeIn = toSafeDate(log.timeIn);
-                    const timeOut = toSafeDate(log.timeOut);
                     return (
                       <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                         <TableCell className="pl-6 py-4">
@@ -190,17 +262,16 @@ export default function AttendancePage() {
                             <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs uppercase">
                               {log.employeeName?.charAt(0) || 'E'}
                             </div>
-                            <p className="text-sm font-semibold text-slate-700">{log.employeeName}</p>
+                            <p className="text-sm font-bold text-slate-700">{log.employeeName}</p>
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm font-medium text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
-                        <TableCell className="text-sm font-medium text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                        <TableCell className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{log.method} • {log.action}</TableCell>
                         <TableCell className="text-right pr-6">
                           <Badge className={cn(
                             "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
-                            log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                            log.validation_status === 'Valid' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                           )}>
-                            {log.status || 'N/A'}
+                            {log.validation_status || 'N/A'}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -210,7 +281,7 @@ export default function AttendancePage() {
               </Table>
             </TabsContent>
 
-            <TabsContent value="leaves" className="m-0">
+            <TabsContent value="leaves" className="m-0 focus-visible:ring-0">
                <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
@@ -229,7 +300,7 @@ export default function AttendancePage() {
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d') : ''}</p>
                       </TableCell>
-                      <TableCell className="text-sm font-semibold text-slate-700">{req.employeeName}</TableCell>
+                      <TableCell className="text-sm font-bold text-slate-700">{req.employeeName}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
                       <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
                       <TableCell className="text-right pr-6">
@@ -247,14 +318,14 @@ export default function AttendancePage() {
               </Table>
             </TabsContent>
 
-            <TabsContent value="payroll" className="m-0">
+            <TabsContent value="payroll" className="m-0 focus-visible:ring-0">
                <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Period</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Salary</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Date Processed</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Details</TableHead>
+                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement ID</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Cycle Period</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Net</TableHead>
+                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -263,17 +334,17 @@ export default function AttendancePage() {
                   ) : displayPayroll.map(run => (
                     <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
-                        <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
-                        <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100">Settled</Badge>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{run.id}</p>
+                        <Badge variant="outline" className="text-[8px] font-black uppercase bg-green-50 text-green-700 border-green-100 mt-1">Settled</Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary?.toLocaleString()}</span>
+                        <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
                       </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-400 uppercase">
-                         {run.createdAt ? format(toSafeDate(run.createdAt) || new Date(), 'MMM d, p') : 'Pending'}
+                      <TableCell>
+                        <span className="text-sm font-black text-slate-900 tabular-nums">₱{run.totalNetSalary?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                          <Button size="sm" variant="ghost" className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                          <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(run)} className="h-8 font-black text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                               <FileText className="h-3.5 w-3.5" />
                               Payslips
                           </Button>
@@ -286,24 +357,97 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
       </Tabs>
+
+      {/* Payslip Description Dialog */}
+      <Dialog open={isPayslipOpen} onOpenChange={setIsPayslipOpen}>
+        <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
+            <div className="bg-slate-900 text-white p-8">
+                <DialogHeader>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
+                                <DollarSign className="h-6 w-6 text-primary-light" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">Payroll Statement</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+                                    High-Fidelity Disbursement Ledger
+                                </DialogDescription>
+                            </div>
+                        </div>
+                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-black uppercase text-[10px] tracking-widest h-7 px-4">
+                            Released
+                        </Badge>
+                    </div>
+                </DialogHeader>
+            </div>
+
+            <ScrollArea className="max-h-[60vh]">
+                <div className="p-8 space-y-8">
+                    <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
+                        <div className="space-y-1">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Statement Reference</Label>
+                            <p className="text-sm font-black text-slate-900">{selectedRun?.id}</p>
+                        </div>
+                        <div className="space-y-1 text-right">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Reporting Period</Label>
+                            <p className="text-sm font-black text-slate-900">
+                                {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <ShieldCheck className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Organization Summary</h4>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Card className="border-none shadow-md rounded-2xl bg-slate-50/50">
+                                <CardContent className="p-6 space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Disbursed</p>
+                                    <p className="text-3xl font-black text-slate-900">₱{selectedRun?.totalNetSalary.toLocaleString()}</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="border-none shadow-md rounded-2xl bg-slate-50/50">
+                                <CardContent className="p-6 space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transaction Status</p>
+                                    <p className="text-3xl font-black text-green-600 uppercase tracking-tighter">SUCCESS</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+
+                    <div className="p-6 rounded-[2.5rem] bg-blue-50/50 border border-blue-100 flex items-start gap-4">
+                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                            This payroll cycle has been processed and settled across the ecosystem. Individual payslips have been dispatched to employee workspace profiles.
+                        </p>
+                    </div>
+                </div>
+            </ScrollArea>
+
+            <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Authorized Ledger Entry</p>
+                </div>
+                <div className="flex gap-2 w-full md:w-auto">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => selectedRun && handleDownloadPDF(selectedRun)}
+                        className="flex-1 md:flex-none rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-sm"
+                    >
+                        <Download className="mr-2 h-4 w-4" /> Export high-fidelity PDF
+                    </Button>
+                    <DialogClose asChild>
+                        <Button variant="ghost" className="rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900">Dismiss</Button>
+                    </DialogClose>
+                </div>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
-
-function subHours(date: Date, hours: number) {
-    const result = new Date(date);
-    result.setHours(result.getHours() - hours);
-    return result;
-}
-
-function addDays(date: Date, days: number) {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-}
-
-function subMonths(date: Date, months: number) {
-    const result = new Date(date);
-    result.setMonth(result.getMonth() - months);
-    return result;
 }
