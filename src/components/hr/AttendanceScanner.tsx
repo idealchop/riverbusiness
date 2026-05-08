@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -39,27 +38,40 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
 
-    if (isOpen && step === 'scan') {
-      scanner = new Html5QrcodeScanner(
-        "qr-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
+    // Use a small timeout to ensure the DOM element #qr-reader is rendered
+    // by React before the Html5QrcodeScanner tries to find it.
+    const setupScanner = () => {
+        if (isOpen && step === 'scan') {
+          const element = document.getElementById("qr-reader");
+          if (!element) {
+              // If element isn't found yet, retry in the next tick
+              setTimeout(setupScanner, 50);
+              return;
+          }
 
-      scanner.render(
-        (decodedText) => {
-          handleScanSuccess(decodedText);
-          scanner?.clear();
-        },
-        (error) => {
-          // Silent fail for scanning errors
+          scanner = new Html5QrcodeScanner(
+            "qr-reader",
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            false
+          );
+
+          scanner.render(
+            (decodedText) => {
+              handleScanSuccess(decodedText);
+              scanner?.clear().catch(err => console.error("Scanner clear failed", err));
+            },
+            (error) => {
+              // Silent fail for scanning errors (common during active search)
+            }
+          );
         }
-      );
-    }
+    };
+
+    setupScanner();
 
     return () => {
       if (scanner) {
-        scanner.clear().catch(err => console.error("Scanner cleanup failed", err));
+        scanner.clear().catch(err => console.warn("Scanner cleanup failed", err));
       }
     };
   }, [isOpen, step]);
@@ -97,7 +109,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 8000,
           maximumAge: 0
         });
       });
