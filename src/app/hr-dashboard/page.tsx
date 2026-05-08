@@ -383,20 +383,20 @@ export default function HRDashboard() {
                                 src={heroImage.imageUrl} 
                                 alt={heroImage.description} 
                                 fill 
-                                className="object-contain p-12 transition-transform duration-[20s] hover:scale-105"
+                                className="object-contain p-8 md:p-12 transition-transform duration-[20s] hover:scale-105"
                                 data-ai-hint={heroImage.imageHint}
                             />
                         )}
-                        <div className="absolute bottom-10 left-10 text-slate-900 z-10 space-y-2">
-                            <h2 className="text-6xl font-black tracking-tighter text-slate-900">
+                        <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-slate-900 z-10 space-y-2">
+                            <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900">
                                 Team Workforce
                             </h2>
-                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">
+                            <p className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">
                                 Unified workforce and operational monitoring.
                             </p>
                         </div>
                     </div>
-                    <div className="lg:col-span-4 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
+                    <div className="lg:col-span-4 p-6 md:p-8 flex flex-col justify-center bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-slate-100">
                         <div className="space-y-6 w-full max-sm mx-auto">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
@@ -429,8 +429,8 @@ export default function HRDashboard() {
                                         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                                         day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl font-black",
                                         day_today: "bg-blue-50 text-primary font-black rounded-xl border border-primary/20",
-                                        day: "h-9 w-9 p-0 font-bold text-[11px] uppercase rounded-xl hover:bg-slate-50 transition-all",
-                                        head_cell: "text-slate-300 font-black uppercase text-[9px] tracking-widest pb-3",
+                                        day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-bold text-[10px] sm:text-[11px] uppercase rounded-xl hover:bg-slate-50 transition-all",
+                                        head_cell: "text-slate-300 font-black uppercase text-[8px] sm:text-[9px] tracking-widest pb-3",
                                         caption_label: "hidden",
                                         nav: "hidden" 
                                     }}
@@ -645,7 +645,7 @@ export default function HRDashboard() {
                         <ScrollArea className="flex-1">
                             <TabsContent value="calendar" className="p-8 mt-0 focus-visible:ring-0">
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-2 duration-500">
-                                    <Card className="border-none shadow-none rounded-[2rem] bg-white p-8">
+                                    <Card className="border-none shadow-none rounded-[2rem] bg-white p-4 sm:p-8">
                                         <div className="flex justify-center">
                                             <Calendar
                                                 mode="single"
@@ -653,14 +653,14 @@ export default function HRDashboard() {
                                                 onSelect={setSelectedDate}
                                                 modifiers={modifiers}
                                                 modifiersStyles={modifiersStyles}
-                                                className="w-full scale-110"
+                                                className="w-full scale-100 sm:scale-110"
                                                 classNames={{
                                                     months: "flex flex-col space-y-4",
                                                     month: "space-y-6",
                                                     caption: "flex justify-center pt-1 relative items-center mb-4",
                                                     caption_label: "text-lg font-black uppercase tracking-widest text-slate-900",
                                                     head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-[0.2em] pb-6 w-12",
-                                                    day: "h-12 w-12 p-0 font-bold text-xs uppercase rounded-2xl hover:bg-slate-50 transition-all m-0.5",
+                                                    day: "h-10 w-10 sm:h-12 sm:w-12 p-0 font-bold text-xs uppercase rounded-2xl hover:bg-slate-50 transition-all m-0.5",
                                                     day_selected: "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20",
                                                     day_today: "bg-blue-50 text-primary border border-primary/20",
                                                     nav: "hidden"
