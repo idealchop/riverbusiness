@@ -14,7 +14,8 @@ import {
   UserCircle,
   Clock,
   BookOpen,
-  ArrowRight
+  ArrowRight,
+  Menu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ import { signOut } from 'firebase/auth';
 import type { Notification as NotificationType, AppUser } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useMounted } from '@/hooks/use-mounted';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -52,6 +54,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -94,82 +97,103 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
+  const SidebarContentArea = () => (
+    <div className="flex flex-col h-full overflow-hidden">
+        {/* Top Navigation area */}
+        <div className="p-6 flex-1 overflow-y-auto">
+            <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
+                <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
+                <div className="flex flex-col">
+                <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">HR</span>
+                <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Management</span>
+                </div>
+            </Link>
+
+            <nav className="space-y-1">
+                {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                    <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                    <div className={cn(
+                        "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
+                        isActive 
+                        ? "bg-slate-100 text-slate-900 shadow-sm" 
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    )}>
+                        <div className="flex items-center gap-3">
+                        <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "group-hover:text-slate-900")} />
+                        <span className="text-sm font-semibold tracking-tight">{item.label}</span>
+                        </div>
+                        {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
+                    </div>
+                    </Link>
+                );
+                })}
+            </nav>
+        </div>
+
+        {/* Learning Hub Card (Prominent) */}
+        <div className="p-6 mt-auto">
+            <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
+                <Link href="/hr-dashboard/modules" onClick={() => setIsMobileMenuOpen(false)}>
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+                        <BookOpen className="h-20 w-20" />
+                    </div>
+                    <CardHeader className="p-5">
+                        <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
+                            <BookOpen className="h-5 w-5" />
+                        </div>
+                        <CardTitle className="text-base font-bold tracking-tight leading-tight text-white">Learning Hub</CardTitle>
+                        <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5 pt-0">
+                        <p className="text-[11px] font-medium text-white/80 leading-relaxed mb-4">
+                            Access exclusive technical documentation and video training.
+                        </p>
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
+                            Open Library <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </CardContent>
+                </Link>
+            </Card>
+        </div>
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
-      {/* Sidebar */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-72 flex-col border-r bg-white shrink-0">
-        <div className="flex flex-col h-full overflow-hidden">
-            {/* Top Navigation area */}
-            <div className="p-6 flex-1 overflow-y-auto">
-                <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
-                    <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
-                    <div className="flex flex-col">
-                    <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">HR</span>
-                    <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Management</span>
-                    </div>
-                </Link>
-
-                <nav className="space-y-1">
-                    {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = pathname === item.href;
-                    return (
-                        <Link key={item.href} href={item.href}>
-                        <div className={cn(
-                            "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
-                            isActive 
-                            ? "bg-slate-100 text-slate-900 shadow-sm" 
-                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                        )}>
-                            <div className="flex items-center gap-3">
-                            <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "group-hover:text-slate-900")} />
-                            <span className="text-sm font-semibold tracking-tight">{item.label}</span>
-                            </div>
-                            {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
-                        </div>
-                        </Link>
-                    );
-                    })}
-                </nav>
-            </div>
-
-            {/* Bottom Card Area */}
-            <div className="p-6 mt-auto">
-                <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
-                    <Link href="/hr-dashboard/modules">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                            <BookOpen className="h-20 w-20" />
-                        </div>
-                        <CardHeader className="p-5">
-                            <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
-                                <BookOpen className="h-5 w-5" />
-                            </div>
-                            <CardTitle className="text-base font-bold tracking-tight leading-tight text-white">Learning Hub</CardTitle>
-                            <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-5 pt-0">
-                            <p className="text-[11px] font-medium text-white/80 leading-relaxed mb-4">
-                                Access exclusive technical documentation and video training.
-                            </p>
-                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
-                                Open Library <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                            </div>
-                        </CardContent>
-                    </Link>
-                </Card>
-            </div>
-        </div>
+        <SidebarContentArea />
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-4">
+             {/* Mobile Menu Trigger */}
+             <div className="md:hidden">
+                <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                    <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full">
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-72 border-none">
+                        <SheetHeader className="sr-only">
+                            <SheetTitle>Navigation Menu</SheetTitle>
+                        </SheetHeader>
+                        <SidebarContentArea />
+                    </SheetContent>
+                </Sheet>
+             </div>
+             
              <div className="md:hidden flex items-center gap-2">
                 <LogoBlack className="h-8 w-8" />
                 <span className="font-black text-[10px] uppercase tracking-widest text-slate-900">HR Management</span>
              </div>
-             <div className="flex items-center gap-2">
+             <div className="hidden sm:flex items-center gap-2">
                 <span className="text-xs font-medium text-slate-400">Environment:</span>
                 <Badge variant="outline" className="text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200">
                     {user?.businessName || 'Standard'}

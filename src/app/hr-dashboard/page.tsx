@@ -23,14 +23,17 @@ import {
   Send,
   UserCircle,
   QrCode,
-  MapPin
+  MapPin,
+  BookOpen,
+  ArrowRight
 } from 'lucide-react';
 import { 
     Card, 
     CardContent, 
     CardHeader, 
     CardTitle, 
-    CardDescription 
+    CardDescription,
+    CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +63,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AttendanceScanner } from '@/components/hr/AttendanceScanner';
+import Link from 'next/link';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -212,7 +216,7 @@ export default function HRDashboard() {
   const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-10 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">HR Dashboard</h1>
@@ -398,6 +402,34 @@ export default function HRDashboard() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Prominent Learning Hub Shortcut (Module Card) */}
+            <div className="pt-6">
+                <Link href="/hr-dashboard/modules">
+                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.01] transition-all">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                            <BookOpen className="h-40 w-40" />
+                        </div>
+                        <CardHeader className="p-10">
+                            <div className="p-3 rounded-2xl bg-white/10 w-fit mb-6">
+                                <BookOpen className="h-8 w-8" />
+                            </div>
+                            <div className="space-y-2">
+                                <CardTitle className="text-3xl font-black tracking-tight text-white uppercase">Learning Hub</CardTitle>
+                                <CardDescription className="text-white/60 font-bold text-xs uppercase tracking-widest">Authorized Training Materials</CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-10 pt-0">
+                            <p className="text-sm font-medium text-white/80 leading-relaxed mb-8 max-w-lg">
+                                Access the centralized library of technical documentation, standard operating procedures, and video training modules authorized for your team.
+                            </p>
+                            <div className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.3em]">
+                                Open Operational Library <ArrowRight className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+            </div>
       </div>
 
       {/* Mobile Floating Action Button (FAB) */}
