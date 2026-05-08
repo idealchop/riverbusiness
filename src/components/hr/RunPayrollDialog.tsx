@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -26,6 +27,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { DollarSign, ShieldAlert, Loader2 } from 'lucide-react';
+import type { HRPayrollBreakdownItem } from '@/lib/types';
 
 const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
@@ -65,7 +67,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         where('hrRole', '==', 'employee')
       );
       const employeesSnap = await getDocs(employeesQuery);
-      const employees = employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const employees = employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
 
       if (employees.length === 0) {
         toast({ 
@@ -86,25 +88,39 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
       const attendanceSnap = await getDocs(attendanceQuery);
       const allLogs = attendanceSnap.docs.map(doc => doc.data());
 
-      // 3. Automated Computation Logic (with runtime safety)
-      const totalNet = employees.reduce((sum, emp: any) => {
+      // 3. Automated Computation Logic & Breakdown Generation
+      const breakdown: HRPayrollBreakdownItem[] = [];
+      let totalNet = 0;
+
+      employees.forEach((emp: any) => {
         const profile = emp?.hrProfile;
-        if (!profile) return sum;
+        if (!profile) return;
 
         let employeeSalary = 0;
         const rate = Number(profile?.rate) || 0;
+        let daysWorked = 0;
         
         if (profile.salaryType === 'daily') {
           // Count unique present days for this employee in the period
-          const daysWorked = allLogs.filter(log => log?.employeeId === emp.id).length;
+          daysWorked = allLogs.filter(log => log?.employeeId === emp.id).length;
           employeeSalary = daysWorked * rate;
         } else {
-          // Fixed monthly rate (basic logic)
+          // Fixed monthly rate
           employeeSalary = rate;
         }
 
-        return sum + employeeSalary;
-      }, 0);
+        if (employeeSalary > 0) {
+            breakdown.push({
+                employeeId: emp.id,
+                employeeName: emp.name || 'Anonymous',
+                amount: employeeSalary,
+                rate: rate,
+                type: profile.salaryType,
+                daysWorked: profile.salaryType === 'daily' ? daysWorked : undefined
+            });
+            totalNet += employeeSalary;
+        }
+      });
 
       // 4. Create Payroll Run Ledger Entry
       const payrollCol = collection(firestore, 'hr_companies', companyId, 'payrollRuns');
@@ -114,13 +130,14 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         periodEnd: values.periodEnd,
         status: 'paid',
         totalNetSalary: totalNet,
-        employeeCount: employees.length,
+        employeeCount: breakdown.length,
+        breakdown,
         createdAt: serverTimestamp()
       });
 
       toast({ 
         title: 'Payroll Disbursed', 
-        description: `Successfully computed ₱${totalNet.toLocaleString()} for ${employees.length} employees.` 
+        description: `Successfully computed ₱${totalNet.toLocaleString()} for ${breakdown.length} employees.` 
       });
       onOpenChange(false);
       form.reset();

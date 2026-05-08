@@ -191,4 +191,14 @@ export interface HRPayrollRun {
     totalNetSalary: number;
     employeeCount?: number;
     createdAt: any;
+    breakdown?: HRPayrollBreakdownItem[];
+}
+
+export interface HRPayrollBreakdownItem {
+    employeeId: string;
+    employeeName: string;
+    amount: number;
+    daysWorked?: number;
+    rate: number;
+    type: 'daily' | 'monthly';
 }

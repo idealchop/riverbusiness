@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -11,9 +12,12 @@ import {
   AlertTriangle,
   Download,
   Building,
-  UserCircle
+  UserCircle,
+  Eye,
+  ChevronRight,
+  Printer
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -24,6 +28,15 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription,
+    DialogFooter,
+    DialogClose
+} from '@/components/ui/dialog';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
@@ -32,7 +45,8 @@ import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { AppUser, HRPayrollRun } from '@/lib/types';
+import type { AppUser, HRPayrollRun, HRPayrollBreakdownItem } from '@/lib/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -42,7 +56,7 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
-// Demo data for the payroll engine
+// Demo data for the payroll engine with breakdown
 const DEMO_PAYROLL: HRPayrollRun[] = [
     { 
         id: 'PR-2025-05-SR', 
@@ -51,8 +65,13 @@ const DEMO_PAYROLL: HRPayrollRun[] = [
         periodEnd: format(endOfMonth(subMonths(new Date(), 0)), 'yyyy-MM-dd'), 
         status: 'paid', 
         totalNetSalary: 385000, 
-        employeeCount: 14,
-        createdAt: Timestamp.now() 
+        employeeCount: 3,
+        createdAt: Timestamp.now(),
+        breakdown: [
+            { employeeId: 'e1', employeeName: 'Marcus Rivera', amount: 45000, rate: 45000, type: 'monthly' },
+            { employeeId: 'e2', employeeName: 'Sarah Jenkins', amount: 38000, rate: 38000, type: 'monthly' },
+            { employeeId: 'e3', employeeName: 'Leo Castelo', amount: 18700, rate: 850, daysWorked: 22, type: 'daily' },
+        ]
     },
     { 
         id: 'PR-2025-04-SR', 
@@ -61,8 +80,12 @@ const DEMO_PAYROLL: HRPayrollRun[] = [
         periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), 
         status: 'paid', 
         totalNetSalary: 372400, 
-        employeeCount: 12,
-        createdAt: Timestamp.fromDate(subMonths(new Date(), 1)) 
+        employeeCount: 2,
+        createdAt: Timestamp.fromDate(subMonths(new Date(), 1)),
+        breakdown: [
+            { employeeId: 'e1', employeeName: 'Marcus Rivera', amount: 45000, rate: 45000, type: 'monthly' },
+            { employeeId: 'e4', employeeName: 'Elena Cruz', amount: 30000, rate: 30000, type: 'monthly' },
+        ]
     },
 ];
 
@@ -70,6 +93,7 @@ export default function PayrollPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
+  const [viewingRun, setViewingRun] = useState<HRPayrollRun | null>(null);
   
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -92,7 +116,6 @@ export default function PayrollPage() {
   const companyAddress = owner?.address || user?.address || 'Authorized Business Entity';
 
   const displayPayroll = useMemo(() => {
-    // If we have live data, use it. Otherwise, show demo data.
     const live = payrollRuns || [];
     return live.length > 0 ? live : DEMO_PAYROLL;
   }, [payrollRuns]);
@@ -119,29 +142,29 @@ export default function PayrollPage() {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(companyAddress, margin, 75);
-    doc.text(`Authorized Signatory: ${user?.name || 'Administrator'}`, margin, 87);
+    doc.text(`Authorized signatory: ${user?.name || 'Administrator'}`, margin, 87);
     doc.text(`Role: ${user?.hrRole || 'Admin'}`, margin, 99);
 
     // Document Title
     doc.setTextColor(0);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Certificate of Payroll Disbursement', margin, 160);
+    doc.text('Certificate of payroll disbursement', margin, 160);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Transaction Reference: ${run.id}`, margin, 185);
-    doc.text(`Statement Period: ${format(new Date(run.periodStart), 'MMM d')} - ${format(new Date(run.periodEnd), 'MMM d, yyyy')}`, margin, 200);
-    doc.text(`Processed Date: ${run.createdAt ? format(toSafeDate(run.createdAt)!, 'PPP p') : 'Recently'}`, margin, 215);
+    doc.text(`Transaction reference: ${run.id}`, margin, 185);
+    doc.text(`Statement period: ${format(new Date(run.periodStart), 'MMM d')} - ${format(new Date(run.periodEnd), 'MMM d, yyyy')}`, margin, 200);
+    doc.text(`Processed date: ${run.createdAt ? format(toSafeDate(run.createdAt)!, 'PPP p') : 'Recently'}`, margin, 215);
 
-    // Table Content
+    // Summary Table
     autoTable(doc, {
         startY: 245,
-        head: [['Disbursement Item', 'Currency', 'Amount']],
+        head: [['Disbursement item', 'Currency', 'Amount']],
         body: [
-            ['Total Net Salaries', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
-            ['Employee Headcount', '-', run.employeeCount || 'N/A'],
-            ['Payment Status', '-', run.status.toUpperCase()],
+            ['Total net salaries', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
+            ['Employee headcount', '-', run.employeeCount || 'N/A'],
+            ['Payment status', '-', run.status.toUpperCase()],
             ['Organization', '-', companyName],
         ],
         theme: 'striped',
@@ -149,12 +172,35 @@ export default function PayrollPage() {
         margin: { left: margin, right: margin },
     });
 
-    // Signatory Area (Required for Bank)
-    const finalY = (doc as any).lastAutoTable.finalY + 80;
+    // Employee Breakdown Table
+    if (run.breakdown && run.breakdown.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Employee disbursement breakdown', margin, (doc as any).lastAutoTable.finalY + 40);
+
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 55,
+            head: [['Employee', 'Type', 'Rate', 'Workload', 'Total payout']],
+            body: run.breakdown.map(item => [
+                item.employeeName,
+                item.type.charAt(0).toUpperCase() + item.type.slice(1),
+                `P${item.rate.toLocaleString()}`,
+                item.type === 'daily' ? `${item.daysWorked} days` : 'Full month',
+                `P${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 8 },
+            margin: { left: margin, right: margin },
+        });
+    }
+
+    // Signatory Area
+    const finalY = (doc as any).lastAutoTable.finalY + 60;
     doc.setDrawColor(200);
     doc.line(margin, finalY, margin + 200, finalY);
     doc.setFontSize(8);
-    doc.text('Authorized Signature', margin, finalY + 15);
+    doc.text('Authorized signature', margin, finalY + 15);
     doc.text(format(new Date(), 'PP p'), margin, finalY + 28);
 
     doc.setFontSize(8);
@@ -251,14 +297,24 @@ export default function PayrollPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right pr-8">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleDownloadStatement(run)}
-                                className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all group/btn"
-                            >
-                               <Download className="mr-2 h-3.5 w-3.5 opacity-50 group-hover/btn:opacity-100" /> Statement
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setViewingRun(run)}
+                                    className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all"
+                                >
+                                <Eye className="mr-2 h-3.5 w-3.5" /> View
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleDownloadStatement(run)}
+                                    className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all group/btn"
+                                >
+                                <Download className="mr-2 h-3.5 w-3.5 opacity-50 group-hover/btn:opacity-100" /> Statement
+                                </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -283,6 +339,116 @@ export default function PayrollPage() {
         onOpenChange={setIsPayrollDialogOpen}
         companyId={companyId}
       />
+
+      {/* Disbursement Detail View Dialog */}
+      <Dialog open={!!viewingRun} onOpenChange={(open) => !open && setViewingRun(null)}>
+        <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
+             <div className="bg-slate-900 text-white p-8">
+                <DialogHeader>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
+                                <DollarSign className="h-6 w-6 text-primary-light" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">Disbursement detail</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+                                    Ref: {viewingRun?.id} • {viewingRun ? format(new Date(viewingRun.periodStart), 'MMM d') : ''} - {viewingRun ? format(new Date(viewingRun.periodEnd), 'MMM d, yyyy') : ''}
+                                </DialogDescription>
+                            </div>
+                        </div>
+                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-black uppercase text-[10px] tracking-widest h-7 px-4">
+                            Settled
+                        </Badge>
+                    </div>
+                </DialogHeader>
+            </div>
+
+            <ScrollArea className="max-h-[60vh]">
+                <div className="p-8 space-y-8">
+                    {/* Organization Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-slate-100 pb-8">
+                         <div className="space-y-4">
+                            <div className="space-y-1">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Client organization</h4>
+                                <p className="text-sm font-bold text-slate-900">{companyName}</p>
+                                <p className="text-xs text-slate-500 leading-relaxed">{companyAddress}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Authorized signatory</h4>
+                                <p className="text-sm font-bold text-slate-900">{user?.name}</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-end justify-center">
+                            <div className="text-right p-6 rounded-[2rem] bg-slate-50 border border-slate-100 w-full md:w-auto min-w-[200px]">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total disbursement</p>
+                                <p className="text-3xl font-black text-slate-900 tracking-tight">₱{viewingRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Employee List */}
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Employee breakdown</h4>
+                            <span className="text-[10px] font-bold text-primary">{viewingRun?.employeeCount} Staff members</span>
+                        </div>
+                        
+                        <div className="rounded-2xl border border-slate-50 overflow-hidden">
+                            <Table>
+                                <TableHeader className="bg-slate-50/50">
+                                    <TableRow className="border-none">
+                                        <TableHead className="text-[10px] font-black uppercase text-slate-400">Member</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-slate-400">Type</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-slate-400">Workload</TableHead>
+                                        <TableHead className="text-right text-[10px] font-black uppercase text-slate-400 pr-6">Net amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {viewingRun?.breakdown?.map((item, idx) => (
+                                        <TableRow key={idx} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0">
+                                            <TableCell className="py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">
+                                                        {item.employeeName.charAt(0)}
+                                                    </div>
+                                                    <p className="text-sm font-bold text-slate-900">{item.employeeName}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="text-[9px] font-bold uppercase border-slate-100 bg-white shadow-none">
+                                                    {item.type}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs font-semibold text-slate-500">
+                                                {item.type === 'daily' ? `${item.daysWorked} days` : 'Fixed monthly'}
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6">
+                                                <span className="text-sm font-black text-slate-900">₱{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </div>
+            </ScrollArea>
+
+            <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4">
+                <Button 
+                    variant="outline" 
+                    onClick={() => viewingRun && handleDownloadStatement(viewingRun)}
+                    className="w-full md:w-auto rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-sm border-slate-200"
+                >
+                    <Printer className="mr-2 h-4 w-4" /> Download professional PDF
+                </Button>
+                <DialogClose asChild>
+                    <Button variant="ghost" className="w-full md:w-auto rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900">Close detail</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
