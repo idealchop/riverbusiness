@@ -14,6 +14,7 @@ import {
   TrendingUp,
   TrendingDown,
   ChevronRight,
+  ChevronLeft,
   Megaphone,
   Plus,
   Info,
@@ -33,7 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, addMonths, subMonths, startOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -71,7 +72,7 @@ function subHours(date: Date, hours: number) {
     return result;
 }
 
-// Philippine Holidays 2024/2025 Mock Data
+// Philippine Holidays Registry
 const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2024, 0, 1), name: "New Year's Day" },
     { date: new Date(2024, 1, 9), name: "Chinese New Year" },
@@ -85,7 +86,6 @@ const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2024, 10, 1), name: "All Saints' Day" },
     { date: new Date(2024, 11, 25), name: "Christmas Day" },
     { date: new Date(2024, 11, 30), name: "Rizal Day" },
-    // 2025
     { date: new Date(2025, 0, 1), name: "New Year's Day" },
     { date: new Date(2025, 0, 29), name: "Chinese New Year" },
     { date: new Date(2025, 3, 9), name: "Araw ng Kagitingan" },
@@ -101,11 +101,12 @@ const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2025, 11, 30), name: "Rizal Day" },
 ];
 
-// Mock Leave Data for Visual Highlighting
-const MOCK_LEAVES = [
-    new Date(2024, 4, 15),
-    new Date(2024, 4, 16),
-    new Date(2024, 4, 22),
+// Enhanced Leave Data with Names
+const MOCK_LEAVES_DATA = [
+    { date: new Date(2024, 4, 15), name: 'Marcus Rivera', type: 'Vacation' },
+    { date: new Date(2024, 4, 16), name: 'Marcus Rivera', type: 'Vacation' },
+    { date: new Date(2024, 4, 22), name: 'Elena Cruz', type: 'Sick Leave' },
+    { date: new Date(2025, 4, 10), name: 'Sarah Jenkins', type: 'Emergency' },
 ];
 
 // Demo data for activity feed
@@ -127,6 +128,10 @@ export default function HRDashboard() {
   const [liveDuration, setLiveDuration] = useState<string>('00:00:00');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
+  
+  // Calendar Interactivity States
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -281,17 +286,26 @@ export default function HRDashboard() {
     ];
   }, [employees, todayAttendance, pendingLeaves]);
 
+  // Interactivity Info Resolution
+  const selectedDateInfo = useMemo(() => {
+      if (!selectedDate) return null;
+      const holiday = PHILIPPINE_HOLIDAYS.find(h => isSameDay(h.date, selectedDate));
+      const leaves = MOCK_LEAVES_DATA.filter(l => isSameDay(l.date, selectedDate));
+      if (!holiday && leaves.length === 0) return null;
+      return { holiday, leaves };
+  }, [selectedDate]);
+
   const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
-  // Calendar modifiers for holiday and leave support
+  // Calendar modifiers
   const modifiers = {
     holiday: (date: Date) => PHILIPPINE_HOLIDAYS.some(h => isSameDay(h.date, date)),
-    leave: (date: Date) => MOCK_LEAVES.some(l => isSameDay(l, date)),
+    leave: (date: Date) => MOCK_LEAVES_DATA.some(l => isSameDay(l.date, date)),
   };
 
   const modifiersStyles = {
-    holiday: { color: 'white', backgroundColor: '#ef4444' }, // Red for holidays
-    leave: { color: 'white', backgroundColor: 'hsl(var(--primary))' }, // Blue for leaves
+    holiday: { color: 'white', backgroundColor: '#ef4444' },
+    leave: { color: 'white', backgroundColor: 'hsl(var(--primary))' },
   };
 
   return (
@@ -306,7 +320,7 @@ export default function HRDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-            <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end shadow-none min-w-[100px]">
+            <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end min-w-[100px]">
                 <p className="text-sm font-black tabular-nums leading-none text-slate-900">
                     {currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}
                 </p>
@@ -321,7 +335,7 @@ export default function HRDashboard() {
                 <button 
                   onClick={handleTimeIn} 
                   disabled={isProcessing} 
-                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold shadow-none text-xs uppercase tracking-widest flex items-center gap-2"
+                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
                 >
                     <LogIn className="h-4 w-4" /> Clock In
                 </button>
@@ -329,7 +343,7 @@ export default function HRDashboard() {
                 <button 
                   onClick={handleTimeOut} 
                   disabled={isProcessing} 
-                  className="bg-destructive text-white hover:bg-destructive/90 transition-all rounded-xl h-11 px-6 font-bold shadow-none text-xs uppercase tracking-widest flex items-center gap-2"
+                  className="bg-destructive text-white hover:bg-destructive/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
                 >
                     <LogOut className="h-4 w-4" /> Clock Out
                 </button>
@@ -340,14 +354,14 @@ export default function HRDashboard() {
                 </div>
             )}
             
-            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-none text-xs uppercase tracking-widest border-slate-200 bg-white">
+            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
                 Payroll
             </Button>
         </div>
       </div>
 
       <div className="space-y-8">
-            <Card className="border-none shadow-none rounded-[2.5rem] overflow-hidden bg-white">
+            <Card className="border-none rounded-[2.5rem] overflow-hidden bg-white shadow-none">
                 <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[380px]">
                     <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden bg-slate-50 flex items-center justify-center p-8">
                         {heroImage && (
@@ -374,18 +388,26 @@ export default function HRDashboard() {
                                 <div className="space-y-1">
                                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Company Calendar</h3>
                                     <p className="text-lg font-black text-slate-900 leading-tight">
-                                        {format(new Date(), 'MMMM yyyy')}
+                                        {format(currentMonth, 'MMMM yyyy')}
                                     </p>
                                 </div>
-                                <div className="h-10 w-10 rounded-2xl bg-white shadow-none border border-slate-100 flex items-center justify-center">
-                                    <CalendarDays className="h-5 w-5 text-primary" />
+                                <div className="flex items-center gap-1 bg-white border border-slate-100 rounded-xl p-1 shadow-sm">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
                             
-                            <div className="bg-white p-4 rounded-[2rem] shadow-none border border-slate-100 flex justify-center overflow-hidden">
+                            <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex flex-col items-center justify-center overflow-hidden">
                                 <Calendar
                                     mode="single"
-                                    selected={new Date()}
+                                    month={currentMonth}
+                                    onMonthChange={setCurrentMonth}
+                                    selected={selectedDate}
+                                    onSelect={setSelectedDate}
                                     modifiers={modifiers}
                                     modifiersStyles={modifiersStyles}
                                     className="w-fit rounded-[1.5rem] border-none p-0"
@@ -400,6 +422,35 @@ export default function HRDashboard() {
                                     }}
                                 />
                             </div>
+
+                            {/* Interactive Status Card */}
+                            {selectedDateInfo && (
+                                <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Activity on {format(selectedDate!, 'MMM d')}</p>
+                                    </div>
+                                    {selectedDateInfo.holiday && (
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="h-6 w-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                                                <AlertCircle className="h-3.5 w-3.5" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-900">{selectedDateInfo.holiday.name}</p>
+                                        </div>
+                                    )}
+                                    {selectedDateInfo.leaves.map((leave, i) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <div className="h-6 w-6 rounded-lg bg-blue-50 text-primary flex items-center justify-center">
+                                                <UserCircle className="h-3.5 w-3.5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{leave.name}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{leave.type}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             
                             <div className="pt-2">
                                 <Button 
@@ -419,7 +470,7 @@ export default function HRDashboard() {
                 <div className="lg:col-span-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {stats.map((stat, idx) => (
-                            <Card key={idx} className="border-none shadow-none rounded-3xl bg-white group hover:shadow-none transition-all active:scale-[0.99]">
+                            <Card key={idx} className="border-none rounded-3xl bg-white group hover:shadow-none transition-all active:scale-[0.99] shadow-none">
                                 <CardContent className="p-6">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="p-3 rounded-2xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
@@ -440,7 +491,7 @@ export default function HRDashboard() {
                 </div>
 
                 <div className="lg:col-span-4">
-                    <Card className="h-full border-none shadow-none rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
+                    <Card className="h-full border-none rounded-3xl bg-slate-900 text-white overflow-hidden relative group shadow-none">
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
                              <CheckCircle2 className="h-24 w-24" />
                         </div>
@@ -460,7 +511,7 @@ export default function HRDashboard() {
                 </div>
             </div>
 
-            <Card className="border-none shadow-none rounded-[2.5rem] overflow-hidden bg-white">
+            <Card className="border-none rounded-[2.5rem] overflow-hidden bg-white shadow-none">
                 <CardHeader className="bg-slate-50/30 p-8 border-b">
                     <div className="flex items-center justify-between">
                         <div>
@@ -579,7 +630,8 @@ export default function HRDashboard() {
                                         <div className="flex justify-center">
                                             <Calendar
                                                 mode="single"
-                                                selected={new Date()}
+                                                selected={selectedDate}
+                                                onSelect={setSelectedDate}
                                                 modifiers={modifiers}
                                                 modifiersStyles={modifiersStyles}
                                                 className="w-full scale-110"
