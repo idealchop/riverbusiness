@@ -11,7 +11,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Camera, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -32,47 +32,81 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const [errorMsg, setErrorMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionType, setActionType] = useState<'IN' | 'OUT' | null>(null);
+  const [cameraLoading, setCameraLoading] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const companyId = user?.companyId || user?.clientId;
 
   useEffect(() => {
     if (isOpen && step === 'scan' && companyId) {
-      const startScanner = async () => {
-        try {
+      setCameraLoading(true);
+      
+      const initializeScanner = async () => {
+        // Retry logic to find the element, as Radix Dialog might take a moment to mount children
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const tryStart = async () => {
           const element = document.getElementById("qr-reader");
-          if (!element) return;
-
-          // Initialize with low-level API to prevent ghost buttons/UI
-          const scanner = new Html5Qrcode("qr-reader");
-          scannerRef.current = scanner;
-
-          await scanner.start(
-            { facingMode: "environment" },
-            { 
-              fps: 15, 
-              qrbox: { width: 250, height: 250 },
-              aspectRatio: 1.0 
-            },
-            (decodedText) => {
-              handleScanSuccess(decodedText);
-            },
-            () => {
-              // Standard scanning loop
+          
+          if (!element) {
+            if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(tryStart, 100);
+            } else {
+              setErrorMsg("Scanner hardware link failed. Please refresh the page.");
+              setFormStep('error');
+              setCameraLoading(false);
             }
-          );
-        } catch (err) {
-          console.error("Scanner start error:", err);
-          setErrorMsg("Camera initialization failed. Please check permissions.");
-          setFormStep('error');
-        }
+            return;
+          }
+
+          try {
+            // Cleanup any existing instance first
+            if (scannerRef.current) {
+              try {
+                await scannerRef.current.stop();
+              } catch (e) {
+                // Ignore stop errors if already stopped
+              }
+              scannerRef.current = null;
+            }
+
+            const scanner = new Html5Qrcode("qr-reader");
+            scannerRef.current = scanner;
+
+            await scanner.start(
+              { facingMode: "environment" },
+              { 
+                fps: 15, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0 
+              },
+              (decodedText) => {
+                handleScanSuccess(decodedText);
+              },
+              () => {
+                // Scanning...
+              }
+            );
+            setCameraLoading(false);
+          } catch (err) {
+            console.error("Scanner start error:", err);
+            setErrorMsg("Camera initialization failed. Please check permissions and ensure no other app is using the camera.");
+            setFormStep('error');
+            setCameraLoading(false);
+          }
+        };
+
+        tryStart();
       };
 
-      const timer = setTimeout(startScanner, 300);
+      initializeScanner();
+
       return () => {
-        clearTimeout(timer);
         if (scannerRef.current) {
           scannerRef.current.stop().catch(e => console.warn("Cleanup warning:", e));
+          scannerRef.current = null;
         }
       };
     }
@@ -96,7 +130,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const handleScanSuccess = async (decodedText: string) => {
     if (!firestore || !companyId) return;
 
-    // 1. Secure Handshake Check
+    // Secure Handshake Check
     const expectedHandshake = `RIVER_OFFICE_QR:${companyId}`;
     if (decodedText.trim() !== expectedHandshake) {
       setErrorMsg("Security Mismatch: This QR code does not belong to your company terminal.");
@@ -106,13 +140,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
 
     if (scannerRef.current) {
         await scannerRef.current.stop().catch(e => console.warn(e));
+        scannerRef.current = null;
     }
 
     setFormStep('validate');
     setIsProcessing(true);
 
     try {
-      // 2. High-Precision GPS Proof
+      // High-Precision GPS Proof
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -123,7 +158,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
 
       const { latitude, longitude } = position.coords;
 
-      // 3. Anchor Points Check
+      // Anchor Points Check
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
       const locationSnap = await getDocs(locationsCol);
       
@@ -137,14 +172,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
       const radius = office.radius_meters || 100;
 
-      // 4. Radius Hard-Validation
+      // Radius Hard-Validation
       if (distance > radius) {
         setErrorMsg(`Location Rejected: You are ${Math.round(distance)}m away. Allowed radius: ${radius}m.`);
         setFormStep('error');
         return;
       }
 
-      // 5. Intelligence: Sequence Detection
+      // Action intelligence
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const logsQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
@@ -159,7 +194,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const nextAction = lastAction === 'IN' ? 'OUT' : 'IN';
       setActionType(nextAction);
 
-      // 6. Record Transaction to Ledger
       const logData: Omit<HRAttendanceLog, 'id'> = {
         companyId,
         employeeId: user.id,
@@ -177,7 +211,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
 
       setFormStep('success');
-      toast({ title: `Handshake Verified: Clocked ${nextAction}` });
+      toast({ title: `Verified: Clocked ${nextAction}` });
 
     } catch (err: any) {
       setErrorMsg(err.message || "Precision GPS error. Ensure high-accuracy location services are active.");
@@ -191,6 +225,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setFormStep('scan');
     setErrorMsg('');
     setActionType(null);
+    setCameraLoading(false);
   };
 
   return (
@@ -216,6 +251,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                 {step === 'scan' && (
                     <>
                         <div id="qr-reader" className="w-full h-full" />
+                        
+                        {cameraLoading && (
+                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+                              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Activating Camera...</p>
+                           </div>
+                        )}
+
                         <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center">
                             <div className="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
                                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-slide-down" />
