@@ -175,7 +175,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                             <MapPin className="h-4 w-4" />
                         </div>
                         <div className="space-y-0.5">
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Office Setup</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">QR Attendance</p>
                             <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest opacity-80">Geo-Fence Config</p>
                         </div>
                     </div>
