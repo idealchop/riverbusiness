@@ -11,7 +11,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -33,11 +33,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionType, setActionType] = useState<'IN' | 'OUT' | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
+  const [showManualStart, setShowManualStart] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const companyId = user?.companyId || user?.clientId;
 
-  // Cleanup function to strictly stop the scanner
   const stopScanner = async () => {
     if (scannerRef.current) {
       try {
@@ -46,72 +46,82 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
         }
         scannerRef.current.clear();
       } catch (e) {
-        console.warn("Scanner stop warning:", e);
+        console.warn("Scanner cleanup warning:", e);
       }
       scannerRef.current = null;
     }
+  };
+
+  const startCameraFlow = async () => {
+    if (!companyId) return;
+    
+    setErrorMsg("");
+    setCameraLoading(true);
+    setShowManualStart(false);
+
+    // Ensure clean state
+    await stopScanner();
+
+    const tryStart = async (attempts = 0) => {
+      const element = document.getElementById("qr-reader");
+      
+      if (!element) {
+        if (attempts < 15) {
+          setTimeout(() => tryStart(attempts + 1), 200);
+        } else {
+          setErrorMsg("Terminal mounting timed out. Please try again.");
+          setFormStep('error');
+          setCameraLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const scanner = new Html5Qrcode("qr-reader");
+        scannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" },
+          { 
+            fps: 10, 
+            qrbox: (viewfinderWidth, vHeight) => {
+                const minDim = Math.min(viewfinderWidth, vHeight);
+                return { width: minDim * 0.7, height: minDim * 0.7 };
+            },
+            aspectRatio: 1.0 
+          },
+          (decodedText) => {
+            handleScanSuccess(decodedText);
+          },
+          () => {} // Silent on scan success (just looking)
+        );
+        setCameraLoading(false);
+      } catch (err) {
+        console.error("Camera start failed:", err);
+        setErrorMsg("Hardware access blocked. Ensure camera permissions are enabled.");
+        setFormStep('error');
+        setCameraLoading(false);
+      }
+    };
+
+    tryStart();
   };
 
   useEffect(() => {
     let mountTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
-      setCameraLoading(true);
-      
-      const initializeScanner = async () => {
-        // Wait for Dialog animation to finish and DOM to be ready
-        // Mobile browsers need a bit more time for the UI to stabilize before hardware requests
-        await new Promise(resolve => mountTimeout = setTimeout(resolve, 800));
-
-        let attempts = 0;
-        const maxAttempts = 15;
-        
-        const tryStart = async () => {
-          const element = document.getElementById("qr-reader");
-          
-          if (!element) {
-            if (attempts < maxAttempts) {
-              attempts++;
-              mountTimeout = setTimeout(tryStart, 150);
-            } else {
-              setErrorMsg("Hardware link timed out. Please try opening the terminal again.");
-              setFormStep('error');
-              setCameraLoading(false);
-            }
-            return;
-          }
-
-          try {
-            await stopScanner(); // Ensure no previous instance exists
-
-            const scanner = new Html5Qrcode("qr-reader");
-            scannerRef.current = scanner;
-
-            await scanner.start(
-              { facingMode: "environment" },
-              { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0 
-              },
-              (decodedText) => {
-                handleScanSuccess(decodedText);
-              },
-              () => {} // Silent on scan failure (scanning...)
-            );
-            setCameraLoading(false);
-          } catch (err) {
-            console.error("Scanner start error:", err);
-            setErrorMsg("Camera access denied. Please allow camera permissions for River Apps.");
-            setFormStep('error');
-            setCameraLoading(false);
-          }
-        };
-
-        tryStart();
-      };
-
-      initializeScanner();
+      // Delay for dialog animation and DOM hydration
+      mountTimeout = setTimeout(() => {
+        startCameraFlow();
+        // Show manual override if it hangs
+        mountTimeout = setTimeout(() => {
+            setCameraLoading(prev => {
+                if (prev) setShowManualStart(true);
+                return prev;
+            });
+        }, 4000);
+      }, 1000);
     }
 
     return () => {
@@ -121,27 +131,24 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   }, [isOpen, step, companyId]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371e3; // Earth radius in meters
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
     const Δφ = (lat2 - lat1) * Math.PI / 180;
     const Δλ = (lon2 - lon1) * Math.PI / 180;
-
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
               Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
     return R * c;
   };
 
   const handleScanSuccess = async (decodedText: string) => {
     if (!firestore || !companyId) return;
 
-    // Secure Handshake Check
     const expectedHandshake = `RIVER_OFFICE_QR:${companyId}`;
     if (decodedText.trim() !== expectedHandshake) {
-      setErrorMsg("Security Mismatch: This QR code is not recognized by your company terminal.");
+      setErrorMsg("Security Error: Invalid organizational QR detected.");
       setFormStep('error');
       return;
     }
@@ -152,23 +159,21 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setIsProcessing(true);
 
     try {
-      // Capture GPS
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 8000,
+          timeout: 10000,
           maximumAge: 0
         });
       });
 
       const { latitude, longitude } = position.coords;
 
-      // Location Validation
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
       const locationSnap = await getDocs(locationsCol);
       
       if (locationSnap.empty) {
-        setErrorMsg("Operational Error: Office coordinates not found. Please contact admin.");
+        setErrorMsg("Error: Office coordinates not anchored by administrator.");
         setFormStep('error');
         return;
       }
@@ -178,12 +183,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const radius = office.radius_meters || 100;
 
       if (distance > radius) {
-        setErrorMsg(`Radius Error: You are ${Math.round(distance)}m away. Attendance only allowed within ${radius}m.`);
+        setErrorMsg(`Location Error: You are ${Math.round(distance)}m away. Authorized radius is ${radius}m.`);
         setFormStep('error');
         return;
       }
 
-      // Log Logic
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const logsQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
@@ -213,12 +217,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       };
 
       await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
-
       setFormStep('success');
-      toast({ title: `Verified: Clocked ${nextAction}` });
+      toast({ title: `Verified: ${nextAction} Success` });
 
     } catch (err: any) {
-      setErrorMsg(err.message || "GPS Failure. Please ensure location services are ON.");
+      setErrorMsg(err.message || "GPS Failure. Please enable Location Services.");
       setFormStep('error');
     } finally {
       setIsProcessing(false);
@@ -252,15 +255,27 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                 </DialogDescription>
             </DialogHeader>
             
-            <div className="min-h-[350px] flex flex-col items-center justify-center bg-slate-900 rounded-[2.5rem] border-4 border-slate-100 overflow-hidden relative shadow-inner group">
+            <div className="min-h-[350px] flex flex-col items-center justify-center bg-slate-900 rounded-[2.5rem] border-4 border-slate-100 overflow-hidden relative shadow-inner">
                 {step === 'scan' && (
                     <>
-                        <div id="qr-reader" className="w-full h-full overflow-hidden" />
+                        <div id="qr-reader" className="w-full h-full" />
                         
                         {cameraLoading && (
-                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900 text-white gap-6">
                               <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Opening Camera...</p>
+                              <div className="text-center space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em]">Activating Terminal...</p>
+                                {showManualStart && (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={startCameraFlow}
+                                        className="rounded-xl border-white/20 text-white h-9 font-bold text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900"
+                                    >
+                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start Manual Scan
+                                    </Button>
+                                )}
+                              </div>
                            </div>
                         )}
 
@@ -272,7 +287,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                                 <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
                                 <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-xl" />
                             </div>
-                            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Position QR code here</p>
+                            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align with Office Tag</p>
                         </div>
                     </>
                 )}
@@ -286,7 +301,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         <div className="text-center space-y-3">
                             <p className="text-lg font-black uppercase tracking-[0.2em] text-white">Validating</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed text-center">
-                                Capturing GPS proof...<br/>Checking organizational radius.
+                                Capturing GPS proof...<br/>Checking boundary radius.
                             </p>
                         </div>
                     </div>
@@ -298,9 +313,9 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                             <CheckCircle2 className="h-12 w-12 text-white" />
                         </div>
                         <div className="space-y-3">
-                            <p className="text-3xl font-black tracking-tight text-white uppercase">Clocked {actionType}!</p>
+                            <p className="text-3xl font-black tracking-tight text-white uppercase">Authorized!</p>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                Your location has been verified.<br/>Log has been securely stored.
+                                Location verified. Log saved.
                             </p>
                         </div>
                     </div>
@@ -308,11 +323,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
 
                 {step === 'error' && (
                     <div className="flex flex-col items-center gap-8 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
-                        <div className="h-24 w-24 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20">
-                            <XCircle className="h-12 w-12 text-white" />
+                        <div className="h-20 w-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20">
+                            <XCircle className="h-10 w-10 text-white" />
                         </div>
                         <div className="space-y-4">
-                            <p className="text-2xl font-black tracking-tight text-white uppercase">Verification Failed</p>
+                            <p className="text-xl font-black text-white uppercase">Access Denied</p>
                             <div className="bg-red-500/10 px-6 py-4 rounded-2xl border border-red-500/20 max-w-[280px]">
                                 <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">{errorMsg}</p>
                             </div>
@@ -320,28 +335,22 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         <Button 
                             variant="outline" 
                             onClick={resetTerminal} 
-                            className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 border-white/10 text-white hover:bg-white hover:text-slate-900 transition-all"
+                            className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 border-white/10 text-white hover:bg-white hover:text-slate-900"
                         >
-                            Try Again
+                            Retry Handshake
                         </Button>
                     </div>
                 )}
             </div>
 
             <DialogFooter className="pt-8">
-                {step === 'scan' ? (
-                    <div className="w-full space-y-4">
-                        <div className="flex items-center gap-3 justify-center text-slate-400">
-                            <ShieldCheck className="h-4 w-4" />
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Verified Secure Terminal</p>
-                        </div>
-                        <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close</Button>
+                <div className="w-full flex flex-col gap-4">
+                    <div className="flex items-center gap-3 justify-center">
+                        <ShieldCheck className="h-4 w-4 text-slate-400" />
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">GPS Proof Verification Active</p>
                     </div>
-                ) : (
-                    <Button onClick={() => onOpenChange(false)} className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl shadow-primary/20">
-                        Dismiss
-                    </Button>
-                )}
+                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close Terminal</Button>
+                </div>
             </DialogFooter>
         </div>
       </DialogContent>
