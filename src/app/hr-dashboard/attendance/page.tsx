@@ -91,8 +91,8 @@ export default function AttendancePage() {
   const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
-    () => (firestore && employee?.id && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
-    [firestore, employee?.id, companyId]
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
+    [firestore, companyId]
   );
   const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
 
@@ -416,7 +416,7 @@ export default function AttendancePage() {
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transaction Status</p>
                                     <p className="text-3xl font-black text-green-600 uppercase tracking-tighter">SUCCESS</p>
                                 </CardContent>
-                            </div>
+                            </Card>
                         </div>
                     </div>
 
