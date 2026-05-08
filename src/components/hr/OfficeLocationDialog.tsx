@@ -57,7 +57,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
     defaultValues: {
-      office_name: 'Main Branch',
+      office_name: 'Main branch',
       radius_meters: 50,
       latitude: 0,
       longitude: 0,
@@ -86,15 +86,15 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
   const captureCurrentLocation = () => {
     if (!navigator.geolocation) {
-        toast({ variant: 'destructive', title: 'GPS Unavailable' });
+        toast({ variant: 'destructive', title: 'GPS unavailable' });
         return;
     }
     navigator.geolocation.getCurrentPosition((pos) => {
         form.setValue('latitude', pos.coords.latitude);
         form.setValue('longitude', pos.coords.longitude);
-        toast({ title: 'Anchor Coordinates Captured' });
+        toast({ title: 'Coordinates captured' });
     }, (err) => {
-        toast({ variant: 'destructive', title: 'Location Access Denied', description: 'Please enable high-accuracy GPS in your browser settings.' });
+        toast({ variant: 'destructive', title: 'Location access denied', description: 'Please enable high-accuracy GPS in your browser settings.' });
     });
   };
 
@@ -114,9 +114,9 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
       await setDoc(locRef, newLoc);
       setLocation(newLoc as HRCompanyLocation);
-      toast({ title: 'Geo-Fence Synchronized', description: 'Precision attendance validation is now active.' });
+      toast({ title: 'Geo-fence synchronized', description: 'Precision attendance validation is now active.' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Setup Failed' });
+      toast({ variant: 'destructive', title: 'Setup failed' });
     } finally {
       setIsSubmitting(false);
     }
@@ -140,7 +140,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
       downloadLink.download = `${form.getValues('office_name')}_QR_HD.png`;
       downloadLink.href = `${pngFile}`;
       downloadLink.click();
-      toast({ title: "HD QR Code Generated", description: "The asset is now downloading." });
+      toast({ title: "HD QR code generated", description: "The asset is now downloading." });
     };
     
     img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
@@ -159,9 +159,9 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                         <div className="p-3 rounded-2xl bg-primary/10">
                             <MapPin className="h-6 w-6 text-primary" />
                         </div>
-                        <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase">Office Protocol</DialogTitle>
+                        <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900">Office protocol</DialogTitle>
                     </div>
-                    <DialogDescription className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                    <DialogDescription className="text-slate-500 font-bold text-xs">
                         Define the physical boundaries for team attendance verification.
                     </DialogDescription>
                 </DialogHeader>
@@ -178,29 +178,29 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
                         <div className="grid grid-cols-2 gap-4">
                             <FormField control={form.control} name="latitude" render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lat</FormLabel><FormControl><Input type="number" step="any" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Latitude</FormLabel><FormControl><Input type="number" step="any" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="longitude" render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Long</FormLabel><FormControl><Input type="number" step="any" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Longitude</FormLabel><FormControl><Input type="number" step="any" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
 
-                        <Button type="button" variant="outline" onClick={captureCurrentLocation} className="w-full rounded-xl border-dashed gap-3 h-12 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all">
+                        <Button type="button" variant="outline" onClick={captureCurrentLocation} className="w-full rounded-xl border-dashed gap-3 h-12 text-xs font-bold text-slate-500 hover:text-primary transition-all">
                             <MapIcon className="h-4 w-4" /> Capture current GPS anchor
                         </Button>
 
                         <FormField control={form.control} name="radius_meters" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Allowed radius (Meters)</FormLabel>
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Allowed radius (meters)</FormLabel>
                                 <FormControl><Input type="number" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold" {...field} /></FormControl>
-                                <FormDescription className="text-[10px] font-medium text-slate-400">Distance from anchor point where clock-in is authorized.</FormDescription>
+                                <FormDescription className="text-[10px] font-medium text-slate-400">Distance from anchor point where clock-in is permitted.</FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )} />
 
                         <div className="pt-6">
                             <Button type="submit" disabled={isSubmitting} className="w-full rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20">
-                                {isSubmitting ? 'Syncing...' : 'Authorize Geo-Fence'}
+                                {isSubmitting ? 'Syncing...' : 'Authorize geo-fence'}
                             </Button>
                         </div>
                     </form>
@@ -209,30 +209,18 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
             {/* Asset Hub / QR Presenter */}
             <div className="w-full md:w-[45%] bg-slate-900 text-white p-12 flex flex-col items-center justify-center animate-in slide-in-from-right duration-700 relative">
-                <div className="absolute top-10 right-10 flex gap-2">
-                    <Badge className="bg-primary text-white border-none font-black text-[9px] uppercase tracking-widest px-3 h-6">Verified Handshake</Badge>
-                </div>
-                
                 <div className="bg-white p-8 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] mb-10 group relative transition-transform duration-500 hover:scale-105">
                     <QRCodeSVG id="office-qr-svg" value={qrValue} size={200} level="H" includeMargin={false} />
                     <div className="absolute inset-0 border-8 border-slate-50/50 rounded-[3rem] pointer-events-none" />
                 </div>
 
                 <div className="text-center space-y-6 max-w-[280px]">
-                    <h4 className="text-2xl font-black tracking-tight uppercase">QR Entry Tag</h4>
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                        <div className="flex items-start gap-3">
-                            <Info className="h-4 w-4 text-primary-light shrink-0 mt-0.5" />
-                            <p className="text-[10px] text-left font-bold text-white/50 uppercase tracking-widest leading-relaxed">
-                                Display this Office QR Code physically at the entrance. It triggers the River GPS-Proof validation flow.
-                            </p>
-                        </div>
-                    </div>
+                    <h4 className="text-2xl font-black tracking-tight">QR Entry Tag</h4>
                     <div className="flex flex-col gap-3 pt-4">
                         <Button className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" onClick={downloadQR}>
-                            <Download className="h-4 w-4" /> Download QR Code in HD
+                            <Download className="h-4 w-4" /> Download QR code in HD
                         </Button>
-                        <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => onOpenChange(false)}>Close Asset View</Button>
+                        <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => onOpenChange(false)}>Close asset view</Button>
                     </div>
                 </div>
                 
