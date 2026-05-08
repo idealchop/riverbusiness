@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Table, 
   TableBody, 
@@ -54,11 +55,11 @@ const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin'
 const ITEMS_PER_PAGE = 10;
 
 const DEMO_EMPLOYEES: Partial<AppUser>[] = [
-    { id: 'e1', name: 'Marcus Rivera', email: 'marcus@riverph.com', hrProfile: { position: 'Operations Lead', department: 'Logistics', status: 'Active', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15', firstName: 'Marcus', lastName: 'Rivera' } },
-    { id: 'e2', name: 'Sarah Jenkins', email: 'sarah.j@riverph.com', hrProfile: { position: 'Customer Success', department: 'Support', status: 'Active', salaryType: 'monthly', rate: 38000, startDate: '2024-02-01', firstName: 'Sarah', lastName: 'Jenkins' } },
-    { id: 'e3', name: 'Leo Castelo', email: 'leo.c@riverph.com', hrProfile: { position: 'Delivery Officer', department: 'Fleet', status: 'Active', salaryType: 'daily', rate: 850, startDate: '2024-03-10', firstName: 'Leo', lastName: 'Castelo' } },
-    { id: 'e4', name: 'Elena Cruz', email: 'elena@riverph.com', hrProfile: { position: 'Admin Assistant', department: 'Admin', status: 'Active', salaryType: 'monthly', rate: 30000, startDate: '2023-11-20', firstName: 'Elena', lastName: 'Cruz' } },
-    { id: 'e5', name: 'David Sy', email: 'david.sy@riverph.com', hrProfile: { position: 'Quality Inspector', department: 'Compliance', status: 'Active', salaryType: 'monthly', rate: 42000, startDate: '2024-01-05', firstName: 'David', lastName: 'Sy' } },
+    { id: 'e1', name: 'Marcus Rivera', email: 'marcus@riverph.com', hrProfile: { position: 'Operations Lead', department: 'Logistics', status: 'Active', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15', firstName: 'Marcus', lastName: 'Rivera', employeeNumber: 'EMP-2024-0001' } },
+    { id: 'e2', name: 'Sarah Jenkins', email: 'sarah.j@riverph.com', hrProfile: { position: 'Customer Success', department: 'Support', status: 'Active', salaryType: 'monthly', rate: 38000, startDate: '2024-02-01', firstName: 'Sarah', lastName: 'Jenkins', employeeNumber: 'EMP-2024-0002' } },
+    { id: 'e3', name: 'Leo Castelo', email: 'leo.c@riverph.com', hrProfile: { position: 'Delivery Officer', department: 'Fleet', status: 'Active', salaryType: 'daily', rate: 850, startDate: '2024-03-10', firstName: 'Leo', lastName: 'Castelo', employeeNumber: 'EMP-2024-0003' } },
+    { id: 'e4', name: 'Elena Cruz', email: 'elena@riverph.com', hrProfile: { position: 'Admin Assistant', department: 'Admin', status: 'Active', salaryType: 'monthly', rate: 30000, startDate: '2023-11-20', firstName: 'Elena', lastName: 'Cruz', employeeNumber: 'EMP-2023-0004' } },
+    { id: 'e5', name: 'David Sy', email: 'david.sy@riverph.com', hrProfile: { position: 'Quality Inspector', department: 'Compliance', status: 'Active', salaryType: 'monthly', rate: 42000, startDate: '2024-01-05', firstName: 'David', lastName: 'Sy', employeeNumber: 'EMP-2024-0005' } },
 ];
 
 export default function EmployeesPage() {
@@ -203,9 +204,12 @@ export default function EmployeesPage() {
                   <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                     <TableCell className="pl-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase shadow-inner">
-                          {nameInitials}
-                        </div>
+                        <Avatar className="h-10 w-10 rounded-xl shadow-inner">
+                            <AvatarImage src={emp.photoURL} alt={emp.name} />
+                            <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
+                                {nameInitials}
+                            </AvatarFallback>
+                        </Avatar>
                         <div className="space-y-0.5">
                           <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
                           <p className="text-[10px] font-bold text-slate-400 lowercase">{emp.email || 'No Email'}</p>

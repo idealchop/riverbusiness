@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -30,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
@@ -482,6 +482,7 @@ export default function AttendancePage() {
                   ) : paginatedAttendance.map((log) => {
                     const timeIn = toSafeDate(log.timeIn);
                     const timeOut = toSafeDate(log.timeOut);
+                    const employee = allUsers?.find(u => u.id === log.employeeId);
                     return (
                       <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                         <TableCell className="pl-6 py-4">
@@ -491,9 +492,12 @@ export default function AttendancePage() {
                         </TableCell>
                         <TableCell>
                           <button onClick={() => handleEmployeeClick(log.employeeId)} className="flex items-center gap-3 hover:text-primary transition-colors text-left outline-none group/name">
-                            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs uppercase group-hover/name:bg-primary/10 group-hover/name:text-primary">
-                              {log.employeeName?.charAt(0) || 'E'}
-                            </div>
+                            <Avatar className="h-8 w-8 rounded-lg shadow-inner group-hover/name:ring-2 group-hover/name:ring-primary/20 transition-all">
+                                <AvatarImage src={employee?.photoURL} alt={log.employeeName} />
+                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 font-bold text-[10px] uppercase">
+                                    {log.employeeName?.charAt(0) || 'E'}
+                                </AvatarFallback>
+                            </Avatar>
                             <p className="text-sm font-bold text-slate-700 group-hover/name:text-primary underline-offset-4 group-hover/name:underline">{log.employeeName}</p>
                           </button>
                         </TableCell>
@@ -534,13 +538,23 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingLeaves ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
-                  ) : paginatedLeaves.map(req => (
+                  ) : paginatedLeaves.map(req => {
+                    const employee = allUsers?.find(u => u.id === req.employeeId);
+                    return (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
                       </TableCell>
                       <TableCell>
-                        <button onClick={() => handleEmployeeClick(req.employeeId)} className="text-sm font-bold text-slate-700 hover:text-primary transition-colors underline-offset-4 hover:underline">{req.employeeName}</button>
+                        <button onClick={() => handleEmployeeClick(req.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors underline-offset-4 hover:underline">
+                            <Avatar className="h-7 w-7 rounded-lg">
+                                <AvatarImage src={employee?.photoURL} alt={req.employeeName} />
+                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
+                                    {req.employeeName?.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                            {req.employeeName}
+                        </button>
                       </TableCell>
                       <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
                       <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
@@ -554,7 +568,7 @@ export default function AttendancePage() {
                           </Badge>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
               <PaginationFooter 
@@ -580,18 +594,29 @@ export default function AttendancePage() {
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
                   ) : paginatedPayroll.map((item, idx) => {
                     const isSending = sendingEmailId === `${item.runId}-${item.employeeId}`;
+                    const employee = allUsers?.find(u => u.id === item.employeeId);
                     return (
                     <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
-                        <button onClick={() => handleEmployeeClick(item.employeeId)} className="text-sm font-bold text-slate-700 hover:text-primary transition-colors">{item.employeeName}</button>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
+                        <button onClick={() => handleEmployeeClick(item.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors">
+                            <Avatar className="h-8 w-8 rounded-lg">
+                                <AvatarImage src={employee?.photoURL} alt={item.employeeName} />
+                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
+                                    {item.employeeName?.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="text-left">
+                                <p>{item.employeeName}</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
+                            </div>
+                        </button>
                       </TableCell>
                       <TableCell>
                         <p className="text-xs font-semibold text-slate-600">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, yyyy')}</p>
                       </TableCell>
                       <TableCell>
                         <p className="text-xs font-medium text-slate-500">
-                            {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : 'Monthly Fixed')}
+                            {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : (item.type === 'bimonthly' ? 'Bimonthly Fixed' : 'Monthly Fixed'))}
                         </p>
                       </TableCell>
                       <TableCell>
@@ -636,7 +661,7 @@ export default function AttendancePage() {
 
       {/* Individual Disbursement View Dialog */}
       <Dialog open={!!selectedDisbursement} onOpenChange={(open) => { if (!open) setSelectedDisbursement(null); }}>
-        <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
+        <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl p-0 overflow-hidden bg-white">
             <div className="bg-slate-900 text-white p-8">
                 <DialogHeader>
                     <div className="flex items-center justify-between mb-2">

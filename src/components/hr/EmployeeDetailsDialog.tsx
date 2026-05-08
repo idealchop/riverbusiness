@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser, HRAttendanceLog, HRLeaveRequest } from '@/lib/types';
 import { 
   Briefcase, 
@@ -181,9 +182,12 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
             <DialogHeader>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
-                        <div className="h-20 w-20 rounded-3xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 shadow-inner">
-                            {initials}
-                        </div>
+                        <Avatar className="h-20 w-20 rounded-3xl shadow-inner border-4 border-slate-50">
+                            <AvatarImage src={employee.photoURL} alt={employee.name} className="object-cover" />
+                            <AvatarFallback className="rounded-3xl bg-slate-100 text-2xl font-bold text-slate-400">
+                                {initials}
+                            </AvatarFallback>
+                        </Avatar>
                         <div className="space-y-1">
                             <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
                             <div className="flex items-center gap-3">

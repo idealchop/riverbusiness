@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -38,13 +37,14 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc, limit } from 'firebase/firestore';
 import { format, isSameDay, addMonths, subMonths, startOfMonth, addDays, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { HRAttendanceLog } from '@/lib/types';
+import type { HRAttendanceLog, AppUser } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -111,7 +111,7 @@ export default function HRDashboard() {
   const { toast } = useToast();
 
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [liveDuration, setLiveDuration] = useState<string>('00:00:00');
+  const [liveDuration, setLiveDuration] = setLiveDuration('00:00:00');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
@@ -165,7 +165,7 @@ export default function HRDashboard() {
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
   );
-  const { data: employees } = useCollection(employeesQuery);
+  const { data: employees } = useCollection<AppUser>(employeesQuery);
 
   const companyAttendanceQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', todayStr)) : null,
@@ -390,10 +390,17 @@ export default function HRDashboard() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y divide-slate-50">
-                        {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => (
+                        {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => {
+                            const emp = employees?.find(e => e.id === item.employeeId);
+                            return (
                             <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                                 <div className="flex items-center gap-5">
-                                    <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-lg shadow-inner">{item.employeeName?.charAt(0)}</div>
+                                    <Avatar className="h-12 w-12 rounded-2xl shadow-inner border border-slate-100">
+                                        <AvatarImage src={emp?.photoURL} alt={item.employeeName} className="object-cover" />
+                                        <AvatarFallback className="rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-lg">
+                                            {item.employeeName?.charAt(0)}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div>
                                         <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
                                         <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
@@ -408,7 +415,7 @@ export default function HRDashboard() {
                                     </Badge>
                                 </div>
                             </div>
-                        )) : (
+                        )}) : (
                             <div className="py-24 text-center flex flex-col items-center gap-4 opacity-30">
                                 <Activity className="h-12 w-12 text-slate-300" />
                                 <p className="text-xs font-black uppercase tracking-[0.3em]">Feed is quiet today</p>
