@@ -142,34 +142,37 @@ export default function AttendancePage() {
 
     // Header
     doc.setFillColor(83, 142, 194);
-    doc.rect(0, 0, pageWidth, 100, 'F');
+    doc.rect(0, 0, pageWidth, 120, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('River Philippines', margin, 45);
-    doc.setFontSize(10);
+    doc.text('River Philippines', margin, 50);
+    
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('A UNIFIED BUSINESS OPERATING SYSTEM', margin, 65);
-    doc.text(`Fulfillment: ${user?.businessName || 'N/A'}`, margin, 80);
+    doc.text('River Tech Inc.', margin, 68);
+    doc.text('SEC Reg #: 202406123456', margin, 80);
+    doc.text('Filinvest Axis Tower 1, Alabang', margin, 92);
+    doc.text('customers@riverph.com', margin, 104);
 
     doc.setTextColor(0);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Payroll Disbursement Summary', margin, 140);
+    doc.text('Payroll Disbursement Summary', margin, 160);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Reference ID: ${run.id}`, margin, 160);
-    doc.text(`Statement Period: ${format(new Date(run.periodStart), 'MMM d')} - ${format(new Date(run.periodEnd), 'MMM d, yyyy')}`, margin, 175);
-    doc.text(`Processed Date: ${run.createdAt ? format(toSafeDate(run.createdAt)!, 'PP p') : 'Recently'}`, margin, 190);
+    doc.text(`Reference ID: ${run.id}`, margin, 185);
+    doc.text(`Statement period: ${format(new Date(run.periodStart), 'MMM d')} - ${format(new Date(run.periodEnd), 'MMM d, yyyy')}`, margin, 200);
+    doc.text(`Processed date: ${run.createdAt ? format(toSafeDate(run.createdAt)!, 'PP p') : 'Recently'}`, margin, 215);
 
     autoTable(doc, {
-        startY: 220,
+        startY: 245,
         head: [['Description', 'Unit', 'Amount']],
         body: [
-            ['Total Net Disbursement', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
-            ['Status', '-', run.status.toUpperCase()],
-            ['Total Payees', 'Count', 'Multi-staff Ledger'],
+            ['Total net disbursement', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
+            ['Status', '-', run.status.charAt(0).toUpperCase() + run.status.slice(1)],
+            ['Total Payees', 'Count', 'Multi-staff ledger'],
         ],
         theme: 'striped',
         headStyles: { fillColor: [83, 142, 194], textColor: 255 },
@@ -181,7 +184,7 @@ export default function AttendancePage() {
     doc.setTextColor(150);
     doc.text('This is an electronically generated statement. High-fidelity verification active.', margin, (doc as any).lastAutoTable.finalY + 40);
 
-    doc.save(`Payslip_${run.id}.pdf`);
+    doc.save(`Statement_${run.id}.pdf`);
   };
 
   if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
@@ -194,12 +197,12 @@ export default function AttendancePage() {
              Attendance
           </h1>
           <p className="text-slate-500 font-bold text-sm">
-             Browse Work, Leave, and Payment Records Across the Organization.
+             Browse work, leave, and payment records across the organization.
           </p>
         </div>
         <div className="flex gap-2">
             <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-200 shadow-sm" onClick={() => window.print()}>
-                <Download className="mr-2 h-4 w-4" /> Export Ledger
+                <Download className="mr-2 h-4 w-4" /> Export ledger
             </Button>
         </div>
       </div>
@@ -210,7 +213,7 @@ export default function AttendancePage() {
             Attendance
           </TabsTrigger>
           <TabsTrigger value="leaves" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Leave Logs
+            Leave logs
           </TabsTrigger>
           <TabsTrigger value="payroll" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
             Payroll
@@ -223,7 +226,7 @@ export default function AttendancePage() {
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder="Search by Employee or Date..." 
+                  placeholder="Search by employee or date..." 
                   className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -231,7 +234,7 @@ export default function AttendancePage() {
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-primary">Consolidated View Active</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-primary">Consolidated view active</span>
               </div>
             </div>
           </CardHeader>
@@ -249,7 +252,7 @@ export default function AttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {loadingAttendance ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Ledger...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading ledger...</TableCell></TableRow>
                   ) : displayAttendance.map((log) => {
                     return (
                       <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
@@ -295,7 +298,7 @@ export default function AttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {loadingLeaves ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading History...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
                   ) : displayLeaves.map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
@@ -324,14 +327,14 @@ export default function AttendancePage() {
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
                     <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement ID</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Cycle Period</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Net</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Cycle period</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total net</TableHead>
                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingPayroll ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Records...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading records...</TableCell></TableRow>
                   ) : displayPayroll.map(run => (
                     <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
@@ -370,9 +373,9 @@ export default function AttendancePage() {
                                 <DollarSign className="h-6 w-6 text-primary-light" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">Payroll Statement</DialogTitle>
+                                <DialogTitle className="text-2xl font-black tracking-tight">Payroll Statement</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                                    High-Fidelity Disbursement Ledger
+                                    High-fidelity disbursement ledger
                                 </DialogDescription>
                             </div>
                         </div>
@@ -387,11 +390,11 @@ export default function AttendancePage() {
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
                         <div className="space-y-1">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Statement Reference</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Statement reference</Label>
                             <p className="text-sm font-black text-slate-900">{selectedRun?.id}</p>
                         </div>
                         <div className="space-y-1 text-right">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Reporting Period</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Reporting period</Label>
                             <p className="text-sm font-black text-slate-900">
                                 {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
                             </p>
@@ -401,19 +404,19 @@ export default function AttendancePage() {
                     <div className="space-y-6">
                         <div className="flex items-center gap-3">
                             <ShieldCheck className="h-4 w-4 text-primary" />
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Organization Summary</h4>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Organization summary</h4>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Card className="border-none shadow-md rounded-2xl bg-slate-50/50">
                                 <CardContent className="p-6 space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Disbursed</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total disbursed</p>
                                     <p className="text-3xl font-black text-slate-900">₱{selectedRun?.totalNetSalary.toLocaleString()}</p>
                                 </CardContent>
                             </Card>
                             <Card className="border-none shadow-md rounded-2xl bg-slate-50/50">
                                 <CardContent className="p-6 space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transaction Status</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transaction status</p>
                                     <p className="text-3xl font-black text-green-600 uppercase tracking-tighter">SUCCESS</p>
                                 </CardContent>
                             </Card>
@@ -432,7 +435,7 @@ export default function AttendancePage() {
             <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Authorized Ledger Entry</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Authorized ledger entry</p>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                     <Button 
