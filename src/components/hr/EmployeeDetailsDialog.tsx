@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useTransition } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -39,16 +39,21 @@ import {
   HeartPulse,
   Landmark,
   FileText,
-  X
+  X,
+  Upload,
+  Eye,
+  Info
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
+import { collection, query, where, orderBy, Timestamp, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { Progress } from '@/components/ui/progress';
 
 // Safe date conversion helper
 const toSafeDate = (val: any): Date | null => {
@@ -76,7 +81,10 @@ interface EmployeeDetailsDialogProps {
 
 export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialTab = 'overview' }: EmployeeDetailsDialogProps) {
   const firestore = useFirestore();
+  const storage = useStorage();
+  const auth = useAuth();
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
   
   const companyId = employee?.companyId || 'default';
   
@@ -104,6 +112,11 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editData, setEditData] = useState<any>({});
+  
+  // Contract Upload States
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploadingContract, setIsUploadingContract] = useState(false);
 
   useEffect(() => {
       if (isOpen && employee) {
@@ -124,6 +137,8 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
               taxDeduction: employee.hrProfile?.taxDeduction || 0
           });
           setIsEditing(false);
+          setContractFile(null);
+          setUploadProgress(0);
       }
   }, [isOpen, employee, initialTab]);
 
@@ -166,6 +181,34 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save changes.' });
     } finally {
         setIsSaving(false);
+    }
+  };
+
+  const handleContractUpload = async () => {
+    if (!contractFile || !auth?.currentUser || !storage || !firestore || !employee) return;
+    setIsUploadingContract(true);
+    setUploadProgress(0);
+    
+    const filePath = `userContracts/${employee.id}/${Date.now()}-${contractFile.name}`;
+    
+    try {
+      const downloadURL = await uploadFileWithProgress(storage, auth, filePath, contractFile, {}, setUploadProgress);
+      const userRef = doc(firestore, 'users', employee.id);
+      
+      await updateDoc(userRef, {
+          currentContractUrl: downloadURL,
+          contractUploadedDate: serverTimestamp(),
+          contractStatus: "Active",
+      });
+      
+      toast({ title: 'Contract Uploaded', description: 'The employment contract has been saved successfully.' });
+      setContractFile(null);
+    } catch (error) {
+      console.error("Contract upload failed:", error);
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not save the contract document.' });
+    } finally {
+      setIsUploadingContract(false);
+      setUploadProgress(0);
     }
   };
 
@@ -415,6 +458,92 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                
+                                <Separator className="bg-slate-50" />
+                                
+                                {/* Legal Documents Section */}
+                                <div className="space-y-6">
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                        <FileText className="h-4 w-4" /> Legal Documents
+                                    </h4>
+                                    <Card className="border-none shadow-sm overflow-hidden bg-slate-50/20">
+                                        <CardHeader className="bg-slate-50/50 p-6 flex flex-row items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-sm font-bold">Employment Contract</CardTitle>
+                                                <CardDescription className="text-xs">Authorized digital copy of signed agreement.</CardDescription>
+                                            </div>
+                                            {employee.currentContractUrl && (
+                                                <Badge className="bg-green-50 text-green-700 border-none font-bold uppercase text-[9px] px-3">Verified Active</Badge>
+                                            )}
+                                        </CardHeader>
+                                        <CardContent className="p-6">
+                                            <div className="flex flex-col md:flex-row items-center gap-8">
+                                                <div className="flex-1 w-full flex flex-col gap-4">
+                                                    {employee.currentContractUrl ? (
+                                                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                                                            <div className="p-2.5 rounded-xl bg-blue-50 text-primary">
+                                                                <FileText className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-bold text-slate-900 truncate">contract_signed_digital.pdf</p>
+                                                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
+                                                                    Uploaded {employee.contractUploadedDate ? format(toSafeDate(employee.contractUploadedDate)!, 'PPP') : 'Recently'}
+                                                                </p>
+                                                            </div>
+                                                            <Button asChild variant="outline" size="sm" className="h-9 px-4 rounded-xl font-bold text-xs gap-2 border-slate-200">
+                                                                <a href={employee.currentContractUrl} target="_blank" rel="noopener noreferrer">
+                                                                    <Eye className="h-3.5 w-3.5" /> View
+                                                                </a>
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-8 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center text-center gap-3 bg-white/40">
+                                                            <div className="p-3 rounded-full bg-slate-50 text-slate-300">
+                                                                <FileText className="h-8 w-8" />
+                                                            </div>
+                                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No Contract on File</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="flex-1 w-full space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
+                                                        <div className="flex gap-2">
+                                                            <Input 
+                                                                type="file" 
+                                                                onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                                                                className="h-10 rounded-xl bg-white border-slate-200 text-xs font-medium"
+                                                                disabled={isUploadingContract}
+                                                                accept=".pdf,image/*"
+                                                            />
+                                                            <Button 
+                                                                size="sm" 
+                                                                className="h-10 px-5 rounded-xl font-bold text-xs shadow-md"
+                                                                onClick={handleContractUpload}
+                                                                disabled={!contractFile || isUploadingContract}
+                                                            >
+                                                                {isUploadingContract ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    {isUploadingContract && (
+                                                        <div className="space-y-1.5">
+                                                            <Progress value={uploadProgress} className="h-1" />
+                                                            <p className="text-[9px] font-black text-right text-primary uppercase tracking-widest">{uploadProgress.toFixed(0)}% Synchronizing</p>
+                                                        </div>
+                                                    )}
+                                                    <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-3">
+                                                        <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                                        <p className="text-[10px] font-medium text-slate-600 leading-relaxed italic">
+                                                            Attaching a new contract will archive the previous version and update the organizational compliance status for this employee.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </>
                         )}
