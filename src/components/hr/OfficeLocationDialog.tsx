@@ -252,11 +252,18 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                     </div>
 
                     <div className="text-center space-y-6 max-w-[280px]">
-                        <h4 className="text-2xl font-black tracking-tight uppercase">QR entry tag</h4>
+                        <h4 className="text-2xl font-black tracking-tight">QR Entry Tag</h4>
                         <div className="flex flex-col gap-3 pt-4">
-                            <Button className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" onClick={downloadQR}>
+                            <Button 
+                              className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" 
+                              onClick={downloadQR}
+                              disabled={!location}
+                            >
                                 <Download className="h-4 w-4" /> Download QR code in HD
                             </Button>
+                            {!location && (
+                                <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Setup required for download</p>
+                            )}
                             <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => onOpenChange(false)}>Close asset view</Button>
                         </div>
                     </div>
