@@ -19,7 +19,8 @@ import {
   Info,
   Calendar as CalendarIcon,
   Search,
-  Bell
+  Bell,
+  Send
 } from 'lucide-react';
 import { 
     Card, 
@@ -54,6 +55,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -357,7 +359,7 @@ export default function HRDashboard() {
                         </div>
                     </div>
                     <div className="lg:col-span-4 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
-                        <div className="space-y-6 w-full max-w-sm mx-auto">
+                        <div className="space-y-6 w-full max-sm mx-auto">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Company Calendar</h3>
@@ -622,4 +624,3 @@ export default function HRDashboard() {
     </div>
   );
 }
-
