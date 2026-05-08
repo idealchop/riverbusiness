@@ -111,7 +111,7 @@ export default function HRDashboard() {
   const { toast } = useToast();
 
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [liveDuration, setLiveDuration] = setLiveDuration('00:00:00');
+  const [liveDuration, setLiveDuration] = useState('00:00:00');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
