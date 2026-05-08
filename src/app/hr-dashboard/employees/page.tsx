@@ -11,7 +11,7 @@ import {
   UserCog,
   Activity
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 
 const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin', 'Compliance', 'Operations'];
+const ITEMS_PER_PAGE = 10;
 
 const DEMO_EMPLOYEES: Partial<AppUser>[] = [
     { id: 'e1', name: 'Marcus Rivera', email: 'marcus@riverph.com', hrProfile: { position: 'Operations Lead', department: 'Logistics', status: 'Active', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15', firstName: 'Marcus', lastName: 'Rivera' } },
@@ -72,6 +73,7 @@ export default function EmployeesPage() {
   const [initialDialogTab, setInitialDialogTab] = useState<string>('overview');
   const [employeeToDelete, setEmployeeToDelete] = useState<AppUser | null>(null);
   const [employeeToEdit, setEmployeeToEdit] = useState<AppUser | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -96,6 +98,13 @@ export default function EmployeesPage() {
       return matchesSearch && matchesDept;
     });
   }, [employees, searchTerm, selectedDept]);
+
+  const paginatedEmployees = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredEmployees.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredEmployees, currentPage]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
 
   const handleDeleteEmployee = async () => {
     if (!firestore || !employeeToDelete) return;
@@ -142,7 +151,10 @@ export default function EmployeesPage() {
                 placeholder="Search By Name, Email, Or Position..." 
                 className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                }}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -157,7 +169,10 @@ export default function EmployeesPage() {
                         {DEPARTMENTS.map(dept => (
                             <DropdownMenuItem 
                                 key={dept} 
-                                onClick={() => setSelectedDept(dept)}
+                                onClick={() => {
+                                    setSelectedDept(dept);
+                                    setCurrentPage(1);
+                                }}
                                 className={cn("rounded-lg font-semibold text-xs py-2 cursor-pointer", selectedDept === dept && "bg-slate-50")}
                             >
                                 {dept}
@@ -182,7 +197,7 @@ export default function EmployeesPage() {
             <TableBody>
               {isLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</TableCell></TableRow>
-              ) : filteredEmployees.map((emp) => {
+              ) : paginatedEmployees.map((emp) => {
                 const nameInitials = emp.name?.split(' ').map(n => n[0]).join('') || '?';
                 return (
                   <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
@@ -254,6 +269,11 @@ export default function EmployeesPage() {
             </TableBody>
           </Table>
         </CardContent>
+        <PaginationFooter 
+            totalItems={filteredEmployees.length}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+        />
       </Card>
       
       <HREmployeeDialog 
@@ -287,4 +307,39 @@ export default function EmployeesPage() {
       </AlertDialog>
     </div>
   );
+}
+
+function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItems: number, currentPage: number, onPageChange: (p: number) => void }) {
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    
+    if (totalItems === 0) return null;
+
+    return (
+        <CardFooter className="bg-slate-50/30 py-4 flex items-center justify-between border-t">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Showing {Math.min(totalItems, (currentPage - 1) * ITEMS_PER_PAGE + 1)}-{Math.min(totalItems, currentPage * ITEMS_PER_PAGE)} of {totalItems} entries
+            </div>
+            <div className="flex items-center gap-2">
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] uppercase font-bold" 
+                    onClick={() => onPageChange(Math.max(1, currentPage - 1))} 
+                    disabled={currentPage === 1}
+                >
+                    Prev
+                </Button>
+                <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{currentPage} / {totalPages || 1}</span>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] uppercase font-bold" 
+                    onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} 
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Next
+                </Button>
+            </div>
+        </CardFooter>
+    );
 }
