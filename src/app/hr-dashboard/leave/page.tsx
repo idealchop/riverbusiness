@@ -12,7 +12,8 @@ import {
   ChevronRight, 
   UserCircle, 
   Info, 
-  Calendar as CalendarIcon 
+  Calendar as CalendarIcon,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -300,7 +301,7 @@ export default function LeavePage() {
 
       {/* Calendar View Dialog */}
       <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-        <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-5xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl h-[90vh] flex flex-col">
             <div className="bg-slate-900 text-white p-8 shrink-0">
                 <DialogHeader>
                     <div className="flex items-center justify-between">
@@ -309,31 +310,32 @@ export default function LeavePage() {
                                 <CalendarDays className="h-6 w-6" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight">Team Availability</DialogTitle>
+                                <DialogTitle className="text-2xl font-black tracking-tight">Team presence</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
-                                    Visual team presence and multi-status tracking.
+                                    Visual team availability and multi-status tracking.
                                 </DialogDescription>
                             </div>
                         </div>
-                        <div className="hidden md:flex items-center gap-4">
+                        <div className="hidden md:flex items-center gap-6">
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-primary" />
-                                <span className="text-[9px] font-bold uppercase text-slate-400">Approved</span>
+                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Approved</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-amber-500" />
-                                <span className="text-[9px] font-bold uppercase text-slate-400">Pending</span>
+                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Pending</span>
                             </div>
                         </div>
                     </div>
                 </DialogHeader>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                <div className="p-8 border-r border-slate-50 flex-1 flex flex-col items-center justify-center">
-                    <Card className="border-none shadow-none p-4 rounded-[2rem] bg-slate-50/50">
+            <ScrollArea className="flex-1 min-h-0 bg-slate-50/30">
+                <div className="p-8 flex flex-col items-center gap-8">
+                    <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 w-fit">
                         <Calendar
                             mode="single"
+                            numberOfMonths={2}
                             selected={selectedCalendarDate}
                             onSelect={setSelectedCalendarDate}
                             modifiers={{
@@ -344,58 +346,59 @@ export default function LeavePage() {
                                 approved: { backgroundColor: 'hsl(var(--primary))', color: 'white', fontWeight: 'bold' },
                                 pending: { backgroundColor: '#f59e0b', color: 'white', fontWeight: 'bold' }
                             }}
-                            className="scale-110"
+                            className="rounded-xl border-none"
                             classNames={{
                                 caption_label: "text-base font-black uppercase tracking-widest text-slate-900",
                                 head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-widest pb-6",
-                                day: "h-10 w-10 p-0 font-bold text-xs uppercase rounded-xl hover:bg-white transition-all",
+                                day: "h-10 w-10 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
                                 day_selected: "ring-2 ring-primary ring-offset-2",
                                 day_today: "border-b-2 border-primary rounded-none",
                             }}
                         />
-                    </Card>
-                </div>
-
-                <div className="w-full md:w-[320px] bg-slate-50/30 flex flex-col h-full">
-                    <div className="p-6 border-b bg-white">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Activity for</p>
-                        <p className="text-lg font-bold text-slate-900">{selectedCalendarDate ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'No Date Selected'}</p>
                     </div>
-                    <ScrollArea className="flex-1">
-                        <div className="p-6 space-y-4">
-                            {selectedDateLeaves.length > 0 ? selectedDateLeaves.map(leave => (
-                                <div key={leave.id} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3 group hover:border-primary/20 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center font-bold text-slate-400 text-[10px]">
-                                            {leave.employeeName?.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900 leading-tight">{leave.employeeName}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{leave.type}</p>
-                                        </div>
-                                    </div>
-                                    <Badge className={cn(
-                                        "text-[8px] font-bold uppercase border-none px-2 h-4",
-                                        leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
-                                    )}>
-                                        {leave.status}
-                                    </Badge>
-                                </div>
-                            )) : (
-                                <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
-                                    <CheckCircle2 className="h-8 w-8" />
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Full Operations</p>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </div>
-            </div>
 
-            <DialogFooter className="p-6 bg-white border-t shrink-0">
+                    {selectedCalendarDate && selectedDateLeaves.length > 0 ? (
+                        <div className="w-full max-w-2xl animate-in fade-in slide-in-from-top-4 duration-500 pb-10">
+                            <Card className="border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
+                                <CardHeader className="bg-muted/30 pb-4 border-b border-slate-100">
+                                    <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Team Presence: {format(selectedCalendarDate, 'MMMM d')}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {selectedDateLeaves.map(leave => (
+                                        <div key={leave.id} className="p-4 rounded-2xl border border-slate-50 bg-slate-50/50 flex items-center justify-between group hover:bg-white hover:border-primary/20 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center font-black text-slate-400 text-[10px] shadow-sm">
+                                                    {leave.employeeName?.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900 leading-tight">{leave.employeeName}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{leave.type}</p>
+                                                </div>
+                                            </div>
+                                            <Badge className={cn(
+                                                "text-[8px] font-black uppercase border-none px-2 h-4",
+                                                leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
+                                            )}>
+                                                {leave.status}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    ) : selectedCalendarDate && (
+                        <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
+                            <CheckCircle2 className="h-8 w-8 text-slate-300" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Full operational presence</p>
+                        </div>
+                    )}
+                </div>
+            </ScrollArea>
+
+            <DialogFooter className="p-8 pt-4 bg-white border-t shrink-0">
                 <DialogClose asChild>
                     <Button variant="ghost" className="rounded-xl h-11 px-10 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
-                        Close Calendar
+                        Close calendar
                     </Button>
                 </DialogClose>
             </DialogFooter>
