@@ -385,17 +385,21 @@ export default function HRDashboard() {
       <div className="space-y-8">
             <Card className="border-none rounded-[2.5rem] overflow-hidden bg-white shadow-none">
                 <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[400px]">
-                    <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden bg-slate-50 flex items-center justify-center p-8">
-                        {heroImage && (
-                            <Image 
-                                src={heroImage.imageUrl} 
-                                alt={heroImage.description} 
-                                fill 
-                                className="object-contain p-8 md:p-12 transition-transform duration-[20s] hover:scale-105"
-                                data-ai-hint={heroImage.imageHint}
-                            />
-                        )}
-                        <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-slate-900 z-10 space-y-2 max-w-[80%]">
+                    <div className="lg:col-span-6 relative flex flex-col lg:block overflow-hidden bg-slate-50 min-h-[300px]">
+                        {/* Image Container: Absolute on desktop, static height on mobile */}
+                        <div className="relative h-64 lg:h-full lg:absolute lg:inset-0 flex items-center justify-center p-8">
+                            {heroImage && (
+                                <Image 
+                                    src={heroImage.imageUrl} 
+                                    alt={heroImage.description} 
+                                    fill 
+                                    className="object-contain p-8 md:p-12 transition-transform duration-[20s] hover:scale-105"
+                                    data-ai-hint={heroImage.imageHint}
+                                />
+                            )}
+                        </div>
+                        {/* Text Content: Stacked on mobile, absolute on desktop to avoid overlap */}
+                        <div className="relative p-8 pt-0 lg:p-0 lg:absolute lg:bottom-10 lg:left-10 text-slate-900 z-10 space-y-2 lg:max-w-[80%]">
                             <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">
                                 Team Workforce
                             </h2>
@@ -578,41 +582,41 @@ export default function HRDashboard() {
             </Card>
       </div>
 
-      {/* Mobile FAB for Clock In/Out */}
-      <div className="sm:hidden fixed bottom-8 right-6 z-50 flex flex-col gap-2 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Mobile Floating Action Button (FAB) for Clock In/Out */}
+      <div className="sm:hidden fixed bottom-8 right-6 z-50 flex flex-col gap-3 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
           {!currentLog ? (
             <>
               <Button 
                   onClick={handleTimeIn} 
                   disabled={isProcessing} 
-                  className="w-14 h-14 rounded-full shadow-2xl bg-primary text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-4 border-white"
+                  className="w-16 h-16 rounded-full shadow-[0_15px_30px_-5px_rgba(0,0,0,0.2)] bg-primary text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-[4px] border-white"
               >
-                  <LogIn className="h-6 w-6" />
+                  <LogIn className="h-7 w-7" />
               </Button>
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Clock In</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100">Clock In</span>
             </>
           ) : !currentLog.timeOut ? (
             <>
                {/* Live Status HUD */}
-               <div className="mb-1 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full border border-blue-100 shadow-sm flex items-center gap-2 animate-pulse">
+               <div className="mb-1 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-blue-100 shadow-sm flex items-center gap-2 animate-pulse">
                   <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-                  <span className="text-[9px] font-black text-blue-600 tabular-nums">{liveDuration}</span>
+                  <span className="text-[10px] font-black text-blue-600 tabular-nums">{liveDuration}</span>
                </div>
                <Button 
                   onClick={handleTimeOut} 
                   disabled={isProcessing} 
-                  className="w-14 h-14 rounded-full shadow-2xl bg-destructive text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-4 border-white"
+                  className="w-16 h-16 rounded-full shadow-[0_15px_30px_-5px_rgba(239,68,68,0.3)] bg-destructive text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-[4px] border-white"
               >
-                  <LogOut className="h-6 w-6" />
+                  <LogOut className="h-7 w-7" />
               </Button>
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Out</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-red-500 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-red-50">Clock Out</span>
             </>
           ) : (
             <>
-              <div className="w-14 h-14 rounded-full shadow-xl bg-green-500 text-white flex items-center justify-center border-4 border-white">
-                  <CheckCircle2 className="h-6 w-6" />
+              <div className="w-16 h-16 rounded-full shadow-xl bg-green-500 text-white flex items-center justify-center border-[4px] border-white">
+                  <CheckCircle2 className="h-7 w-7" />
               </div>
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-green-600 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Saved</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-green-600 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-green-50">Shift Secured</span>
             </>
           )}
       </div>
