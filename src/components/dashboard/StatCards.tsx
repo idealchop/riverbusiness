@@ -284,7 +284,7 @@ export function StatCards({
                 <div className="flex-1 space-y-4">
                     {isFlowPlan || isBranchAccount ? (
                         <div>
-                            <p className="text-3xl font-black text-slate-900 tracking-tight uppercase">Flow Access</p>
+                            <p className="text-3xl font-black text-slate-900 tracking-tight">Drinking Water</p>
                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
                                 Unlimited Supply 
                                 <span className="block text-primary">Billed by usage (₱{user?.plan?.price}/L)</span>
