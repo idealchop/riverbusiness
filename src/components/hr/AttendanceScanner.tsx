@@ -60,73 +60,65 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setCameraLoading(true);
     setShowManualStart(false);
 
-    // Ensure clean state
+    // Ensure clean state before starting
     await stopScanner();
 
-    const tryStart = async (attempts = 0) => {
-      const element = document.getElementById("qr-reader");
-      
-      if (!element) {
-        if (attempts < 15) {
-          setTimeout(() => tryStart(attempts + 1), 200);
-        } else {
-          setErrorMsg("Terminal mounting timed out. Please try again.");
-          setFormStep('error');
-          setCameraLoading(false);
-        }
+    const element = document.getElementById("qr-reader");
+    if (!element) {
+        // If element is not in DOM yet, wait a tiny bit more
+        setTimeout(startCameraFlow, 100);
         return;
-      }
+    }
 
-      try {
-        const scanner = new Html5Qrcode("qr-reader");
-        scannerRef.current = scanner;
+    try {
+      const scanner = new Html5Qrcode("qr-reader");
+      scannerRef.current = scanner;
 
-        await scanner.start(
-          { facingMode: "environment" },
-          { 
-            fps: 10, 
-            qrbox: (viewfinderWidth, vHeight) => {
-                const minDim = Math.min(viewfinderWidth, vHeight);
-                return { width: minDim * 0.7, height: minDim * 0.7 };
-            },
-            aspectRatio: 1.0 
+      await scanner.start(
+        { facingMode: "environment" },
+        { 
+          fps: 10, 
+          qrbox: (viewfinderWidth, vHeight) => {
+              const minDim = Math.min(viewfinderWidth, vHeight);
+              return { width: minDim * 0.7, height: minDim * 0.7 };
           },
-          (decodedText) => {
-            handleScanSuccess(decodedText);
-          },
-          () => {} // Silent on scan success (just looking)
-        );
-        setCameraLoading(false);
-      } catch (err) {
-        console.error("Camera start failed:", err);
-        setErrorMsg("Hardware access blocked. Ensure camera permissions are enabled.");
-        setFormStep('error');
-        setCameraLoading(false);
-      }
-    };
-
-    tryStart();
+          aspectRatio: 1.0 
+        },
+        (decodedText) => {
+          handleScanSuccess(decodedText);
+        },
+        () => {} // Silent scan attempts
+      );
+      setCameraLoading(false);
+    } catch (err) {
+      console.error("Camera start failed:", err);
+      setErrorMsg("Hardware access blocked. Ensure camera permissions are enabled.");
+      setFormStep('error');
+      setCameraLoading(false);
+    }
   };
 
   useEffect(() => {
     let mountTimeout: NodeJS.Timeout;
+    let manualTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
-      // Delay for dialog animation and DOM hydration
+      // Small delay to allow dialog opening animation to stabilize DOM
       mountTimeout = setTimeout(() => {
         startCameraFlow();
-        // Show manual override if it hangs
-        mountTimeout = setTimeout(() => {
+        // Manual override backup if hardware takes too long
+        manualTimeout = setTimeout(() => {
             setCameraLoading(prev => {
                 if (prev) setShowManualStart(true);
                 return prev;
             });
-        }, 4000);
-      }, 1000);
+        }, 6000);
+      }, 500);
     }
 
     return () => {
       clearTimeout(mountTimeout);
+      clearTimeout(manualTimeout);
       stopScanner();
     };
   }, [isOpen, step, companyId]);
@@ -201,7 +193,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       const logsSnap = await getDocs(logsQuery);
       const latestLog = logsSnap.empty ? null : { id: logsSnap.docs[0].id, ...(logsSnap.docs[0].data() as HRAttendanceLog) };
       
-      // If action is IN and we have a session without timeOut, the next action is OUT
       const nextAction = (latestLog && !latestLog.timeOut) ? 'OUT' : 'IN';
       setActionType(nextAction);
 
@@ -269,13 +260,13 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                 </DialogDescription>
             </DialogHeader>
             
-            <div className="min-h-[350px] flex flex-col items-center justify-center bg-slate-900 rounded-[2.5rem] border-4 border-slate-100 overflow-hidden relative shadow-inner">
+            <div className="min-h-[350px] flex flex-col items-center justify-center bg-black rounded-[2.5rem] border-4 border-slate-50 overflow-hidden relative shadow-inner">
                 {step === 'scan' && (
                     <>
                         <div id="qr-reader" className="w-full h-full" />
                         
                         {cameraLoading && (
-                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900 text-white gap-6">
+                           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black text-white gap-6">
                               <Loader2 className="h-10 w-10 animate-spin text-primary" />
                               <div className="text-center space-y-2">
                                 <p className="text-[10px] font-black uppercase tracking-[0.3em]">Activating Terminal...</p>
@@ -294,8 +285,8 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         )}
 
                         <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center">
-                            <div className="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
-                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-slide-down" />
+                            <div className="w-64 h-64 border-2 border-white/20 rounded-3xl relative">
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/50 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-slide-down" />
                                 <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-xl" />
                                 <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-xl" />
                                 <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
