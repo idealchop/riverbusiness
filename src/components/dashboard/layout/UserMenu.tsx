@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Settings, LogOut, User as UserIcon } from 'lucide-react';
+import { Settings, LogOut, User as UserIcon, MapPin } from 'lucide-react';
 
 interface UserMenuProps {
   user: any;
@@ -20,8 +20,12 @@ interface UserMenuProps {
 
 export function UserMenu({ user, onOpenSettings, onLogout }: UserMenuProps) {
   const displayName = user?.businessName || user?.name || 'User';
-  const subText = user?.email || 'Account settings';
   const photo = user?.photoURL || user?.supportPhotoURL;
+  const isOwner = user?.hrRole === 'owner';
+  
+  const handleOpenOfficeSettings = () => {
+    window.dispatchEvent(new CustomEvent('open-office-settings'));
+  };
   
   return (
     <DropdownMenu>
@@ -47,14 +51,26 @@ export function UserMenu({ user, onOpenSettings, onLogout }: UserMenuProps) {
                 <p className="text-base font-bold text-slate-900 leading-tight truncate px-2">{displayName}</p>
                 <p className="text-xs text-muted-foreground truncate px-4">{user?.email}</p>
             </div>
-            <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-4 rounded-full h-8 text-[10px] font-bold uppercase tracking-widest px-6 bg-white hover:bg-slate-50 border-slate-200 shadow-sm"
-                onClick={onOpenSettings}
-            >
-                Manage your account
-            </Button>
+            <div className="flex flex-col gap-2 mt-4">
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-full h-8 text-[10px] font-bold uppercase tracking-widest px-6 bg-white hover:bg-slate-50 border-slate-200 shadow-sm"
+                    onClick={onOpenSettings}
+                >
+                    Manage your account
+                </Button>
+                {isOwner && (
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-full h-8 text-[10px] font-bold uppercase tracking-widest px-6 bg-white hover:bg-slate-50 border-slate-200 shadow-sm"
+                        onClick={handleOpenOfficeSettings}
+                    >
+                        Office Setup (GPS/QR)
+                    </Button>
+                )}
+            </div>
         </div>
         
         <div className="p-2 bg-white">
@@ -67,6 +83,18 @@ export function UserMenu({ user, onOpenSettings, onLogout }: UserMenuProps) {
                 </div>
                 <span>Account Settings</span>
             </DropdownMenuItem>
+
+            {isOwner && (
+                <DropdownMenuItem 
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 focus:bg-slate-50 cursor-pointer transition-colors"
+                    onClick={handleOpenOfficeSettings}
+                >
+                    <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                        <MapPin className="h-4 w-4" />
+                    </div>
+                    <span>Office Setup</span>
+                </DropdownMenuItem>
+            )}
             
             <DropdownMenuItem 
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 hover:text-red-700 focus:bg-red-50 cursor-pointer transition-colors"

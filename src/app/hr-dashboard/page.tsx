@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -36,7 +35,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc, limit } from 'firebase/firestore';
 import { format, isSameDay, addMonths, subMonths, startOfMonth, addDays, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -61,7 +60,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AttendanceScanner } from '@/components/hr/AttendanceScanner';
-import { OfficeLocationDialog } from '@/components/hr/OfficeLocationDialog';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -110,7 +108,6 @@ export default function HRDashboard() {
   const [liveDuration, setLiveDuration] = useState<string>('00:00:00');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -208,6 +205,10 @@ export default function HRDashboard() {
     pendingLeave: { color: 'white', backgroundColor: '#f59e0b' },
   };
 
+  const handleOpenOfficeSettings = () => {
+    window.dispatchEvent(new CustomEvent('open-office-settings'));
+  };
+
   const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
   return (
@@ -234,7 +235,7 @@ export default function HRDashboard() {
                 </Button>
                 
                 {user?.hrRole === 'owner' && (
-                    <Button onClick={() => setIsLocationDialogOpen(true)} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
+                    <Button onClick={handleOpenOfficeSettings} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
                         Office Settings
                     </Button>
                 )}
@@ -426,7 +427,6 @@ export default function HRDashboard() {
 
       {/* Dialogs */}
       <AttendanceScanner isOpen={isScannerOpen} onOpenChange={setIsScannerOpen} user={user} />
-      <OfficeLocationDialog isOpen={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen} companyId={companyId} />
       
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
         <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">

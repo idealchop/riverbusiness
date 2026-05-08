@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -28,6 +28,7 @@ import { LogoBlack } from '@/components/icons';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
+import { OfficeLocationDialog } from '@/components/hr/OfficeLocationDialog';
 import { signOut } from 'firebase/auth';
 import type { Notification as NotificationType, AppUser } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -50,6 +51,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   const isMounted = useMounted();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -61,6 +63,12 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
 
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
+
+  useEffect(() => {
+    const handleOpenOfficeSettings = () => setIsLocationDialogOpen(true);
+    window.addEventListener('open-office-settings', handleOpenOfficeSettings);
+    return () => window.removeEventListener('open-office-settings', handleOpenOfficeSettings);
+  }, []);
 
   React.useEffect(() => {
     if (!isUserLoading && !authUser && !isLoggingOut) {
@@ -83,6 +91,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   if (isUserLoading || isUserDocLoading || !isMounted || isLoggingOut) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
   }
+
+  const companyId = user?.companyId || user?.clientId || 'default';
 
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
@@ -202,6 +212,12 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
         onPayNow={() => {}}
         isOpen={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+      />
+
+      <OfficeLocationDialog 
+        isOpen={isLocationDialogOpen} 
+        onOpenChange={setIsLocationDialogOpen} 
+        companyId={companyId} 
       />
     </div>
   );
