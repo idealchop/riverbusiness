@@ -5,18 +5,19 @@ import {
   CalendarDays, 
   Search, 
   Plus, 
-  CheckCircle2,
-  XCircle,
-  Clock,
-  LayoutGrid,
-  ChevronRight,
-  UserCircle,
-  Info,
-  Calendar as CalendarIcon
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  LayoutGrid, 
+  ChevronRight, 
+  UserCircle, 
+  Info, 
+  Calendar as CalendarIcon 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { 
   Table, 
   TableBody, 
