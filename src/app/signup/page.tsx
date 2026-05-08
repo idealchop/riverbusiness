@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, Suspense } from 'react';
@@ -77,7 +76,7 @@ function SignupContent() {
   return (
     <div className="flex w-full flex-col lg:flex-row min-h-screen bg-background font-sans overflow-hidden">
         {/* Branding Side (Left) - 65% width to match Login */}
-        <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
+        <div className="relative w-full lg:w-[65%] p-8 pb-48 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
             {/* Animated Mesh Gradient Background - match Login */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
@@ -106,8 +105,8 @@ function SignupContent() {
         </div>
 
         {/* Signup Form Side (Right) - 35% width to match Login */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
-            <div className="w-full max-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-12 md:p-20 bg-slate-50 lg:bg-white relative">
+            <div className="w-full max-sm space-y-12 animate-in fade-in zoom-in-95 duration-500 bg-white p-10 lg:p-0 rounded-[3rem] lg:rounded-none shadow-2xl lg:shadow-none -mt-32 lg:mt-0 relative z-20">
                 <div className="space-y-2">
                     {isInvited ? (
                         <>
