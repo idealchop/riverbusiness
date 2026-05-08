@@ -364,6 +364,32 @@ export default function HRDashboard() {
                 </div>
             </div>
 
+            {/* Learning Hub Shortcut */}
+            <div className="grid grid-cols-1 gap-6">
+                <Card asChild className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.01] transition-all">
+                    <Link href="/hr-dashboard/modules">
+                        <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                            <BookOpen className="h-40 w-40" />
+                        </div>
+                        <CardHeader className="p-10 pb-4">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
+                                    <BookOpen className="h-6 w-6 text-white" />
+                                </div>
+                                <Badge className="bg-white/20 text-white border-none font-black text-[10px] uppercase tracking-[0.2em]">Authorized Training</Badge>
+                            </div>
+                            <CardTitle className="text-4xl font-black tracking-tight text-white uppercase">Learning Hub</CardTitle>
+                            <CardDescription className="text-white/60 font-bold text-base mt-2">Access technical documentation and operational modules.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-10 pt-4">
+                            <div className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.3em]">
+                                Open Library <ArrowRight className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
+                            </div>
+                        </CardContent>
+                    </Link>
+                </Card>
+            </div>
+
             <Card className="border-none rounded-[2.5rem] overflow-hidden bg-white shadow-none">
                 <CardHeader className="bg-slate-50/30 p-8 border-b">
                     <div className="flex items-center justify-between">
