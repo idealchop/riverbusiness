@@ -10,7 +10,7 @@ import {
   Clock,
   LayoutGrid
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -30,6 +30,8 @@ import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 import type { HRLeaveRequest } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 
+const ITEMS_PER_PAGE = 10;
+
 const DEMO_LEAVES: Partial<HRLeaveRequest>[] = [
     { id: 'l1', employeeName: 'Marcus Rivera', type: 'Vacation', startDate: format(addDays(new Date(), 10), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'), reason: 'Family trip', status: 'pending' },
     { id: 'l2', employeeName: 'Sarah Jenkins', type: 'Emergency', startDate: format(new Date(), 'yyyy-MM-dd'), endDate: format(new Date(), 'yyyy-MM-dd'), reason: 'Personal matters', status: 'pending' },
@@ -41,6 +43,7 @@ export default function LeavePage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -56,6 +59,13 @@ export default function LeavePage() {
   const displayLeaves = useMemo(() => {
     return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVES as HRLeaveRequest[]);
   }, [leaveRequests]);
+
+  const paginatedLeaves = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return displayLeaves.slice(start, start + ITEMS_PER_PAGE);
+  }, [displayLeaves, currentPage]);
+
+  const totalPages = Math.ceil(displayLeaves.length / ITEMS_PER_PAGE);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
     if (!firestore || !companyId || !requestId || requestId.startsWith('l')) {
@@ -124,7 +134,7 @@ export default function LeavePage() {
                 <TableBody>
                    {isLoading ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing Request Data...</TableCell></TableRow>
-                   ) : displayLeaves.map(request => (
+                   ) : paginatedLeaves.map(request => (
                         <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                            <TableCell className="pl-6 py-5">
                               <div className="flex items-center gap-3">
@@ -180,9 +190,19 @@ export default function LeavePage() {
                            </TableCell>
                         </TableRow>
                       ))}
+                      {!isLoading && displayLeaves.length === 0 && (
+                          <TableRow>
+                              <TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No leave applications found.</TableCell>
+                          </TableRow>
+                      )}
                 </TableBody>
             </Table>
          </CardContent>
+         <PaginationFooter 
+            totalItems={displayLeaves.length}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+         />
       </Card>
       
       <FileLeaveDialog
@@ -192,4 +212,39 @@ export default function LeavePage() {
       />
     </div>
   );
+}
+
+function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItems: number, currentPage: number, onPageChange: (p: number) => void }) {
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    
+    if (totalItems === 0) return null;
+
+    return (
+        <CardFooter className="bg-slate-50/30 py-4 flex items-center justify-between border-t">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Showing {Math.min(totalItems, (currentPage - 1) * ITEMS_PER_PAGE + 1)}-{Math.min(totalItems, currentPage * ITEMS_PER_PAGE)} of {totalItems} entries
+            </div>
+            <div className="flex items-center gap-2">
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] uppercase font-bold" 
+                    onClick={() => onPageChange(Math.max(1, currentPage - 1))} 
+                    disabled={currentPage === 1}
+                >
+                    Prev
+                </Button>
+                <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{currentPage} / {totalPages || 1}</span>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] uppercase font-bold" 
+                    onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} 
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Next
+                </Button>
+            </div>
+        </CardFooter>
+    );
 }
