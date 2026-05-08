@@ -25,6 +25,7 @@ import {
   FormDescription
 } from '@/components/ui/form';
 import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, getDocs, query } from 'firebase/firestore';
@@ -292,15 +293,15 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                         <span className="text-2xl font-black">1</span>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Owner sets up office</h3>
-                                        <p className="text-slate-500 font-medium">Laying the digital foundation for your workspace.</p>
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">Owner sets up office</h3>
+                                        <p className="text-slate-500 font-medium">Setting up the digital gateway for your workplace.</p>
                                     </div>
                                     <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 flex flex-col items-center gap-8">
                                         <div className="p-6 rounded-[2rem] bg-blue-50 text-primary shadow-inner">
                                             <Building className="h-12 w-12" />
                                         </div>
                                         <p className="text-lg font-bold text-slate-700 leading-snug">
-                                            Administrator initializes the digital office by anchoring GPS coordinates, defining the verification radius, and generating the unique entry QR tag.
+                                            The admin registers the office location, sets the required GPS distance for staff, and the system instantly creates your unique office entry QR tag.
                                         </p>
                                     </Card>
                                 </div>
@@ -312,7 +313,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                         <span className="text-2xl font-black">2</span>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Employee arrives at office</h3>
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">Employee arrives at office</h3>
                                         <p className="text-slate-500 font-medium">Physical presence meets digital verification.</p>
                                     </div>
                                     <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 flex flex-col items-center gap-8">
@@ -332,7 +333,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                         <span className="text-2xl font-black">3</span>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Employee scans office QR</h3>
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">Employee scans office QR</h3>
                                         <p className="text-slate-500 font-medium">The digital handshake that verifies attendance.</p>
                                     </div>
                                     <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
@@ -367,8 +368,8 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                             {infoStep === 3 && (
                                 <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto">
                                     <div className="text-center space-y-2">
-                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">System intelligence</h3>
-                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em]">Automated Backend Decisions</p>
+                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">System intelligence</h3>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em]">Automated backend decisions</p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
                                         <Card className="border-none shadow-lg rounded-3xl bg-white p-6 space-y-4 hover:shadow-xl transition-all">
