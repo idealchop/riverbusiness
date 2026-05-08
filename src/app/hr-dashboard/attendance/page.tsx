@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Printer,
   MapPin,
-  Briefcase
+  Briefcase,
+  UserCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,19 +149,18 @@ export default function AttendancePage() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('River Philippines', margin, 50);
+    doc.text(user?.businessName || 'River Philippines', margin, 55);
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('River Tech Inc.', margin, 68);
-    doc.text('SEC Reg #: 202406123456', margin, 80);
-    doc.text('Filinvest Axis Tower 1, Alabang', margin, 92);
-    doc.text('customers@riverph.com', margin, 104);
+    doc.text(user?.address || 'Authorized Business Entity', margin, 75);
+    doc.text(`Authorized by: ${user?.name || 'System Admin'}`, margin, 87);
+    doc.text(`Role: ${user?.hrRole || 'Administrator'}`, margin, 99);
 
     doc.setTextColor(0);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Payroll Disbursement Summary', margin, 160);
+    doc.text('Payroll disbursement summary', margin, 160);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -301,7 +301,7 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingLeaves ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
-                  ) : displayLeaves.map(req => (
+                  ) : (leaveRequests || DEMO_LEAVES).map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
@@ -352,7 +352,7 @@ export default function AttendancePage() {
                       <TableCell className="text-right pr-6">
                           <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(run)} className="h-8 font-black text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                               <FileText className="h-3.5 w-3.5" />
-                              Details
+                              Payslip
                           </Button>
                       </TableCell>
                     </TableRow>
@@ -377,7 +377,7 @@ export default function AttendancePage() {
                             <div>
                                 <DialogTitle className="text-2xl font-bold tracking-tight">Payroll statement</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
-                                    Organizational disbursement summary.
+                                    Disbursement summary for the reporting period.
                                 </DialogDescription>
                             </div>
                         </div>
@@ -392,12 +392,12 @@ export default function AttendancePage() {
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
                         <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Statement Reference</Label>
-                            <p className="text-sm font-bold text-slate-900">{selectedRun?.id}</p>
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Statement reference</Label>
+                            <p className="text-sm font-black text-slate-900">{selectedRun?.id}</p>
                         </div>
                         <div className="space-y-1 text-right">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Reporting Period</Label>
-                            <p className="text-sm font-bold text-slate-900">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Reporting period</Label>
+                            <p className="text-sm font-black text-slate-900">
                                 {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
                             </p>
                         </div>
@@ -407,30 +407,32 @@ export default function AttendancePage() {
                         <div className="space-y-6">
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                    <Building className="h-3.5 w-3.5" /> Company details
+                                    <Building className="h-3.5 w-3.5" /> Client organization
                                 </h4>
                                 <div className="space-y-0.5">
-                                    <p className="text-sm font-bold text-slate-900">River Tech Inc.</p>
-                                    <p className="text-xs text-slate-500">Filinvest Axis Tower 1, Alabang</p>
-                                    <p className="text-xs text-slate-500">SEC Reg #: 202406123456</p>
+                                    <p className="text-sm font-bold text-slate-900">{user?.businessName || 'N/A'}</p>
+                                    <p className="text-xs text-slate-500">{user?.address || 'No address provided'}</p>
                                 </div>
                             </div>
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                    <MapPin className="h-3.5 w-3.5" /> Client organization
+                                    <UserCircle className="h-3.5 w-3.5" /> Account owner
                                 </h4>
-                                <p className="text-sm font-bold text-slate-900">{user?.businessName || 'Standard Client'}</p>
+                                <div className="space-y-0.5">
+                                    <p className="text-sm font-bold text-slate-900">{user?.name}</p>
+                                    <p className="text-xs text-slate-500 capitalize">{user?.hrRole || 'Admin'}</p>
+                                </div>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Disbursement amount</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Net disbursement</p>
                                 <p className="text-3xl font-black text-slate-900 tabular-nums">₱{selectedRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100">
                                 <Briefcase className="h-4 w-4 text-primary" />
-                                <p className="text-xs font-bold text-primary">Organizational Staff Disbursement</p>
+                                <p className="text-xs font-bold text-primary">Organizational disbursement active</p>
                             </div>
                         </div>
                     </div>
@@ -454,4 +456,3 @@ export default function AttendancePage() {
     </div>
   );
 }
-
