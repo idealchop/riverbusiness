@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -12,7 +11,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +32,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const [errorMsg, setErrorMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionType, setActionType] = useState<'IN' | 'OUT' | null>(null);
+  const [lastActionTime, setLastActionTime] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [showManualStart, setShowManualStart] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -64,9 +64,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     await stopScanner();
 
     const element = document.getElementById("qr-reader");
-    if (!element) {
-        return;
-    }
+    if (!element) return;
 
     try {
       const scanner = new Html5Qrcode("qr-reader");
@@ -119,7 +117,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   }, [isOpen, step, companyId]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371e3;
+    const R = 6371e3; // Earth radius in meters
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
     const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -190,6 +188,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       
       const nextAction = (latestLog && !latestLog.timeOut) ? 'OUT' : 'IN';
       setActionType(nextAction);
+      setLastActionTime(format(new Date(), 'hh:mm a'));
 
       if (nextAction === 'IN') {
           const logData: Omit<HRAttendanceLog, 'id'> = {
@@ -218,7 +217,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       }
 
       setFormStep('success');
-      toast({ title: `Verified: ${nextAction} Success` });
+      toast({ title: `Verified: ${nextAction === 'IN' ? 'Clock in' : 'Clock out'} successful` });
 
     } catch (err: any) {
       setErrorMsg(err.message || "GPS failure. Please enable location services.");
@@ -233,6 +232,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setFormStep('scan');
     setErrorMsg('');
     setActionType(null);
+    setLastActionTime(null);
     setCameraLoading(false);
   };
 
@@ -274,7 +274,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black text-white gap-6">
                               {cameraLoading && <Loader2 className="h-10 w-10 animate-spin text-primary" />}
                               <div className="text-center space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Activating Terminal...</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Activating terminal...</p>
                                 {showManualStart && (
                                     <Button 
                                         variant="outline" 
@@ -282,7 +282,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                                         onClick={startCameraFlow}
                                         className="rounded-xl border-white/20 text-white h-9 font-bold text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900 px-6"
                                     >
-                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start Manual Scan
+                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start manual scan
                                     </Button>
                                 )}
                               </div>
@@ -297,7 +297,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                                 <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
                                 <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-xl" />
                             </div>
-                            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align with Office Tag</p>
+                            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align with office tag</p>
                         </div>
                     </>
                 )}
@@ -322,12 +322,28 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         <div className="h-24 w-24 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
                             <CheckCircle2 className="h-12 w-12 text-white" />
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <p className="text-3xl font-black tracking-tight text-white uppercase">Authorized!</p>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                            <div className="bg-white/10 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
+                                <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
+                                    {actionType === 'IN' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                                    Successfully clocked {actionType === 'IN' ? 'in' : 'out'}
+                                </p>
+                                <div className="flex items-center justify-center gap-1.5 text-blue-300">
+                                    <Clock className="h-3 w-3" />
+                                    <span className="text-xs font-black tabular-nums">{lastActionTime}</span>
+                                </div>
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
                                 Location verified. Log saved.
                             </p>
                         </div>
+                        <Button 
+                            onClick={() => onOpenChange(false)} 
+                            className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 bg-white text-slate-900 hover:bg-slate-100"
+                        >
+                            Return to hub
+                        </Button>
                     </div>
                 )}
 
@@ -337,7 +353,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                             <XCircle className="h-10 w-10 text-white" />
                         </div>
                         <div className="space-y-4">
-                            <p className="text-xl font-black text-white uppercase">Access Denied</p>
+                            <p className="text-xl font-black text-white uppercase">Access denied</p>
                             <div className="bg-red-500/10 px-6 py-4 rounded-2xl border border-red-500/20 max-w-[280px]">
                                 <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">{errorMsg}</p>
                             </div>
@@ -347,7 +363,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                             onClick={resetTerminal} 
                             className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 border-white/10 text-white hover:bg-white hover:text-slate-900"
                         >
-                            Retry Handshake
+                            Retry handshake
                         </Button>
                     </div>
                 )}
@@ -357,9 +373,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                 <div className="w-full flex flex-col gap-4">
                     <div className="flex items-center gap-3 justify-center">
                         <ShieldCheck className="h-4 w-4 text-slate-400" />
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">GPS Proof Verification Active</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">GPS proof verification active</p>
                     </div>
-                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close terminal</Button>
+                    {step !== 'success' && (
+                        <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close terminal</Button>
+                    )}
                 </div>
             </DialogFooter>
         </div>
