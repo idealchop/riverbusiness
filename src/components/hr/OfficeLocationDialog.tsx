@@ -53,7 +53,6 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [location, setLocation] = useState<HRCompanyLocation | null>(null);
-  const [showQR, setShowQR] = useState(false);
 
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -121,6 +120,30 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
     }
   };
 
+  const downloadQR = () => {
+    const svg = document.getElementById('office-qr-svg');
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new window.Image();
+    
+    img.onload = () => {
+      canvas.width = 1000;
+      canvas.height = 1000;
+      ctx?.drawImage(img, 0, 0, 1000, 1000);
+      const pngFile = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `${form.getValues('office_name')}_QR_HD.png`;
+      downloadLink.href = `${pngFile}`;
+      downloadLink.click();
+      toast({ title: "HD QR Code Generated", description: "The asset is now downloading." });
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  };
+
   const qrValue = `RIVER_OFFICE_QR:${companyId}`;
 
   return (
@@ -145,7 +168,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField control={form.control} name="office_name" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Location Label</FormLabel>
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Location label</FormLabel>
                                 <FormControl><Input placeholder="Headquarters" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -161,24 +184,21 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                         </div>
 
                         <Button type="button" variant="outline" onClick={captureCurrentLocation} className="w-full rounded-xl border-dashed gap-3 h-12 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all">
-                            <MapIcon className="h-4 w-4" /> Capture Current GPS Anchor
+                            <MapIcon className="h-4 w-4" /> Capture current GPS anchor
                         </Button>
 
                         <FormField control={form.control} name="radius_meters" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Allowed Radius (Meters)</FormLabel>
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Allowed radius (Meters)</FormLabel>
                                 <FormControl><Input type="number" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold" {...field} /></FormControl>
                                 <FormDescription className="text-[10px] font-medium text-slate-400">Distance from anchor point where clock-in is authorized.</FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )} />
 
-                        <div className="pt-6 flex flex-col gap-3">
+                        <div className="pt-6">
                             <Button type="submit" disabled={isSubmitting} className="w-full rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20">
                                 {isSubmitting ? 'Syncing...' : 'Authorize Geo-Fence'}
-                            </Button>
-                            <Button type="button" variant="ghost" onClick={() => setShowQR(true)} className="w-full rounded-xl h-12 font-black uppercase tracking-widest text-[10px] gap-2 text-primary hover:bg-primary/5">
-                                <QrCode className="h-4 w-4" /> Access Office Entry Tag
                             </Button>
                         </div>
                     </form>
@@ -186,38 +206,36 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
             </div>
 
             {/* Asset Hub / QR Presenter */}
-            {showQR && (
-                <div className="w-full md:w-[45%] bg-slate-900 text-white p-12 flex flex-col items-center justify-center animate-in slide-in-from-right duration-700 relative">
-                    <div className="absolute top-10 right-10 flex gap-2">
-                        <Badge className="bg-primary text-white border-none font-black text-[9px] uppercase tracking-widest px-3 h-6">Verified Handshake</Badge>
-                    </div>
-                    
-                    <div className="bg-white p-8 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] mb-10 group relative transition-transform duration-500 hover:scale-105">
-                        <QRCodeSVG value={qrValue} size={200} level="H" includeMargin={false} />
-                        <div className="absolute inset-0 border-8 border-slate-50/50 rounded-[3rem] pointer-events-none" />
-                    </div>
-
-                    <div className="text-center space-y-6 max-w-[280px]">
-                        <h4 className="text-2xl font-black tracking-tight uppercase">Entry Asset</h4>
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                            <div className="flex items-start gap-3">
-                                <Info className="h-4 w-4 text-primary-light shrink-0 mt-0.5" />
-                                <p className="text-[10px] text-left font-bold text-white/50 uppercase tracking-widest leading-relaxed">
-                                    Display this QR physically at the entrance. It triggers the River GPS-Proof validation flow.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-3 pt-4">
-                            <Button className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" onClick={() => window.print()}>
-                                <Printer className="h-4 w-4" /> Print Physical Tag
-                            </Button>
-                            <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => setShowQR(false)}>Close Asset View</Button>
-                        </div>
-                    </div>
-                    
-                    <div className="absolute bottom-8 text-[8px] font-black uppercase tracking-[0.6em] text-white/10">River Philippines</div>
+            <div className="w-full md:w-[45%] bg-slate-900 text-white p-12 flex flex-col items-center justify-center animate-in slide-in-from-right duration-700 relative">
+                <div className="absolute top-10 right-10 flex gap-2">
+                    <Badge className="bg-primary text-white border-none font-black text-[9px] uppercase tracking-widest px-3 h-6">Verified Handshake</Badge>
                 </div>
-            )}
+                
+                <div className="bg-white p-8 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] mb-10 group relative transition-transform duration-500 hover:scale-105">
+                    <QRCodeSVG id="office-qr-svg" value={qrValue} size={200} level="H" includeMargin={false} />
+                    <div className="absolute inset-0 border-8 border-slate-50/50 rounded-[3rem] pointer-events-none" />
+                </div>
+
+                <div className="text-center space-y-6 max-w-[280px]">
+                    <h4 className="text-2xl font-black tracking-tight uppercase">QR Entry Tag</h4>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                        <div className="flex items-start gap-3">
+                            <Info className="h-4 w-4 text-primary-light shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-left font-bold text-white/50 uppercase tracking-widest leading-relaxed">
+                                Display this Office QR Code physically at the entrance. It triggers the River GPS-Proof validation flow.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-3 pt-4">
+                        <Button className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" onClick={downloadQR}>
+                            <Download className="h-4 w-4" /> Download QR Code in HD
+                        </Button>
+                        <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => onOpenChange(false)}>Close Asset View</Button>
+                    </div>
+                </div>
+                
+                <div className="absolute bottom-8 text-[8px] font-black uppercase tracking-[0.6em] text-white/10">River Philippines</div>
+            </div>
         </div>
       </DialogContent>
     </Dialog>
