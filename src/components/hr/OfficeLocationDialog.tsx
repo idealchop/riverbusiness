@@ -43,7 +43,6 @@ import {
   DollarSign,
   ChevronRight,
   ChevronLeft,
-  Info,
   Building
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -73,7 +72,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [location, setLocation] = useState<HRCompanyLocation | null>(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [infoStep, setInfoStep] = useState(0); // 0: Setup, 1: Arrival, 2: Scan, 3: Additional Info
+  const [infoStep, setInfoStep] = useState(0);
 
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -180,7 +179,6 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
       <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl flex flex-col h-full sm:h-auto sm:max-h-[90vh]">
         {!showHowItWorks ? (
             <div className="flex flex-col md:flex-row h-full overflow-hidden">
-                {/* Control Panel */}
                 <ScrollArea className="flex-1">
                     <div className="p-10">
                         <DialogHeader className="mb-10">
@@ -244,7 +242,6 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                     </div>
                 </ScrollArea>
 
-                {/* Asset Hub / QR Presenter */}
                 <div className="w-full md:w-[45%] bg-slate-900 text-white p-12 flex flex-col items-center justify-center animate-in slide-in-from-right duration-700 relative shrink-0">
                     <div className="bg-white p-8 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] mb-10 group relative transition-transform duration-500 hover:scale-105">
                         <QRCodeSVG id="office-qr-svg" value={qrValue} size={200} level="H" includeMargin={false} />
@@ -291,7 +288,6 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                 </div>
                 
                 <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden relative">
-                    {/* Animated Step Container */}
                     <div className="w-full max-w-4xl h-full flex items-center justify-center">
                         <div key={infoStep} className="w-full animate-in fade-in slide-in-from-right-8 duration-500">
                             {infoStep === 0 && (
@@ -308,7 +304,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                             <Building className="h-12 w-12" />
                                         </div>
                                         <p className="text-lg font-bold text-slate-700 leading-snug">
-                                            The admin registers the office location, sets the required GPS distance for staff, and the system instantly creates your unique office entry QR tag.
+                                            The admin registers the office location, defines the distance, and the system instantly creates your unique office entry QR tag.
                                         </p>
                                     </Card>
                                 </div>
@@ -328,7 +324,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                             <MapPin className="h-12 w-12" />
                                         </div>
                                         <p className="text-lg font-bold text-slate-700 leading-snug">
-                                            Staff member enters the designated physical premises and opens the River Business portal on their device.
+                                            Staff member enters the designated physical premises. Access is strictly granted only within the authorized GPS radius (e.g., 50m).
                                         </p>
                                     </Card>
                                 </div>
@@ -381,11 +377,11 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
                                         <Card className="border-none shadow-lg rounded-3xl bg-white p-6 space-y-4 hover:shadow-xl transition-all">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600"><ShieldCheck className="h-5 w-5" /></div>
+                                                <div className="p-2 rounded-xl bg-purple-50 text-purple-600"><ShieldCheck className="h-5 w-5" /></div>
                                                 <p className="text-xs font-black uppercase tracking-wider text-slate-900">Location validation</p>
                                             </div>
                                             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                                River checks if the employee is within the allowed GPS radius. Scans outside the boundary are rejected to prevent remote spoofing.
+                                                GPS Geofencing captures high-accuracy coordinates to calculate distance to the anchor. If outside the allowed radius (e.g. 50m), access is denied.
                                             </p>
                                             <div className="flex items-center gap-2 pt-2 border-t border-slate-50">
                                                 <Badge className="bg-green-50 text-green-700 text-[8px] font-bold uppercase border-none h-5">Verified</Badge>
@@ -430,7 +426,6 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                     </div>
                 </div>
                 
-                {/* Wizard Navigation */}
                 <div className="p-8 border-t bg-white flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                     <Button 
                         variant="ghost" 
