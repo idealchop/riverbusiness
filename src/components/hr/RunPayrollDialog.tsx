@@ -32,7 +32,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, ShieldAlert, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, UserCircle, Calculator, Info, Plus, Minus } from 'lucide-react';
+import { DollarSign, ShieldAlert, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Info, Plus, X } from 'lucide-react';
 import type { HRPayrollBreakdownItem, AppUser } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
@@ -60,7 +60,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   const { toast } = useToast();
   const firestore = useFirestore();
   
-  const [step, setStep] = useState(0); // 0: Selection, 1: Review, 2: Adjustments
+  const [step, setStep] = useState(0); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComputing, setIsComputing] = useState(false);
   
@@ -79,7 +79,6 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     }
   });
 
-  // Sync Calendar Range with Input Fields
   useEffect(() => {
       if (dateRange?.from) {
           form.setValue('periodStart', format(dateRange.from, 'yyyy-MM-dd'));
@@ -177,6 +176,10 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
           next[index].adjustmentRemarks = value;
           return next;
       });
+  };
+
+  const handleRemoveEmployee = (index: number) => {
+      setComputedBreakdown(prev => prev.filter((_, i) => i !== index));
   };
 
   const onSubmit = async () => {
@@ -396,7 +399,15 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
                         <div className="space-y-4">
                             {computedBreakdown.map((item, index) => (
-                                <Card key={index} className="border border-slate-100 shadow-none rounded-3xl overflow-hidden group hover:border-primary/20 transition-all">
+                                <Card key={index} className="border border-slate-100 shadow-none rounded-3xl overflow-hidden group hover:border-primary/20 transition-all relative">
+                                    <button 
+                                        onClick={() => handleRemoveEmployee(index)}
+                                        className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors z-10"
+                                        title="Exclude from run"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                    
                                     <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                                         <div className="md:col-span-3 space-y-1">
                                             <p className="text-sm font-black text-slate-900">{item.employeeName}</p>
@@ -437,25 +448,33 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                     </div>
                                 </Card>
                             ))}
+                            {computedBreakdown.length === 0 && (
+                                <div className="py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No employees in this run</p>
+                                    <Button variant="link" onClick={() => setStep(0)} className="text-primary mt-2">Back to Period Selection</Button>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
-                             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-1000">
-                                <ShieldAlert className="h-24 w-24" />
-                             </div>
-                             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-                                <div className="space-y-2">
-                                    <h5 className="text-xl font-black tracking-tight uppercase">Ready to Disburse?</h5>
-                                    <p className="text-xs font-medium text-slate-400 max-w-sm">
-                                        By finalizing, you are authorizing the system to record these individual payouts and update the organizational financial ledger.
-                                    </p>
+                        {computedBreakdown.length > 0 && (
+                            <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-1000">
+                                    <ShieldAlert className="h-24 w-24" />
                                 </div>
-                                <div className="text-right p-6 rounded-[2rem] bg-white/5 border border-white/10 min-w-[220px]">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-light mb-1">Authorization Value</p>
-                                    <p className="text-3xl font-black tabular-nums">₱{totalRunDisbursement.toLocaleString()}</p>
+                                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+                                    <div className="space-y-2">
+                                        <h5 className="text-xl font-black tracking-tight uppercase">Ready to Disburse?</h5>
+                                        <p className="text-xs font-medium text-slate-400 max-w-sm">
+                                            By finalizing, you are authorizing the system to record these individual payouts and update the organizational financial ledger.
+                                        </p>
+                                    </div>
+                                    <div className="text-right p-6 rounded-[2rem] bg-white/5 border border-white/10 min-w-[220px]">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-light mb-1">Authorization Value</p>
+                                        <p className="text-3xl font-black tabular-nums">₱{totalRunDisbursement.toLocaleString()}</p>
+                                    </div>
                                 </div>
-                             </div>
-                        </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -474,13 +493,13 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                 </Button>
                 
                 {step < 2 ? (
-                    <Button onClick={() => step === 0 ? handleCompute() : setStep(2)} disabled={isComputing} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px]">
+                    <Button onClick={() => step === 0 ? handleCompute() : setStep(2)} disabled={isComputing || (step === 1 && computedBreakdown.length === 0)} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px]">
                         {isComputing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         {isComputing ? "Computing Ledger..." : step === 0 ? "Analyze & Compute" : "Proceed to Adjustments"}
                         {!isComputing && <ChevronRight className="ml-2 h-4 w-4" />}
                     </Button>
                 ) : (
-                    <Button onClick={onSubmit} disabled={isSubmitting} className="rounded-2xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90 min-w-[240px]">
+                    <Button onClick={onSubmit} disabled={isSubmitting || computedBreakdown.length === 0} className="rounded-2xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90 min-w-[240px]">
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                         {isSubmitting ? "Finalizing Ledger..." : "Finalize & Disburse"}
                     </Button>
