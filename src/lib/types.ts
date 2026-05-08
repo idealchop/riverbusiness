@@ -43,6 +43,7 @@ export interface AppUser {
 export interface HREmployeeProfile {
     firstName: string;
     lastName: string;
+    employeeNumber: string; // Auto-generated ID: EMP-YYYY-XXXX
     salaryType: 'daily' | 'weekly' | 'monthly';
     rate: number;
     startDate: string;
@@ -207,6 +208,7 @@ export interface HRPayrollRun {
 export interface HRPayrollBreakdownItem {
     employeeId: string;
     employeeName: string;
+    employeeNumber?: string;
     amount: number;
     daysWorked?: number;
     rate: number;

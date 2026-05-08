@@ -139,6 +139,12 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
     }
   }, [isOpen, employeeToEdit, form]);
 
+  const generateEmployeeNumber = () => {
+    const year = new Date().getFullYear();
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `EMP-${year}-${random}`;
+  };
+
   const onSubmit = (values: EmployeeFormValues) => {
     if (!firestore || !companyId) return;
     setIsSubmitting(true);
@@ -146,6 +152,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
     const hrProfileData = {
         firstName: values.name?.split(' ')[0] ?? '',
         lastName: values.name?.split(' ').slice(1).join(' ') || '',
+        employeeNumber: employeeToEdit?.hrProfile?.employeeNumber || generateEmployeeNumber(),
         position: values.position ?? 'Staff',
         department: values.department ?? 'General',
         salaryType: values.salaryType ?? 'monthly',
@@ -232,7 +239,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-3xl rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
+      <DialogContent className="sm:max-w-3xl rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-2xl">
         {isSuccess ? (
           <div className="p-12 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
             <div className="h-20 w-20 rounded-full bg-green-50 flex items-center justify-center mb-6">

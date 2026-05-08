@@ -30,6 +30,7 @@
             "properties": {
                 "firstName": { "type": "string" },
                 "lastName": { "type": "string" },
+                "employeeNumber": { "type": "string", "description": "Unique auto-generated employee ID." },
                 "salaryType": { "type": "string", "enum": ["daily", "weekly", "monthly"] },
                 "rate": { "type": "number" },
                 "startDate": { "type": "string", "format": "date" },

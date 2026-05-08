@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -33,7 +34,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft } from 'lucide-react';
+import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft, UserCircle } from 'lucide-react';
 import type { HRPayrollBreakdownItem, AppUser } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
@@ -143,6 +144,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
             breakdown.push({
                 employeeId: emp.id,
                 employeeName: emp.name || 'Anonymous',
+                employeeNumber: profile.employeeNumber || 'ID Pending',
                 amount: employeeSalary,
                 rate: rate,
                 type: profile.salaryType,
@@ -341,7 +343,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                 {step === 1 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-500">
                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Step 2: Review & Finalize</h4>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Review & Finalize</h4>
                             <Badge className="bg-primary/10 text-primary border-none font-bold">{computedBreakdown.length} Profiles Computed</Badge>
                         </div>
 
@@ -357,12 +359,18 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                     </button>
                                     
                                     <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                                        <div className="md:col-span-3 space-y-1">
-                                            <p className="text-sm font-black text-slate-900">{item.employeeName}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.type} Basis: ₱{item.rate.toLocaleString()}</p>
+                                        <div className="md:col-span-4 flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                                <UserCircle className="h-6 w-6" />
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-sm font-black text-slate-900 leading-tight">{item.employeeName}</p>
+                                                <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">{item.employeeNumber}</p>
+                                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">{item.type} Basis • ₱{item.rate.toLocaleString()}</p>
+                                            </div>
                                         </div>
-                                        <div className="md:col-span-2 text-center md:text-left">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1">Base amount</p>
+                                        <div className="md:col-span-2 text-center md:text-left border-l border-slate-50 pl-6">
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1">Computed Base</p>
                                             <p className="text-sm font-bold text-slate-900">₱{item.amount.toLocaleString()}</p>
                                             {item.type === 'daily' && (
                                                 <Badge variant="outline" className="text-[8px] font-black border-slate-100 mt-1">{item.daysWorked} Days Logged</Badge>
@@ -382,17 +390,9 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                                 />
                                              </div>
                                         </div>
-                                        <div className="md:col-span-2">
-                                            <Input 
-                                                placeholder="Remarks (optional)" 
-                                                value={item.adjustmentRemarks || ''} 
-                                                onChange={(e) => handleRemarksChange(item.employeeId, e.target.value)}
-                                                className="h-10 rounded-xl bg-slate-50 border-none text-xs italic"
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2 text-right">
-                                            <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em] mb-1">Net payout</p>
-                                            <p className="text-base font-black text-slate-900 tabular-nums">
+                                        <div className="md:col-span-3 text-right">
+                                            <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em] mb-1">Net disbursement</p>
+                                            <p className="text-xl font-black text-slate-900 tabular-nums">
                                                 ₱{(item.amount + (item.adjustment || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                             </p>
                                         </div>

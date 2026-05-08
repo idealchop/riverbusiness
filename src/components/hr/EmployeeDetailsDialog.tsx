@@ -195,7 +195,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                     {profile?.status || 'Active'}
                                 </Badge>
                                 <span className="text-sm font-medium text-slate-500">
-                                    {profile?.position || 'Unassigned'} • {profile?.department || 'General'}
+                                    {profile?.employeeNumber || 'ID Pending'} • {profile?.position || 'Unassigned'} • {profile?.department || 'General'}
                                 </span>
                             </div>
                         </div>
