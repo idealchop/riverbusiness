@@ -188,7 +188,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                 <div className="p-3 rounded-2xl bg-primary/10">
                                     <MapPin className="h-6 w-6 text-primary" />
                                 </div>
-                                <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase">QR attendance</DialogTitle>
+                                <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900">QR Attendance System</DialogTitle>
                             </div>
                             <DialogDescription className="text-slate-500 font-bold text-xs">
                                 Define the physical boundaries for team attendance verification.
@@ -229,7 +229,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
 
                                 <div className="pt-6 space-y-3">
                                     <Button type="submit" disabled={isSubmitting} className="w-full rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20">
-                                        {isSubmitting ? 'Syncing...' : 'Save QR system'}
+                                        {isSubmitting ? 'Syncing...' : 'Save QR System'}
                                     </Button>
                                     <button 
                                         type="button" 
