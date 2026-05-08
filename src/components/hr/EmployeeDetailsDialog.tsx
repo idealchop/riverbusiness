@@ -37,7 +37,8 @@ import {
   Edit,
   HeartPulse,
   Landmark,
-  FileText
+  FileText,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -171,14 +172,14 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
 
   const profile = employee.hrProfile;
   const initials = employee.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
-  const startDate = toSafeDate(profile?.startDate);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col max-h-[90vh] bg-white shadow-3xl">
-        <div className="p-8 pb-4">
+      <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col h-[90vh] bg-white shadow-3xl">
+        {/* Header - Fixed */}
+        <div className="p-8 pb-4 shrink-0">
             <DialogHeader>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         <div className="h-20 w-20 rounded-3xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 shadow-inner">
                             {initials}
@@ -198,18 +199,13 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                             </div>
                         </div>
                     </div>
-                    {!isEditing && (
-                        <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-100 bg-slate-50/50 hover:bg-slate-50" onClick={() => setIsEditing(true)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                        </Button>
-                    )}
                 </div>
-                <DialogDescription className="sr-only">360-Degree Employment Overview For {employee.name}</DialogDescription>
             </DialogHeader>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <div className="px-8 border-b border-slate-50">
+            {/* Tabs List - Fixed */}
+            <div className="px-8 border-b border-slate-50 shrink-0">
                 <TabsList className="bg-transparent h-12 p-0 gap-8">
                     <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Overview</TabsTrigger>
                     <TabsTrigger value="performance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Performance</TabsTrigger>
@@ -218,11 +214,12 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                 </TabsList>
             </div>
 
-            <ScrollArea className="flex-1">
+            {/* Content Area - Scrollable */}
+            <ScrollArea className="flex-1 min-h-0">
                 <div className="p-8">
                     <TabsContent value="overview" className="mt-0 space-y-10 animate-in fade-in duration-500">
                         {isEditing ? (
-                            <div className="space-y-12">
+                            <div className="space-y-12 pb-10">
                                 <div className="space-y-6">
                                     <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                         <Briefcase className="h-4 w-4" /> Employment Configuration
@@ -267,7 +264,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
 
                                 <div className="space-y-6">
                                     <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                                        <HeartPulse className="h-4 w-4" /> Benefits & Statutory Details
+                                        <HeartPulse className="h-3.5 w-3.5" /> Benefits & Statutory Details
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                                         <div className="space-y-4">
@@ -313,13 +310,6 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div className="flex gap-3 justify-end pt-8 border-t">
-                                    <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-8 font-bold text-xs">Cancel</Button>
-                                    <Button onClick={handleSaveProfile} disabled={isSaving} className="rounded-xl h-11 px-10 font-bold text-xs shadow-xl shadow-primary/20">
-                                        {isSaving ? 'Processing...' : 'Save Profile Changes'}
-                                    </Button>
                                 </div>
                             </div>
                         ) : (
@@ -556,10 +546,29 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
             </ScrollArea>
         </Tabs>
 
-        <div className="p-8 pt-4 border-t bg-slate-50/20">
+        {/* Footer - Fixed */}
+        <div className="p-8 pt-4 border-t bg-slate-50/20 shrink-0">
             <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Confidential Workforce Data — Unauthorized Access Prohibited</p>
-                <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-bold h-11 px-8 rounded-2xl">Dismiss</Button>
+                <div className="flex items-center gap-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Confidential Workforce Data — Unauthorized Access Prohibited</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    {isEditing ? (
+                        <>
+                            <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-8 font-bold text-xs" disabled={isSaving}>Cancel</Button>
+                            <Button onClick={handleSaveProfile} disabled={isSaving} className="rounded-xl h-11 px-10 font-bold text-xs shadow-xl shadow-primary/20">
+                                {isSaving ? 'Processing...' : 'Save Profile Changes'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button variant="outline" className="rounded-xl font-bold text-xs h-11 px-8 border-slate-200 bg-white" onClick={() => setIsEditing(true)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                            </Button>
+                            <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-bold h-11 px-8 rounded-2xl">Dismiss</Button>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
       </DialogContent>
