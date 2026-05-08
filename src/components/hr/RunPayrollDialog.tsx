@@ -13,7 +13,11 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from '@/components/ui/label';
 import { 
   Form, 
@@ -26,11 +30,12 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, ShieldAlert, Loader2, CalendarIcon } from 'lucide-react';
+import { DollarSign, ShieldAlert, Loader2, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
 import type { HRPayrollBreakdownItem } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfMonth, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
@@ -77,7 +82,6 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     setIsSubmitting(true);
     
     try {
-      // 1. Fetch all active employees for this company
       const employeesQuery = query(
         collection(firestore, 'users'), 
         where('companyId', '==', companyId),
@@ -96,7 +100,6 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         return;
       }
 
-      // 2. Fetch all attendance logs for this period to compute daily salaries
       const attendanceQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('date', '>=', values.periodStart),
@@ -105,7 +108,6 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
       const attendanceSnap = await getDocs(attendanceQuery);
       const allLogs = attendanceSnap.docs.map(doc => doc.data());
 
-      // 3. Automated Computation Logic & Breakdown Generation
       const breakdown: HRPayrollBreakdownItem[] = [];
       let totalNet = 0;
 
@@ -118,11 +120,9 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         let daysWorked = 0;
         
         if (profile.salaryType === 'daily') {
-          // Count unique present days for this employee in the period
           daysWorked = allLogs.filter(log => log?.employeeId === emp.id).length;
           employeeSalary = daysWorked * rate;
         } else {
-          // Fixed monthly rate
           employeeSalary = rate;
         }
 
@@ -139,7 +139,6 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         }
       });
 
-      // 4. Create Payroll Run Ledger Entry
       const payrollCol = collection(firestore, 'hr_companies', companyId, 'payrollRuns');
       await addDoc(payrollCol, {
         companyId,
@@ -168,7 +167,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
+      <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
         <div className="p-8">
             <DialogHeader className="mb-6">
                 <div className="flex items-center gap-4 mb-2">
@@ -176,7 +175,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         <DollarSign className="h-6 w-6" />
                     </div>
                     <div>
-                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Run Payroll</DialogTitle>
+                        <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Run payroll</DialogTitle>
                         <DialogDescription className="text-slate-500 font-medium">
                           Select the disbursement period to compute team salaries.
                         </DialogDescription>
@@ -202,7 +201,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             </div>
                         </div>
 
-                        {/* Manual Inputs & Details */}
+                        {/* Manual Dropdowns & Verification */}
                         <div className="space-y-6">
                             <div className="space-y-3">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">2. Review Boundaries</Label>
@@ -211,9 +210,35 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                         control={form.control}
                                         name="periodStart"
                                         render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel className="text-xs font-semibold text-slate-600">Start Date</FormLabel>
-                                            <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-full h-11 justify-start text-left font-bold rounded-xl bg-slate-50 border-slate-100 shadow-none",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                                                        {field.value ? format(parseISO(field.value), "PPP") : <span>Pick a date</span>}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={field.value ? parseISO(field.value) : undefined}
+                                                        onSelect={(date) => {
+                                                            if (date) {
+                                                                field.onChange(format(date, 'yyyy-MM-dd'));
+                                                                setDateRange(prev => ({ ...prev, from: date }));
+                                                            }
+                                                        }}
+                                                        initialFocus
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                         )}
@@ -222,9 +247,35 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                         control={form.control}
                                         name="periodEnd"
                                         render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel className="text-xs font-semibold text-slate-600">End Date</FormLabel>
-                                            <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-full h-11 justify-start text-left font-bold rounded-xl bg-slate-50 border-slate-100 shadow-none",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                                                        {field.value ? format(parseISO(field.value), "PPP") : <span>Pick a date</span>}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={field.value ? parseISO(field.value) : undefined}
+                                                        onSelect={(date) => {
+                                                            if (date) {
+                                                                field.onChange(format(date, 'yyyy-MM-dd'));
+                                                                setDateRange(prev => ({ ...prev, to: date }));
+                                                            }
+                                                        }}
+                                                        initialFocus
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                         )}
@@ -235,21 +286,25 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             <div className="p-5 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-4">
                                 <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                                 <p className="text-[11px] font-bold text-amber-900/70 leading-relaxed uppercase tracking-tight">
-                                    Finalizing this run will process disbursements and update the organizational ledger.
+                                    Finalizing this run will compute disbursements based on confirmed presence logs and update the organizational ledger.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <DialogFooter className="pt-6 border-t">
+                    <DialogFooter className="pt-6 border-t flex items-center justify-between">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-8 rounded-xl h-12">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 min-w-[180px]">
+                        <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 min-w-[200px]">
                             {isSubmitting ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Computing...
                               </>
-                            ) : 'Finalize & Disburse'}
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    Finalize & Disburse <ChevronRight className="h-4 w-4" />
+                                </span>
+                            )}
                         </Button>
                     </DialogFooter>
                 </form>
