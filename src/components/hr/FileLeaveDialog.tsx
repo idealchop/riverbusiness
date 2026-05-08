@@ -13,7 +13,6 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Select, 
   SelectContent, 
@@ -29,10 +28,19 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
+import { 
+    Popover, 
+    PopoverContent, 
+    PopoverTrigger 
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { format, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 
 const leaveSchema = z.object({
   type: z.enum(['Vacation', 'Sick', 'Emergency', 'Maternity/Paternity']),
@@ -60,6 +68,7 @@ export function FileLeaveDialog({ isOpen, onOpenChange, user }: FileLeaveDialogP
       type: 'Vacation',
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date().toISOString().split('T')[0],
+      reason: ''
     }
   });
 
@@ -133,14 +142,37 @@ export function FileLeaveDialog({ isOpen, onOpenChange, user }: FileLeaveDialogP
                         )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
                             name="startDate"
                             render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Start date</FormLabel>
-                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                                                {field.value ? format(parseISO(field.value), "MMM d, yyyy") : <span>Pick date</span>}
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value ? parseISO(field.value) : undefined}
+                                            onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -149,9 +181,32 @@ export function FileLeaveDialog({ isOpen, onOpenChange, user }: FileLeaveDialogP
                             control={form.control}
                             name="endDate"
                             render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">End date</FormLabel>
-                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                                                {field.value ? format(parseISO(field.value), "MMM d, yyyy") : <span>Pick date</span>}
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value ? parseISO(field.value) : undefined}
+                                            onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                                 <FormMessage />
                             </FormItem>
                             )}
