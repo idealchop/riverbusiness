@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -17,7 +18,8 @@ import {
   Printer,
   MapPin,
   Briefcase,
-  UserCircle
+  UserCircle,
+  Filter
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,13 @@ import {
     DialogFooter,
     DialogClose
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, Timestamp, where, limit } from 'firebase/firestore';
 import { format, subDays, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns';
@@ -52,6 +61,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
+
+const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin', 'Compliance', 'Operations'];
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -69,9 +80,9 @@ const formatDuration = (minutes?: number) => {
 };
 
 const DEMO_ATTENDANCE: HRAttendanceLog[] = [
-    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'QR', validation_status: 'Valid' },
-    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'QR', validation_status: 'Valid' },
-    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'manual', validation_status: 'Valid' },
+    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'QR', validation_status: 'Valid', action: 'IN' },
+    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'QR', validation_status: 'Valid', action: 'IN' },
+    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timeIn: Timestamp.now(), status: 'present', method: 'manual', validation_status: 'Valid', action: 'IN' },
 ];
 
 const DEMO_LEAVES: HRLeaveRequest[] = [
@@ -80,8 +91,33 @@ const DEMO_LEAVES: HRLeaveRequest[] = [
 ];
 
 const DEMO_PAYROLL: HRPayrollRun[] = [
-    { id: 'PR-2025-05', companyId: 'demo', periodStart: format(startOfMonth(new Date()), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(new Date()), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 385000, createdAt: Timestamp.now() },
-    { id: 'PR-2025-04', companyId: 'demo', periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 372000, createdAt: Timestamp.now() },
+    { 
+        id: 'PR-2025-05', 
+        companyId: 'demo', 
+        periodStart: format(startOfMonth(new Date()), 'yyyy-MM-dd'), 
+        periodEnd: format(endOfMonth(new Date()), 'yyyy-MM-dd'), 
+        status: 'paid', 
+        totalNetSalary: 385000, 
+        createdAt: Timestamp.now(),
+        breakdown: [
+            { employeeId: 'e1', employeeName: 'Marcus Rivera', amount: 45000, rate: 45000, type: 'monthly' },
+            { employeeId: 'e2', employeeName: 'Sarah Jenkins', amount: 38000, rate: 38000, type: 'monthly' },
+            { employeeId: 'e3', employeeName: 'Leo Castelo', amount: 18700, rate: 850, daysWorked: 22, type: 'daily' },
+        ]
+    },
+    { 
+        id: 'PR-2025-04', 
+        companyId: 'demo', 
+        periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), 
+        periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), 
+        status: 'paid', 
+        totalNetSalary: 372000, 
+        createdAt: Timestamp.now(),
+        breakdown: [
+            { employeeId: 'e1', employeeName: 'Marcus Rivera', amount: 45000, rate: 45000, type: 'monthly' },
+            { employeeId: 'e4', employeeName: 'Elena Cruz', amount: 30000, rate: 30000, type: 'monthly' },
+        ]
+    },
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -91,9 +127,9 @@ export default function AttendancePage() {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveTab] = useState('attendance');
-  const [selectedRun, setSelectedRun] = useState<HRPayrollRun | null>(null);
-  const [isPayslipOpen, setIsPayslipOpen] = useState(false);
+  const [selectedDisbursement, setSelectedDisbursement] = useState<any | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
+  const [selectedDept, setSelectedDept] = useState('All Departments');
 
   // Pagination states for each tab
   const [attendancePage, setAttendancePage] = useState(1);
@@ -137,58 +173,83 @@ export default function AttendancePage() {
   const companyName = owner?.businessName || user?.businessName || 'River Philippines';
   const companyAddress = owner?.address || user?.address || 'Authorized Business Entity';
 
-  // --- Display Logic with Pagination ---
+  // --- Filtering Logic ---
+  
   const displayAttendance = useMemo(() => {
     let list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : DEMO_ATTENDANCE;
-    if (searchTerm) {
-        list = list.filter(log => 
-            log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            log.date.includes(searchTerm)
-        );
-    }
-    return list;
-  }, [attendanceLogs, searchTerm]);
+    const search = searchTerm.toLowerCase().trim();
+    
+    return list.filter(log => {
+        const matchesSearch = !search || log.employeeName?.toLowerCase().includes(search) || log.date.includes(search);
+        
+        // Filter by department if selected
+        const employee = allUsers?.find(u => u.id === log.employeeId);
+        const matchesDept = selectedDept === 'All Departments' || employee?.hrProfile?.department === selectedDept;
+        
+        return matchesSearch && matchesDept;
+    });
+  }, [attendanceLogs, searchTerm, selectedDept, allUsers]);
 
+  const displayLeaves = useMemo(() => {
+    let list = leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
+    const search = searchTerm.toLowerCase().trim();
+    
+    return list.filter(req => {
+        const matchesSearch = !search || req.employeeName?.toLowerCase().includes(search) || req.type.toLowerCase().includes(search);
+        
+        const employee = allUsers?.find(u => u.id === req.employeeId);
+        const matchesDept = selectedDept === 'All Departments' || employee?.hrProfile?.department === selectedDept;
+        
+        return matchesSearch && matchesDept;
+    });
+  }, [leaveRequests, searchTerm, selectedDept, allUsers]);
+
+  // Flattened Payroll - Each item is for one employee in one period
+  const displayPayrollItems = useMemo(() => {
+    const runs = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
+    const search = searchTerm.toLowerCase().trim();
+    
+    const flattened = runs.flatMap(run => 
+        (run.breakdown || []).map(item => ({
+            ...item,
+            runId: run.id,
+            periodStart: run.periodStart,
+            periodEnd: run.periodEnd,
+            status: run.status,
+            createdAt: run.createdAt
+        }))
+    );
+
+    return flattened.filter(item => {
+        const matchesSearch = !search || 
+            item.employeeName.toLowerCase().includes(search) || 
+            item.runId.toLowerCase().includes(search);
+            
+        const employee = allUsers?.find(u => u.id === item.employeeId);
+        const matchesDept = selectedDept === 'All Departments' || employee?.hrProfile?.department === selectedDept;
+        
+        return matchesSearch && matchesDept;
+    });
+  }, [payrollRuns, searchTerm, selectedDept, allUsers]);
+
+  // --- Pagination Logic ---
   const paginatedAttendance = useMemo(() => {
     const start = (attendancePage - 1) * ITEMS_PER_PAGE;
     return displayAttendance.slice(start, start + ITEMS_PER_PAGE);
   }, [displayAttendance, attendancePage]);
-
-  const displayLeaves = useMemo(() => {
-    let list = leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
-    if (searchTerm) {
-        list = list.filter(req => 
-            req.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            req.type.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }
-    return list;
-  }, [leaveRequests, searchTerm]);
 
   const paginatedLeaves = useMemo(() => {
     const start = (leavePage - 1) * ITEMS_PER_PAGE;
     return displayLeaves.slice(start, start + ITEMS_PER_PAGE);
   }, [displayLeaves, leavePage]);
 
-  const displayPayroll = useMemo(() => {
-    let list = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
-    if (searchTerm) {
-        list = list.filter(run => 
-            run.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            run.periodStart.includes(searchTerm)
-        );
-    }
-    return list;
-  }, [payrollRuns, searchTerm]);
-
   const paginatedPayroll = useMemo(() => {
     const start = (payrollPage - 1) * ITEMS_PER_PAGE;
-    return displayPayroll.slice(start, start + ITEMS_PER_PAGE);
-  }, [displayPayroll, payrollPage]);
+    return displayPayrollItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [displayPayrollItems, payrollPage]);
 
-  const handleOpenPayslip = (run: HRPayrollRun) => {
-    setSelectedRun(run);
-    setIsPayslipOpen(true);
+  const handleOpenPayslip = (item: any) => {
+    setSelectedDisbursement(item);
   };
 
   const handleEmployeeClick = (employeeId: string) => {
@@ -198,7 +259,7 @@ export default function AttendancePage() {
     }
   };
 
-  const handleDownloadPDF = (run: HRPayrollRun) => {
+  const handleDownloadIndividualPDF = (item: any) => {
     const doc = new jsPDF('p', 'pt');
     const pageWidth = doc.internal.pageSize.width;
     const margin = 40;
@@ -213,27 +274,25 @@ export default function AttendancePage() {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(companyAddress, margin, 75);
-    doc.text(`Authorized by: ${user?.name || 'System Admin'}`, margin, 87);
-    doc.text(`Role: ${user?.hrRole || 'Administrator'}`, margin, 99);
+    doc.text(`Authorized signatory: ${user?.name || 'Administrator'}`, margin, 87);
 
     doc.setTextColor(0);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Payroll disbursement summary', margin, 160);
+    doc.text('Employee payslip certificate', margin, 160);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Reference ID: ${run.id}`, margin, 185);
-    doc.text(`Statement period: ${format(new Date(run.periodStart), 'MMM d')} - ${format(new Date(run.periodEnd), 'MMM d, yyyy')}`, margin, 200);
-    doc.text(`Processed date: ${run.createdAt ? format(toSafeDate(run.createdAt)!, 'PP p') : 'Recently'}`, margin, 215);
+    doc.text(`Statement period: ${format(new Date(item.periodStart), 'MMM d')} - ${format(new Date(item.periodEnd), 'MMM d, yyyy')}`, margin, 185);
+    doc.text(`Employee: ${item.employeeName}`, margin, 200);
 
     autoTable(doc, {
-        startY: 245,
-        head: [['Description', 'Unit', 'Amount']],
+        startY: 230,
+        head: [['Component', 'Basis', 'Amount']],
         body: [
-            ['Total net disbursement', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
-            ['Status', '-', run.status.charAt(0).toUpperCase() + run.status.slice(1)],
-            ['Organization', '-', companyName],
+            ['Basic salary', item.type === 'daily' ? `${item.daysWorked} days at P${item.rate}` : 'Monthly fixed', `P${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+            ['Net payout', 'Total', `P${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+            ['Status', '-', 'Settled'],
         ],
         theme: 'striped',
         headStyles: { fillColor: [83, 142, 194], textColor: 255 },
@@ -243,9 +302,10 @@ export default function AttendancePage() {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(150);
-    doc.text('This is an electronically generated statement. Professional record active.', margin, (doc as any).lastAutoTable.finalY + 40);
+    const footerY = (doc as any).lastAutoTable.finalY + 40;
+    doc.text('This is an individual disbursement record authorized by the company administrator.', margin, footerY);
 
-    doc.save(`Statement_${run.id}.pdf`);
+    doc.save(`Payslip_${item.employeeName.replace(/\s/g, '_')}_${item.runId}.pdf`);
   };
 
   if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
@@ -258,7 +318,7 @@ export default function AttendancePage() {
              Team Records
           </h1>
           <p className="text-slate-500 font-medium text-sm">
-             Browse work, leave, and payment records across the organization.
+             Browse work, leave, and individual payment records across the organization.
           </p>
         </div>
       </div>
@@ -282,8 +342,8 @@ export default function AttendancePage() {
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder="Search by employee or date..." 
-                  className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
+                  placeholder={`Search in ${activeCategory}...`} 
+                  className="pl-10 h-11 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                   value={searchTerm}
                   onChange={(e) => {
                       setSearchTerm(e.target.value);
@@ -293,9 +353,31 @@ export default function AttendancePage() {
                   }}
                 />
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100">
-                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Consolidated view active</span>
+              <div className="flex items-center gap-3">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white h-11 px-4 shadow-sm">
+                            <Filter className="h-3.5 w-3.5 text-primary" /> {selectedDept}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
+                        <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Filter by Department</DropdownMenuLabel>
+                        {DEPARTMENTS.map(dept => (
+                            <DropdownMenuItem 
+                                key={dept} 
+                                onClick={() => {
+                                    setSelectedDept(dept);
+                                    setAttendancePage(1);
+                                    setLeavePage(1);
+                                    setPayrollPage(1);
+                                }}
+                                className={cn("rounded-lg font-semibold text-xs py-2 cursor-pointer", selectedDept === dept && "bg-slate-50")}
+                            >
+                                {dept}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </CardHeader>
@@ -405,39 +487,48 @@ export default function AttendancePage() {
                <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement ID</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Cycle period</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total net</TableHead>
+                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement Cycle</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Basis</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Net Disbursement</TableHead>
                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingPayroll ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading records...</TableCell></TableRow>
-                  ) : paginatedPayroll.map(run => (
-                    <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
+                  ) : paginatedPayroll.map((item, idx) => (
+                    <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{run.id}</p>
-                        <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100 mt-1">Settled</Badge>
+                        <button onClick={() => handleEmployeeClick(item.employeeId)} className="text-sm font-bold text-slate-700 hover:text-primary transition-colors">{item.employeeName}</button>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
                       </TableCell>
                       <TableCell>
-                        <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
+                        <p className="text-xs font-semibold text-slate-600">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, yyyy')}</p>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary?.toLocaleString()}</span>
+                        <p className="text-xs font-medium text-slate-500">
+                            {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : `Fixed Monthly`}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-bold text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                          <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(run)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                          <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                               <FileText className="h-3.5 w-3.5" />
-                              Payslip
+                              Statement
                           </Button>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {!loadingPayroll && paginatedPayroll.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No individual disbursement logs found.</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
               <PaginationFooter 
-                totalItems={displayPayroll.length}
+                totalItems={displayPayrollItems.length}
                 currentPage={payrollPage}
                 onPageChange={setPayrollPage}
               />
@@ -446,8 +537,8 @@ export default function AttendancePage() {
         </Card>
       </Tabs>
 
-      {/* Payslip Description Dialog */}
-      <Dialog open={isPayslipOpen} onOpenChange={setIsPayslipOpen}>
+      {/* Individual Disbursement View Dialog */}
+      <Dialog open={!!selectedDisbursement} onOpenChange={(open) => { if (!open) setSelectedDisbursement(null); }}>
         <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
             <div className="bg-slate-900 text-white p-8">
                 <DialogHeader>
@@ -457,9 +548,9 @@ export default function AttendancePage() {
                                 <DollarSign className="h-6 w-6 text-primary-light" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-bold tracking-tight">Payroll statement</DialogTitle>
+                                <DialogTitle className="text-2xl font-bold tracking-tight">Individual statement</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
-                                    Disbursement summary for the reporting period.
+                                    Disbursement summary for {selectedDisbursement?.employeeName}.
                                 </DialogDescription>
                             </div>
                         </div>
@@ -475,12 +566,12 @@ export default function AttendancePage() {
                     <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
                         <div className="space-y-1">
                             <Label className="text-[10px] font-bold text-slate-400">Statement reference</Label>
-                            <p className="text-sm font-bold text-slate-900">{selectedRun?.id}</p>
+                            <p className="text-sm font-bold text-slate-900">{selectedDisbursement?.runId}</p>
                         </div>
                         <div className="space-y-1 text-right">
                             <Label className="text-[10px] font-bold text-slate-400">Reporting period</Label>
                             <p className="text-sm font-bold text-slate-900">
-                                {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
+                                {selectedDisbursement ? `${format(new Date(selectedDisbursement.periodStart), 'MMM d')} - ${format(new Date(selectedDisbursement.periodEnd), 'MMM d, yyyy')}` : ''}
                             </p>
                         </div>
                     </div>
@@ -498,11 +589,11 @@ export default function AttendancePage() {
                             </div>
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                    <UserCircle className="h-3.5 w-3.5" /> Account owner
+                                    <UserCircle className="h-3.5 w-3.5" /> Employee entity
                                 </h4>
                                 <div className="space-y-0.5">
-                                    <p className="text-sm font-bold text-slate-900">{user?.name}</p>
-                                    <p className="text-xs text-slate-500 capitalize">{user?.hrRole || 'Admin'}</p>
+                                    <p className="text-sm font-bold text-slate-900">{selectedDisbursement?.employeeName}</p>
+                                    <p className="text-xs text-slate-500 capitalize">{selectedDisbursement?.type} basis</p>
                                 </div>
                             </div>
                         </div>
@@ -510,7 +601,7 @@ export default function AttendancePage() {
                         <div className="space-y-4">
                              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
                                 <p className="text-[10px] font-bold text-slate-400">Net disbursement</p>
-                                <p className="text-3xl font-bold text-slate-900 tabular-nums">₱{selectedRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                <p className="text-3xl font-bold text-slate-900 tabular-nums">₱{selectedDisbursement?.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100">
                                 <Briefcase className="h-4 w-4 text-primary" />
@@ -524,7 +615,7 @@ export default function AttendancePage() {
             <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-end items-center gap-3">
                 <Button 
                     variant="outline" 
-                    onClick={() => selectedRun && handleDownloadPDF(selectedRun)}
+                    onClick={() => selectedDisbursement && handleDownloadIndividualPDF(selectedDisbursement)}
                     className="w-full md:w-auto rounded-xl h-11 px-8 font-bold text-xs shadow-sm border-slate-200"
                 >
                     <Download className="mr-2 h-4 w-4" /> Download PDF
@@ -579,3 +670,4 @@ function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItem
         </CardFooter>
     );
 }
+
