@@ -19,6 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -90,8 +91,8 @@ export default function AttendancePage() {
   const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
-    [firestore, companyId]
+    () => (firestore && employee?.id && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
+    [firestore, employee?.id, companyId]
   );
   const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
 
@@ -298,7 +299,7 @@ export default function AttendancePage() {
                   ) : displayLeaves.map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
-                        <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d') : ''}</p>
+                        <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
                       </TableCell>
                       <TableCell className="text-sm font-bold text-slate-700">{req.employeeName}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
@@ -415,7 +416,7 @@ export default function AttendancePage() {
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transaction Status</p>
                                     <p className="text-3xl font-black text-green-600 uppercase tracking-tighter">SUCCESS</p>
                                 </CardContent>
-                            </Card>
+                            </div>
                         </div>
                     </div>
 
