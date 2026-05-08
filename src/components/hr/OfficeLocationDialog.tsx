@@ -24,13 +24,13 @@ import {
   FormMessage,
   FormDescription
 } from '@/components/ui/form';
+import { Card } from '@/components/ui/card';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
-import { MapPin, QrCode, Download, Printer, ShieldCheck, Map as MapIcon, Info, HelpCircle, ArrowLeft, CheckCircle2, ChevronRight, Calculator, Database } from 'lucide-react';
+import { collection, doc, setDoc, getDocs, query } from 'firebase/firestore';
+import { MapPin, QrCode, Download, ShieldCheck, Map as MapIcon, HelpCircle, ArrowLeft, CheckCircle2, Calculator, Database } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { HRCompanyLocation } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -321,7 +321,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                             </p>
                                         </div>
                                         <div className="pt-4 border-t space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Automatic handshake data:</p>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest:">Automatic handshake data:</p>
                                             <div className="flex flex-wrap gap-2">
                                                 <Badge variant="outline" className="bg-slate-50 text-[10px] font-bold">Employee ID</Badge>
                                                 <Badge variant="outline" className="bg-slate-50 text-[10px] font-bold">Office Auth ID</Badge>
