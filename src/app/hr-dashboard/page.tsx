@@ -292,11 +292,13 @@ export default function HRDashboard() {
                                 data-ai-hint={heroImage.imageHint}
                             />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-transparent to-transparent pointer-events-none" />
-                        <div className="absolute bottom-10 left-10 text-slate-900 z-10">
+                        <div className="absolute bottom-10 left-10 text-slate-900 z-10 space-y-2">
                             <h2 className="text-6xl font-black tracking-tighter text-slate-900">
-                                The Workforce
+                                Team Workforce
                             </h2>
+                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">
+                                Unified workforce and operational monitoring.
+                            </p>
                         </div>
                     </div>
                     <div className="lg:col-span-4 p-8 flex flex-col justify-center bg-slate-50/50 border-l border-slate-100">
