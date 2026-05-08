@@ -1238,14 +1238,19 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
   
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser || !storage || !auth) return;
+    if (!state.profilePhotoFile || !authUser || !storage || !auth || !firestore) return;
 
     const filePath = `users/${authUser.uid}/profile/profile-photo-${Date.now()}`;
     
     startTransition(async () => {
       try {
-        await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
-        toast({ title: 'Profile Photo Uploaded!', description: 'Your new photo is being processed.' });
+        const downloadURL = await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
+        
+        // Manual update for immediate UI sync
+        const userRef = doc(firestore, 'users', authUser.uid);
+        await updateDoc(userRef, { photoURL: downloadURL });
+        
+        toast({ title: 'Profile Photo Uploaded!', description: 'Your new photo has been saved successfully.' });
       } catch (error) {
         console.error("Profile photo upload failed:", error);
         toast({ variant: "destructive", title: "Update Failed", description: "Could not upload your profile photo." });
