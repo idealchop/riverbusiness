@@ -9,7 +9,9 @@ import {
   LogOut,
   LogIn,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -309,7 +311,7 @@ export default function HRDashboard() {
                                     day_today: "bg-blue-100 text-primary font-black rounded-xl",
                                     day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-200 transition-colors",
                                     head_cell: "text-slate-400 font-black uppercase text-[10px] tracking-widest",
-                                    caption_label: "hidden" // Hide the redundant month label since we have the badge
+                                    caption_label: "hidden" 
                                 }}
                             />
                         </div>
@@ -318,9 +320,8 @@ export default function HRDashboard() {
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Stats and Activity */}
-                <div className="lg:col-span-8 space-y-8">
-                    {/* Stat Cards Sub-grid */}
+                {/* Stats Row */}
+                <div className="lg:col-span-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {stats.map((stat, idx) => (
                             <Card key={idx} className="border-none shadow-sm rounded-3xl bg-white group hover:shadow-md transition-all active:scale-[0.99]">
@@ -341,51 +342,11 @@ export default function HRDashboard() {
                             </Card>
                         ))}
                     </div>
-
-                    {/* Activity Feed */}
-                    <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
-                        <CardHeader className="bg-slate-50/30 p-8 border-b">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-xl font-bold tracking-tight text-slate-900">Recent Activity Feed</CardTitle>
-                                    <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Real-Time Operational Summary</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="divide-y divide-slate-50">
-                                {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => (
-                                    <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                                        <div className="flex items-center gap-5">
-                                            <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-lg shadow-inner">{item.employeeName?.charAt(0)}</div>
-                                            <div>
-                                                <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                                                  {item.action} • {item.method} Verification
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right space-y-1">
-                                            <p className="text-sm font-black text-slate-900">{item.time ? format(item.time, 'hh:mm a') : '--:--'}</p>
-                                            <Badge className={cn("text-[9px] h-5 font-black uppercase px-3 shadow-none border-none", item.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
-                                                {item.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <div className="py-24 text-center flex flex-col items-center gap-4 opacity-30">
-                                        <Activity className="h-12 w-12 text-slate-300" />
-                                        <p className="text-xs font-black uppercase tracking-[0.3em]">Feed is quiet today</p>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
 
-                {/* Right Column: Empty or Sidebar Info */}
-                <div className="lg:col-span-4 space-y-8">
-                    <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
+                {/* Sidebar Info */}
+                <div className="lg:col-span-4">
+                    <Card className="h-full border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
                              <CheckCircle2 className="h-24 w-24" />
                         </div>
@@ -404,6 +365,46 @@ export default function HRDashboard() {
                     </Card>
                 </div>
             </div>
+
+            {/* Full-width Activity Feed */}
+            <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
+                <CardHeader className="bg-slate-50/30 p-8 border-b">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-xl font-bold tracking-tight text-slate-900">Recent Activity Feed</CardTitle>
+                            <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Real-Time Operational Summary</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="divide-y divide-slate-50">
+                        {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => (
+                            <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                <div className="flex items-center gap-5">
+                                    <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-lg shadow-inner">{item.employeeName?.charAt(0)}</div>
+                                    <div>
+                                        <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                                          {item.action} • {item.method} Verification
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <p className="text-sm font-black text-slate-900">{item.time ? format(item.time, 'hh:mm a') : '--:--'}</p>
+                                    <Badge className={cn("text-[9px] h-5 font-black uppercase px-3 shadow-none border-none", item.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+                                        {item.status}
+                                    </Badge>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="py-24 text-center flex flex-col items-center gap-4 opacity-30">
+                                <Activity className="h-12 w-12 text-slate-300" />
+                                <p className="text-xs font-black uppercase tracking-[0.3em]">Feed is quiet today</p>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
       </div>
     </div>
   );
