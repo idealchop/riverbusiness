@@ -8,7 +8,11 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  LayoutGrid
+  LayoutGrid,
+  ChevronRight,
+  UserCircle,
+  Info,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,16 +25,35 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription,
+    DialogFooter,
+    DialogClose
+} from '@/components/ui/dialog';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { format, addDays } from 'date-fns';
+import { format, addDays, isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
+import { Calendar } from '@/components/ui/calendar';
 import type { HRLeaveRequest } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const ITEMS_PER_PAGE = 10;
+
+const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+};
 
 const DEMO_LEAVES: Partial<HRLeaveRequest>[] = [
     { id: 'l1', employeeName: 'Marcus Rivera', type: 'Vacation', startDate: format(addDays(new Date(), 10), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'), reason: 'Family trip', status: 'pending' },
@@ -42,8 +65,12 @@ export default function LeavePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -57,8 +84,13 @@ export default function LeavePage() {
   const { data: leaveRequests, isLoading } = useCollection<HRLeaveRequest>(leaveQuery);
 
   const displayLeaves = useMemo(() => {
-    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVES as HRLeaveRequest[]);
-  }, [leaveRequests]);
+    let list = leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVES as HRLeaveRequest[]);
+    if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        list = list.filter(l => l.employeeName.toLowerCase().includes(s) || l.type.toLowerCase().includes(s));
+    }
+    return list;
+  }, [leaveRequests, searchTerm]);
 
   const paginatedLeaves = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -66,6 +98,44 @@ export default function LeavePage() {
   }, [displayLeaves, currentPage]);
 
   const totalPages = Math.ceil(displayLeaves.length / ITEMS_PER_PAGE);
+
+  // Calendar Intelligence Logic
+  const calendarModifiers = useMemo(() => {
+      const approved: Date[] = [];
+      const pending: Date[] = [];
+
+      displayLeaves.forEach(req => {
+          const start = toSafeDate(req.startDate);
+          const end = toSafeDate(req.endDate);
+          if (!start || !end) return;
+
+          // Loop through the range to fill the calendar
+          let current = startOfDay(start);
+          const last = startOfDay(end);
+
+          while (current <= last) {
+              if (req.status === 'approved') approved.push(new Date(current));
+              else if (req.status === 'pending') pending.push(new Date(current));
+              current = addDays(current, 1);
+          }
+      });
+
+      return { approved, pending };
+  }, [displayLeaves]);
+
+  const selectedDateLeaves = useMemo(() => {
+      if (!selectedCalendarDate) return [];
+      return displayLeaves.filter(req => {
+          const start = toSafeDate(req.startDate);
+          const end = toSafeDate(req.endDate);
+          if (!start || !end) return false;
+          
+          return isWithinInterval(selectedCalendarDate, {
+              start: startOfDay(start),
+              end: endOfDay(end)
+          });
+      });
+  }, [selectedCalendarDate, displayLeaves]);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
     if (!firestore || !companyId || !requestId || requestId.startsWith('l')) {
@@ -94,29 +164,45 @@ export default function LeavePage() {
               Review company-wide applications and manage team availability collaboratively.
           </p>
         </div>
-        <Button 
-            onClick={() => setIsLeaveDialogOpen(true)}
-            className="rounded-xl h-11 px-6 font-bold shadow-sm"
-        >
-          <Plus className="mr-2 h-4 w-4" /> File Leave
-        </Button>
+        <div className="flex items-center gap-3">
+            <Button 
+                variant="outline"
+                onClick={() => setIsCalendarOpen(true)}
+                className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm"
+            >
+                <LayoutGrid className="mr-2 h-4 w-4 text-primary" /> Calendar View
+            </Button>
+            <Button 
+                onClick={() => setIsLeaveDialogOpen(true)}
+                className="rounded-xl h-11 px-6 font-bold shadow-sm"
+            >
+                <Plus className="mr-2 h-4 w-4" /> File Leave
+            </Button>
+        </div>
       </div>
 
       <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
          <CardHeader className="bg-slate-50/20 border-b p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div>
                    <CardTitle className="text-lg font-bold text-slate-900">
                        Organization Queue
                    </CardTitle>
-                   <CardDescription className="text-xs font-medium text-slate-500">
-                       All pending team applications requiring review.
+                   <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">
+                       Requests Requiring Verification
                    </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-slate-200">
-                       <LayoutGrid className="h-3.5 w-3.5 mr-2 opacity-50" /> Calendar View
-                    </Button>
+                <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input 
+                        placeholder="Search by staff name..." 
+                        className="pl-10 h-10 rounded-xl bg-white border-slate-200"
+                        value={searchTerm}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                    />
                 </div>
             </div>
          </CardHeader>
@@ -138,7 +224,7 @@ export default function LeavePage() {
                         <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                            <TableCell className="pl-6 py-5">
                               <div className="flex items-center gap-3">
-                                 <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
+                                 <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase shadow-inner">
                                     {request.employeeName?.charAt(0) || '?'}
                                  </div>
                                  <p className="text-sm font-semibold text-slate-900">{request.employeeName || 'Untitled Employee'}</p>
@@ -155,7 +241,7 @@ export default function LeavePage() {
                            </TableCell>
                            <TableCell>
                               <Badge className={cn(
-                                 "text-[9px] font-bold uppercase border-none px-2 h-5",
+                                 "text-[9px] font-bold uppercase border-none px-2 h-5 shadow-sm",
                                  request.status === 'approved' ? "bg-green-50 text-green-700" : 
                                  request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
                               )}>
@@ -210,6 +296,116 @@ export default function LeavePage() {
         onOpenChange={setIsLeaveDialogOpen}
         user={user}
       />
+
+      {/* Calendar View Dialog */}
+      <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl h-[90vh] flex flex-col">
+            <div className="bg-slate-900 text-white p-8 shrink-0">
+                <DialogHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md text-primary-light">
+                                <CalendarDays className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">Organizational Availability</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+                                    Visual Intelligence Feed • Multi-Status Tracking
+                                </DialogDescription>
+                            </div>
+                        </div>
+                        <div className="hidden md:flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-primary" />
+                                <span className="text-[9px] font-black uppercase text-slate-400">Approved</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-amber-500" />
+                                <span className="text-[9px] font-black uppercase text-slate-400">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                </DialogHeader>
+            </div>
+
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                <div className="p-8 border-r border-slate-50 flex-1 flex flex-col items-center justify-center">
+                    <Card className="border-none shadow-none p-4 rounded-[2rem] bg-slate-50/50">
+                        <Calendar
+                            mode="single"
+                            selected={selectedCalendarDate}
+                            onSelect={setSelectedCalendarDate}
+                            modifiers={{
+                                approved: calendarModifiers.approved,
+                                pending: calendarModifiers.pending
+                            }}
+                            modifiersStyles={{
+                                approved: { backgroundColor: 'hsl(var(--primary))', color: 'white', fontWeight: 'bold' },
+                                pending: { backgroundColor: '#f59e0b', color: 'white', fontWeight: 'bold' }
+                            }}
+                            className="scale-110"
+                            classNames={{
+                                caption_label: "text-base font-black uppercase tracking-widest text-slate-900",
+                                head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-widest pb-6",
+                                day: "h-10 w-10 p-0 font-bold text-xs uppercase rounded-xl hover:bg-white transition-all",
+                                day_selected: "ring-2 ring-primary ring-offset-2",
+                                day_today: "border-b-2 border-primary rounded-none",
+                            }}
+                        />
+                    </Card>
+                    <div className="mt-8 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex items-start gap-4 max-w-xs">
+                        <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <p className="text-[10px] font-medium text-blue-900/60 leading-relaxed uppercase tracking-tight">
+                            Select a date to see the list of employees scheduled for time off. Highlights indicate active overlapping requests.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="w-full md:w-[320px] bg-slate-50/30 flex flex-col h-full">
+                    <div className="p-6 border-b bg-white">
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1">Activity for</p>
+                        <p className="text-lg font-black text-slate-900">{selectedCalendarDate ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'No Date Selected'}</p>
+                    </div>
+                    <ScrollArea className="flex-1">
+                        <div className="p-6 space-y-4">
+                            {selectedDateLeaves.length > 0 ? selectedDateLeaves.map(leave => (
+                                <div key={leave.id} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3 group hover:border-primary/20 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center font-bold text-slate-400 text-[10px]">
+                                            {leave.employeeName?.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 leading-tight">{leave.employeeName}</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{leave.type}</p>
+                                        </div>
+                                    </div>
+                                    <Badge className={cn(
+                                        "text-[8px] font-black uppercase border-none px-2 h-4",
+                                        leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
+                                    )}>
+                                        {leave.status}
+                                    </Badge>
+                                </div>
+                            )) : (
+                                <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
+                                    <CheckCircle2 className="h-8 w-8" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Full Operations</p>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
+            </div>
+
+            <DialogFooter className="p-6 bg-white border-t shrink-0">
+                <DialogClose asChild>
+                    <Button variant="ghost" className="rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
+                        Close Calendar
+                    </Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
