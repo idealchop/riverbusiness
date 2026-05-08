@@ -353,7 +353,7 @@ export default function HRDashboard() {
                 </div>
 
                 <div className="lg:col-span-4">
-                    <Card className="h-full border-none rounded-3xl bg-slate-900 text-white overflow-hidden relative group shadow-none">
+                    <Card className="h-full border-none rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative group shadow-none">
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 className="h-24 w-24" /></div>
                         <CardHeader className="p-8"><CardTitle className="text-lg font-bold tracking-tight">Focus: Today</CardTitle><CardDescription className="text-white/50 font-medium">{format(new Date(), 'EEEE, MMMM do')}</CardDescription></CardHeader>
                         <CardContent className="p-8 pt-0 space-y-4 relative z-10">
@@ -402,34 +402,6 @@ export default function HRDashboard() {
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Prominent Learning Hub Shortcut (Module Card) */}
-            <div className="pt-6">
-                <Link href="/hr-dashboard/modules">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.01] transition-all">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-                            <BookOpen className="h-40 w-40" />
-                        </div>
-                        <CardHeader className="p-10">
-                            <div className="p-3 rounded-2xl bg-white/10 w-fit mb-6">
-                                <BookOpen className="h-8 w-8" />
-                            </div>
-                            <div className="space-y-2">
-                                <CardTitle className="text-3xl font-black tracking-tight text-white uppercase">Learning Hub</CardTitle>
-                                <CardDescription className="text-white/60 font-bold text-xs uppercase tracking-widest">Authorized Training Materials</CardDescription>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-10 pt-0">
-                            <p className="text-sm font-medium text-white/80 leading-relaxed mb-8 max-w-lg">
-                                Access the centralized library of technical documentation, standard operating procedures, and video training modules authorized for your team.
-                            </p>
-                            <div className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.3em]">
-                                Open Operational Library <ArrowRight className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Link>
-            </div>
       </div>
 
       {/* Mobile Floating Action Button (FAB) */}
