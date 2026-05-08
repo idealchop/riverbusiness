@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -130,7 +129,8 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
       <div className="flex w-full flex-col lg:flex-row">
-        <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
+        {/* Branding Side (Left) */}
+        <div className="relative w-full lg:w-[65%] p-8 pb-48 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
@@ -160,8 +160,9 @@ export default function LoginPage() {
             </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
-            <div className="w-full max-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
+        {/* Sign-in Form Side (Right) */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-12 md:p-20 bg-slate-50 lg:bg-white relative">
+            <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500 bg-white p-10 lg:p-0 rounded-[3rem] lg:rounded-none shadow-2xl lg:shadow-none -mt-32 lg:mt-0 relative z-20">
                 <div className="space-y-2">
                     <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign in</h2>
                     <p className="text-slate-500 font-bold text-lg">Welcome back! Please enter your details.</p>
