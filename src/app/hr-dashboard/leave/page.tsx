@@ -13,7 +13,8 @@ import {
   UserCircle, 
   Info, 
   Calendar as CalendarIcon,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -101,7 +102,6 @@ export default function LeavePage() {
 
   const totalPages = Math.ceil(displayLeaves.length / ITEMS_PER_PAGE);
 
-  // Calendar Intelligence Logic
   const calendarModifiers = useMemo(() => {
       const approved: Date[] = [];
       const pending: Date[] = [];
@@ -111,7 +111,6 @@ export default function LeavePage() {
           const end = toSafeDate(req.endDate);
           if (!start || !end) return;
 
-          // Loop through the range to fill the calendar
           let current = startOfDay(start);
           const last = startOfDay(end);
 
@@ -141,7 +140,7 @@ export default function LeavePage() {
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
     if (!firestore || !companyId || !requestId || requestId.startsWith('l')) {
-        toast({ title: 'Demo Mode', description: 'Status updates are simulated for demo records.' });
+        toast({ title: 'Demo mode', description: 'Status updates are simulated for demo records.' });
         return;
     }
     try {
@@ -153,17 +152,17 @@ export default function LeavePage() {
     }
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Syncing Applications..." />;
+  if (isUserLoading) return <FullScreenLoader text="Syncing applications..." />;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Leave Review
+              Leave review
           </h1>
           <p className="text-slate-500 font-medium">
-              Review company-wide applications and manage team availability collaboratively.
+              Review company-wide applications and manage team availability.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -172,13 +171,13 @@ export default function LeavePage() {
                 onClick={() => setIsCalendarOpen(true)}
                 className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm"
             >
-                <LayoutGrid className="mr-2 h-4 w-4 text-primary" /> Calendar View
+                <LayoutGrid className="mr-2 h-4 w-4 text-primary" /> Calendar view
             </Button>
             <Button 
                 onClick={() => setIsLeaveDialogOpen(true)}
                 className="rounded-xl h-11 px-6 font-bold shadow-sm"
             >
-                <Plus className="mr-2 h-4 w-4" /> File Leave
+                <Plus className="mr-2 h-4 w-4" /> File leave
             </Button>
         </div>
       </div>
@@ -188,17 +187,17 @@ export default function LeavePage() {
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div>
                    <CardTitle className="text-lg font-bold text-slate-900">
-                       Organization Queue
+                       Organization queue
                    </CardTitle>
                    <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">
-                       Requests Requiring Verification
+                       Requests requiring verification
                    </CardDescription>
                 </div>
                 <div className="relative w-full md:w-80">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input 
                         placeholder="Search by staff name..." 
-                        className="pl-10 h-10 rounded-xl bg-white border-slate-200"
+                        className="pl-10 h-10 rounded-xl bg-white border-slate-200 shadow-none focus-visible:ring-primary"
                         value={searchTerm}
                         onChange={(e) => {
                             setSearchTerm(e.target.value);
@@ -211,9 +210,9 @@ export default function LeavePage() {
          <CardContent className="p-0">
             <Table>
                 <TableHeader className="bg-slate-50/50">
-                   <TableRow>
+                   <TableRow className="border-none hover:bg-transparent">
                      <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Type & Period</TableHead>
+                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Type & period</TableHead>
                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                      <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Actions</TableHead>
@@ -221,7 +220,7 @@ export default function LeavePage() {
                 </TableHeader>
                 <TableBody>
                    {isLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing Request Data...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing records...</TableCell></TableRow>
                    ) : paginatedLeaves.map(request => (
                         <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                            <TableCell className="pl-6 py-5">
@@ -258,7 +257,7 @@ export default function LeavePage() {
                                         variant="outline" 
                                         size="sm" 
                                         className="h-8 w-8 p-0 rounded-lg text-green-600 border-green-100 hover:bg-green-50"
-                                        title="Approve Request"
+                                        title="Approve request"
                                     >
                                        <CheckCircle2 className="h-4 w-4" />
                                     </Button>
@@ -267,7 +266,7 @@ export default function LeavePage() {
                                         variant="outline" 
                                         size="sm" 
                                         className="h-8 w-8 p-0 rounded-lg text-red-600 border-red-100 hover:bg-red-50"
-                                        title="Reject Request"
+                                        title="Reject request"
                                     >
                                        <XCircle className="h-4 w-4" />
                                     </Button>
@@ -299,9 +298,8 @@ export default function LeavePage() {
         user={user}
       />
 
-      {/* Calendar View Dialog */}
       <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-        <DialogContent className="sm:max-w-5xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-5xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl h-[85vh] flex flex-col">
             <div className="bg-slate-900 text-white p-8 shrink-0">
                 <DialogHeader>
                     <div className="flex items-center justify-between">
@@ -312,7 +310,7 @@ export default function LeavePage() {
                             <div>
                                 <DialogTitle className="text-2xl font-black tracking-tight">Team presence</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
-                                    Visual team availability and multi-status tracking.
+                                    Visualize team availability across the organizational layout.
                                 </DialogDescription>
                             </div>
                         </div>
@@ -330,74 +328,82 @@ export default function LeavePage() {
                 </DialogHeader>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 bg-slate-50/30">
-                <div className="p-8 flex flex-col items-center gap-8">
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 w-fit">
-                        <Calendar
-                            mode="single"
-                            numberOfMonths={2}
-                            selected={selectedCalendarDate}
-                            onSelect={setSelectedCalendarDate}
-                            modifiers={{
-                                approved: calendarModifiers.approved,
-                                pending: calendarModifiers.pending
-                            }}
-                            modifiersStyles={{
-                                approved: { backgroundColor: 'hsl(var(--primary))', color: 'white', fontWeight: 'bold' },
-                                pending: { backgroundColor: '#f59e0b', color: 'white', fontWeight: 'bold' }
-                            }}
-                            className="rounded-xl border-none"
-                            classNames={{
-                                caption_label: "text-base font-black uppercase tracking-widest text-slate-900",
-                                head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-widest pb-6",
-                                day: "h-10 w-10 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
-                                day_selected: "ring-2 ring-primary ring-offset-2",
-                                day_today: "border-b-2 border-primary rounded-none",
-                            }}
-                        />
+            <div className="flex-1 flex min-h-0 bg-slate-50/30 overflow-hidden">
+                <ScrollArea className="flex-1">
+                    <div className="p-8 flex justify-center">
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 w-fit">
+                            <Calendar
+                                mode="single"
+                                numberOfMonths={2}
+                                selected={selectedCalendarDate}
+                                onSelect={setSelectedCalendarDate}
+                                modifiers={{
+                                    approved: calendarModifiers.approved,
+                                    pending: calendarModifiers.pending
+                                }}
+                                modifiersStyles={{
+                                    approved: { backgroundColor: 'hsl(var(--primary))', color: 'white', fontWeight: 'bold' },
+                                    pending: { backgroundColor: '#f59e0b', color: 'white', fontWeight: 'bold' }
+                                }}
+                                className="rounded-xl border-none"
+                                classNames={{
+                                    caption_label: "text-base font-black uppercase tracking-widest text-slate-900",
+                                    head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-widest pb-6",
+                                    day: "h-10 w-10 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
+                                    day_selected: "ring-2 ring-primary ring-offset-2",
+                                    day_today: "border-b-2 border-primary rounded-none",
+                                }}
+                            />
+                        </div>
                     </div>
+                </ScrollArea>
 
-                    {selectedCalendarDate && selectedDateLeaves.length > 0 ? (
-                        <div className="w-full max-w-2xl animate-in fade-in slide-in-from-top-4 duration-500 pb-10">
-                            <Card className="border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
-                                <CardHeader className="bg-muted/30 pb-4 border-b border-slate-100">
-                                    <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Team Presence: {format(selectedCalendarDate, 'MMMM d')}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {selectedDateLeaves.map(leave => (
-                                        <div key={leave.id} className="p-4 rounded-2xl border border-slate-50 bg-slate-50/50 flex items-center justify-between group hover:bg-white hover:border-primary/20 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center font-black text-slate-400 text-[10px] shadow-sm">
-                                                    {leave.employeeName?.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-black text-slate-900 leading-tight">{leave.employeeName}</p>
-                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{leave.type}</p>
-                                                </div>
+                {/* Minimal Side Presence Panel */}
+                <div className="w-72 bg-white border-l border-slate-100 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+                    <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
+                            <Users className="h-3 w-3" /> Scheduled absences
+                        </h4>
+                        <p className="text-xs font-bold text-slate-900 mt-2">
+                            {selectedCalendarDate ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'No date selected'}
+                        </p>
+                    </div>
+                    <ScrollArea className="flex-1">
+                        <div className="p-4 space-y-3">
+                            {selectedCalendarDate && selectedDateLeaves.length > 0 ? (
+                                selectedDateLeaves.map(leave => (
+                                    <div key={leave.id} className="p-3 rounded-2xl border border-slate-50 bg-slate-50/50 flex items-center justify-between group hover:bg-white hover:border-primary/20 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center font-black text-slate-400 text-[10px] shadow-sm">
+                                                {leave.employeeName?.charAt(0)}
                                             </div>
-                                            <Badge className={cn(
-                                                "text-[8px] font-black uppercase border-none px-2 h-4",
-                                                leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
-                                            )}>
-                                                {leave.status}
-                                            </Badge>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-black text-slate-900 leading-tight truncate">{leave.employeeName}</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate">{leave.type}</p>
+                                            </div>
                                         </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
+                                        <Badge className={cn(
+                                            "text-[8px] font-black uppercase border-none px-2 h-4 shrink-0",
+                                            leave.status === 'approved' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
+                                        )}>
+                                            {leave.status === 'approved' ? 'Active' : 'Wait'}
+                                        </Badge>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
+                                    <CheckCircle2 className="h-8 w-8 text-slate-300" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[120px] mx-auto">Full operational presence</p>
+                                </div>
+                            )}
                         </div>
-                    ) : selectedCalendarDate && (
-                        <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
-                            <CheckCircle2 className="h-8 w-8 text-slate-300" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Full operational presence</p>
-                        </div>
-                    )}
+                    </ScrollArea>
                 </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="p-8 pt-4 bg-white border-t shrink-0">
+            <DialogFooter className="p-6 pt-4 bg-white border-t shrink-0">
                 <DialogClose asChild>
-                    <Button variant="ghost" className="rounded-xl h-11 px-10 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
+                    <Button variant="ghost" className="rounded-xl h-10 px-10 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
                         Close calendar
                     </Button>
                 </DialogClose>
