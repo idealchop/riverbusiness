@@ -14,7 +14,9 @@ import {
   ShieldCheck,
   Building,
   CheckCircle2,
-  Printer
+  Printer,
+  MapPin,
+  Briefcase
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -172,7 +174,7 @@ export default function AttendancePage() {
         body: [
             ['Total net disbursement', 'PHP', run.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })],
             ['Status', '-', run.status.charAt(0).toUpperCase() + run.status.slice(1)],
-            ['Total Payees', 'Count', 'Multi-staff ledger'],
+            ['Organization', '-', user?.businessName || 'Standard Client'],
         ],
         theme: 'striped',
         headStyles: { fillColor: [83, 142, 194], textColor: 255 },
@@ -182,7 +184,7 @@ export default function AttendancePage() {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(150);
-    doc.text('This is an electronically generated statement. High-fidelity verification active.', margin, (doc as any).lastAutoTable.finalY + 40);
+    doc.text('This is an electronically generated statement. Professional record active.', margin, (doc as any).lastAutoTable.finalY + 40);
 
     doc.save(`Statement_${run.id}.pdf`);
   };
@@ -350,7 +352,7 @@ export default function AttendancePage() {
                       <TableCell className="text-right pr-6">
                           <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(run)} className="h-8 font-black text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                               <FileText className="h-3.5 w-3.5" />
-                              Payslips
+                              Details
                           </Button>
                       </TableCell>
                     </TableRow>
@@ -373,14 +375,14 @@ export default function AttendancePage() {
                                 <DollarSign className="h-6 w-6 text-primary-light" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-bold tracking-tight">Payroll Statement</DialogTitle>
+                                <DialogTitle className="text-2xl font-bold tracking-tight">Payroll statement</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
-                                    Statement details for the period.
+                                    Organizational disbursement summary.
                                 </DialogDescription>
                             </div>
                         </div>
                         <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-bold uppercase text-[10px] tracking-widest h-7 px-4">
-                            Released
+                            Settled
                         </Badge>
                     </div>
                 </DialogHeader>
@@ -401,19 +403,36 @@ export default function AttendancePage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card className="border-none shadow-sm rounded-2xl bg-slate-50/50 border border-slate-100">
-                            <CardContent className="p-6 space-y-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount</p>
-                                <p className="text-2xl font-bold text-slate-900">₱{selectedRun?.totalNetSalary.toLocaleString()}</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm rounded-2xl bg-slate-50/50 border border-slate-100">
-                            <CardContent className="p-6 space-y-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</p>
-                                <p className="text-2xl font-bold text-green-600">Processed</p>
-                            </CardContent>
-                        </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <Building className="h-3.5 w-3.5" /> Company details
+                                </h4>
+                                <div className="space-y-0.5">
+                                    <p className="text-sm font-bold text-slate-900">River Tech Inc.</p>
+                                    <p className="text-xs text-slate-500">Filinvest Axis Tower 1, Alabang</p>
+                                    <p className="text-xs text-slate-500">SEC Reg #: 202406123456</p>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <MapPin className="h-3.5 w-3.5" /> Client organization
+                                </h4>
+                                <p className="text-sm font-bold text-slate-900">{user?.businessName || 'Standard Client'}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                             <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Disbursement amount</p>
+                                <p className="text-3xl font-black text-slate-900 tabular-nums">₱{selectedRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            </div>
+                             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100">
+                                <Briefcase className="h-4 w-4 text-primary" />
+                                <p className="text-xs font-bold text-primary">Organizational Staff Disbursement</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </ScrollArea>
@@ -435,3 +454,4 @@ export default function AttendancePage() {
     </div>
   );
 }
+
