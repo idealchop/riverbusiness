@@ -28,7 +28,19 @@ import { Card } from '@/components/ui/card';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, getDocs, query } from 'firebase/firestore';
-import { MapPin, QrCode, Download, ShieldCheck, Map as MapIcon, HelpCircle, ArrowLeft, CheckCircle2, Calculator, Database } from 'lucide-react';
+import { 
+  MapPin, 
+  QrCode, 
+  Download, 
+  ShieldCheck, 
+  Map as MapIcon, 
+  HelpCircle, 
+  ArrowLeft, 
+  CheckCircle2, 
+  Calculator, 
+  Database,
+  DollarSign
+} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { HRCompanyLocation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -234,7 +246,7 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                         <h4 className="text-2xl font-black tracking-tight uppercase">QR Entry Tag</h4>
                         <div className="flex flex-col gap-3 pt-4">
                             <Button className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 h-12 text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl" onClick={downloadQR}>
-                                <Download className="h-4 w-4" /> Download QR code in HD
+                                <Download className="h-4 w-4" /> Download QR Code in HD
                             </Button>
                             <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white" onClick={() => onOpenChange(false)}>Close asset view</Button>
                         </div>
