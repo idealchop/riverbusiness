@@ -211,4 +211,6 @@ export interface HRPayrollBreakdownItem {
     daysWorked?: number;
     rate: number;
     type: 'daily' | 'weekly' | 'monthly';
+    adjustment?: number;
+    adjustmentRemarks?: string;
 }
