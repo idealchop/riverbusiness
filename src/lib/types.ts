@@ -1,3 +1,4 @@
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -59,6 +60,27 @@ export interface HREmployeeProfile {
     philhealthDeduction?: number;
     pagibigDeduction?: number;
     taxDeduction?: number;
+}
+
+export interface CollabWorkspace {
+    id: string;
+    companyId: string;
+    name: string;
+    createdBy: string;
+    createdAt: any;
+}
+
+export interface CollabPage {
+    id: string;
+    companyId: string;
+    workspaceId: string;
+    parentId: string | null;
+    title: string;
+    icon?: string;
+    coverImage?: string;
+    content?: any; // TipTap JSON
+    createdBy: string;
+    createdAt: any;
 }
 
 export interface HRAttendanceLog {

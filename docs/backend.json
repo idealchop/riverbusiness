@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "AppUser": {
@@ -40,69 +41,34 @@
       },
       "required": ["id", "name", "email", "role", "createdAt"]
     },
-    "HRAttendanceLog": {
-        "title": "HRAttendanceLog",
+    "CollabWorkspace": {
+        "title": "CollabWorkspace",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
             "companyId": { "type": "string" },
-            "employeeId": { "type": "string" },
-            "employeeName": { "type": "string" },
-            "date": { "type": "string", "format": "date" },
-            "timeIn": { "type": "string", "format": "date-time" },
-            "timeOut": { "type": "string", "format": "date-time" },
-            "method": { "type": "string", "enum": ["QR", "manual"] },
-            "status": { "type": "string", "enum": ["present", "late", "absent", "leave"] }
-        },
-        "required": ["companyId", "employeeId", "date", "timeIn"]
-    },
-    "HRLeaveRequest": {
-        "title": "HRLeaveRequest",
-        "type": "object",
-        "properties": {
-            "id": { "type": "string" },
-            "companyId": { "type": "string" },
-            "employeeId": { "type": "string" },
-            "employeeName": { "type": "string" },
-            "type": { "type": "string", "enum": ["Vacation", "Sick", "Emergency", "Maternity/Paternity"] },
-            "startDate": { "type": "string", "format": "date" },
-            "endDate": { "type": "string", "format": "date" },
-            "reason": { "type": "string" },
-            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-            "appliedAt": { "type": "string", "format": "date-time" }
-        },
-        "required": ["companyId", "employeeId", "type", "startDate", "endDate", "status"]
-    },
-    "HRPayrollRun": {
-        "title": "HRPayrollRun",
-        "type": "object",
-        "properties": {
-            "id": { "type": "string" },
-            "companyId": { "type": "string" },
-            "periodStart": { "type": "string", "format": "date" },
-            "periodEnd": { "type": "string", "format": "date" },
-            "status": { "type": "string", "enum": ["draft", "processed", "paid"] },
-            "totalNetSalary": { "type": "number" },
+            "name": { "type": "string" },
+            "createdBy": { "type": "string" },
             "createdAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["companyId", "periodStart", "periodEnd", "status"]
+        "required": ["companyId", "name", "createdBy"]
     },
-    "HRLearningModule": {
-        "title": "HRLearningModule",
+    "CollabPage": {
+        "title": "CollabPage",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
             "companyId": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "parentId": { "type": "string", "description": "Parent page ID for nested structure." },
             "title": { "type": "string" },
-            "description": { "type": "string" },
-            "category": { "type": "string" },
-            "contentType": { "type": "string", "enum": ["video", "image", "article"] },
-            "contentUrl": { "type": "string" },
-            "textContent": { "type": "string" },
-            "createdAt": { "type": "string", "format": "date-time" },
-            "isPublished": { "type": "boolean" }
+            "icon": { "type": "string" },
+            "coverImage": { "type": "string" },
+            "content": { "type": "object", "description": "JSON representation of the TipTap document." },
+            "createdBy": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["companyId", "title", "contentType"]
+        "required": ["companyId", "workspaceId", "title", "createdBy"]
     }
   },
   "auth": {
@@ -113,21 +79,13 @@
       "schema": { "$ref": "#/entities/AppUser" },
       "description": "Stores user and employee profile information."
     },
-    "/hr_companies/{companyId}/attendance/{logId}": {
-        "schema": { "$ref": "#/entities/HRAttendanceLog" },
-        "description": "Daily attendance logs for a company."
+    "/collaboration_workspaces/{workspaceId}": {
+        "schema": { "$ref": "#/entities/CollabWorkspace" },
+        "description": "Organizational workspaces for document collaboration."
     },
-    "/hr_companies/{companyId}/leaveRequests/{requestId}": {
-        "schema": { "$ref": "#/entities/HRLeaveRequest" },
-        "description": "Leave applications from employees."
-    },
-    "/hr_companies/{companyId}/payrollRuns/{runId}": {
-        "schema": { "$ref": "#/entities/HRPayrollRun" },
-        "description": "Historical records of payroll processing."
-    },
-    "/hr_companies/{companyId}/learningModules/{moduleId}": {
-        "schema": { "$ref": "#/entities/HRLearningModule" },
-        "description": "Company training and module materials."
+    "/collaboration_pages/{pageId}": {
+        "schema": { "$ref": "#/entities/CollabPage" },
+        "description": "Individual collaborative pages containing blocks of content."
     }
   }
 }

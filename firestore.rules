@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -5,12 +6,10 @@ service cloud.firestore {
 
     // --- HELPER FUNCTIONS ---
 
-    // Checks if the user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Platform-wide administrator check (By email or custom claim)
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.email == 'admin@riverph.com' || 
@@ -20,7 +19,6 @@ service cloud.firestore {
 
     // --- GLOBAL RULES ---
 
-    // Admins have master access to all resources
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -28,33 +26,28 @@ service cloud.firestore {
     // --- USER PROFILES & DIRECTORY ---
 
     match /users/{userId} {
-      // Allow any authenticated user to manage profiles collaboratively.
-      // This supports the flat hierarchy for workforce termination and updates.
       allow read, list, create, update, delete: if isAuthenticated();
-
-      // Sub-collections (Deliveries, Payments, Notifications, Chat)
       match /{subcollection}/{docId} {
         allow read, write: if isAuthenticated();
       }
     }
+
+    // --- COLLABORATION PLATFORM ---
+
+    match /collaboration_workspaces/{workspaceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /collaboration_pages/{pageId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
     
-    // --- INVITATIONS & ONBOARDING ---
-
-    match /unclaimedProfiles/{clientId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    match /unclaimedEmployees/{inviteId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // --- HR MULTI-TENANT DATA (Collaborative Workspace) ---
+    // --- HR MULTI-TENANT DATA ---
 
     match /hr_companies/{companyId} {
-      // Allow any authenticated user to manage HR data for their organization.
-      // Full collaborative access for all team members.
       allow read, write, delete: if isAuthenticated();
-      
       match /{allSubcollections=**} {
         allow read, write, delete: if isAuthenticated();
       }
@@ -70,7 +63,6 @@ service cloud.firestore {
       }
     }
 
-    // Public links for mobile sanitation officers
     match /publicSanitationLinks/{linkId} {
       allow read: if true;
       allow write: if isAuthenticated();
@@ -78,7 +70,6 @@ service cloud.firestore {
 
     match /users/{userId}/sanitationVisits/{visitId} {
       allow read: if true;
-      // Allow public updates to reports (for signatures and checklists)
       allow update: if true;
     }
   }
