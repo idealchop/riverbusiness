@@ -200,8 +200,8 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
           <DropdownMenuTrigger asChild>
             <div className="relative group cursor-pointer">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
-                <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
+                <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
+                <AvatarFallback className="text-3xl">{user?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               {(isPending) && (
                   <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
@@ -232,7 +232,7 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
         </DropdownMenu>
         <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
         <div className="space-y-1">
-          <h4 className="font-semibold">{user.name}</h4>
+          <h4 className="font-semibold">{user?.name}</h4>
           <p className="text-sm text-muted-foreground">Update your account details.</p>
         </div>
       </div>
@@ -270,7 +270,7 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
         </div>
         {isEditingDetails && (
             <div className="flex justify-end gap-2 mt-4">
-                <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user}) }}>Cancel</Button>
+                <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user || {}}) }}>Cancel</Button>
                 <Button onClick={handleSaveChanges}>Save Changes</Button>
             </div>
         )}
@@ -291,8 +291,8 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
               <div className="flex items-center justify-between">
                   <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
                   <div className="flex items-center gap-2">
-                      <Input id="uid" value={user.id} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(user.id, 'User ID')}>
+                      <Input id="uid" value={user?.id || ''} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user?.id && copyToClipboard(user.id, 'User ID')}>
                           <Copy className="h-4 w-4" />
                       </Button>
                   </div>
@@ -300,8 +300,8 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
               <div className="flex items-center justify-between">
                   <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
                   <div className="flex items-center gap-2">
-                      <Input id="clientId" value={user.clientId || 'N/A'} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user.clientId && copyToClipboard(user.clientId, 'Client ID')} disabled={!user.clientId}>
+                      <Input id="clientId" value={user?.clientId || 'N/A'} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user?.clientId && copyToClipboard(user.clientId, 'Client ID')} disabled={!user?.clientId}>
                           <Copy className="h-4 w-4" />
                       </Button>
                   </div>
@@ -318,31 +318,31 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
       <CardContent className="p-0">
         {planImage && (
             <div className="relative h-48 w-full">
-                <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
+                <Image src={planImage.imageUrl} alt={user?.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
             </div>
         )}
         <div className="p-6">
-          <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
-          {user.plan?.isConsumptionBased ? (
+          <h3 className="text-xl font-bold">{user?.plan?.name} ({user?.clientType})</h3>
+          {user?.plan?.isConsumptionBased ? (
               <p className="text-lg font-bold text-foreground">
-                  P{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
+                  P{user?.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
               </p>
           ) : (
               <p className="text-lg font-bold text-foreground">
-                  P{user.plan?.price.toLocaleString()}/month
+                  P{user?.plan?.price.toLocaleString()}/month
               </p>
           )}
           <Separator className="my-4" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            {user.plan?.isConsumptionBased ? (
+            {user?.plan?.isConsumptionBased ? (
               <div className="sm:col-span-2">
                 <h4 className="font-semibold mb-2">Plan Details</h4>
                 <ul className="space-y-1 text-muted-foreground">
                   <li><strong>Billing:</strong> Pay based on consumption.</li>
                   <li>
                     <strong>Deliveries:</strong> Automated, On-demand, or request refills as needed.
-                    {(user.customPlanDetails?.autoRefillEnabled && user.customPlanDetails?.deliveryDay) && 
+                    {(user?.customPlanDetails?.autoRefillEnabled && user?.customPlanDetails?.deliveryDay) && 
                       <span className="text-xs block pl-4 text-primary"> - Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}.</span>
                     }
                   </li>
@@ -352,13 +352,13 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
               <div>
                   <h4 className="font-semibold mb-2">Water Plan</h4>
                   <ul className="space-y-1 text-muted-foreground">
-                    <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
-                    <li><strong>Bonus Liters:</strong> {user.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
+                    <li><strong>Liters/Month:</strong> {user?.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                    <li><strong>Bonus Liters:</strong> {user?.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
                   </ul>
               </div>
             )}
 
-            {user.customPlanDetails && (
+            {user?.customPlanDetails && (
               <div>
                   <h4 className="font-semibold mb-2">Equipment</h4>
                   <ul className="space-y-1 text-muted-foreground">
@@ -383,7 +383,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
             <div className="sm:col-span-2">
               <h4 className="font-semibold mb-2">Delivery Schedule</h4>
               <p className="text-muted-foreground">
-                {user.customPlanDetails?.deliveryFrequency} on {user.customPlanDetails?.deliveryDay} at {user.customPlanDetails?.deliveryTime}
+                {user?.customPlanDetails?.deliveryFrequency} on {user?.customPlanDetails?.deliveryDay} at {user?.customPlanDetails?.deliveryTime}
               </p>
             </div>
 
@@ -394,7 +394,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
      <Card>
         <CardContent className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {user.currentContractUrl ? (
+            {user?.currentContractUrl ? (
                 <Button variant="outline" asChild>
                     <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
                         <FileText className="mr-2 h-4 w-4" />
@@ -447,7 +447,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
 
 const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }) => (
     <div className="space-y-4">
-    {user.accountType === 'Branch' && (
+    {user?.accountType === 'Branch' && (
         <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
             <Info className="h-5 w-5 shrink-0" />
             <p>Your invoices are covered by your parent account. This history is for your records.</p>
@@ -762,20 +762,6 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
     </Card>
 );
 
-interface MyAccountDialogProps {
-  user: AppUser | null;
-  authUser: AuthUser | null;
-  planImage: ImagePlaceholder | null;
-  paymentHistory: Payment[];
-  paymentsLoading: boolean;
-  onLogout: () => void;
-  children: React.ReactNode;
-  onPayNow: (invoice: Payment) => void;
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  initialTab?: string;
-}
-
 export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange, initialTab }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
@@ -810,6 +796,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       { name: 'Maya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
   ];
 
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
@@ -1135,12 +1123,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
 
-  useEffect(() => {
-    if (user) {
-      dispatch({ type: 'SET_FORM_DATA', payload: user });
-    }
-  }, [user]);
-
   const literConversionRate = useMemo(() => {
     if (user?.accountType === 'Parent' && user?.plan?.price > 0) {
         return user.plan.price;
@@ -1163,6 +1145,51 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (numTabs <= 4) return `grid-cols-${numTabs}`;
     return 'grid-cols-2 sm:grid-cols-4';
   }, [TABS_CONFIG]);
+
+  const soaDateOptions = useMemo(() => {
+    if (!user?.createdAt) return [];
+    
+    const options: { label: string; value: string }[] = [];
+    const now = new Date();
+    let startDate = toSafeDate(user.createdAt);
+
+    if (!startDate || isNaN(startDate.getTime())) {
+        startDate = startOfMonth(now);
+    }
+    
+    let currentDate = startOfMonth(now);
+    
+    // Add months from current back to signup month
+    while (isAfter(currentDate, startDate) || isSameDay(currentDate, startDate)) {
+        options.push({
+            label: format(currentDate, 'MMMM yyyy'),
+            value: format(currentDate, 'yyyy-MM'),
+        });
+        currentDate = subMonths(currentDate, 1);
+    }
+    
+    // Insert special period for Dec 2025 - Jan 2026
+    options.push({ label: 'December 2025 - January 2026', value: '2025-12_2026-01' });
+
+    // Add Full History option at the start
+    options.unshift({ label: 'Full History', value: 'full' });
+
+    // Remove duplicates
+    const uniqueValues = new Set();
+    return options.filter(option => {
+        if (uniqueValues.has(option.value)) {
+            return false;
+        }
+        uniqueValues.add(option.value);
+        return true;
+    });
+  }, [user?.createdAt]);
+
+  useEffect(() => {
+    if (user) {
+      dispatch({ type: 'SET_FORM_DATA', payload: user });
+    }
+  }, [user]);
 
   if (!user) {
     return null;
@@ -1311,46 +1338,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         description: 'Your scheduled plan change has been cancelled.',
     });
   };
-
-  const soaDateOptions = useMemo(() => {
-    if (!user?.createdAt) return [];
-    
-    const options: { label: string; value: string }[] = [];
-    const now = new Date();
-    let startDate = toSafeDate(user.createdAt);
-
-    if (!startDate || isNaN(startDate.getTime())) {
-        startDate = startOfMonth(now);
-    }
-    
-    let currentDate = startOfMonth(now);
-    
-    // Add months from current back to signup month
-    while (isAfter(currentDate, startDate) || isSameDay(currentDate, startDate)) {
-        options.push({
-            label: format(currentDate, 'MMMM yyyy'),
-            value: format(currentDate, 'yyyy-MM'),
-        });
-        currentDate = subMonths(currentDate, 1);
-    }
-    
-    // Insert special period for Dec 2025 - Jan 2026
-    options.push({ label: 'December 2025 - January 2026', value: '2025-12_2026-01' });
-
-    // Add Full History option at the start
-    options.unshift({ label: 'Full History', value: 'full' });
-
-    // Remove duplicates
-    const uniqueValues = new Set();
-    return options.filter(option => {
-        if (uniqueValues.has(option.value)) {
-            return false;
-        }
-        uniqueValues.add(option.value);
-        return true;
-    });
-  }, [user?.createdAt]);
-
 
   const handleDownloadMonthlySOA = async () => {
     if (!user) {
@@ -1593,7 +1580,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
               <CardContent className="p-4 space-y-2 text-sm">
                 {breakdownDetails.planCost > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Base Plan ({user.plan?.name})</span>
+                    <span className="text-muted-foreground">Base Plan ({user?.plan?.name})</span>
                     <span className="font-medium">P{breakdownDetails.planCost.toFixed(2)}</span>
                   </div>
                 )}
@@ -1603,7 +1590,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
                   </div>
                 )}
-                {user.customPlanDetails?.gallonQuantity > 0 &&
+                {user?.customPlanDetails?.gallonQuantity > 0 &&
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">
                             Container Rental ({user.customPlanDetails?.gallonQuantity || 0} units)
@@ -1612,7 +1599,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <span className="font-medium">P{(breakdownDetails.gallonCost || 0).toFixed(2)}</span>
                     </div>
                 }
-                {user.customPlanDetails?.dispenserQuantity > 0 &&
+                {user?.customPlanDetails?.dispenserQuantity > 0 &&
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">
                             Dispenser Rental ({user.customPlanDetails?.dispenserQuantity || 0} units)
@@ -1878,10 +1865,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           <DialogHeader>
             <DialogTitle>Change Your Plan</DialogTitle>
             <DialogDescription>
-              {user.pendingPlan ? "A change to your plan is already scheduled." : "Compare your current plan with our Flow Plan and schedule the change."}
+              {user?.pendingPlan ? "A change to your plan is already scheduled." : "Compare your current plan with our Flow Plan and schedule the change."}
             </DialogDescription>
           </DialogHeader>
-            {user.pendingPlan ? (
+            {user?.pendingPlan ? (
                 <div className="py-4 text-center">
                     <Card className="max-w-md mx-auto">
                         <CardHeader>
@@ -1917,10 +1904,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                   Your Current Plan
                                   <CheckCircle className="h-5 w-5 text-primary" />
                                 </CardTitle>
-                                <CardDescription>{user.plan?.name}</CardDescription>
+                                <CardDescription>{user?.plan?.name}</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1">
-                                {user.plan?.isConsumptionBased ? (
+                                {user?.plan?.isConsumptionBased ? (
                                     <>
                                       <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/liter</p>
                                       <Separator className="my-2" />
@@ -1931,17 +1918,17 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                     </>
                                 ) : (
                                     <>
-                                        <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/month</p>
+                                        <p className="font-bold text-lg">P{user?.plan?.price.toLocaleString()}/month</p>
                                         <Separator className="my-2" />
                                         <ul className="text-sm space-y-1 text-muted-foreground">
                                             <li><strong>Billing:</strong> Fixed monthly bill.</li>
-                                            <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                                            <li><strong>Liters/Month:</strong> {user?.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
                                         </ul>
                                     </>
                                 )}
                             </CardContent>
                         </Card>
-                        {flowPlan && !user.plan?.isConsumptionBased && (
+                        {flowPlan && !user?.plan?.isConsumptionBased && (
                             <Card 
                                 onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
                                 className={cn(
@@ -1991,7 +1978,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                   </div>
                   <DialogFooter className="pr-6 pb-4 pt-2">
                     <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
-                    <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name || user.plan?.isConsumptionBased}>
+                    <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user?.plan?.name || user?.plan?.isConsumptionBased}>
                       Confirm and Switch Plan
                     </Button>
                   </DialogFooter>
@@ -2098,4 +2085,18 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       </Dialog>
     </AlertDialog>
   );
+}
+
+interface MyAccountDialogProps {
+  user: AppUser | null;
+  authUser: AuthUser | null;
+  planImage: ImagePlaceholder | null;
+  paymentHistory: Payment[];
+  paymentsLoading: boolean;
+  onLogout: () => void;
+  children?: React.ReactNode;
+  onPayNow: (invoice: Payment) => void;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  initialTab?: string;
 }
