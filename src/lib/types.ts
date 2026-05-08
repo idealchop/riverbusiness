@@ -1,3 +1,4 @@
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -56,11 +57,22 @@ export interface HRAttendanceLog {
     employeeId: string;
     employeeName: string;
     date: string;
-    timeIn: any;
-    timeOut?: any;
-    totalMinutes?: number;
+    timestamp: any;
+    action: 'IN' | 'OUT';
+    gps_lat?: number;
+    gps_long?: number;
+    validation_status: 'Valid' | 'Invalid';
     method: 'QR' | 'manual';
-    status: 'present' | 'late' | 'absent' | 'leave';
+    office_id?: string;
+}
+
+export interface HRCompanyLocation {
+    id: string;
+    companyId: string;
+    office_name: string;
+    latitude: number;
+    longitude: number;
+    radius_meters: number;
 }
 
 export interface HRLeaveRequest {

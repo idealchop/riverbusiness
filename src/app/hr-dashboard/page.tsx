@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -21,7 +22,9 @@ import {
   Search,
   Bell,
   Send,
-  UserCircle
+  UserCircle,
+  QrCode,
+  MapPin
 } from 'lucide-react';
 import { 
     Card, 
@@ -57,6 +60,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { AttendanceScanner } from '@/components/hr/AttendanceScanner';
+import { OfficeLocationDialog } from '@/components/hr/OfficeLocationDialog';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -66,30 +71,8 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
-function subHours(date: Date, hours: number) {
-    const result = new Date(date);
-    result.setHours(result.getHours() - hours);
-    return result;
-}
-
-// Philippine Holidays Registry (Standard National Holidays)
+// Philippine Holidays Registry
 const PHILIPPINE_HOLIDAYS = [
-    { date: new Date(2024, 0, 1), name: "New Year's Day" },
-    { date: new Date(2024, 1, 9), name: "Chinese New Year" },
-    { date: new Date(2024, 1, 25), name: "EDSA People Power Revolution Anniversary" },
-    { date: new Date(2024, 2, 28), name: "Maundy Thursday" },
-    { date: new Date(2024, 2, 29), name: "Good Friday" },
-    { date: new Date(2024, 3, 9), name: "Araw ng Kagitingan" },
-    { date: new Date(2024, 4, 1), name: "Labor Day" },
-    { date: new Date(2024, 5, 12), name: "Independence Day" },
-    { date: new Date(2024, 7, 21), name: "Ninoy Aquino Day" },
-    { date: new Date(2024, 7, 26), name: "National Heroes Day" },
-    { date: new Date(2024, 10, 1), name: "All Saints' Day" },
-    { date: new Date(2024, 10, 2), name: "All Souls' Day" },
-    { date: new Date(2024, 11, 8), name: "Feast of the Immaculate Conception" },
-    { date: new Date(2024, 11, 25), name: "Christmas Day" },
-    { date: new Date(2024, 11, 30), name: "Rizal Day" },
-    // 2025
     { date: new Date(2025, 0, 1), name: "New Year's Day" },
     { date: new Date(2025, 0, 29), name: "Chinese New Year" },
     { date: new Date(2025, 1, 25), name: "EDSA People Power Revolution Anniversary" },
@@ -107,27 +90,15 @@ const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2025, 11, 30), name: "Rizal Day" },
 ];
 
-// Generate Dynamic Mock Leave Data centered around "today"
 const getMockLeaves = () => {
     const today = new Date();
     return [
         { date: addDays(today, 2), name: 'Marcus Rivera', type: 'Vacation', status: 'approved' },
-        { date: addDays(today, 3), name: 'Marcus Rivera', type: 'Vacation', status: 'approved' },
-        { date: subDays(today, 2), name: 'Elena Cruz', type: 'Sick Leave', status: 'approved' },
         { date: addDays(today, 5), name: 'Sarah Jenkins', type: 'Emergency', status: 'pending' },
-        { date: addDays(today, 1), name: 'Leo Castelo', type: 'Personal', status: 'pending' },
     ];
 };
 
 const MOCK_LEAVES_DATA = getMockLeaves();
-
-// Demo data for activity feed
-const DEMO_FEED = [
-    { id: 'd1', employeeName: 'Marcus Rivera', action: 'Clock In', time: subHours(new Date(), 2), status: 'present', method: 'QR' },
-    { id: 'd2', employeeName: 'Sarah Jenkins', action: 'Clock In', time: subHours(new Date(), 1.5), status: 'present', method: 'QR' },
-    { id: 'd3', employeeName: 'Leo Castelo', action: 'Clock In', time: subHours(new Date(), 1.2), status: 'late', method: 'Manual' },
-    { id: 'd4', employeeName: 'Elena Cruz', action: 'Clock Out', time: subHours(new Date(), 0.5), status: 'present', method: 'QR' },
-];
 
 export default function HRDashboard() {
   const { user } = useUser();
@@ -135,43 +106,43 @@ export default function HRDashboard() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [isProcessing, setIsProcessing] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState<string>('00:00:00');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
   
-  // Calendar Interactivity States
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     setCurrentTime(new Date());
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   const companyId = user?.companyId || user?.clientId || 'default';
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  // --- Clock Logic ---
+  // --- Clock Status Logic ---
   const todayLogQuery = useMemoFirebase(
     () => (firestore && user?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
-        where('date', '==', todayStr)
+        where('date', '==', todayStr),
+        orderBy('timestamp', 'desc'),
+        limit(1)
     ) : null,
     [firestore, companyId, user?.id, todayStr]
   );
-  const { data: attendanceLogs } = useCollection<HRAttendanceLog>(todayLogQuery);
-  const currentLog = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs[0] : null;
+  const { data: latestLogToday } = useCollection<HRAttendanceLog>(todayLogQuery);
+  const currentAction = latestLogToday && latestLogToday.length > 0 ? latestLogToday[0].action : null;
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (currentLog && currentLog.timeIn && !currentLog.timeOut) {
-      const startTime = toSafeDate(currentLog.timeIn);
+    if (currentAction === 'IN' && latestLogToday?.[0]?.timestamp) {
+      const startTime = toSafeDate(latestLogToday[0].timestamp);
       if (startTime) {
         interval = setInterval(() => {
           const now = new Date();
@@ -179,89 +150,22 @@ export default function HRDashboard() {
           const diffHrs = Math.floor(diffMs / 3600000);
           const diffMins = Math.floor((diffMs % 3600000) / 60000);
           const diffSecs = Math.floor((diffMs % 60000) / 1000);
-          setLiveDuration(
-            `${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`
-          );
+          setLiveDuration(`${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`);
         }, 1000);
       }
     } else {
         setLiveDuration('00:00:00');
     }
     return () => clearInterval(interval);
-  }, [currentLog]);
+  }, [currentAction, latestLogToday]);
 
-  const handleTimeIn = async () => {
-    if (!firestore || !user?.id || !companyId) {
-        toast({ variant: 'destructive', title: 'System Error', description: 'Could Not Resolve Employee Identity.' });
-        return;
-    }
-    setIsProcessing(true);
-    try {
-        const attendanceCol = collection(firestore, 'hr_companies', companyId, 'attendance');
-        const now = new Date();
-        const hour = now.getHours();
-        const status = hour >= 9 ? 'late' : 'present';
-
-        await addDoc(attendanceCol, {
-            companyId,
-            employeeId: user.id,
-            employeeName: user.name || 'Anonymous Employee',
-            date: todayStr,
-            timeIn: serverTimestamp(),
-            method: 'QR',
-            status: status
-        });
-
-        toast({ title: 'Clock In Successful', description: `Good Morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Operation Failed', description: 'Could Not Clock In.' });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-  const handleTimeOut = async () => {
-    if (!firestore || !currentLog || !companyId) return;
-    setIsProcessing(true);
-    try {
-        const startTime = toSafeDate(currentLog.timeIn);
-        const endTime = new Date();
-        let totalMinutes = 0;
-        if (startTime) {
-            totalMinutes = Math.floor((endTime.getTime() - startTime.getTime()) / 60000);
-        }
-        const logRef = doc(firestore, 'hr_companies', companyId, 'attendance', currentLog.id);
-        await updateDoc(logRef, {
-            timeOut: serverTimestamp(),
-            totalMinutes: totalMinutes
-        });
-        toast({ title: 'Clock Out Successful', description: 'Shift Summary Saved To Attendance.' });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Operation Failed', description: 'Could Not Clock Out.' });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-  const handlePostAnnouncement = () => {
-      if (!announcementText.trim()) return;
-      toast({ title: 'Broadcast Sent', description: 'Your announcement is now live for all team members.' });
-      setAnnouncementText('');
-  };
-
-  // --- Dashboard Data Queries ---
+  // --- Dashboard Data ---
   const employeesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
   );
   const { data: employees } = useCollection(employeesQuery);
 
-  const leavesQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), where('status', '==', 'pending')) : null,
-    [firestore, companyId]
-  );
-  const { data: pendingLeaves } = useCollection(leavesQuery);
-  
   const companyAttendanceQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', todayStr)) : null,
     [firestore, companyId, todayStr]
@@ -269,36 +173,21 @@ export default function HRDashboard() {
   const { data: todayAttendance } = useCollection<HRAttendanceLog>(companyAttendanceQuery);
 
   const feedItems = useMemo(() => {
-    const items: any[] = [];
-    if (todayAttendance && todayAttendance.length > 0) {
-        todayAttendance.forEach(log => {
-            if (log.timeOut) {
-                items.push({ id: `${log.id}-out`, employeeName: log.employeeName, action: 'Clock Out', time: toSafeDate(log.timeOut), status: log.status, method: log.method, date: log.date });
-            }
-            if (log.timeIn) {
-                items.push({ id: `${log.id}-in`, employeeName: log.employeeName, action: 'Clock In', time: toSafeDate(log.timeIn), status: log.status, method: log.method, date: log.date });
-            }
-        });
-    } else {
-        return DEMO_FEED;
-    }
-    return items.sort((a, b) => (b.time?.getTime() || 0) - (a.time?.getTime() || 0));
+    if (!todayAttendance || todayAttendance.length === 0) return [];
+    return [...todayAttendance].sort((a, b) => (toSafeDate(b.timestamp)?.getTime() || 0) - (toSafeDate(a.timestamp)?.getTime() || 0));
   }, [todayAttendance]);
 
   const stats = useMemo(() => {
-    const empCount = employees && employees.length > 0 ? employees.length : 12;
-    const attCount = todayAttendance && todayAttendance.length > 0 ? todayAttendance.length : 8;
-    const leaveCount = pendingLeaves && pendingLeaves.length > 0 ? pendingLeaves.length : 3;
-
+    const empCount = employees?.length || 12;
+    const attCount = todayAttendance?.filter(a => a.action === 'IN').length || 8;
     return [
         { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
-        { label: 'Present Today', value: attCount, icon: Clock, trend: 'Live Attendance', trendType: 'up' },
-        { label: 'Pending Leaves', value: leaveCount, icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
-        { label: 'Work Shifts', value: attCount, icon: Activity, trend: 'Total Logs Today', trendType: 'up' },
+        { label: 'Present Today', value: attCount, icon: Clock, trend: 'Verified Entry', trendType: 'up' },
+        { label: 'Operational', value: '100%', icon: Activity, trend: 'Live Sync', trendType: 'up' },
+        { label: 'GPS Radius', value: '50m', icon: MapPin, trend: 'Validation Active', trendType: 'up' },
     ];
-  }, [employees, todayAttendance, pendingLeaves]);
+  }, [employees, todayAttendance]);
 
-  // Interactivity Info Resolution
   const selectedDateInfo = useMemo(() => {
       if (!selectedDate) return null;
       const holiday = PHILIPPINE_HOLIDAYS.find(h => isSameDay(h.date, selectedDate));
@@ -307,9 +196,6 @@ export default function HRDashboard() {
       return { holiday, leaves };
   }, [selectedDate]);
 
-  const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
-
-  // Calendar modifiers - Use date-fns isSameDay for reliable matching
   const modifiers = {
     holiday: (date: Date) => PHILIPPINE_HOLIDAYS.some(h => isSameDay(h.date, date)),
     approvedLeave: (date: Date) => MOCK_LEAVES_DATA.some(l => isSameDay(l.date, date) && l.status === 'approved'),
@@ -317,65 +203,43 @@ export default function HRDashboard() {
   };
 
   const modifiersStyles = {
-    holiday: { color: 'white', backgroundColor: '#ef4444' }, // Red
-    approvedLeave: { color: 'white', backgroundColor: 'hsl(var(--primary))' }, // Blue
-    pendingLeave: { color: 'white', backgroundColor: '#f59e0b' }, // Amber
+    holiday: { color: 'white', backgroundColor: '#ef4444' },
+    approvedLeave: { color: 'white', backgroundColor: 'hsl(var(--primary))' },
+    pendingLeave: { color: 'white', backgroundColor: '#f59e0b' },
   };
+
+  const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            HR Dashboard
-          </h1>
-          <p className="text-slate-500 font-medium text-sm">
-            Hello, {user?.name?.split(' ')[0] || 'Employee'} • Universal Access Active
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">HR Dashboard</h1>
+          <p className="text-slate-500 font-medium text-sm">Hello, {user?.name?.split(' ')[0] || 'Employee'} • Universal Access Active</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
             <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end min-w-[100px]">
-                <p className="text-sm font-black tabular-nums leading-none text-slate-900">
-                    {currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}
-                </p>
-                {currentLog && !currentLog.timeOut && (
-                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">
-                        Active: {liveDuration}
-                    </p>
+                <p className="text-sm font-black tabular-nums leading-none text-slate-900">{currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}</p>
+                {currentAction === 'IN' && (
+                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">Active: {liveDuration}</p>
                 )}
             </div>
 
-            {/* Desktop Action Buttons */}
             <div className="hidden sm:flex items-center gap-3">
-                {!currentLog ? (
-                    <Button 
-                      onClick={handleTimeIn} 
-                      disabled={isProcessing} 
-                      className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
-                    >
-                        <LogIn className="h-4 w-4" /> Clock In
-                    </Button>
-                ) : !currentLog.timeOut ? (
-                    <Button 
-                      onClick={handleTimeOut} 
-                      disabled={isProcessing} 
-                      className="bg-destructive text-white hover:bg-destructive/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
-                    >
-                        <LogOut className="h-4 w-4" /> Clock Out
-                    </Button>
-                ) : (
-                    <div className="h-11 px-5 bg-green-50 text-green-700 border border-green-200 rounded-xl flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Shift Secured</span>
-                    </div>
-                )}
-                
-                <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
-                    Payroll
+                <Button 
+                  onClick={() => setIsScannerOpen(true)}
+                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
+                >
+                    <QrCode className="h-4 w-4" /> Attendance Terminal
                 </Button>
+                
+                {user?.hrRole === 'owner' && (
+                    <Button onClick={() => setIsLocationDialogOpen(true)} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
+                        Office Settings
+                    </Button>
+                )}
             </div>
 
-            {/* Mobile Payroll shortcut - keep visible if desktop buttons hidden */}
             <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="sm:hidden rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
                 Payroll
             </Button>
@@ -386,26 +250,14 @@ export default function HRDashboard() {
             <Card className="border-none rounded-[2.5rem] overflow-hidden bg-white shadow-none">
                 <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[400px]">
                     <div className="lg:col-span-6 relative flex flex-col lg:block overflow-hidden bg-slate-50 min-h-[300px]">
-                        {/* Image Container: Absolute on desktop, static height on mobile */}
                         <div className="relative h-64 lg:h-full lg:absolute lg:inset-0 flex items-center justify-center p-8">
                             {heroImage && (
-                                <Image 
-                                    src={heroImage.imageUrl} 
-                                    alt={heroImage.description} 
-                                    fill 
-                                    className="object-contain p-8 md:p-12 transition-transform duration-[20s] hover:scale-105"
-                                    data-ai-hint={heroImage.imageHint}
-                                />
+                                <Image src={heroImage.imageUrl} alt={heroImage.description} fill className="object-contain p-8 md:p-12 transition-transform duration-[20s] hover:scale-105" data-ai-hint={heroImage.imageHint}/>
                             )}
                         </div>
-                        {/* Text Content: Stacked on mobile, absolute on desktop to avoid overlap */}
                         <div className="relative p-8 pt-0 lg:p-0 lg:absolute lg:bottom-10 lg:left-10 text-slate-900 z-10 space-y-2 lg:max-w-[80%]">
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">
-                                Team Workforce
-                            </h2>
-                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 tracking-widest leading-relaxed">
-                                Unified workforce and operational monitoring for modern teams.
-                            </p>
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">Team Workforce</h2>
+                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 tracking-widest leading-relaxed">Unified workforce and operational monitoring for modern teams.</p>
                         </div>
                     </div>
                     <div className="lg:col-span-4 p-6 md:p-8 flex flex-col justify-center bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-slate-100">
@@ -413,21 +265,15 @@ export default function HRDashboard() {
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Company Calendar</h3>
-                                    <p className="text-lg font-black text-slate-900 leading-tight">
-                                        {format(currentMonth, 'MMMM yyyy')}
-                                    </p>
+                                    <p className="text-lg font-black text-slate-900 leading-tight">{format(currentMonth, 'MMMM yyyy')}</p>
                                 </div>
                                 <div className="flex items-center gap-1 bg-white border border-slate-100 rounded-xl p-1 shadow-sm">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                             
-                            <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex flex-col items-center justify-center overflow-hidden">
+                            <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex flex-col items-center justify-center overflow-hidden shadow-sm">
                                 <Calendar
                                     mode="single"
                                     month={currentMonth}
@@ -449,7 +295,6 @@ export default function HRDashboard() {
                                 />
                             </div>
 
-                            {/* Interactive Status Card */}
                             {selectedDateInfo && (
                                 <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="flex items-center gap-3 mb-2">
@@ -458,25 +303,16 @@ export default function HRDashboard() {
                                     </div>
                                     {selectedDateInfo.holiday && (
                                         <div className="flex items-center gap-3 mb-2">
-                                            <div className="h-6 w-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-                                                <AlertCircle className="h-3.5 w-3.5" />
-                                            </div>
+                                            <div className="h-6 w-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><AlertCircle className="h-3.5 w-3.5" /></div>
                                             <p className="text-sm font-bold text-slate-900">{selectedDateInfo.holiday.name}</p>
                                         </div>
                                     )}
                                     {selectedDateInfo.leaves.map((leave, i) => (
                                         <div key={i} className="flex items-center gap-3 mb-1 last:mb-0">
-                                            <div className={cn(
-                                                "h-6 w-6 rounded-lg flex items-center justify-center",
-                                                leave.status === 'approved' ? "bg-blue-50 text-primary" : "bg-amber-50 text-amber-600"
-                                            )}>
-                                                <UserCircle className="h-3.5 w-3.5" />
-                                            </div>
+                                            <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center", leave.status === 'approved' ? "bg-blue-50 text-primary" : "bg-amber-50 text-amber-600")}><UserCircle className="h-3.5 w-3.5" /></div>
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900">{leave.name}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                                                    {leave.type} • <span className={cn(leave.status === 'approved' ? "text-primary" : "text-amber-600")}>{leave.status}</span>
-                                                </p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{leave.type} • <span className={cn(leave.status === 'approved' ? "text-primary" : "text-amber-600")}>{leave.status}</span></p>
                                             </div>
                                         </div>
                                     ))}
@@ -484,13 +320,7 @@ export default function HRDashboard() {
                             )}
                             
                             <div className="pt-2">
-                                <Button 
-                                    onClick={() => setIsScheduleDialogOpen(true)}
-                                    variant="ghost" 
-                                    className="w-full justify-between rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all"
-                                >
-                                    Company Schedule <ChevronRight className="h-4 w-4" />
-                                </Button>
+                                <Button onClick={() => setIsScheduleDialogOpen(true)} variant="ghost" className="w-full justify-between rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all">Company Schedule <ChevronRight className="h-4 w-4" /></Button>
                             </div>
                         </div>
                     </div>
@@ -504,12 +334,8 @@ export default function HRDashboard() {
                             <Card key={idx} className="border-none rounded-3xl bg-white group hover:shadow-none transition-all active:scale-[0.99] shadow-none">
                                 <CardContent className="p-6">
                                     <div className="flex justify-between items-start mb-4">
-                                        <div className="p-3 rounded-2xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
-                                            <stat.icon className="h-6 w-6" />
-                                        </div>
-                                        <div className={cn("text-[10px] font-black uppercase tracking-widest", stat.trendType === 'up' ? "text-green-600" : stat.trendType === 'warn' ? "text-amber-600" : "text-slate-400")}>
-                                            {stat.trend}
-                                        </div>
+                                        <div className="p-3 rounded-2xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-all"><stat.icon className="h-6 w-6" /></div>
+                                        <div className={cn("text-[10px] font-black uppercase tracking-widest", stat.trendType === 'up' ? "text-green-600" : stat.trendType === 'warn' ? "text-amber-600" : "text-slate-400")}>{stat.trend}</div>
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-4xl font-black text-slate-900 tabular-nums tracking-tighter">{stat.value}</p>
@@ -523,20 +349,11 @@ export default function HRDashboard() {
 
                 <div className="lg:col-span-4">
                     <Card className="h-full border-none rounded-3xl bg-slate-900 text-white overflow-hidden relative group shadow-none">
-                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
-                             <CheckCircle2 className="h-24 w-24" />
-                        </div>
-                        <CardHeader className="p-8">
-                            <CardTitle className="text-lg font-bold tracking-tight">Focus: Today</CardTitle>
-                            <CardDescription className="text-white/50 font-medium">{format(new Date(), 'EEEE, MMMM do')}</CardDescription>
-                        </CardHeader>
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 className="h-24 w-24" /></div>
+                        <CardHeader className="p-8"><CardTitle className="text-lg font-bold tracking-tight">Focus: Today</CardTitle><CardDescription className="text-white/50 font-medium">{format(new Date(), 'EEEE, MMMM do')}</CardDescription></CardHeader>
                         <CardContent className="p-8 pt-0 space-y-4 relative z-10">
-                            <p className="text-sm font-medium text-white/80 leading-relaxed italic">
-                                "Efficiency is doing things right; effectiveness is doing the right things."
-                            </p>
-                            <div className="pt-4 border-t border-white/10">
-                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40">River Workforce Management</p>
-                            </div>
+                            <p className="text-sm font-medium text-white/80 leading-relaxed italic">"Physical presence is the anchor of accountability and team alignment."</p>
+                            <div className="pt-4 border-t border-white/10"><p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40">QR & GPS Verification System</p></div>
                         </CardContent>
                     </Card>
                 </div>
@@ -547,7 +364,7 @@ export default function HRDashboard() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-xl font-bold tracking-tight text-slate-900">Recent Activity Feed</CardTitle>
-                            <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Real-Time Operational Summary</CardDescription>
+                            <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Real-Time Verification Summary</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -560,14 +377,14 @@ export default function HRDashboard() {
                                     <div>
                                         <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
                                         <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                                          {item.action} • {item.method} Verification
+                                          CLOCKED {item.action} • {item.validation_status === 'Valid' ? 'GPS VERIFIED' : 'INVALID LOCATION'}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right space-y-1">
-                                    <p className="text-sm font-black text-slate-900">{item.time ? format(item.time, 'hh:mm a') : '--:--'}</p>
-                                    <Badge className={cn("text-[9px] h-5 font-black uppercase px-3 shadow-none border-none", item.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
-                                        {item.status}
+                                    <p className="text-sm font-black text-slate-900">{item.timestamp ? format(toSafeDate(item.timestamp)!, 'hh:mm a') : '--:--'}</p>
+                                    <Badge className={cn("text-[9px] h-5 font-black uppercase px-3 shadow-none border-none", item.action === 'IN' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700")}>
+                                        {item.action}
                                     </Badge>
                                 </div>
                             </div>
@@ -582,175 +399,84 @@ export default function HRDashboard() {
             </Card>
       </div>
 
-      {/* Mobile Floating Action Button (FAB) for Clock In/Out */}
+      {/* Mobile Floating Action Button (FAB) */}
       <div className="sm:hidden fixed bottom-8 right-6 z-50 flex flex-col gap-3 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {!currentLog ? (
-            <>
-              <Button 
-                  onClick={handleTimeIn} 
-                  disabled={isProcessing} 
-                  className="w-16 h-16 rounded-full shadow-[0_15px_30px_-5px_rgba(0,0,0,0.2)] bg-primary text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-[4px] border-white"
-              >
-                  <LogIn className="h-7 w-7" />
-              </Button>
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100">Clock In</span>
-            </>
-          ) : !currentLog.timeOut ? (
-            <>
-               {/* Live Status HUD */}
-               <div className="mb-1 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-blue-100 shadow-sm flex items-center gap-2 animate-pulse">
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-                  <span className="text-[10px] font-black text-blue-600 tabular-nums">{liveDuration}</span>
-               </div>
-               <Button 
-                  onClick={handleTimeOut} 
-                  disabled={isProcessing} 
-                  className="w-16 h-16 rounded-full shadow-[0_15px_30px_-5px_rgba(239,68,68,0.3)] bg-destructive text-white hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center border-[4px] border-white"
-              >
-                  <LogOut className="h-7 w-7" />
-              </Button>
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-red-500 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-red-50">Clock Out</span>
-            </>
-          ) : (
-            <>
-              <div className="w-16 h-16 rounded-full shadow-xl bg-green-500 text-white flex items-center justify-center border-[4px] border-white">
-                  <CheckCircle2 className="h-7 w-7" />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-green-600 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-green-50">Shift Secured</span>
-            </>
+          {currentAction === 'IN' && (
+             <div className="mb-1 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-blue-100 shadow-sm flex items-center gap-2 animate-pulse">
+                <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                <span className="text-[10px] font-black text-blue-600 tabular-nums">{liveDuration}</span>
+             </div>
           )}
+          <Button 
+              onClick={() => setIsScannerOpen(true)}
+              className={cn(
+                "w-16 h-16 rounded-full shadow-2xl transition-all p-0 flex items-center justify-center border-[4px] border-white active:scale-95",
+                currentAction === 'IN' ? "bg-destructive" : "bg-primary"
+              )}
+          >
+              <QrCode className="h-7 w-7 text-white" />
+          </Button>
+          <span className={cn(
+            "text-[9px] font-black uppercase tracking-[0.3em] bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border",
+            currentAction === 'IN' ? "text-red-500 border-red-50" : "text-primary border-slate-100"
+          )}>
+            Clock {currentAction === 'IN' ? 'Out' : 'In'}
+          </span>
       </div>
 
-      {/* Company Schedule Dialog */}
+      {/* Dialogs */}
+      <AttendanceScanner isOpen={isScannerOpen} onOpenChange={setIsScannerOpen} user={user} />
+      <OfficeLocationDialog isOpen={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen} companyId={companyId} />
+      
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
         <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
             <div className="grid grid-cols-1 md:grid-cols-12 h-full min-h-[600px]">
-                {/* Left: Administrative Control Panel */}
                 <div className="md:col-span-4 bg-slate-900 text-white p-8 space-y-10">
                     <div>
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 rounded-xl bg-white/10">
-                                <Megaphone className="h-5 w-5 text-primary-light" />
-                            </div>
+                            <div className="p-2 rounded-xl bg-white/10"><Megaphone className="h-5 w-5 text-primary-light" /></div>
                             <h3 className="text-lg font-black tracking-tight">Command Center</h3>
                         </div>
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">New Announcement</Label>
-                                <Textarea 
-                                    placeholder="Type important updates here..."
-                                    value={announcementText}
-                                    onChange={(e) => setAnnouncementText(e.target.value)}
-                                    className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] focus:ring-primary text-sm font-medium resize-none shadow-inner"
-                                />
+                                <Textarea placeholder="Type important updates here..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] focus:ring-primary text-sm font-medium resize-none shadow-inner" />
                             </div>
-                            <Button 
-                                onClick={handlePostAnnouncement}
-                                disabled={!announcementText.trim()}
-                                className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"
-                            >
-                                <Send className="mr-2 h-3.5 w-3.5" /> Broadcast to Team
-                            </Button>
+                            <Button onClick={() => { toast({ title: 'Broadcast Sent' }); setAnnouncementText(''); }} disabled={!announcementText.trim()} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"><Send className="mr-2 h-3.5 w-3.5" /> Broadcast to Team</Button>
                         </div>
                     </div>
-
                     <Separator className="bg-white/10" />
-
                     <div className="space-y-6">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Upcoming Holidays (PH)</h4>
                         <div className="space-y-4">
                             {PHILIPPINE_HOLIDAYS.filter(h => h.date >= new Date()).slice(0, 3).map((h, i) => (
                                 <div key={i} className="flex items-start gap-4 group">
-                                    <div className="h-10 w-10 rounded-2xl bg-white/5 flex flex-col items-center justify-center border border-white/10 shrink-0 group-hover:bg-primary/20 transition-colors">
-                                        <span className="text-[8px] font-black uppercase opacity-60">{format(h.date, 'MMM')}</span>
-                                        <span className="text-sm font-black">{format(h.date, 'd')}</span>
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-xs font-bold text-white/90">{h.name}</p>
-                                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-tighter">Public Holiday</p>
-                                    </div>
+                                    <div className="h-10 w-10 rounded-2xl bg-white/5 flex flex-col items-center justify-center border border-white/10 shrink-0 group-hover:bg-primary/20 transition-colors"><span className="text-[8px] font-black uppercase opacity-60">{format(h.date, 'MMM')}</span><span className="text-sm font-black">{format(h.date, 'd')}</span></div>
+                                    <div className="space-y-0.5"><p className="text-xs font-bold text-white/90">{h.name}</p><p className="text-[9px] font-bold text-white/30 uppercase tracking-tighter">Public Holiday</p></div>
                                 </div>
                             ))}
                         </div>
-                        <Button variant="ghost" className="w-full justify-between rounded-xl h-10 px-4 text-[9px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 hover:text-white transition-all">
-                            Full Holiday List <ChevronRight className="h-3.5 w-3.5" />
-                        </Button>
                     </div>
                 </div>
-
-                {/* Right: Interactive Calendar & Timeline */}
                 <div className="md:col-span-8 bg-slate-50/50 flex flex-col h-full">
                     <Tabs defaultValue="calendar" className="flex-1 flex flex-col h-full">
                         <div className="p-8 pb-4 flex items-center justify-between border-b border-slate-100 bg-white">
-                            <TabsList className="bg-slate-100 p-1 rounded-xl h-10 border shadow-inner">
-                                <TabsTrigger value="calendar" className="rounded-lg px-6 font-bold text-[10px] uppercase tracking-widest">Calendar View</TabsTrigger>
-                                <TabsTrigger value="schedule" className="rounded-lg px-6 font-bold text-[10px] uppercase tracking-widest">Team Availability</TabsTrigger>
-                            </TabsList>
-                            <DialogClose asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 h-9 w-9">
-                                    <ChevronRight className="h-5 w-5 text-slate-400 rotate-90" />
-                                </Button>
-                            </DialogClose>
+                            <TabsList className="bg-slate-100 p-1 rounded-xl h-10 border shadow-inner"><TabsTrigger value="calendar" className="rounded-lg px-6 font-bold text-[10px] uppercase tracking-widest">Calendar View</TabsTrigger></TabsList>
+                            <DialogClose asChild><Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 h-9 w-9"><ChevronRight className="h-5 w-5 text-slate-400 rotate-90" /></Button></DialogClose>
                         </div>
-
                         <ScrollArea className="flex-1">
                             <TabsContent value="calendar" className="p-8 mt-0 focus-visible:ring-0">
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-2 duration-500">
                                     <Card className="border-none shadow-none rounded-[2rem] bg-white p-4 sm:p-8">
                                         <div className="flex justify-center">
-                                            <Calendar
-                                                mode="single"
-                                                selected={selectedDate}
-                                                onSelect={setSelectedDate}
-                                                modifiers={modifiers}
-                                                modifiersStyles={modifiersStyles}
-                                                className="w-full scale-100 sm:scale-110"
-                                                classNames={{
-                                                    months: "flex flex-col space-y-4",
-                                                    month: "space-y-6",
-                                                    caption: "flex justify-center pt-1 relative items-center mb-4",
-                                                    caption_label: "text-lg font-black uppercase tracking-widest text-slate-900",
-                                                    head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-[0.2em] pb-6 w-12",
-                                                    day: "h-10 w-10 sm:h-12 sm:w-12 p-0 font-bold text-xs uppercase rounded-2xl hover:bg-slate-50 transition-all m-0.5",
-                                                    day_selected: "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20",
-                                                    day_today: "bg-blue-50 text-primary border border-primary/20",
-                                                    nav: "hidden"
-                                                }}
-                                            />
+                                            <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} modifiers={modifiers} modifiersStyles={modifiersStyles} className="w-full scale-100 sm:scale-110" 
+                                            classNames={{ months: "flex flex-col space-y-4", month: "space-y-6", caption: "flex justify-center pt-1 relative items-center mb-4", caption_label: "text-lg font-black uppercase tracking-widest text-slate-900", head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-[0.2em] pb-6 w-12", day: "h-10 w-10 sm:h-12 sm:w-12 p-0 font-bold text-xs uppercase rounded-2xl hover:bg-slate-50 transition-all m-0.5", day_selected: "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20", day_today: "bg-blue-50 text-primary border border-primary/20", nav: "hidden" }} />
                                         </div>
                                     </Card>
-
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3">
-                                            <div className="h-3 w-3 rounded-full bg-red-500" />
-                                            <div className="space-y-0.5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Public</p>
-                                                <p className="text-xs font-bold text-slate-900">Holiday</p>
-                                            </div>
-                                        </div>
-                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3">
-                                            <div className="h-3 w-3 rounded-full bg-primary" />
-                                            <div className="space-y-0.5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team</p>
-                                                <p className="text-xs font-bold text-slate-900">Approved Leave</p>
-                                            </div>
-                                        </div>
-                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3">
-                                            <div className="h-3 w-3 rounded-full bg-amber-500" />
-                                            <div className="space-y-0.5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team</p>
-                                                <p className="text-xs font-bold text-slate-900">Pending Leave</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </TabsContent>
-
-                            <TabsContent value="schedule" className="p-8 mt-0 focus-visible:ring-0">
-                                <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-500">
-                                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 opacity-30">
-                                        <Activity className="h-12 w-12 text-slate-300" />
-                                        <p className="text-xs font-black uppercase tracking-[0.3em]">Timeline View Initializing</p>
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-red-500" /><div className="space-y-0.5"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Public</p><p className="text-xs font-bold text-slate-900">Holiday</p></div></div>
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-primary" /><div className="space-y-0.5"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team</p><p className="text-xs font-bold text-slate-900">Approved Leave</p></div></div>
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-amber-500" /><div className="space-y-0.5"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team</p><p className="text-xs font-bold text-slate-900">Pending Leave</p></div></div>
                                     </div>
                                 </div>
                             </TabsContent>

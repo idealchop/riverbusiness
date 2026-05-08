@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "AppUser": {
@@ -48,43 +49,28 @@
             "employeeId": { "type": "string" },
             "employeeName": { "type": "string" },
             "date": { "type": "string", "format": "date" },
-            "timeIn": { "type": "string", "format": "date-time" },
-            "timeOut": { "type": "string", "format": "date-time" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "action": { "type": "string", "enum": ["IN", "OUT"] },
+            "gps_lat": { "type": "number" },
+            "gps_long": { "type": "number" },
+            "validation_status": { "type": "string", "enum": ["Valid", "Invalid"] },
             "method": { "type": "string", "enum": ["QR", "manual"] },
-            "status": { "type": "string", "enum": ["present", "late", "absent", "leave"] }
+            "office_id": { "type": "string" }
         },
-        "required": ["companyId", "employeeId", "date", "timeIn"]
+        "required": ["companyId", "employeeId", "date", "timestamp", "action"]
     },
-    "HRLeaveRequest": {
-        "title": "HRLeaveRequest",
+    "HRCompanyLocation": {
+        "title": "HRCompanyLocation",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
             "companyId": { "type": "string" },
-            "employeeId": { "type": "string" },
-            "employeeName": { "type": "string" },
-            "type": { "type": "string", "enum": ["Vacation", "Sick", "Emergency", "Maternity/Paternity"] },
-            "startDate": { "type": "string", "format": "date" },
-            "endDate": { "type": "string", "format": "date" },
-            "reason": { "type": "string" },
-            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-            "appliedAt": { "type": "string", "format": "date-time" }
+            "office_name": { "type": "string" },
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" },
+            "radius_meters": { "type": "number" }
         },
-        "required": ["companyId", "employeeId", "type", "startDate", "endDate", "status"]
-    },
-    "HRPayrollRun": {
-        "title": "HRPayrollRun",
-        "type": "object",
-        "properties": {
-            "id": { "type": "string" },
-            "companyId": { "type": "string" },
-            "periodStart": { "type": "string", "format": "date" },
-            "periodEnd": { "type": "string", "format": "date" },
-            "status": { "type": "string", "enum": ["draft", "processed", "paid"] },
-            "totalNetSalary": { "type": "number" },
-            "createdAt": { "type": "string", "format": "date-time" }
-        },
-        "required": ["companyId", "periodStart", "periodEnd", "status"]
+        "required": ["companyId", "office_name", "latitude", "longitude"]
     }
   },
   "auth": {
@@ -95,21 +81,13 @@
       "schema": { "$ref": "#/entities/AppUser" },
       "description": "Stores user and employee profile information."
     },
-    "/unclaimedEmployees/{inviteId}": {
-        "schema": { "$ref": "#/entities/AppUser" },
-        "description": "Temporary storage for employee invitations."
-    },
     "/hr_companies/{companyId}/attendance/{logId}": {
         "schema": { "$ref": "#/entities/HRAttendanceLog" },
-        "description": "Daily attendance logs for a company."
+        "description": "Individual scan records for time in/out."
     },
-    "/hr_companies/{companyId}/leaveRequests/{requestId}": {
-        "schema": { "$ref": "#/entities/HRLeaveRequest" },
-        "description": "Leave applications from employees."
-    },
-    "/hr_companies/{companyId}/payrollRuns/{runId}": {
-        "schema": { "$ref": "#/entities/HRPayrollRun" },
-        "description": "Historical records of payroll processing."
+    "/hr_companies/{companyId}/locations/{locationId}": {
+        "schema": { "$ref": "#/entities/HRCompanyLocation" },
+        "description": "Registered office locations for GPS validation."
     }
   }
 }
