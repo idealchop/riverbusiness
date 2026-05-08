@@ -84,6 +84,8 @@ const DEMO_PAYROLL: HRPayrollRun[] = [
     { id: 'PR-2025-04', companyId: 'demo', periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 372000, createdAt: Timestamp.now() },
 ];
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -92,6 +94,11 @@ export default function AttendancePage() {
   const [selectedRun, setSelectedRun] = useState<HRPayrollRun | null>(null);
   const [isPayslipOpen, setIsPayslipOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
+
+  // Pagination states for each tab
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [leavePage, setLeavePage] = useState(1);
+  const [payrollPage, setPayrollPage] = useState(1);
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -120,7 +127,6 @@ export default function AttendancePage() {
   );
   const { data: allUsers } = useCollection<AppUser>(usersQuery);
 
-  // Fetch the owner's profile to get official branding (Business Name and Address)
   const ownerQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId), where('hrRole', '==', 'owner'), limit(1)) : null,
     [firestore, companyId]
@@ -131,33 +137,54 @@ export default function AttendancePage() {
   const companyName = owner?.businessName || user?.businessName || 'River Philippines';
   const companyAddress = owner?.address || user?.address || 'Authorized Business Entity';
 
-  // --- Display Logic ---
+  // --- Display Logic with Pagination ---
   const displayAttendance = useMemo(() => {
-    const list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : DEMO_ATTENDANCE;
-    if (!searchTerm) return list;
-    return list.filter(log => 
-        log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        log.date.includes(searchTerm)
-    );
+    let list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : DEMO_ATTENDANCE;
+    if (searchTerm) {
+        list = list.filter(log => 
+            log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            log.date.includes(searchTerm)
+        );
+    }
+    return list;
   }, [attendanceLogs, searchTerm]);
 
+  const paginatedAttendance = useMemo(() => {
+    const start = (attendancePage - 1) * ITEMS_PER_PAGE;
+    return displayAttendance.slice(start, start + ITEMS_PER_PAGE);
+  }, [displayAttendance, attendancePage]);
+
   const displayLeaves = useMemo(() => {
-    const list = leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
-    if (!searchTerm) return list;
-    return list.filter(req => 
-        req.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        req.type.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let list = leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
+    if (searchTerm) {
+        list = list.filter(req => 
+            req.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            req.type.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+    return list;
   }, [leaveRequests, searchTerm]);
 
+  const paginatedLeaves = useMemo(() => {
+    const start = (leavePage - 1) * ITEMS_PER_PAGE;
+    return displayLeaves.slice(start, start + ITEMS_PER_PAGE);
+  }, [displayLeaves, leavePage]);
+
   const displayPayroll = useMemo(() => {
-    const list = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
-    if (!searchTerm) return list;
-    return list.filter(run => 
-        run.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        run.periodStart.includes(searchTerm)
-    );
+    let list = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
+    if (searchTerm) {
+        list = list.filter(run => 
+            run.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            run.periodStart.includes(searchTerm)
+        );
+    }
+    return list;
   }, [payrollRuns, searchTerm]);
+
+  const paginatedPayroll = useMemo(() => {
+    const start = (payrollPage - 1) * ITEMS_PER_PAGE;
+    return displayPayroll.slice(start, start + ITEMS_PER_PAGE);
+  }, [displayPayroll, payrollPage]);
 
   const handleOpenPayslip = (run: HRPayrollRun) => {
     setSelectedRun(run);
@@ -176,7 +203,6 @@ export default function AttendancePage() {
     const pageWidth = doc.internal.pageSize.width;
     const margin = 40;
 
-    // Header
     doc.setFillColor(83, 142, 194);
     doc.rect(0, 0, pageWidth, 120, 'F');
     doc.setTextColor(255, 255, 255);
@@ -228,17 +254,12 @@ export default function AttendancePage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">
-             Attendance
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+             Team
           </h1>
-          <p className="text-slate-500 font-bold text-sm">
+          <p className="text-slate-500 font-medium text-sm">
              Browse work, leave, and payment records across the organization.
           </p>
-        </div>
-        <div className="flex gap-2">
-            <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-200 shadow-sm" onClick={() => window.print()}>
-                <Download className="mr-2 h-4 w-4" /> Export ledger
-            </Button>
         </div>
       </div>
 
@@ -264,12 +285,17 @@ export default function AttendancePage() {
                   placeholder="Search by employee or date..." 
                   className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setAttendancePage(1);
+                      setLeavePage(1);
+                      setPayrollPage(1);
+                  }}
                 />
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-primary">Consolidated view active</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Consolidated view active</span>
               </div>
             </div>
           </CardHeader>
@@ -290,7 +316,7 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingAttendance ? (
                     <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading ledger...</TableCell></TableRow>
-                  ) : displayAttendance.map((log) => {
+                  ) : paginatedAttendance.map((log) => {
                     const timeIn = toSafeDate(log.timeIn);
                     const timeOut = toSafeDate(log.timeOut);
                     return (
@@ -324,6 +350,11 @@ export default function AttendancePage() {
                   })}
                 </TableBody>
               </Table>
+              <PaginationFooter 
+                totalItems={displayAttendance.length}
+                currentPage={attendancePage}
+                onPageChange={setAttendancePage}
+              />
             </TabsContent>
 
             <TabsContent value="leaves" className="m-0 focus-visible:ring-0">
@@ -340,7 +371,7 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingLeaves ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
-                  ) : displayLeaves.map(req => (
+                  ) : paginatedLeaves.map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
@@ -363,6 +394,11 @@ export default function AttendancePage() {
                   ))}
                 </TableBody>
               </Table>
+              <PaginationFooter 
+                totalItems={displayLeaves.length}
+                currentPage={leavePage}
+                onPageChange={setLeavePage}
+              />
             </TabsContent>
 
             <TabsContent value="payroll" className="m-0 focus-visible:ring-0">
@@ -378,20 +414,20 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingPayroll ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading records...</TableCell></TableRow>
-                  ) : displayPayroll.map(run => (
+                  ) : paginatedPayroll.map(run => (
                     <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{run.id}</p>
-                        <Badge variant="outline" className="text-[8px] font-black uppercase bg-green-50 text-green-700 border-green-100 mt-1">Settled</Badge>
+                        <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100 mt-1">Settled</Badge>
                       </TableCell>
                       <TableCell>
                         <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-black text-slate-900 tabular-nums">₱{run.totalNetSalary?.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary?.toLocaleString()}</span>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                          <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(run)} className="h-8 font-black text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                          <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(run)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                               <FileText className="h-3.5 w-3.5" />
                               Payslip
                           </Button>
@@ -400,6 +436,11 @@ export default function AttendancePage() {
                   ))}
                 </TableBody>
               </Table>
+              <PaginationFooter 
+                totalItems={displayPayroll.length}
+                currentPage={payrollPage}
+                onPageChange={setPayrollPage}
+              />
             </TabsContent>
           </CardContent>
         </Card>
@@ -434,11 +475,11 @@ export default function AttendancePage() {
                     <div className="grid grid-cols-2 gap-8 border-b border-slate-100 pb-8">
                         <div className="space-y-1">
                             <Label className="text-[10px] font-bold text-slate-400">Statement reference</Label>
-                            <p className="text-sm font-black text-slate-900">{selectedRun?.id}</p>
+                            <p className="text-sm font-bold text-slate-900">{selectedRun?.id}</p>
                         </div>
                         <div className="space-y-1 text-right">
                             <Label className="text-[10px] font-bold text-slate-400">Reporting period</Label>
-                            <p className="text-sm font-black text-slate-900">
+                            <p className="text-sm font-bold text-slate-900">
                                 {selectedRun ? `${format(new Date(selectedRun.periodStart), 'MMM d')} - ${format(new Date(selectedRun.periodEnd), 'MMM d, yyyy')}` : ''}
                             </p>
                         </div>
@@ -469,7 +510,7 @@ export default function AttendancePage() {
                         <div className="space-y-4">
                              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
                                 <p className="text-[10px] font-bold text-slate-400">Net disbursement</p>
-                                <p className="text-3xl font-black text-slate-900 tabular-nums">₱{selectedRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                <p className="text-3xl font-bold text-slate-900 tabular-nums">₱{selectedRun?.totalNetSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100">
                                 <Briefcase className="h-4 w-4 text-primary" />
@@ -502,4 +543,39 @@ export default function AttendancePage() {
       />
     </div>
   );
+}
+
+function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItems: number, currentPage: number, onPageChange: (p: number) => void }) {
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    
+    if (totalItems === 0) return null;
+
+    return (
+        <CardFooter className="bg-slate-50/30 py-4 flex items-center justify-between border-t">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Showing {Math.min(totalItems, (currentPage - 1) * ITEMS_PER_PAGE + 1)}-{Math.min(totalItems, currentPage * ITEMS_PER_PAGE)} of {totalItems} entries
+            </div>
+            <div className="flex items-center gap-2">
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] uppercase font-bold" 
+                    onClick={() => onPageChange(Math.max(1, currentPage - 1))} 
+                    disabled={currentPage === 1}
+                >
+                    Prev
+                </Button>
+                <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{currentPage} / {totalPages || 1}</span>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] uppercase font-bold" 
+                    onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} 
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Next
+                </Button>
+            </div>
+        </CardFooter>
+    );
 }
