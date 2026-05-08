@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -34,7 +35,10 @@ import {
   Save,
   UserCog,
   CheckCircle2,
-  Edit
+  Edit,
+  HeartPulse,
+  Landmark,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -45,7 +49,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
-// Safe date conversion helper to prevent runtime crashes during formatting
+// Safe date conversion helper
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
     if (val instanceof Timestamp) return val.toDate();
@@ -66,7 +70,6 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  // 1. Hook definitions (MUST stay at the top and be unconditional)
   const companyId = employee?.companyId || 'default';
   
   const attendanceQuery = useMemoFirebase(
@@ -89,13 +92,11 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
   );
   const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
 
-  // 2. State definitions
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editData, setEditData] = useState<any>({});
 
-  // 3. Effects
   useEffect(() => {
       if (isOpen && employee) {
           setActiveTab(initialTab);
@@ -104,13 +105,20 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
               department: employee.hrProfile?.department || '',
               rate: employee.hrProfile?.rate || 0,
               salaryType: employee.hrProfile?.salaryType || 'monthly',
-              status: employee.hrProfile?.status || 'Active'
+              status: employee.hrProfile?.status || 'Active',
+              sssNumber: employee.hrProfile?.sssNumber || '',
+              philhealthNumber: employee.hrProfile?.philhealthNumber || '',
+              pagibigNumber: employee.hrProfile?.pagibigNumber || '',
+              tinNumber: employee.hrProfile?.tinNumber || '',
+              sssDeduction: employee.hrProfile?.sssDeduction || 0,
+              philhealthDeduction: employee.hrProfile?.philhealthDeduction || 0,
+              pagibigDeduction: employee.hrProfile?.pagibigDeduction || 0,
+              taxDeduction: employee.hrProfile?.taxDeduction || 0
           });
           setIsEditing(false);
       }
   }, [isOpen, employee, initialTab]);
 
-  // 4. Calculations
   const metrics = useMemo(() => {
     const logs = attendanceLogs || [];
     const total = logs.length;
@@ -128,14 +136,23 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
     setIsSaving(true);
     try {
         const userRef = doc(firestore, 'users', employee.id);
-        await updateDoc(userRef, {
+        const updatePayload = {
             'hrProfile.position': editData.position,
             'hrProfile.department': editData.department,
             'hrProfile.rate': Number(editData.rate),
             'hrProfile.salaryType': editData.salaryType,
-            'hrProfile.status': editData.status
-        });
-        toast({ title: 'Profile Updated', description: 'Employment details have been synchronized.' });
+            'hrProfile.status': editData.status,
+            'hrProfile.sssNumber': editData.sssNumber,
+            'hrProfile.philhealthNumber': editData.philhealthNumber,
+            'hrProfile.pagibigNumber': editData.pagibigNumber,
+            'hrProfile.tinNumber': editData.tinNumber,
+            'hrProfile.sssDeduction': Number(editData.sssDeduction),
+            'hrProfile.philhealthDeduction': Number(editData.philhealthDeduction),
+            'hrProfile.pagibigDeduction': Number(editData.pagibigDeduction),
+            'hrProfile.taxDeduction': Number(editData.taxDeduction)
+        };
+        await updateDoc(userRef, updatePayload);
+        toast({ title: 'Profile Updated', description: 'Employment and benefit details have been saved.' });
         setIsEditing(false);
     } catch (error) {
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save changes.' });
@@ -144,7 +161,6 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
     }
   };
 
-  // 5. Early return (AFTER hooks)
   if (!employee) return null;
 
   const profile = employee.hrProfile;
@@ -178,7 +194,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                     </div>
                     {!isEditing && (
                         <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-100 bg-slate-50/50 hover:bg-slate-50" onClick={() => setIsEditing(true)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Employment
+                            <Edit className="mr-2 h-4 w-4" /> Edit Profile
                         </Button>
                     )}
                 </div>
@@ -200,97 +216,43 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                 <div className="p-8">
                     <TabsContent value="overview" className="mt-0 space-y-10 animate-in fade-in duration-500">
                         {isEditing ? (
-                            <div className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position Title</Label>
-                                        <Input value={editData.position} onChange={(e) => setEditData({...editData, position: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-slate-100" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</Label>
-                                        <Select value={editData.department} onValueChange={(v) => setEditData({...editData, department: v})}>
-                                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                <SelectItem value="Logistics">Logistics</SelectItem>
-                                                <SelectItem value="Support">Support</SelectItem>
-                                                <SelectItem value="Fleet">Fleet</SelectItem>
-                                                <SelectItem value="Admin">Admin</SelectItem>
-                                                <SelectItem value="Compliance">Compliance</SelectItem>
-                                                <SelectItem value="Operations">Operations</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Salary Type</Label>
-                                        <Select value={editData.salaryType} onValueChange={(v) => setEditData({...editData, salaryType: v})}>
-                                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                <SelectItem value="daily">Daily Rate</SelectItem>
-                                                <SelectItem value="monthly">Monthly Fixed</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pay Rate (PHP)</Label>
-                                        <Input type="number" value={editData.rate} onChange={(e) => setEditData({...editData, rate: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-slate-100" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Status</Label>
-                                        <Select value={editData.status} onValueChange={(v) => setEditData({...editData, status: v})}>
-                                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                <SelectItem value="Active">Active</SelectItem>
-                                                <SelectItem value="Terminated">Terminated</SelectItem>
-                                                <SelectItem value="On Leave">On Leave</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 justify-end pt-4">
-                                    <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-8 font-bold text-xs">Cancel</Button>
-                                    <Button onClick={handleSaveProfile} disabled={isSaving} className="rounded-xl h-11 px-10 font-bold text-xs shadow-lg">
-                                        {isSaving ? 'Processing...' : 'Save Profile Changes'}
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                    <div className="space-y-6">
-                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                            <UserCircle className="h-4 w-4" /> Personal & Contact
-                                        </h4>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-4 group">
-                                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Login Email</p>
-                                                    <p className="text-sm font-semibold text-slate-700">{employee.email || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4 group">
-                                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
-                                                    <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
-                                                </div>
-                                            </div>
+                            <div className="space-y-12">
+                                <div className="space-y-6">
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                        <Briefcase className="h-4 w-4" /> Employment Configuration
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position Title</Label>
+                                            <Input value={editData.position} onChange={(e) => setEditData({...editData, position: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-slate-100" />
                                         </div>
-                                    </div>
-
-                                    <div className="space-y-6">
-                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                            <DollarSign className="h-4 w-4" /> Compensation Profile
-                                        </h4>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
-                                                <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
-                                            </div>
-                                            <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Type</p>
-                                                <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</Label>
+                                            <Select value={editData.department} onValueChange={(v) => setEditData({...editData, department: v})}>
+                                                <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="Logistics">Logistics</SelectItem>
+                                                    <SelectItem value="Support">Support</SelectItem>
+                                                    <SelectItem value="Fleet">Fleet</SelectItem>
+                                                    <SelectItem value="Admin">Admin</SelectItem>
+                                                    <SelectItem value="Compliance">Compliance</SelectItem>
+                                                    <SelectItem value="Operations">Operations</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Salary Type</Label>
+                                            <Select value={editData.salaryType} onValueChange={(v) => setEditData({...editData, salaryType: v})}>
+                                                <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="daily">Daily Rate</SelectItem>
+                                                    <SelectItem value="monthly">Monthly Fixed</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pay Rate (PHP)</Label>
+                                            <Input type="number" value={editData.rate} onChange={(e) => setEditData({...editData, rate: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-slate-100" />
                                         </div>
                                     </div>
                                 </div>
@@ -298,37 +260,156 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                 <Separator className="bg-slate-50" />
 
                                 <div className="space-y-6">
-                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                        <ShieldCheck className="h-4 w-4" /> Employment Intelligence
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                        <HeartPulse className="h-4 w-4" /> Benefits & Statutory Details
                                     </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                        <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
-                                            <div className="p-3 rounded-2xl bg-blue-50 text-primary">
-                                                <Calendar className="h-6 w-6" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-900">Sign Date</p>
-                                                <p className="text-xs font-medium text-slate-400 mt-1">
-                                                    {startDate ? format(startDate, 'MMM d, yyyy') : 'Pending'}
-                                                </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                                        <div className="space-y-4">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">ID Credentials</p>
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">SSS Number</Label>
+                                                    <Input value={editData.sssNumber} onChange={(e) => setEditData({...editData, sssNumber: e.target.value})} className="h-10 rounded-xl" placeholder="00-0000000-0" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">PhilHealth ID</Label>
+                                                    <Input value={editData.philhealthNumber} onChange={(e) => setEditData({...editData, philhealthNumber: e.target.value})} className="h-10 rounded-xl" placeholder="00-000000000-0" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">Pag-IBIG MID</Label>
+                                                    <Input value={editData.pagibigNumber} onChange={(e) => setEditData({...editData, pagibigNumber: e.target.value})} className="h-10 rounded-xl" placeholder="0000-0000-0000" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">TIN</Label>
+                                                    <Input value={editData.tinNumber} onChange={(e) => setEditData({...editData, tinNumber: e.target.value})} className="h-10 rounded-xl" placeholder="000-000-000-000" />
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
-                                            <div className="p-3 rounded-2xl bg-green-50 text-green-600">
-                                                <Clock className="h-6 w-6" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-900">Coverage</p>
-                                                <p className="text-xs font-medium text-slate-400 mt-1">Standard Shift</p>
+                                        <div className="space-y-4">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Monthly Deductions (PHP)</p>
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">SSS Deduction</Label>
+                                                    <Input type="number" value={editData.sssDeduction} onChange={(e) => setEditData({...editData, sssDeduction: e.target.value})} className="h-10 rounded-xl" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">PhilHealth Deduction</Label>
+                                                    <Input type="number" value={editData.philhealthDeduction} onChange={(e) => setEditData({...editData, philhealthDeduction: e.target.value})} className="h-10 rounded-xl" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">Pag-IBIG Deduction</Label>
+                                                    <Input type="number" value={editData.pagibigDeduction} onChange={(e) => setEditData({...editData, pagibigDeduction: e.target.value})} className="h-10 rounded-xl" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold">Withholding Tax</Label>
+                                                    <Input type="number" value={editData.taxDeduction} onChange={(e) => setEditData({...editData, taxDeduction: e.target.value})} className="h-10 rounded-xl" />
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
-                                            <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
-                                                <LayoutDashboard className="h-6 w-6" />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 justify-end pt-8 border-t">
+                                    <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-8 font-bold text-xs">Cancel</Button>
+                                    <Button onClick={handleSaveProfile} disabled={isSaving} className="rounded-xl h-11 px-10 font-bold text-xs shadow-xl shadow-primary/20">
+                                        {isSaving ? 'Processing...' : 'Save Profile Changes'}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="space-y-8">
+                                        <div className="space-y-6">
+                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                <UserCircle className="h-4 w-4" /> Personal & Contact
+                                            </h4>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-4 group">
+                                                    <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Login Email</p>
+                                                        <p className="text-sm font-semibold text-slate-700">{employee.email || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 group">
+                                                    <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
+                                                        <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-900">Department</p>
-                                                <p className="text-xs font-medium text-slate-400 mt-1">{profile?.department || 'Unassigned'}</p>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                <ShieldCheck className="h-4 w-4" /> Statutory Accounts
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <Card className="border-none bg-slate-50/50 p-4 space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">SSS</p>
+                                                    <p className="text-xs font-bold text-slate-900">{profile?.sssNumber || 'Unset'}</p>
+                                                </Card>
+                                                <Card className="border-none bg-slate-50/50 p-4 space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">PhilHealth</p>
+                                                    <p className="text-xs font-bold text-slate-900">{profile?.philhealthNumber || 'Unset'}</p>
+                                                </Card>
+                                                <Card className="border-none bg-slate-50/50 p-4 space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">Pag-IBIG</p>
+                                                    <p className="text-xs font-bold text-slate-900">{profile?.pagibigNumber || 'Unset'}</p>
+                                                </Card>
+                                                <Card className="border-none bg-slate-50/50 p-4 space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">TIN</p>
+                                                    <p className="text-xs font-bold text-slate-900">{profile?.tinNumber || 'Unset'}</p>
+                                                </Card>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-8">
+                                        <div className="space-y-6">
+                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                <DollarSign className="h-4 w-4" /> Compensation Profile
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
+                                                    <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
+                                                </div>
+                                                <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Type</p>
+                                                    <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                <Landmark className="h-4 w-4" /> Monthly Deductions
+                                            </h4>
+                                            <div className="p-6 rounded-[2rem] border border-slate-100 bg-white shadow-sm space-y-4">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-500">SSS Contribution</span>
+                                                    <span className="font-bold text-slate-900">₱{(profile?.sssDeduction || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-500">PhilHealth</span>
+                                                    <span className="font-bold text-slate-900">₱{(profile?.philhealthDeduction || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-500">Pag-IBIG</span>
+                                                    <span className="font-bold text-slate-900">₱{(profile?.pagibigDeduction || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-500">Withholding Tax</span>
+                                                    <span className="font-bold text-slate-900">₱{(profile?.taxDeduction || 0).toLocaleString()}</span>
+                                                </div>
+                                                <Separator className="bg-slate-50" />
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-black uppercase text-slate-400">Total Deductions</span>
+                                                    <span className="text-sm font-black text-primary">₱{((profile?.sssDeduction || 0) + (profile?.philhealthDeduction || 0) + (profile?.pagibigDeduction || 0) + (profile?.taxDeduction || 0)).toLocaleString()}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

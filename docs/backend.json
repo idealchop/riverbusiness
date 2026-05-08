@@ -34,7 +34,16 @@
                 "rate": { "type": "number" },
                 "startDate": { "type": "string", "format": "date" },
                 "position": { "type": "string" },
-                "department": { "type": "string" }
+                "department": { "type": "string" },
+                "status": { "type": "string", "enum": ["Active", "Terminated", "On Leave"] },
+                "sssNumber": { "type": "string" },
+                "philhealthNumber": { "type": "string" },
+                "pagibigNumber": { "type": "string" },
+                "tinNumber": { "type": "string" },
+                "sssDeduction": { "type": "number" },
+                "philhealthDeduction": { "type": "number" },
+                "pagibigDeduction": { "type": "number" },
+                "taxDeduction": { "type": "number" }
             }
         }
       },

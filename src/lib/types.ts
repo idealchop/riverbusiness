@@ -49,6 +49,16 @@ export interface HREmployeeProfile {
     position: string;
     department: string;
     status: 'Active' | 'Terminated' | 'On Leave';
+    // Philippine Statutory Benefits
+    sssNumber?: string;
+    philhealthNumber?: string;
+    pagibigNumber?: string;
+    tinNumber?: string;
+    // Recurring Deduction Amounts
+    sssDeduction?: number;
+    philhealthDeduction?: number;
+    pagibigDeduction?: number;
+    taxDeduction?: number;
 }
 
 export interface HRAttendanceLog {
