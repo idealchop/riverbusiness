@@ -5,32 +5,21 @@ import {
   Users, 
   Clock, 
   CalendarDays, 
-  Timer,
-  AlertCircle,
-  TrendingUp,
-  FileCheck,
-  UserCircle,
   Activity,
   LogOut,
-  MapPin,
-  ScanLine,
   LogIn,
-  Database,
-  CheckCircle2,
-  BookOpen,
-  ArrowRight
+  CheckCircle2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { AppUser, HRAttendanceLog } from '@/lib/types';
-import Link from 'next/link';
+import type { HRAttendanceLog } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 
 const toSafeDate = (val: any): Date | null => {
@@ -338,7 +327,7 @@ export default function HRDashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="lg:col-span-5 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                <Card className="lg:col-span-8 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                     <CardHeader className="bg-slate-50/30 pb-6 border-b">
                         <div className="flex items-center justify-between">
                             <div>
@@ -376,31 +365,10 @@ export default function HRDashboard() {
                         </div>
                     </CardContent>
                 </Card>
-
-                <div className="lg:col-span-3 space-y-6">
-                    <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
-                        <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
-                        <CardHeader><CardTitle className="text-lg font-bold tracking-tight">Security & Insights</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
-                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-green-400"><Timer className="h-5 w-5" /></div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-white">Shift Accuracy</p>
-                                    <p className="text-[9px] text-white/50 font-bold leading-relaxed">Logs After 09:00 AM Are Flagged For Manual Review.</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
-                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-blue-400"><MapPin className="h-5 w-5" /></div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-white">Station Verification</p>
-                                    <p className="text-[9px] text-white/50 font-bold leading-relaxed">IP And Geolocation Verified For Every Authorization.</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
       </div>
     </div>
   );
 }
+
+import { AlertCircle } from 'lucide-react';
