@@ -20,7 +20,8 @@ import {
   UserCircle,
   Filter,
   Mail,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, Timestamp, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { format, subDays, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns';
@@ -134,6 +145,7 @@ export default function AttendancePage() {
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
   const [selectedDept, setSelectedDept] = useState('All Departments');
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [confirmItem, setConfirmItem] = useState<any | null>(null);
 
   // Pagination states for each tab
   const [attendancePage, setAttendancePage] = useState(1);
@@ -283,6 +295,7 @@ export default function AttendancePage() {
         toast({ variant: 'destructive', title: 'Action Failed' });
     } finally {
         setTimeout(() => setSendingEmailId(null), 2000);
+        setConfirmItem(null);
     }
   };
 
@@ -550,17 +563,16 @@ export default function AttendancePage() {
                                 Statement
                             </Button>
                             <Button 
-                                size="sm" 
-                                variant="outline" 
+                                size="icon" 
+                                variant="ghost" 
                                 disabled={isSending}
-                                onClick={() => handleSendEmail(item)}
+                                onClick={() => setConfirmItem(item)}
                                 className={cn(
-                                    "h-8 font-bold text-[10px] uppercase tracking-widest gap-2 shadow-sm",
-                                    sendingEmailId && "opacity-50"
+                                    "h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all",
+                                    isSending && "opacity-50"
                                 )}
                             >
-                                {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
-                                {isSending ? "Sending" : "Send Email"}
+                                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                             </Button>
                           </div>
                       </TableCell>
@@ -676,6 +688,21 @@ export default function AttendancePage() {
         isOpen={!!selectedEmployee}
         onOpenChange={(open) => !open && setSelectedEmployee(null)}
       />
+
+      <AlertDialog open={!!confirmItem} onOpenChange={(open) => !open && setConfirmItem(null)}>
+        <AlertDialogContent className="rounded-3xl border-none p-10 shadow-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Authorize Dispatch?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-medium leading-relaxed pt-2">
+              This will send the personalized payslip and statement for <span className="font-bold text-slate-900">{confirmItem?.employeeName}</span> to their registered email address. This action is irreversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-6">
+            <AlertDialogCancel className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-8">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleSendEmail(confirmItem)} className="bg-primary text-white hover:bg-primary/90 rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-8">Confirm & Send</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
