@@ -191,6 +191,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
               user={user} 
               onOpenSettings={() => setIsAccountDialogOpen(true)} 
               onLogout={handleLogout} 
+              showOfficeSetup={true}
             />
           </div>
         </header>

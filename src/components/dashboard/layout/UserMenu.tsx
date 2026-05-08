@@ -16,9 +16,10 @@ interface UserMenuProps {
   user: any;
   onOpenSettings: () => void;
   onLogout: () => void;
+  showOfficeSetup?: boolean;
 }
 
-export function UserMenu({ user, onOpenSettings, onLogout }: UserMenuProps) {
+export function UserMenu({ user, onOpenSettings, onLogout, showOfficeSetup = false }: UserMenuProps) {
   const displayName = user?.businessName || user?.name || 'User';
   const photo = user?.photoURL || user?.supportPhotoURL;
   const isOwner = user?.hrRole === 'owner';
@@ -60,7 +61,7 @@ export function UserMenu({ user, onOpenSettings, onLogout }: UserMenuProps) {
                 >
                     Manage your account
                 </Button>
-                {isOwner && (
+                {isOwner && showOfficeSetup && (
                     <Button 
                         variant="outline" 
                         size="sm" 
@@ -84,7 +85,7 @@ export function UserMenu({ user, onOpenSettings, onLogout }: UserMenuProps) {
                 <span>Account Settings</span>
             </DropdownMenuItem>
 
-            {isOwner && (
+            {isOwner && showOfficeSetup && (
                 <DropdownMenuItem 
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 focus:bg-slate-50 cursor-pointer transition-colors"
                     onClick={handleOpenOfficeSettings}
