@@ -95,6 +95,10 @@ export default function PayrollPage() {
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   const [viewingRun, setViewingRun] = useState<HRPayrollRun | null>(null);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const companyId = user?.companyId || user?.clientId || 'default';
 
   // --- Data Fetching ---
@@ -119,6 +123,13 @@ export default function PayrollPage() {
     const live = payrollRuns || [];
     return live.length > 0 ? live : DEMO_PAYROLL;
   }, [payrollRuns]);
+
+  // Computed Pagination
+  const totalPages = Math.ceil(displayPayroll.length / itemsPerPage);
+  const paginatedPayroll = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayPayroll.slice(start, start + itemsPerPage);
+  }, [displayPayroll, currentPage, itemsPerPage]);
 
   const totalDisbursed = useMemo(() => {
     return displayPayroll.reduce((sum, run) => sum + (Number(run?.totalNetSalary) || 0), 0);
@@ -269,21 +280,25 @@ export default function PayrollPage() {
                  <TableHeader className="bg-slate-50/50">
                    <TableRow className="border-none">
                      <TableHead className="pl-8 font-bold text-[10px] uppercase tracking-wider text-slate-400 py-4">Statement Cycle</TableHead>
-                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Disbursement</TableHead>
-                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
-                     <TableHead className="text-right pr-8 font-bold text-[10px] uppercase tracking-wider text-slate-400">Action</TableHead>
+                     <TableHead>Headcount</TableHead>
+                     <TableHead>Total Disbursement</TableHead>
+                     <TableHead>Status</TableHead>
+                     <TableHead className="text-right pr-8">Action</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
                    {isLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-20 opacity-50 font-bold text-xs uppercase tracking-[0.2em]">Accessing records...</TableCell></TableRow>
-                   ) : displayPayroll.map(run => (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-50 font-bold text-xs uppercase tracking-[0.2em]">Accessing records...</TableCell></TableRow>
+                   ) : paginatedPayroll.map(run => (
                         <TableRow key={run.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                           <TableCell className="pl-8 py-5">
                             <div className="space-y-1">
                                 <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : 'N/A'} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : 'N/A'}</p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Processed {run.createdAt instanceof Timestamp ? format(run.createdAt.toDate(), 'PP') : (run.createdAt ? format(new Date(run.createdAt), 'PP') : 'Recently')}</p>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs font-semibold text-slate-500">{run.employeeCount || 0} Staff</span>
                           </TableCell>
                           <TableCell>
                             <span className="text-sm font-black text-slate-900 tabular-nums">₱{(Number(run.totalNetSalary) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -302,17 +317,18 @@ export default function PayrollPage() {
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => setViewingRun(run)}
-                                    className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all"
+                                    className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all shadow-none"
                                 >
                                 <Eye className="mr-2 h-3.5 w-3.5" /> View
                                 </Button>
                                 <Button 
                                     variant="outline" 
-                                    size="sm" 
+                                    size="icon" 
                                     onClick={() => handleDownloadStatement(run)}
-                                    className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all group/btn"
+                                    className="rounded-xl h-9 w-9 border-slate-200 bg-white hover:bg-slate-50 hover:text-primary transition-all group/btn shadow-none"
+                                    title="Download Statement"
                                 >
-                                <Download className="mr-2 h-3.5 w-3.5 opacity-50 group-hover/btn:opacity-100" /> Statement
+                                <Download className="h-3.5 w-3.5 opacity-50 group-hover/btn:opacity-100" />
                                 </Button>
                             </div>
                           </TableCell>
@@ -320,7 +336,7 @@ export default function PayrollPage() {
                       ))}
                       {!isLoading && displayPayroll.length === 0 && (
                           <TableRow>
-                              <TableCell colSpan={4} className="text-center py-24">
+                              <TableCell colSpan={5} className="text-center py-24">
                                   <div className="flex flex-col items-center gap-4 opacity-20">
                                       <DollarSign className="h-12 w-12" />
                                       <p className="text-xs font-black uppercase tracking-[0.3em]">No Payroll Records Found</p>
@@ -331,6 +347,16 @@ export default function PayrollPage() {
                  </TableBody>
                </Table>
             </CardContent>
+            <CardFooter className="bg-muted/5 py-4 flex items-center justify-between border-t">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Showing {paginatedPayroll.length} of {displayPayroll.length} runs
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
+                    <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{currentPage} / {totalPages || 1}</span>
+                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
+                </div>
+            </CardFooter>
           </Card>
       </div>
 
@@ -341,7 +367,7 @@ export default function PayrollPage() {
       />
 
       {/* Disbursement Detail View Dialog */}
-      <Dialog open={!!viewingRun} onOpenChange={(open) => !open && setViewingRun(null)}>
+      <Dialog open={!!viewingRun} onOpenChange={(open) => { if (!open) setViewingRun(null); }}>
         <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
              <div className="bg-slate-900 text-white p-8">
                 <DialogHeader>
