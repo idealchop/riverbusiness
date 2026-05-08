@@ -293,14 +293,12 @@ export default function HRDashboard() {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-transparent to-transparent pointer-events-none" />
                         <div className="absolute bottom-10 left-10 text-slate-900 space-y-3 z-10">
-                            <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px] uppercase tracking-[0.3em] px-4 h-7">
-                                Organization Command
-                            </Badge>
-                            <h2 className="text-5xl font-black tracking-tight leading-none uppercase text-slate-900 drop-shadow-sm">
-                                Unified <br/>Workforce
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Organization Hub</p>
+                            <h2 className="text-6xl font-black tracking-tighter leading-[0.85] uppercase text-slate-900 drop-shadow-sm">
+                                The <br/>Workforce
                             </h2>
-                            <p className="text-sm font-bold text-slate-500 max-w-sm">
-                                Real-time monitoring and administrative oversight for the modern business ecosystem.
+                            <p className="text-sm font-bold text-slate-500 max-w-xs pt-2">
+                                Manage and monitor your team in one unified workspace.
                             </p>
                         </div>
                     </div>
@@ -409,7 +407,7 @@ export default function HRDashboard() {
                                     <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-lg shadow-inner">{item.employeeName?.charAt(0)}</div>
                                     <div>
                                         <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
                                           {item.action} • {item.method} Verification
                                         </p>
                                     </div>
