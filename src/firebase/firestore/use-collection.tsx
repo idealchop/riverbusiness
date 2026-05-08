@@ -8,7 +8,6 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
-  getDocs,
 } from 'firebase/firestore';
 
 /** Utility type to add an 'id' field to a given type T. */
@@ -28,29 +27,14 @@ interface UseCollectionOptions {
     idField?: string;
 }
 
-/* Internal implementation of Query:
-  https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
-*/
-export interface InternalQuery extends Query<DocumentData> {
-  _query: {
-    path: {
-      canonicalString(): string;
-      toString(): string;
-    }
-  }
-}
-
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
  * 
- *
- * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
- * references
+ * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery using useMemoFirebase.
  *  
  * @template T Optional type for document data. Defaults to any.
- * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
+ * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} memoizedTargetRefOrQuery -
  * The Firestore CollectionReference or Query. Waits if null/undefined.
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
@@ -78,52 +62,36 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    const isCollectionGroup = (memoizedTargetRefOrQuery as any).type === 'collection-group';
-
-    const processSnapshot = (snapshot: QuerySnapshot<DocumentData>) => {
+    const unsubscribe = onSnapshot(
+      memoizedTargetRefOrQuery,
+      (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         snapshot.forEach(doc => {
-            let itemData: any = { ...(doc.data() as T), id: doc.id };
-            if (isCollectionGroup && idField) {
-                // For collection group queries, the parent ID might be what's needed.
-                itemData[idField] = doc.ref.parent.parent?.id;
-            }
-            results.push(itemData);
+          let itemData: any = { ...(doc.data() as T), id: doc.id };
+          if (idField) {
+            // For collection group queries, we can extract the parent ID if needed.
+            // doc.ref.parent is the collection, its parent is the document.
+            itemData[idField] = doc.ref.parent.parent?.id;
+          }
+          results.push(itemData);
         });
         setData(results);
         setError(null);
         setIsLoading(false);
-    };
+      },
+      (err: FirestoreError) => {
+        console.error("useCollection error:", err);
+        setError(err);
+        setData(null);
+        setIsLoading(false);
+      }
+    );
 
-    if (isCollectionGroup) {
-      // For collection group, we do a one-time fetch as real-time listeners can be expensive.
-      // You can change this to onSnapshot if real-time updates are necessary and cost-effective.
-      getDocs(memoizedTargetRefOrQuery)
-        .then(processSnapshot)
-        .catch((err: FirestoreError) => {
-            console.error("useCollection (collectionGroup) error:", err);
-            setError(err);
-            setData(null);
-            setIsLoading(false);
-        });
-    } else {
-      const unsubscribe = onSnapshot(
-        memoizedTargetRefOrQuery,
-        processSnapshot,
-        (error: FirestoreError) => {
-          console.error("useCollection error:", error);
-          setError(error);
-          setData(null);
-          setIsLoading(false);
-        }
-      );
-      return () => unsubscribe();
-    }
-
-  }, [memoizedTargetRefOrQuery, idField]); // Re-run if the target query/reference or idField changes.
+    return () => unsubscribe();
+  }, [memoizedTargetRefOrQuery, idField]);
   
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+    throw new Error('useCollection: reference was not properly memoized using useMemoFirebase');
   }
   return { data, isLoading, error };
 }

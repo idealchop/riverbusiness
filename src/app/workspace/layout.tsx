@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth } from '@/firebase';
 import { collection, query, where, orderBy, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
@@ -17,7 +16,6 @@ import { LogoBlack } from '@/components/icons';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase';
 import { useMounted } from '@/hooks/use-mounted';
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
@@ -155,19 +153,4 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       />
     </div>
   );
-}
-
-function useDoc<T>(ref: any) {
-    const [data, setData] = useState<T | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    useEffect(() => {
-        if (!ref) return;
-        const { onSnapshot } = require('firebase/firestore');
-        const unsub = onSnapshot(ref, (doc: any) => {
-            if (doc.exists()) setData({ id: doc.id, ...doc.data() } as T);
-            setIsLoading(false);
-        });
-        return () => unsub();
-    }, [ref]);
-    return { data, isLoading };
 }

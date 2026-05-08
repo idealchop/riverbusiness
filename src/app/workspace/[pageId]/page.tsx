@@ -1,34 +1,30 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, updateDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { 
   ChevronRight, 
   Star, 
   MoreHorizontal, 
   Share2, 
-  History,
   Smile,
   ImageIcon,
   Layout
 } from 'lucide-react';
 import type { CollabPage } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function PageEditor() {
   const { pageId } = useParams();
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const { toast } = useToast();
 
   const [page, setPage] = useState<CollabPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -140,9 +136,4 @@ export default function PageEditor() {
       </ScrollArea>
     </div>
   );
-}
-
-function serverTimestamp() {
-    const { serverTimestamp } = require('firebase/firestore');
-    return serverTimestamp();
 }
