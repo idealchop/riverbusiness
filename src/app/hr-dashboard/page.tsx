@@ -272,7 +272,7 @@ export default function HRDashboard() {
                 </div>
             )}
             
-            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
+            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-none text-xs uppercase tracking-widest border-slate-200 bg-white">
                 Payroll
             </Button>
         </div>
@@ -280,7 +280,7 @@ export default function HRDashboard() {
 
       <div className="space-y-8">
             {/* Top Section: Hero Banner with Image and Calendar (60/40 split) */}
-            <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
+            <Card className="border-none shadow-none rounded-[2.5rem] overflow-hidden bg-white">
                 <div className="grid grid-cols-1 lg:grid-cols-10 h-full min-h-[380px]">
                     <div className="lg:col-span-6 relative h-64 lg:h-auto overflow-hidden bg-slate-50 flex items-center justify-center p-8">
                         {heroImage && (
@@ -308,12 +308,12 @@ export default function HRDashboard() {
                                         {format(new Date(), 'MMMM yyyy')}
                                     </p>
                                 </div>
-                                <div className="h-10 w-10 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+                                <div className="h-10 w-10 rounded-2xl bg-white shadow-none border border-slate-100 flex items-center justify-center">
                                     <CalendarDays className="h-5 w-5 text-primary" />
                                 </div>
                             </div>
                             
-                            <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex justify-center overflow-hidden">
+                            <div className="bg-white p-4 rounded-[2rem] shadow-none border border-slate-100 flex justify-center overflow-hidden">
                                 <Calendar
                                     mode="single"
                                     selected={new Date()}
@@ -345,7 +345,7 @@ export default function HRDashboard() {
                 <div className="lg:col-span-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {stats.map((stat, idx) => (
-                            <Card key={idx} className="border-none shadow-sm rounded-3xl bg-white group hover:shadow-md transition-all active:scale-[0.99]">
+                            <Card key={idx} className="border-none shadow-none rounded-3xl bg-white group hover:shadow-md transition-all active:scale-[0.99]">
                                 <CardContent className="p-6">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="p-3 rounded-2xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
@@ -367,7 +367,7 @@ export default function HRDashboard() {
 
                 {/* Sidebar Info */}
                 <div className="lg:col-span-4">
-                    <Card className="h-full border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
+                    <Card className="h-full border-none shadow-none rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
                              <CheckCircle2 className="h-24 w-24" />
                         </div>
@@ -388,7 +388,7 @@ export default function HRDashboard() {
             </div>
 
             {/* Full-width Activity Feed */}
-            <Card className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
+            <Card className="border-none shadow-none rounded-[2.5rem] overflow-hidden bg-white">
                 <CardHeader className="bg-slate-50/30 p-8 border-b">
                     <div className="flex items-center justify-between">
                         <div>
