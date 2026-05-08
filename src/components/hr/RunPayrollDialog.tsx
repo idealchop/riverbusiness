@@ -10,7 +10,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogFooter
+  DialogFooter,
+  DialogClose
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { 
@@ -41,7 +42,6 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
@@ -183,7 +183,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   };
 
   const onSubmit = async () => {
-    if (!firestore || !companyId) return;
+    if (!firestore || !companyId || computedBreakdown.length === 0) return;
     setIsSubmitting(true);
     
     try {
@@ -239,9 +239,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         <div>
                             <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Run Payroll</DialogTitle>
                             <DialogDescription className="text-slate-500 font-medium">
-                                {step === 0 ? "Select period to begin automated computation." : 
-                                 step === 1 ? "Review computed results before finalizing." : 
-                                 "Apply final adjustments per employee profile."}
+                                {step === 0 ? "Select period to begin automated computation." : "Review details and apply final adjustments per employee."}
                             </DialogDescription>
                         </div>
                     </div>
@@ -335,66 +333,9 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
                 {step === 1 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-500">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Step 2: Computed Review</h4>
-                            <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none font-bold">{computedBreakdown.length} Employees</Badge>
-                        </div>
-                        
-                        <div className="rounded-3xl border border-slate-100 overflow-hidden bg-white shadow-sm">
-                            <Table>
-                                <TableHeader className="bg-slate-50">
-                                    <TableRow className="border-none">
-                                        <TableHead className="pl-6 text-[10px] font-black uppercase text-slate-400 h-10">Member</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-slate-400">Run Basis</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-slate-400 text-center">Workload</TableHead>
-                                        <TableHead className="text-right pr-6 text-[10px] font-black uppercase text-slate-400">Calculated Payout</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {computedBreakdown.map((item, idx) => (
-                                        <TableRow key={idx} className="border-b border-slate-50 last:border-none group hover:bg-slate-50/50 transition-colors">
-                                            <TableCell className="pl-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">
-                                                        {item.employeeName.charAt(0)}
-                                                    </div>
-                                                    <span className="text-sm font-bold text-slate-700">{item.employeeName}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">{item.type} rate</p>
-                                                    <p className="text-xs font-bold text-slate-900">₱{item.rate.toLocaleString()}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="outline" className="text-[10px] font-black border-slate-200">
-                                                    {item.type === 'daily' ? `${item.daysWorked} days` : 'Full period'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <span className="text-sm font-black text-slate-900 tabular-nums">₱{item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-4">
-                            <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                            <p className="text-[10px] font-bold text-amber-900/70 leading-relaxed uppercase tracking-tight">
-                                These amounts are purely based on profiles. Proceed to the final step to apply manual bonuses or deductions.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {step === 2 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-500">
                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Step 3: Final Adjustments</h4>
-                            <Badge className="bg-primary/10 text-primary border-none font-bold">Modifications Active</Badge>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Step 2: Review & Finalize</h4>
+                            <Badge className="bg-primary/10 text-primary border-none font-bold">{computedBreakdown.length} Profiles Computed</Badge>
                         </div>
 
                         <div className="space-y-4">
@@ -416,6 +357,9 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                         <div className="md:col-span-2 text-center md:text-left">
                                             <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1">Base amount</p>
                                             <p className="text-sm font-bold text-slate-900">₱{item.amount.toLocaleString()}</p>
+                                            {item.type === 'daily' && (
+                                                <Badge variant="outline" className="text-[8px] font-black border-slate-100 mt-1">{item.daysWorked} Days Logged</Badge>
+                                            )}
                                         </div>
                                         <div className="md:col-span-3 space-y-2">
                                              <div className="relative">
@@ -484,18 +428,17 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
             <div className="flex items-center gap-3">
                 <div className={cn("h-2.5 w-2.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
                 <div className={cn("h-2.5 w-2.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
-                <div className={cn("h-2.5 w-2.5 rounded-full", step >= 2 ? "bg-primary" : "bg-slate-200")} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step + 1} of 3</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step + 1} of 2</span>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
                 <Button variant="ghost" onClick={() => step > 0 ? setStep(step - 1) : onOpenChange(false)} className="rounded-xl h-12 px-8 font-bold text-xs" disabled={isSubmitting || isComputing}>
                     {step === 0 ? "Cancel" : <><ArrowLeft className="mr-2 h-4 w-4" /> Back</>}
                 </Button>
                 
-                {step < 2 ? (
-                    <Button onClick={() => step === 0 ? handleCompute() : setStep(2)} disabled={isComputing || (step === 1 && computedBreakdown.length === 0)} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px]">
+                {step === 0 ? (
+                    <Button onClick={handleCompute} disabled={isComputing} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px]">
                         {isComputing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        {isComputing ? "Computing Ledger..." : step === 0 ? "Analyze & Compute" : "Proceed to Adjustments"}
+                        {isComputing ? "Computing Ledger..." : "Compute Ledger"}
                         {!isComputing && <ChevronRight className="ml-2 h-4 w-4" />}
                     </Button>
                 ) : (
@@ -510,3 +453,4 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     </Dialog>
   );
 }
+
