@@ -87,8 +87,18 @@ const PHILIPPINE_HOLIDAYS = [
     { date: new Date(2024, 11, 30), name: "Rizal Day" },
     // 2025
     { date: new Date(2025, 0, 1), name: "New Year's Day" },
+    { date: new Date(2025, 0, 29), name: "Chinese New Year" },
+    { date: new Date(2025, 3, 9), name: "Araw ng Kagitingan" },
+    { date: new Date(2025, 3, 17), name: "Maundy Thursday" },
+    { date: new Date(2025, 3, 18), name: "Good Friday" },
     { date: new Date(2025, 4, 1), name: "Labor Day" },
     { date: new Date(2025, 5, 12), name: "Independence Day" },
+    { date: new Date(2025, 7, 21), name: "Ninoy Aquino Day" },
+    { date: new Date(2025, 7, 25), name: "National Heroes Day" },
+    { date: new Date(2025, 10, 1), name: "All Saints' Day" },
+    { date: new Date(2025, 10, 30), name: "Bonifacio Day" },
+    { date: new Date(2025, 11, 25), name: "Christmas Day" },
+    { date: new Date(2025, 11, 30), name: "Rizal Day" },
 ];
 
 // Mock Leave Data for Visual Highlighting
