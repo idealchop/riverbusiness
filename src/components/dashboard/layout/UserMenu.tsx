@@ -52,26 +52,6 @@ export function UserMenu({ user, onOpenSettings, onLogout, showOfficeSetup = fal
                 <p className="text-base font-bold text-slate-900 leading-tight truncate px-2">{displayName}</p>
                 <p className="text-xs text-muted-foreground truncate px-4">{user?.email}</p>
             </div>
-            <div className="flex flex-col gap-2 mt-4">
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="rounded-full h-8 text-[10px] font-bold uppercase tracking-widest px-6 bg-white hover:bg-slate-50 border-slate-200 shadow-sm"
-                    onClick={onOpenSettings}
-                >
-                    Manage your account
-                </Button>
-                {isOwner && showOfficeSetup && (
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="rounded-full h-8 text-[10px] font-bold uppercase tracking-widest px-6 bg-white hover:bg-slate-50 border-slate-200 shadow-sm"
-                        onClick={handleOpenOfficeSettings}
-                    >
-                        Office Setup (GPS/QR)
-                    </Button>
-                )}
-            </div>
         </div>
         
         <div className="p-2 bg-white">
