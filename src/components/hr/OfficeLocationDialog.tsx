@@ -33,6 +33,7 @@ import type { HRCompanyLocation } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const locationSchema = z.object({
   office_name: z.string().min(1, 'Office name is required'),
@@ -399,4 +400,3 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
     </Dialog>
   );
 }
-
