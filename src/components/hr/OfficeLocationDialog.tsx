@@ -24,7 +24,7 @@ import {
   FormMessage,
   FormDescription
 } from '@/components/ui/form';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, getDocs, query } from 'firebase/firestore';
@@ -42,13 +42,13 @@ import {
   DollarSign,
   ChevronRight,
   ChevronLeft,
-  Info
+  Info,
+  Building
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { HRCompanyLocation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const locationSchema = z.object({
@@ -295,19 +295,13 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
                                         <h3 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Owner sets up office</h3>
                                         <p className="text-slate-500 font-medium">Laying the digital foundation for your workspace.</p>
                                     </div>
-                                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-8">
-                                        <ul className="grid gap-4 text-left text-sm font-bold text-slate-600">
-                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> Admin opens River Apps</li>
-                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> Adds office/branch location</li>
-                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> Sets allowed GPS radius (ex: 50–100m)</li>
-                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> System generates office QR code</li>
-                                            <li className="flex items-center gap-4"><CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" /> QR code is printed and placed in the office</li>
-                                        </ul>
-                                        <div className="mt-8 pt-6 border-t border-slate-50">
-                                            <p className="text-[10px] font-black uppercase text-green-600 tracking-[0.3em] flex items-center justify-center gap-2">
-                                                <CheckCircle2 className="h-4 w-4" /> Ready for scanning
-                                            </p>
+                                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 flex flex-col items-center gap-8">
+                                        <div className="p-6 rounded-[2rem] bg-blue-50 text-primary shadow-inner">
+                                            <Building className="h-12 w-12" />
                                         </div>
+                                        <p className="text-lg font-bold text-slate-700 leading-snug">
+                                            Administrator initializes the digital office by anchoring GPS coordinates, defining the verification radius, and generating the unique entry QR tag.
+                                        </p>
                                     </Card>
                                 </div>
                             )}
