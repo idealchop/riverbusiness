@@ -345,30 +345,38 @@ export default function HRDashboard() {
                 )}
             </div>
 
-            {!currentLog ? (
-                <button 
-                  onClick={handleTimeIn} 
-                  disabled={isProcessing} 
-                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
-                >
-                    <LogIn className="h-4 w-4" /> Clock In
-                </button>
-            ) : !currentLog.timeOut ? (
-                <button 
-                  onClick={handleTimeOut} 
-                  disabled={isProcessing} 
-                  className="bg-destructive text-white hover:bg-destructive/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
-                >
-                    <LogOut className="h-4 w-4" /> Clock Out
-                </button>
-            ) : (
-                <div className="h-11 px-5 bg-green-50 text-green-700 border border-green-200 rounded-xl flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Shift Secured</span>
-                </div>
-            )}
-            
-            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
+            {/* Desktop Action Buttons */}
+            <div className="hidden sm:flex items-center gap-3">
+                {!currentLog ? (
+                    <Button 
+                      onClick={handleTimeIn} 
+                      disabled={isProcessing} 
+                      className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
+                    >
+                        <LogIn className="h-4 w-4" /> Clock In
+                    </Button>
+                ) : !currentLog.timeOut ? (
+                    <Button 
+                      onClick={handleTimeOut} 
+                      disabled={isProcessing} 
+                      className="bg-destructive text-white hover:bg-destructive/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
+                    >
+                        <LogOut className="h-4 w-4" /> Clock Out
+                    </Button>
+                ) : (
+                    <div className="h-11 px-5 bg-green-50 text-green-700 border border-green-200 rounded-xl flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Shift Secured</span>
+                    </div>
+                )}
+                
+                <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
+                    Payroll
+                </Button>
+            </div>
+
+            {/* Mobile Payroll shortcut - keep visible if desktop buttons hidden */}
+            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="sm:hidden rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
                 Payroll
             </Button>
         </div>
@@ -387,11 +395,11 @@ export default function HRDashboard() {
                                 data-ai-hint={heroImage.imageHint}
                             />
                         )}
-                        <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-slate-900 z-10 space-y-2">
-                            <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900">
+                        <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-slate-900 z-10 space-y-2 max-w-[80%]">
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">
                                 Team Workforce
                             </h2>
-                            <p className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">
+                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
                                 Unified workforce and operational monitoring.
                             </p>
                         </div>
@@ -568,6 +576,34 @@ export default function HRDashboard() {
                     </div>
                 </CardContent>
             </Card>
+      </div>
+
+      {/* Mobile FAB for Clock In/Out */}
+      <div className="sm:hidden fixed bottom-6 right-6 z-50 flex flex-col gap-3 items-end">
+          {!currentLog ? (
+              <Button 
+                  onClick={handleTimeIn} 
+                  disabled={isProcessing} 
+                  className="w-16 h-16 rounded-full shadow-2xl bg-primary text-white hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center p-0"
+              >
+                  <LogIn className="h-6 w-6" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">Clock In</span>
+              </Button>
+          ) : !currentLog.timeOut ? (
+              <Button 
+                  onClick={handleTimeOut} 
+                  disabled={isProcessing} 
+                  className="w-16 h-16 rounded-full shadow-2xl bg-destructive text-white hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center p-0"
+              >
+                  <LogOut className="h-6 w-6" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">Out</span>
+              </Button>
+          ) : (
+              <div className="w-16 h-16 rounded-full shadow-xl bg-green-500 text-white flex flex-col items-center justify-center gap-0.5">
+                  <CheckCircle2 className="h-6 w-6" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">Saved</span>
+              </div>
+          )}
       </div>
 
       {/* Company Schedule Dialog */}
