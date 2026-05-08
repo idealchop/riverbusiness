@@ -59,6 +59,8 @@ export function OfficeLocationDialog({ isOpen, onOpenChange, companyId }: Office
     defaultValues: {
       office_name: 'Main Branch',
       radius_meters: 50,
+      latitude: 0,
+      longitude: 0,
     }
   });
 
