@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -8,6 +7,10 @@ import { Plus, BookOpen, Clock, Star, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 export default function WorkspaceLandingPage() {
+  const handleNewDoc = () => {
+    window.dispatchEvent(new CustomEvent('request-new-collab-page'));
+  };
+
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50/50">
         <div className="max-w-2xl w-full space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -22,7 +25,10 @@ export default function WorkspaceLandingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-none shadow-sm rounded-3xl bg-white group hover:shadow-xl transition-all duration-500 cursor-pointer">
+                <Card 
+                    onClick={handleNewDoc}
+                    className="border-none shadow-sm rounded-3xl bg-white group hover:shadow-xl transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                >
                     <CardContent className="p-8 space-y-6">
                         <div className="h-12 w-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Plus className="h-6 w-6" />
@@ -36,7 +42,7 @@ export default function WorkspaceLandingPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white group hover:shadow-primary/20 transition-all duration-500 cursor-pointer">
+                <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white group hover:shadow-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]">
                     <CardContent className="p-8 space-y-6">
                         <div className="h-12 w-12 rounded-2xl bg-white/10 text-primary-light flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Sparkles className="h-6 w-6" />

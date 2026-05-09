@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth } from '@/firebase';
 import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
@@ -44,13 +44,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const { data: pages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
-  useEffect(() => {
-    if (!isUserLoading && !authUser) {
-      router.push('/login');
-    }
-  }, [authUser, isUserLoading, router]);
-
-  const handleCreatePage = async (parentId: string | null = null) => {
+  const handleCreatePage = useCallback(async (parentId: string | null = null) => {
     if (!firestore || !authUser || !companyId) return;
 
     try {
@@ -72,7 +66,25 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       console.error("Error creating page:", error);
       toast({ variant: 'destructive', title: 'Action failed' });
     }
-  };
+  }, [firestore, authUser, companyId, router, toast]);
+
+  useEffect(() => {
+    const handleRequestNewPage = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        handleCreatePage(customEvent.detail?.parentId || null);
+    };
+
+    window.addEventListener('request-new-collab-page', handleRequestNewPage);
+    return () => {
+        window.removeEventListener('request-new-collab-page', handleRequestNewPage);
+    };
+  }, [handleCreatePage]);
+
+  useEffect(() => {
+    if (!isUserLoading && !authUser) {
+      router.push('/login');
+    }
+  }, [authUser, isUserLoading, router]);
 
   const handleDeletePage = async (pageId: string) => {
     if (!firestore || !companyId) return;
