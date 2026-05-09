@@ -212,9 +212,9 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto py-20 px-8 space-y-12">
+        <div className="max-w-4xl mx-auto py-12 px-8 space-y-6">
             {/* Cover and Icon Placeholder */}
-            <div className="space-y-6 group">
+            <div className="space-y-2 group">
                 <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
                         <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
@@ -232,10 +232,12 @@ export default function PageEditor() {
             </div>
 
             {/* Block Editor */}
-            <Editor 
-                initialContent={page.content} 
-                onContentChange={handleUpdateContent} 
-            />
+            <div className="pt-2">
+                <Editor 
+                    initialContent={page.content} 
+                    onContentChange={handleUpdateContent} 
+                />
+            </div>
         </div>
       </ScrollArea>
 

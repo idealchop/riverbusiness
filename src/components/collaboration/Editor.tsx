@@ -67,10 +67,10 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   if (!editor) return null;
 
   return (
-    <div className="space-y-10 group">
+    <div className="group">
       {/* Floating Toolbar - Only shown in editable mode */}
       {editable && (
-        <div className="sticky top-20 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100">
+        <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-6">
             <div className="flex items-center gap-1 px-1">
                 <ToolbarButton 
                     onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
@@ -150,7 +150,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       
       {/* Footer hint - Only shown in editable mode */}
       {editable && (
-          <div className="pt-10 border-t border-slate-50 flex items-center justify-between opacity-30">
+          <div className="pt-10 mt-10 border-t border-slate-50 flex items-center justify-between opacity-30">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative State Active</p>
               <div className="flex items-center gap-1">
                   <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">Enter</span>
