@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
@@ -16,7 +16,8 @@ import {
   Smile,
   ImageIcon,
   Layout,
-  Trash2
+  Trash2,
+  CheckCircle
 } from 'lucide-react';
 import type { CollabPage } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -69,12 +70,13 @@ export default function PageEditor() {
     // Reset state for new page
     setLoading(true);
     setPage(null);
+    setIsSaving(false);
 
     // Set local presence
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     setDoc(presenceRef, {
         userId: user.uid,
-        name: user.displayName || 'Contributor',
+        name: user.displayName || user.email?.split('@')[0] || 'Contributor',
         photoURL: user.photoURL,
         lastActive: serverTimestamp()
     });
@@ -100,31 +102,36 @@ export default function PageEditor() {
     };
   }, [firestore, pageId, router, user]);
 
-  const handleUpdateTitle = (newTitle: string) => {
+  const handleUpdateTitle = useCallback((newTitle: string) => {
     if (!firestore || !pageId || !page) return;
     
-    // Optimistic local update
+    // Optimistic local update for UI snappiness
     setPage(prev => prev ? { ...prev, title: newTitle } : null);
 
     if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
     
     titleUpdateTimeoutRef.current = setTimeout(async () => {
+        setIsSaving(true);
         try {
           const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
           await updateDoc(pageRef, { title: newTitle });
         } catch (error) {
           console.error("Error updating title:", error);
+        } finally {
+          // Keep indicator for a brief moment to show completion
+          setTimeout(() => setIsSaving(false), 500);
         }
-    }, 800);
-  };
+    }, 2000);
+  }, [firestore, pageId, page]);
 
-  const handleUpdateContent = (json: any) => {
+  const handleUpdateContent = useCallback((json: any) => {
     if (!firestore || !pageId) return;
     
-    setIsSaving(true);
+    // We do NOT set isSaving(true) here to avoid a re-render on every keystroke
     if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
 
     contentUpdateTimeoutRef.current = setTimeout(async () => {
+      setIsSaving(true); // Only show syncing when the network request actually fires
       try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
         await updateDoc(pageRef, { 
@@ -134,10 +141,11 @@ export default function PageEditor() {
       } catch (error) {
         console.error("Error updating content:", error);
       } finally {
-        setIsSaving(false);
+        // Small delay to ensure the user sees the "Synced" state
+        setTimeout(() => setIsSaving(false), 800);
       }
-    }, 1500); // 1.5s debounce for content to prevent excessive writes
-  };
+    }, 3000); // 3 second pause in typing triggers a cloud sync
+  }, [firestore, pageId]);
 
   const toggleFavorite = async () => {
     if (!firestore || !page) return;
@@ -189,9 +197,19 @@ export default function PageEditor() {
               )}
           </div>
 
-          {isSaving && (
-             <span className="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse mr-2">Syncing...</span>
-          )}
+          <div className="w-20 flex justify-center">
+            {isSaving ? (
+               <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Syncing</span>
+               </div>
+            ) : (
+               <div className="flex items-center gap-1.5 opacity-40">
+                 <CheckCircle className="h-3 w-3 text-slate-400" />
+                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Saved</span>
+               </div>
+            )}
+          </div>
           
           <Button 
             variant="ghost" 
@@ -234,29 +252,29 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto py-12 px-8 space-y-4">
-            {/* Cover and Icon Placeholder */}
-            <div className="space-y-2 group">
-                <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
-                        <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
-                        <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add Cover
-                    </Button>
-                </div>
-                <Input 
-                    value={page.title} 
-                    placeholder="Untitled"
-                    onChange={(e) => handleUpdateTitle(e.target.value)}
-                    className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100"
-                />
+        <div className="max-w-4xl mx-auto py-8 px-8 space-y-2">
+            {/* Header Decorations */}
+            <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
+                <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
+                    <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
+                    <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add Cover
+                </Button>
             </div>
+            
+            {/* Title Section */}
+            <Input 
+                value={page.title} 
+                placeholder="Untitled"
+                onChange={(e) => handleUpdateTitle(e.target.value)}
+                className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-6"
+            />
 
             {/* Block Editor */}
             <div className="pt-2">
                 <Editor 
-                    key={page.id} // Forces clean editor remount on page change
+                    key={page.id} 
                     initialContent={page.content} 
                     onContentChange={handleUpdateContent} 
                 />
