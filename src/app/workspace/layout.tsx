@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -45,7 +46,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const { data: pages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
   const handleCreatePage = useCallback(async (parentId: string | null = null) => {
-    if (!firestore || !authUser || !companyId) return;
+    if (!firestore || !authUser || !companyId) {
+        toast({ title: "Initializing", description: "Please wait a moment while the workspace prepares." });
+        return;
+    }
 
     try {
       const pageRef = collection(firestore, 'collaboration_pages');
@@ -56,15 +60,18 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         title: 'Untitled',
         createdBy: authUser.uid,
         createdAt: serverTimestamp(),
-        content: null,
+        content: {
+            type: "doc",
+            content: [{ type: "paragraph" }]
+        },
       };
 
       const docRef = await addDoc(pageRef, newPage);
       router.push(`/workspace/${docRef.id}`);
-      toast({ title: 'Page created' });
+      toast({ title: 'New Document Created' });
     } catch (error) {
       console.error("Error creating page:", error);
-      toast({ variant: 'destructive', title: 'Action failed' });
+      toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not authorize new document entry.' });
     }
   }, [firestore, authUser, companyId, router, toast]);
 
@@ -84,7 +91,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         if (pathname.includes(pageId)) {
             router.push('/workspace');
         }
-        toast({ title: 'Page deleted' });
+        toast({ title: 'Document Removed' });
     } catch (error) {
         console.error("Error deleting page:", error);
         toast({ variant: 'destructive', title: 'Deletion failed' });

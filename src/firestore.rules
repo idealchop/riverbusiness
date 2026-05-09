@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -28,11 +29,11 @@ service cloud.firestore {
     // --- USER PROFILES & DIRECTORY ---
 
     match /users/{userId} {
-      // Allow any authenticated user to manage profiles collaboratively.
+      // Radical transparency for organizational collaboration: 
+      // All authenticated users can read, list, and update profiles (for presence and attribution)
       allow read, list, create, update, delete: if isAuthenticated();
 
-      // Sub-collections (Deliveries, Payments, Notifications, Chat)
-      match /{subcollection}/{docId} {
+      match /{allSubcollections=**} {
         allow read, write: if isAuthenticated();
       }
     }
@@ -47,10 +48,10 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // --- HR MULTI-TENANT DATA (Collaborative Workspace) ---
+    // --- HR MULTI-TENANT DATA ---
 
     match /hr_companies/{companyId} {
-      // Allow any authenticated user to manage HR data for their organization.
+      // Open access for all authenticated organization members
       allow read, write, delete: if isAuthenticated();
       
       match /{allSubcollections=**} {
@@ -65,10 +66,11 @@ service cloud.firestore {
     }
 
     match /collaboration_pages/{pageId} {
-      // Collaborative access for all authenticated users
+      // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, or delete pages
       allow read, write: if isAuthenticated();
       
-      match /presence/{userId} {
+      // Recursive match for presence and other potential sub-data
+      match /{allSubcollections=**} {
         allow read, write: if isAuthenticated();
       }
     }
