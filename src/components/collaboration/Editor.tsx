@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -33,6 +32,7 @@ import { Separator } from '@/components/ui/separator';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
 
 interface EditorProps {
   initialContent: any;
@@ -46,6 +46,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const editor = useEditor({
     extensions: [
@@ -67,7 +68,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       }),
       ImageExtension.configure({
         HTMLAttributes: {
-          class: 'rounded-[2rem] border-4 border-white shadow-2xl max-w-full h-auto my-12 mx-auto block',
+          class: 'rounded-[2rem] border-4 border-white shadow-2xl max-w-full h-auto my-6 mx-auto block',
         },
       }),
     ],
@@ -78,7 +79,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-loose text-lg font-medium'
+            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-medium'
         }
     }
   });
@@ -107,10 +108,13 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     if (!file || !editor || !storage || !auth?.currentUser) return;
 
     setIsUploading(true);
+    setUploadProgress(0);
     const path = `collab_images/${auth.currentUser.uid}/${Date.now()}-${file.name}`;
 
     try {
-      const url = await uploadFileWithProgress(storage, auth, path, file, {}, () => {});
+      const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
+        setUploadProgress(progress);
+      });
       editor.chain().focus().setImage({ src: url }).run();
       toast({ title: 'Image attached' });
     } catch (error) {
@@ -118,6 +122,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image.' });
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -135,79 +140,92 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       />
 
       {editable && (
-        <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-6">
-            <div className="flex items-center gap-1 px-1">
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
-                    active={editor.isActive('heading', { level: 1 })}
-                    icon={<Heading1 className="h-4 w-4" />}
-                />
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
-                    active={editor.isActive('heading', { level: 2 })}
-                    icon={<Heading2 className="h-4 w-4" />}
-                />
+        <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-6">
+            <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 px-1">
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
+                        active={editor.isActive('heading', { level: 1 })}
+                        icon={<Heading1 className="h-4 w-4" />}
+                    />
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
+                        active={editor.isActive('heading', { level: 2 })}
+                        icon={<Heading2 className="h-4 w-4" />}
+                    />
+                </div>
+                
+                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                <div className="flex items-center gap-1 px-1">
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleBold().run()} 
+                        active={editor.isActive('bold')}
+                        icon={<Bold className="h-4 w-4" />}
+                    />
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleItalic().run()} 
+                        active={editor.isActive('italic')}
+                        icon={<Italic className="h-4 w-4" />}
+                    />
+                </div>
+
+                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                <div className="flex items-center gap-1 px-1">
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleBulletList().run()} 
+                        active={editor.isActive('bulletList')}
+                        icon={<List className="h-4 w-4" />}
+                    />
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().toggleTaskList().run()} 
+                        active={editor.isActive('taskList')}
+                        icon={<CheckSquare className="h-4 w-4" />}
+                    />
+                </div>
+
+                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                <div className="flex items-center gap-1 px-1">
+                    <ToolbarButton 
+                        onClick={setLink} 
+                        active={editor.isActive('link')}
+                        icon={<LinkIcon className="h-4 w-4" />}
+                    />
+                    <ToolbarButton 
+                        onClick={() => fileInputRef.current?.click()} 
+                        disabled={isUploading}
+                        icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
+                    />
+                </div>
+
+                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                <div className="flex items-center gap-1 px-1">
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().undo().run()} 
+                        disabled={!editor.can().undo()}
+                        icon={<Undo2 className="h-4 w-4" />}
+                    />
+                    <ToolbarButton 
+                        onClick={() => editor.chain().focus().redo().run()} 
+                        disabled={!editor.can().redo()}
+                        icon={<Redo2 className="h-4 w-4" />}
+                    />
+                </div>
             </div>
             
-            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-            <div className="flex items-center gap-1 px-1">
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleBold().run()} 
-                    active={editor.isActive('bold')}
-                    icon={<Bold className="h-4 w-4" />}
-                />
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleItalic().run()} 
-                    active={editor.isActive('italic')}
-                    icon={<Italic className="h-4 w-4" />}
-                />
-            </div>
-
-            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-            <div className="flex items-center gap-1 px-1">
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleBulletList().run()} 
-                    active={editor.isActive('bulletList')}
-                    icon={<List className="h-4 w-4" />}
-                />
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleTaskList().run()} 
-                    active={editor.isActive('taskList')}
-                    icon={<CheckSquare className="h-4 w-4" />}
-                />
-            </div>
-
-            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-            <div className="flex items-center gap-1 px-1">
-                <ToolbarButton 
-                    onClick={setLink} 
-                    active={editor.isActive('link')}
-                    icon={<LinkIcon className="h-4 w-4" />}
-                />
-                <ToolbarButton 
-                    onClick={() => fileInputRef.current?.click()} 
-                    disabled={isUploading}
-                    icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-                />
-            </div>
-
-            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-            <div className="flex items-center gap-1 px-1">
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().undo().run()} 
-                    disabled={!editor.can().undo()}
-                    icon={<Undo2 className="h-4 w-4" />}
-                />
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().redo().run()} 
-                    disabled={!editor.can().redo()}
-                    icon={<Redo2 className="h-4 w-4" />}
-                />
-            </div>
+            {isUploading && (
+                <div className="w-full px-4 pb-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                            className="h-full bg-primary transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
       )}
 
