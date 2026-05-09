@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -122,7 +123,7 @@ export default function PageEditor() {
   const handleUpdateTitle = useCallback((newTitle: string) => {
     if (!firestore || !pageId || !page) return;
     
-    // Optimistic local update for UI snappiness
+    // Optimistic local update
     setPage(prev => prev ? { ...prev, title: newTitle } : null);
 
     if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
@@ -145,7 +146,7 @@ export default function PageEditor() {
                 errorEmitter.emit('permission-error', permissionError);
                 setIsSaving(false);
             });
-    }, 2000);
+    }, 1000); // Shorter 1s debounce for faster transitions
   }, [firestore, pageId, page]);
 
   const handleUpdateContent = useCallback((json: any) => {
@@ -174,7 +175,7 @@ export default function PageEditor() {
             errorEmitter.emit('permission-error', permissionError);
             setIsSaving(false);
         });
-    }, 3000);
+    }, 1000); // Shorter 1s debounce
   }, [firestore, pageId]);
 
   const toggleFavorite = async () => {

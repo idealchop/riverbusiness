@@ -6,12 +6,10 @@ service cloud.firestore {
 
     // --- HELPER FUNCTIONS ---
 
-    // Checks if the user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Platform-wide administrator check (By email or custom claim)
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.email == 'admin@riverph.com' || 
@@ -21,7 +19,6 @@ service cloud.firestore {
 
     // --- GLOBAL RULES ---
 
-    // Admins have master access to all resources
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -29,7 +26,7 @@ service cloud.firestore {
     // --- USER PROFILES & DIRECTORY ---
 
     match /users/{allPaths=**} {
-      // Radical transparency: any signed-in user can manage profiles for presence and attribution
+      // Unrestricted access for all signed-in members to facilitate collaboration and presence
       allow read, write: if isAuthenticated();
     }
     
@@ -46,7 +43,6 @@ service cloud.firestore {
     // --- HR MULTI-TENANT DATA ---
 
     match /hr_companies/{allPaths=**} {
-      // Open access for all authenticated organization members
       allow read, write: if isAuthenticated();
     }
 
@@ -54,6 +50,7 @@ service cloud.firestore {
 
     match /collaboration_pages/{allPaths=**} {
       // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, organize or delete any page
+      // Use broad recursive match to avoid permission issues on nested structures like 'presence'
       allow read, write: if isAuthenticated();
     }
     
@@ -68,15 +65,9 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Public links for mobile sanitation officers
     match /publicSanitationLinks/{linkId} {
       allow read: if true;
       allow write: if isAuthenticated();
-    }
-
-    match /users/{userId}/sanitationVisits/{visitId} {
-      allow read: if true;
-      allow update: if true;
     }
   }
 }

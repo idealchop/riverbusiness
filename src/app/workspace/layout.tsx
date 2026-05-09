@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -37,13 +37,23 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const companyId = user?.companyId || 'default';
 
+  // Use simple query without orderBy to avoid index permission issues, sort client-side
   const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
     collection(firestore, 'collaboration_pages'),
-    where('companyId', '==', companyId),
-    orderBy('createdAt', 'desc')
+    where('companyId', '==', companyId)
   ) : null, [firestore, companyId]);
 
-  const { data: pages, isLoading: loadingPages, error: pagesError } = useCollection<CollabPage>(pagesQuery);
+  const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
+
+  // Client-side sorting for a snappy, reliable experience
+  const pages = useMemo(() => {
+      if (!rawPages) return [];
+      return [...rawPages].sort((a, b) => {
+          const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+          const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          return timeB - timeA;
+      });
+  }, [rawPages]);
 
   const handleCreatePage = useCallback(async (parentId: string | null = null) => {
     if (!firestore || !authUser || !companyId) {
@@ -51,7 +61,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         return;
     }
 
-    const pageRef = collection(firestore, 'collaboration_pages');
+    const pagesCol = collection(firestore, 'collaboration_pages');
     const newPage = {
       companyId,
       workspaceId: 'default',
@@ -65,14 +75,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       },
     };
 
-    addDoc(pageRef, newPage)
+    addDoc(pagesCol, newPage)
       .then((docRef) => {
         router.push(`/workspace/${docRef.id}`);
         toast({ title: 'New Document Created' });
       })
       .catch(async (err) => {
         const permissionError = new FirestorePermissionError({
-            path: pageRef.path,
+            path: pagesCol.path,
             operation: 'create',
             requestResourceData: newPage
         } satisfies SecurityRuleContext);
@@ -84,14 +94,16 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const handleDeletePage = useCallback(async (pageId: string) => {
     if (!firestore || !companyId) return;
     try {
-        // Recursive children deletion
+        const batch = writeBatch(firestore);
+        
+        // Find children
         const childrenQuery = query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId));
         const childrenSnap = await getDocs(childrenQuery);
         
-        const batch = writeBatch(firestore);
         childrenSnap.docs.forEach((childDoc) => {
             batch.delete(childDoc.ref);
         });
+        
         batch.delete(doc(firestore, 'collaboration_pages', pageId));
         
         await batch.commit();
