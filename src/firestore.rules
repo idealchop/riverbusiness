@@ -29,7 +29,6 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Allow any authenticated user to manage profiles collaboratively.
-      // This supports the flat hierarchy for workforce termination and updates.
       allow read, list, create, update, delete: if isAuthenticated();
 
       // Sub-collections (Deliveries, Payments, Notifications, Chat)
@@ -52,11 +51,25 @@ service cloud.firestore {
 
     match /hr_companies/{companyId} {
       // Allow any authenticated user to manage HR data for their organization.
-      // Full collaborative access for all team members.
       allow read, write, delete: if isAuthenticated();
       
       match /{allSubcollections=**} {
         allow read, write, delete: if isAuthenticated();
+      }
+    }
+
+    // --- COLLABORATION PLATFORM ---
+
+    match /collaboration_workspaces/{workspaceId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /collaboration_pages/{pageId} {
+      // Collaborative access for all authenticated users
+      allow read, write: if isAuthenticated();
+      
+      match /presence/{userId} {
+        allow read, write: if isAuthenticated();
       }
     }
 
@@ -78,7 +91,6 @@ service cloud.firestore {
 
     match /users/{userId}/sanitationVisits/{visitId} {
       allow read: if true;
-      // Allow public updates to reports (for signatures and checklists)
       allow update: if true;
     }
   }

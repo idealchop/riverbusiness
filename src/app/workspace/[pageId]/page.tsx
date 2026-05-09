@@ -16,14 +16,31 @@ import {
   Smile,
   ImageIcon,
   Layout,
-  Users
+  Trash2
 } from 'lucide-react';
-import type { CollabPage, AppUser } from '@/lib/types';
+import type { CollabPage } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareDialog } from '@/components/collaboration/ShareDialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function PageEditor() {
   const { pageId } = useParams();
@@ -36,6 +53,7 @@ export default function PageEditor() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Presence Query - Sync other users looking at the same page
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
@@ -58,14 +76,17 @@ export default function PageEditor() {
       if (snapshot.exists()) {
         setPage({ id: snapshot.id, ...snapshot.data() } as CollabPage);
       } else {
-        router.push('/workspace');
+        // Only redirect if we haven't already navigated away
+        if (window.location.pathname.includes(pageId as string)) {
+          router.push('/workspace');
+        }
       }
       setLoading(false);
     });
 
     return () => {
         unsub();
-        deleteDoc(presenceRef); // Cleanup presence
+        deleteDoc(presenceRef).catch(() => {}); // Cleanup presence
     };
   }, [firestore, pageId, router, user]);
 
@@ -104,6 +125,12 @@ export default function PageEditor() {
     } catch (error) {
         toast({ variant: 'destructive', title: 'Action failed' });
     }
+  };
+
+  const handleDelete = () => {
+      if (!page) return;
+      // Trigger the centralized delete event that layout.tsx listens to
+      window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
   };
 
   if (loading) return <FullScreenLoader text="Opening Document" />;
@@ -162,9 +189,25 @@ export default function PageEditor() {
             <Share2 className="h-4 w-4" />
           </Button>
           
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
+                  <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                      <Share2 className="h-4 w-4 opacity-50" /> Public Sharing Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                      <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-slate-50" />
+                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                      <Trash2 className="h-4 w-4 opacity-50" /> Delete Document
+                  </DropdownMenuItem>
+              </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -201,6 +244,26 @@ export default function PageEditor() {
         onOpenChange={setIsShareDialogOpen} 
         page={page} 
       />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Delete Document?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
+              This action is permanent and will delete this document and any potential subpages. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-6">
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Keep</AlertDialogCancel>
+            <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
+            >
+                Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -68,27 +68,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     }
   }, [firestore, authUser, companyId, router, toast]);
 
-  useEffect(() => {
-    const handleRequestNewPage = (event: Event) => {
-        const customEvent = event as CustomEvent;
-        handleCreatePage(customEvent.detail?.parentId || null);
-    };
-
-    window.addEventListener('request-new-collab-page', handleRequestNewPage);
-    return () => {
-        window.removeEventListener('request-new-collab-page', handleRequestNewPage);
-    };
-  }, [handleCreatePage]);
-
-  useEffect(() => {
-    if (!isUserLoading && !authUser) {
-      router.push('/login');
-    }
-  }, [authUser, isUserLoading, router]);
-
-  const handleDeletePage = async (pageId: string) => {
+  const handleDeletePage = useCallback(async (pageId: string) => {
     if (!firestore || !companyId) return;
     try {
+        // Recursive children deletion
         const childrenQuery = query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId));
         const childrenSnap = await getDocs(childrenQuery);
         
@@ -106,7 +89,35 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         console.error("Error deleting page:", error);
         toast({ variant: 'destructive', title: 'Deletion failed' });
     }
-  };
+  }, [firestore, companyId, pathname, router, toast]);
+
+  useEffect(() => {
+    const handleRequestNewPage = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        handleCreatePage(customEvent.detail?.parentId || null);
+    };
+
+    const handleRequestDeletePage = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            handleDeletePage(customEvent.detail.pageId);
+        }
+    };
+
+    window.addEventListener('request-new-collab-page', handleRequestNewPage);
+    window.addEventListener('request-delete-collab-page', handleRequestDeletePage);
+    
+    return () => {
+        window.removeEventListener('request-new-collab-page', handleRequestNewPage);
+        window.removeEventListener('request-delete-collab-page', handleRequestDeletePage);
+    };
+  }, [handleCreatePage, handleDeletePage]);
+
+  useEffect(() => {
+    if (!isUserLoading && !authUser) {
+      router.push('/login');
+    }
+  }, [authUser, isUserLoading, router]);
 
   const handleLogout = async () => {
     if (!auth) return;
