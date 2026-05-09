@@ -140,7 +140,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, o
                 <LogoBlack className="h-10 w-10" />
                 <div className="flex flex-col">
                     <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Collab</span>
-                    <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Intelligence</span>
+                    <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Documents</span>
                 </div>
             </Link>
             <Button variant="ghost" size="icon" onClick={onToggle} className="h-8 w-8 text-slate-400 hover:text-slate-900 rounded-lg">
