@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -13,16 +13,11 @@ import {
     Bold, 
     Italic, 
     List, 
-    ListOrdered, 
     Heading1, 
     Heading2, 
-    Heading3, 
-    Quote, 
     CheckSquare,
     Undo2,
     Redo2,
-    Type,
-    Code,
     Link as LinkIcon,
     Image as ImageIcon,
     Loader2
@@ -47,6 +42,34 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Helper to handle the actual upload and insertion
+  const uploadAndInsertImage = useCallback(async (file: File) => {
+    if (!editor || !storage || !auth?.currentUser) return;
+
+    if (!file.type.startsWith('image/')) {
+        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop or paste an image file.' });
+        return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    const path = `collab_images/${auth.currentUser.uid}/${Date.now()}-${file.name}`;
+
+    try {
+      const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
+        setUploadProgress(progress);
+      });
+      editor.chain().focus().setImage({ src: url }).run();
+      toast({ title: 'Image attached' });
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image.' });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  }, [storage, auth, toast]);
 
   const editor = useEditor({
     extensions: [
@@ -80,9 +103,31 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     editorProps: {
         attributes: {
             class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-medium'
+        },
+        // Handle Drag and Drop
+        handleDrop: (view, event, slice, moved) => {
+            if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+                const file = event.dataTransfer.files[0];
+                if (file.type.startsWith('image/')) {
+                    uploadAndInsertImage(file);
+                    return true; // handled
+                }
+            }
+            return false;
+        },
+        // Handle Paste
+        handlePaste: (view, event) => {
+            if (event.clipboardData && event.dataTransfer && event.clipboardData.files && event.clipboardData.files[0]) {
+                const file = event.clipboardData.files[0];
+                if (file.type.startsWith('image/')) {
+                    uploadAndInsertImage(file);
+                    return true; // handled
+                }
+            }
+            return false;
         }
     }
-  });
+  }, [uploadAndInsertImage]); // Re-run if handler changes
 
   useEffect(() => {
     if (editor && initialContent && editor.isEmpty) {
@@ -103,28 +148,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !editor || !storage || !auth?.currentUser) return;
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    const path = `collab_images/${auth.currentUser.uid}/${Date.now()}-${file.name}`;
-
-    try {
-      const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
-        setUploadProgress(progress);
-      });
-      editor.chain().focus().setImage({ src: url }).run();
-      toast({ title: 'Image attached' });
-    } catch (error) {
-      console.error('Image upload failed:', error);
-      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image.' });
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    if (file) {
+        uploadAndInsertImage(file);
     }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   if (!editor) return null;
@@ -134,7 +163,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       <input 
         type="file" 
         ref={fileInputRef} 
-        onChange={handleImageUpload} 
+        onChange={handleImageInput} 
         accept="image/*" 
         className="hidden" 
       />
