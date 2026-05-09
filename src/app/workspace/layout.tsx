@@ -3,14 +3,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
-import type { CollabPage, AppUser } from '@/lib/types';
+import type { CollabPage, AppUser, SecurityRuleContext } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
@@ -43,7 +43,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     orderBy('createdAt', 'desc')
   ) : null, [firestore, companyId]);
 
-  const { data: pages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
+  const { data: pages, isLoading: loadingPages, error: pagesError } = useCollection<CollabPage>(pagesQuery);
 
   const handleCreatePage = useCallback(async (parentId: string | null = null) => {
     if (!firestore || !authUser || !companyId) {
@@ -51,28 +51,34 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         return;
     }
 
-    try {
-      const pageRef = collection(firestore, 'collaboration_pages');
-      const newPage = {
-        companyId,
-        workspaceId: 'default',
-        parentId,
-        title: 'Untitled',
-        createdBy: authUser.uid,
-        createdAt: serverTimestamp(),
-        content: {
-            type: "doc",
-            content: [{ type: "paragraph" }]
-        },
-      };
+    const pageRef = collection(firestore, 'collaboration_pages');
+    const newPage = {
+      companyId,
+      workspaceId: 'default',
+      parentId,
+      title: 'Untitled',
+      createdBy: authUser.uid,
+      createdAt: serverTimestamp(),
+      content: {
+          type: "doc",
+          content: [{ type: "paragraph" }]
+      },
+    };
 
-      const docRef = await addDoc(pageRef, newPage);
-      router.push(`/workspace/${docRef.id}`);
-      toast({ title: 'New Document Created' });
-    } catch (error) {
-      console.error("Error creating page:", error);
-      toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not authorize new document entry.' });
-    }
+    addDoc(pageRef, newPage)
+      .then((docRef) => {
+        router.push(`/workspace/${docRef.id}`);
+        toast({ title: 'New Document Created' });
+      })
+      .catch(async (err) => {
+        const permissionError = new FirestorePermissionError({
+            path: pageRef.path,
+            operation: 'create',
+            requestResourceData: newPage
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: 'destructive', title: 'Creation Failed' });
+      });
   }, [firestore, authUser, companyId, router, toast]);
 
   const handleDeletePage = useCallback(async (pageId: string) => {
@@ -82,11 +88,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         const childrenQuery = query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId));
         const childrenSnap = await getDocs(childrenQuery);
         
-        for (const childDoc of childrenSnap.docs) {
-            await deleteDoc(childDoc.ref);
-        }
-
-        await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
+        const batch = writeBatch(firestore);
+        childrenSnap.docs.forEach((childDoc) => {
+            batch.delete(childDoc.ref);
+        });
+        batch.delete(doc(firestore, 'collaboration_pages', pageId));
+        
+        await batch.commit();
         
         if (pathname.includes(pageId)) {
             router.push('/workspace');

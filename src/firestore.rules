@@ -28,61 +28,44 @@ service cloud.firestore {
 
     // --- USER PROFILES & DIRECTORY ---
 
-    match /users/{userId} {
-      // Radical transparency for organizational collaboration: 
-      // All authenticated users can read, list, and update profiles (for presence and attribution)
-      allow read, list, create, update, delete: if isAuthenticated();
-
-      match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated();
-      }
+    match /users/{allPaths=**} {
+      // Radical transparency: any signed-in user can manage profiles for presence and attribution
+      allow read, write: if isAuthenticated();
     }
     
     // --- INVITATIONS & ONBOARDING ---
 
-    match /unclaimedProfiles/{clientId} {
+    match /unclaimedProfiles/{allPaths=**} {
       allow read, write: if isAuthenticated();
     }
 
-    match /unclaimedEmployees/{inviteId} {
+    match /unclaimedEmployees/{allPaths=**} {
       allow read, write: if isAuthenticated();
     }
 
     // --- HR MULTI-TENANT DATA ---
 
-    match /hr_companies/{companyId} {
+    match /hr_companies/{allPaths=**} {
       // Open access for all authenticated organization members
-      allow read, write, delete: if isAuthenticated();
-      
-      match /{allSubcollections=**} {
-        allow read, write, delete: if isAuthenticated();
-      }
+      allow read, write: if isAuthenticated();
     }
 
     // --- COLLABORATION PLATFORM ---
 
-    match /collaboration_workspaces/{workspaceId} {
+    match /collaboration_pages/{allPaths=**} {
+      // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, organize or delete any page
       allow read, write: if isAuthenticated();
     }
-
-    match /collaboration_pages/{pageId} {
-      // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, or delete pages
-      allow read, write: if isAuthenticated();
-      
-      // Recursive match for presence and other potential sub-data
-      match /{allSubcollections=**} {
+    
+    match /collaboration_workspaces/{allPaths=**} {
         allow read, write: if isAuthenticated();
-      }
     }
 
     // --- STATION & COMPLIANCE ---
 
-    match /waterStations/{stationId} {
+    match /waterStations/{allPaths=**} {
       allow read: if isAuthenticated();
-      match /{document=**} {
-          allow read, list: if isAuthenticated();
-          allow write: if isAdmin();
-      }
+      allow write: if isAdmin();
     }
 
     // Public links for mobile sanitation officers
