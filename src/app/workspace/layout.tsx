@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +7,7 @@ import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimest
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { Plus, Menu } from 'lucide-react';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -77,8 +77,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const handleDeletePage = async (pageId: string) => {
     if (!firestore || !companyId) return;
     try {
-        // Recursive deletion of children is handled by a simplified loop here
-        // In a large system, this should be a recursive cloud function
         const childrenQuery = query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId));
         const childrenSnap = await getDocs(childrenQuery);
         
