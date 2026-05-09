@@ -57,7 +57,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     }
   });
 
-  // Keep content in sync if changed from outside (e.g. initial load)
+  // Keep content in sync only if it's external (not the user's typing)
+  // Since we use key={page.id} in parent, this component is fresh for each page.
   useEffect(() => {
     if (editor && initialContent && editor.isEmpty) {
         editor.commands.setContent(initialContent);
@@ -150,7 +151,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       
       {/* Footer hint - Only shown in editable mode */}
       {editable && (
-          <div className="pt-10 mt-10 border-t border-slate-50 flex items-center justify-between opacity-30">
+          <div className="pt-6 mt-6 border-t border-slate-50 flex items-center justify-between opacity-30">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative State Active</p>
               <div className="flex items-center gap-1">
                   <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">Enter</span>

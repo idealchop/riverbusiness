@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
@@ -55,12 +55,20 @@ export default function PageEditor() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // Debounce refs
+  const contentUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const titleUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Presence Query - Sync other users looking at the same page
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
   const { data: collaborators } = useCollection(presenceQuery);
 
   useEffect(() => {
     if (!firestore || !pageId || !user) return;
+
+    // Reset state for new page
+    setLoading(true);
+    setPage(null);
 
     // Set local presence
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
@@ -87,33 +95,48 @@ export default function PageEditor() {
     return () => {
         unsub();
         deleteDoc(presenceRef).catch(() => {}); // Cleanup presence
+        if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
+        if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
     };
   }, [firestore, pageId, router, user]);
 
-  const handleUpdateTitle = async (title: string) => {
-    if (!firestore || !pageId) return;
-    try {
-      const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-      await updateDoc(pageRef, { title });
-    } catch (error) {
-      console.error("Error updating title:", error);
-    }
+  const handleUpdateTitle = (newTitle: string) => {
+    if (!firestore || !pageId || !page) return;
+    
+    // Optimistic local update
+    setPage(prev => prev ? { ...prev, title: newTitle } : null);
+
+    if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
+    
+    titleUpdateTimeoutRef.current = setTimeout(async () => {
+        try {
+          const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
+          await updateDoc(pageRef, { title: newTitle });
+        } catch (error) {
+          console.error("Error updating title:", error);
+        }
+    }, 800);
   };
 
-  const handleUpdateContent = async (json: any) => {
+  const handleUpdateContent = (json: any) => {
     if (!firestore || !pageId) return;
+    
     setIsSaving(true);
-    try {
-      const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-      await updateDoc(pageRef, { 
-        content: json,
-        updatedAt: serverTimestamp()
-      });
-    } catch (error) {
-      console.error("Error updating content:", error);
-    } finally {
-      setTimeout(() => setIsSaving(false), 800);
-    }
+    if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
+
+    contentUpdateTimeoutRef.current = setTimeout(async () => {
+      try {
+        const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
+        await updateDoc(pageRef, { 
+          content: json,
+          updatedAt: serverTimestamp()
+        });
+      } catch (error) {
+        console.error("Error updating content:", error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1500); // 1.5s debounce for content to prevent excessive writes
   };
 
   const toggleFavorite = async () => {
@@ -129,11 +152,10 @@ export default function PageEditor() {
 
   const handleDelete = () => {
       if (!page) return;
-      // Trigger the centralized delete event that layout.tsx listens to
       window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
   };
 
-  if (loading) return <FullScreenLoader text="Opening Document" />;
+  if (loading && !page) return <FullScreenLoader text="Opening Document" />;
   if (!page) return null;
 
   return (
@@ -212,7 +234,7 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto py-12 px-8 space-y-6">
+        <div className="max-w-4xl mx-auto py-12 px-8 space-y-4">
             {/* Cover and Icon Placeholder */}
             <div className="space-y-2 group">
                 <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -234,6 +256,7 @@ export default function PageEditor() {
             {/* Block Editor */}
             <div className="pt-2">
                 <Editor 
+                    key={page.id} // Forces clean editor remount on page change
                     initialContent={page.content} 
                     onContentChange={handleUpdateContent} 
                 />
