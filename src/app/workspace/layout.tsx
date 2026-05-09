@@ -1,19 +1,18 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth } from '@/firebase';
-import { collection, query, where, orderBy, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Menu, ChevronRight, LayoutGrid, Search, Bell, Settings, LogOut } from 'lucide-react';
-import type { CollabWorkspace, CollabPage, AppUser } from '@/lib/types';
+import { Plus, Menu } from 'lucide-react';
+import type { CollabPage, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
-import { LogoBlack } from '@/components/icons';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { signOut } from 'firebase/auth';
@@ -32,13 +31,11 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Re-fetch current user doc to get companyId and role
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
 
   const companyId = user?.companyId || 'default';
 
-  // Fetch all pages for the current company
   const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
     collection(firestore, 'collaboration_pages'),
     where('companyId', '==', companyId),
@@ -77,6 +74,30 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     }
   };
 
+  const handleDeletePage = async (pageId: string) => {
+    if (!firestore || !companyId) return;
+    try {
+        // Recursive deletion of children is handled by a simplified loop here
+        // In a large system, this should be a recursive cloud function
+        const childrenQuery = query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId));
+        const childrenSnap = await getDocs(childrenQuery);
+        
+        for (const childDoc of childrenSnap.docs) {
+            await deleteDoc(childDoc.ref);
+        }
+
+        await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
+        
+        if (pathname.includes(pageId)) {
+            router.push('/workspace');
+        }
+        toast({ title: 'Page deleted' });
+    } catch (error) {
+        console.error("Error deleting page:", error);
+        toast({ variant: 'destructive', title: 'Deletion failed' });
+    }
+  };
+
   const handleLogout = async () => {
     if (!auth) return;
     setIsLoggingOut(true);
@@ -95,17 +116,16 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
-      {/* Sidebar - Panel 1 */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         pages={pages || []}
         activePageId={pathname.split('/').pop() || null}
         onCreatePage={handleCreatePage}
+        onDeletePage={handleDeletePage}
         user={user}
       />
 
-      {/* Main Content - Panel 2 */}
       <div className="flex-1 flex flex-col min-w-0 bg-white">
         <header className="h-14 border-b flex items-center justify-between px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-4">

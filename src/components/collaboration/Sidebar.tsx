@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { 
     ChevronRight, 
@@ -10,16 +10,15 @@ import {
     FileText, 
     Home, 
     Search, 
-    Clock, 
     Star, 
     Trash2, 
     Settings,
     MoreHorizontal,
     LayoutGrid,
-    Layout,
     PanelLeftClose,
-    PanelLeftOpen,
-    History
+    History,
+    FilePlus,
+    X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,18 @@ import {
     DropdownMenuItem, 
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { LogoBlack } from '@/components/icons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -40,11 +50,15 @@ interface SidebarProps {
   pages: CollabPage[];
   activePageId: string | null;
   onCreatePage: (parentId: string | null) => void;
+  onDeletePage: (pageId: string) => void;
   user: AppUser | null;
 }
 
-export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, onDeletePage, user }: SidebarProps) {
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState<string | null>(null);
 
   const toggleExpand = (e: React.MouseEvent, pageId: string) => {
     e.preventDefault();
@@ -52,7 +66,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
     setExpandedPages(prev => ({ ...prev, [pageId]: !prev[pageId] }));
   };
 
-  const rootPages = pages.filter(p => !p.parentId);
+  const filteredPages = useMemo(() => {
+      if (!searchQuery) return pages;
+      return pages.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [pages, searchQuery]);
+
+  const favorites = pages.filter(p => p.isFavorite);
+  const rootPages = filteredPages.filter(p => !p.parentId);
 
   const NavItem = ({ page, level = 0 }: { page: CollabPage, level?: number }) => {
     const isExpanded = expandedPages[page.id];
@@ -89,11 +109,11 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48 rounded-xl">
-                    <DropdownMenuItem onClick={() => onCreatePage(page.id)} className="gap-2 text-xs font-bold uppercase">
+                <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-bold uppercase rounded-lg">
                         <Plus className="h-3.5 w-3.5" /> Add Subpage
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2 text-xs font-bold uppercase text-red-600">
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToDelete(page.id); }} className="gap-2 text-xs font-bold uppercase text-red-600 rounded-lg">
                         <Trash2 className="h-3.5 w-3.5" /> Delete
                     </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -111,7 +131,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
   return (
     <div className={cn(
-      "bg-slate-50/80 border-r transition-all duration-300 flex flex-col h-full group/sidebar shrink-0",
+      "bg-slate-50/80 border-r transition-all duration-300 flex flex-col h-full group/sidebar shrink-0 relative",
       isOpen ? "w-72" : "w-0 overflow-hidden border-none"
     )}>
       {/* Sidebar Header */}
@@ -130,10 +150,34 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         </div>
 
         <div className="space-y-1">
-            <Button variant="outline" className="w-full justify-start h-10 rounded-xl border-slate-200 bg-white shadow-sm gap-3 font-bold text-xs">
-                <Search className="h-4 w-4 text-slate-400" />
-                Quick Find
-            </Button>
+            <div className="relative group/search">
+                <Button 
+                    variant="outline" 
+                    onClick={() => setIsSearching(true)}
+                    className="w-full justify-start h-10 rounded-xl border-slate-200 bg-white shadow-sm gap-3 font-bold text-xs"
+                >
+                    <Search className="h-4 w-4 text-slate-400" />
+                    {isSearching ? '' : 'Quick Find'}
+                </Button>
+                {isSearching && (
+                    <div className="absolute inset-0 z-50">
+                        <Input 
+                            autoFocus
+                            placeholder="Type to filter..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onBlur={() => !searchQuery && setIsSearching(false)}
+                            className="h-10 rounded-xl bg-white shadow-lg border-primary pr-8"
+                        />
+                        <button 
+                            onClick={() => { setSearchTerm(''); setIsSearching(false); }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100"
+                        >
+                            <X className="h-3 w-3 text-slate-400" />
+                        </button>
+                    </div>
+                )}
+            </div>
             <Button variant="ghost" className="w-full justify-start h-10 rounded-xl gap-3 font-bold text-xs text-slate-600">
                 <Settings className="h-4 w-4" />
                 Settings
@@ -143,13 +187,32 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       {/* Pages Navigation */}
       <ScrollArea className="flex-1 px-4 pb-10">
-        <div className="space-y-6">
+        <div className="space-y-8">
+            {favorites.length > 0 && !searchQuery && (
+                <div className="space-y-1">
+                    <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Favorites</h4>
+                    <div className="space-y-0.5">
+                        {favorites.map(p => (
+                             <Link key={p.id} href={`/workspace/${p.id}`}>
+                                <div className={cn(
+                                    "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                                    activePageId === p.id ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                                )}>
+                                    <Star className="h-3.5 w-3.5 text-amber-500 fill-current" />
+                                    <span className="truncate">{p.title}</span>
+                                </div>
+                             </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-1">
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Company Workspace</h4>
                 <div className="space-y-0.5">
                     {rootPages.map(page => <NavItem key={page.id} page={page} />)}
-                    {rootPages.length === 0 && (
-                        <div className="px-3 py-4 text-center border-2 border-dashed rounded-xl border-slate-100 opacity-40">
+                    {rootPages.length === 0 && !searchQuery && (
+                        <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Empty Workspace</p>
                         </div>
                     )}
@@ -166,13 +229,10 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
             <div className="pt-6 border-t border-slate-100 space-y-1">
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Internal Hub</h4>
-                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500">
-                    <Star className="h-4 w-4" /> Favorites
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500">
+                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900">
                     <History className="h-4 w-4" /> Recent
                 </Button>
-                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500">
+                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900">
                     <Trash2 className="h-4 w-4" /> Trash
                 </Button>
             </div>
@@ -191,6 +251,26 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </div>
         </div>
       </div>
+
+      <AlertDialog open={!!pageToDelete} onOpenChange={() => setPageToDelete(null)}>
+        <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Delete Page?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
+              This action is permanent and will delete all nested subpages. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-6">
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Keep</AlertDialogCancel>
+            <AlertDialogAction 
+                onClick={() => pageToDelete && onDeletePage(pageToDelete)}
+                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
+            >
+                Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

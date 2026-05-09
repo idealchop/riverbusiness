@@ -81,6 +81,10 @@ export interface CollabPage {
     content?: any; // TipTap JSON
     createdBy: string;
     createdAt: any;
+    updatedAt?: any;
+    isFavorite?: boolean;
+    isPublic?: boolean;
+    shareToken?: string;
 }
 
 export interface HRAttendanceLog {
