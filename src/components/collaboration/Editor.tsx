@@ -1,11 +1,14 @@
+
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import Link from '@tiptap/extension-link';
+import ImageExtension from '@tiptap/extension-image';
 import { cn } from '@/lib/utils';
 import { 
     Bold, 
@@ -20,10 +23,16 @@ import {
     Undo2,
     Redo2,
     Type,
-    Code
+    Code,
+    Link as LinkIcon,
+    Image as ImageIcon,
+    Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useStorage, useAuth } from '@/firebase';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface EditorProps {
   initialContent: any;
@@ -32,6 +41,12 @@ interface EditorProps {
 }
 
 export function Editor({ initialContent, onContentChange, editable = true }: EditorProps) {
+  const storage = useStorage();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -43,6 +58,17 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       TaskList,
       TaskItem.configure({
         nested: true,
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-primary underline cursor-pointer hover:text-primary-light transition-colors font-bold',
+        },
+      }),
+      ImageExtension.configure({
+        HTMLAttributes: {
+          class: 'rounded-[2rem] border-4 border-white shadow-2xl max-w-full h-auto my-12 mx-auto block',
+        },
       }),
     ],
     content: initialContent,
@@ -57,19 +83,57 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     }
   });
 
-  // Keep content in sync only if it's external (not the user's typing)
-  // Since we use key={page.id} in parent, this component is fresh for each page.
   useEffect(() => {
     if (editor && initialContent && editor.isEmpty) {
         editor.commands.setContent(initialContent);
     }
   }, [editor, initialContent]);
 
+  const setLink = () => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('Enter link URL', previousUrl);
+
+    if (url === null) return;
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor || !storage || !auth?.currentUser) return;
+
+    setIsUploading(true);
+    const path = `collab_images/${auth.currentUser.uid}/${Date.now()}-${file.name}`;
+
+    try {
+      const url = await uploadFileWithProgress(storage, auth, path, file, {}, () => {});
+      editor.chain().focus().setImage({ src: url }).run();
+      toast({ title: 'Image attached' });
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image.' });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   if (!editor) return null;
 
   return (
     <div className="group">
-      {/* Floating Toolbar - Only shown in editable mode */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImageUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
+
       {editable && (
         <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-6">
             <div className="flex items-center gap-1 px-1">
@@ -82,11 +146,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
                     active={editor.isActive('heading', { level: 2 })}
                     icon={<Heading2 className="h-4 w-4" />}
-                />
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().setParagraph().run()} 
-                    active={editor.isActive('paragraph')}
-                    icon={<Type className="h-4 w-4" />}
                 />
             </div>
             
@@ -103,11 +162,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     active={editor.isActive('italic')}
                     icon={<Italic className="h-4 w-4" />}
                 />
-                <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleCode().run()} 
-                    active={editor.isActive('code')}
-                    icon={<Code className="h-4 w-4" />}
-                />
             </div>
 
             <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
@@ -119,14 +173,24 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     icon={<List className="h-4 w-4" />}
                 />
                 <ToolbarButton 
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()} 
-                    active={editor.isActive('orderedList')}
-                    icon={<ListOrdered className="h-4 w-4" />}
-                />
-                <ToolbarButton 
                     onClick={() => editor.chain().focus().toggleTaskList().run()} 
                     active={editor.isActive('taskList')}
                     icon={<CheckSquare className="h-4 w-4" />}
+                />
+            </div>
+
+            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+            <div className="flex items-center gap-1 px-1">
+                <ToolbarButton 
+                    onClick={setLink} 
+                    active={editor.isActive('link')}
+                    icon={<LinkIcon className="h-4 w-4" />}
+                />
+                <ToolbarButton 
+                    onClick={() => fileInputRef.current?.click()} 
+                    disabled={isUploading}
+                    icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
                 />
             </div>
 
@@ -149,7 +213,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       <EditorContent editor={editor} />
       
-      {/* Footer hint - Only shown in editable mode */}
       {editable && (
           <div className="pt-6 mt-6 border-t border-slate-50 flex items-center justify-between opacity-30">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative State Active</p>

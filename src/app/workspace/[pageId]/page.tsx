@@ -58,6 +58,10 @@ export default function PageEditor() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // Use refs to keep track of the latest content for immediate saving on unmount
+  const latestContentRef = useRef<any>(null);
+  const latestTitleRef = useRef<string>('');
+
   // Debounce refs
   const contentUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,15 +70,32 @@ export default function PageEditor() {
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
   const { data: collaborators } = useCollection(presenceQuery);
 
+  const forceSave = useCallback(async () => {
+    if (!firestore || !pageId || !latestContentRef.current) return;
+    
+    // Clear existing debounce timeouts
+    if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
+    if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
+
+    const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
+    const updateData = { 
+        title: latestTitleRef.current,
+        content: latestContentRef.current,
+        updatedAt: serverTimestamp()
+    };
+    
+    // Fire and forget update on unmount
+    updateDoc(pageRef, updateData).catch(() => {});
+  }, [firestore, pageId]);
+
   useEffect(() => {
     if (!firestore || !pageId || !user) return;
 
-    // Reset state for new page
     setLoading(true);
     setPage(null);
     setIsSaving(false);
 
-    // Set local presence - Non-blocking
+    // Set local presence
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
         userId: user.uid,
@@ -95,9 +116,11 @@ export default function PageEditor() {
     const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
     const unsub = onSnapshot(pageRef, (snapshot) => {
       if (snapshot.exists()) {
-        setPage({ id: snapshot.id, ...snapshot.data() } as CollabPage);
+        const data = snapshot.data();
+        setPage({ id: snapshot.id, ...data } as CollabPage);
+        latestContentRef.current = data.content;
+        latestTitleRef.current = data.title;
       } else {
-        // Only redirect if we haven't already navigated away
         if (window.location.pathname.includes(pageId as string)) {
           router.push('/workspace');
         }
@@ -113,17 +136,15 @@ export default function PageEditor() {
 
     return () => {
         unsub();
-        // Cleanup presence - Non-blocking
+        forceSave(); // Immediate sync on navigation
         deleteDoc(presenceRef).catch(() => {}); 
-        if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
-        if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
     };
-  }, [firestore, pageId, router, user]);
+  }, [firestore, pageId, router, user, forceSave]);
 
   const handleUpdateTitle = useCallback((newTitle: string) => {
     if (!firestore || !pageId || !page) return;
     
-    // Optimistic local update
+    latestTitleRef.current = newTitle;
     setPage(prev => prev ? { ...prev, title: newTitle } : null);
 
     if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
@@ -135,7 +156,7 @@ export default function PageEditor() {
         
         updateDoc(pageRef, updateData)
             .then(() => {
-                setTimeout(() => setIsSaving(false), 500);
+                setTimeout(() => setIsSaving(false), 800);
             })
             .catch(async (err) => {
                 const permissionError = new FirestorePermissionError({
@@ -146,12 +167,14 @@ export default function PageEditor() {
                 errorEmitter.emit('permission-error', permissionError);
                 setIsSaving(false);
             });
-    }, 1000); // Shorter 1s debounce for faster transitions
+    }, 1000);
   }, [firestore, pageId, page]);
 
   const handleUpdateContent = useCallback((json: any) => {
     if (!firestore || !pageId) return;
     
+    latestContentRef.current = json;
+
     if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
 
     contentUpdateTimeoutRef.current = setTimeout(() => {
@@ -175,7 +198,7 @@ export default function PageEditor() {
             errorEmitter.emit('permission-error', permissionError);
             setIsSaving(false);
         });
-    }, 1000); // Shorter 1s debounce
+    }, 1000);
   }, [firestore, pageId]);
 
   const toggleFavorite = async () => {

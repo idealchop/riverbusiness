@@ -52,6 +52,11 @@ service firebase.storage {
     match /chats/{userId}/{fileName} {
         allow write: if request.auth.uid == userId || isAdmin();
     }
+
+    // Rule for collab document images
+    match /collab_images/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
     
     // --- READ RULES ---
 
