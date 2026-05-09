@@ -353,18 +353,26 @@ export function StatCards({
             <CardContent>
               <div className="space-y-4">
                 <div className={cn(
-                    "p-3 rounded-xl border flex flex-col gap-1 transition-all",
-                    autoRefill ? "bg-blue-50 border-blue-100" : "bg-muted/40 border-slate-200 opacity-60"
+                    "p-3 rounded-xl border flex flex-col gap-1 transition-all relative overflow-hidden",
+                    autoRefill ? "bg-blue-50 border-blue-100" : "bg-slate-100 border-slate-200 opacity-60"
                 )}>
-                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{autoRefill ? "Next Dispatch" : "Service Paused"}</p>
-                   <p className="text-sm font-extrabold text-slate-900">{autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}</p>
+                   <div className="flex items-center justify-between">
+                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{autoRefill ? "Next Dispatch" : "Service Paused"}</p>
+                       {autoRefill && (
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                          </span>
+                       )}
+                   </div>
+                   <p className={cn("text-sm font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>{autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}</p>
                 </div>
                 {autoRefill ? (
-                    <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest" onClick={onUpdateScheduleClick}>
+                    <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest rounded-xl border-slate-200" onClick={onUpdateScheduleClick}>
                         <Edit className="mr-2 h-3 w-3" /> Customize Delivery
                     </Button>
                 ) : (
-                    <Button variant="default" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900" onClick={onRequestRefillClick}>
+                    <Button variant="default" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl" onClick={onRequestRefillClick}>
                         <CalendarIcon className="mr-2 h-4 w-4" /> Schedule One-Time
                     </Button>
                 )}
@@ -376,14 +384,14 @@ export function StatCards({
     </div>
 
     <AlertDialog open={isConfirmingToggle} onOpenChange={setIsConfirmingToggle}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8">
             <AlertDialogHeader>
-                <AlertDialogTitle className="text-xl font-bold">Adjust Auto-Refill Preferences?</AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-600 leading-relaxed pt-2">
+                <AlertDialogTitle className="text-2xl font-black tracking-tight">Adjust Auto-Refill Preferences?</AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
                     {toggleTargetState ? (
                         <>
                             Re-activating auto-refill will resume your recurring schedule:
-                            <strong className="block mt-3 text-slate-900 text-base">→ Next {nextRefillDay} at {planDetails?.deliveryTime || 'morning'}</strong>
+                            <strong className="block mt-4 text-slate-900 text-lg font-black">→ Next {nextRefillDay} at {planDetails?.deliveryTime || 'morning'}</strong>
                             Our fulfillment team will be notified immediately.
                         </>
                     ) : (
@@ -393,9 +401,9 @@ export function StatCards({
                     )}
                 </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="pt-4">
-                <AlertDialogCancel className="rounded-full font-bold" onClick={() => setToggleTargetState(null)}>Keep Current</AlertDialogCancel>
-                <AlertDialogAction className="rounded-full font-bold" onClick={handleToggleConfirmation}>
+            <AlertDialogFooter className="pt-8 gap-3">
+                <AlertDialogCancel className="rounded-xl h-12 font-bold text-xs uppercase tracking-widest px-8 border-slate-100" onClick={() => setToggleTargetState(null)}>Keep Current</AlertDialogCancel>
+                <AlertDialogAction className="rounded-xl h-12 font-bold text-xs uppercase tracking-widest px-8 shadow-lg" onClick={handleToggleConfirmation}>
                     {toggleTargetState ? 'Enable Auto-Refill' : 'Confirm Pause'}
                 </AlertDialogAction>
             </AlertDialogFooter>
