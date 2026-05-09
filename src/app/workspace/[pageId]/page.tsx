@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { FullScreenLoader } from '@/components/ui/loader';
@@ -18,9 +17,10 @@ import {
   ImageIcon,
   Layout,
   Trash2,
-  CheckCircle
+  CheckCircle,
+  Globe
 } from 'lucide-react';
-import type { CollabPage } from '@/lib/types';
+import type { CollabPage, SecurityRuleContext } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareDialog } from '@/components/collaboration/ShareDialog';
@@ -73,13 +73,22 @@ export default function PageEditor() {
     setPage(null);
     setIsSaving(false);
 
-    // Set local presence
+    // Set local presence - Non-blocking
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
-    setDoc(presenceRef, {
+    const presenceData = {
         userId: user.uid,
         name: user.displayName || user.email?.split('@')[0] || 'Contributor',
-        photoURL: user.photoURL,
+        photoURL: user.photoURL || null,
         lastActive: serverTimestamp()
+    };
+    
+    setDoc(presenceRef, presenceData).catch(async (err) => {
+        const permissionError = new FirestorePermissionError({
+            path: presenceRef.path,
+            operation: 'create',
+            requestResourceData: presenceData
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
 
     const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
@@ -93,11 +102,18 @@ export default function PageEditor() {
         }
       }
       setLoading(false);
+    }, async (err) => {
+        const permissionError = new FirestorePermissionError({
+            path: pageRef.path,
+            operation: 'get'
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
 
     return () => {
         unsub();
-        deleteDoc(presenceRef).catch(() => {}); // Cleanup presence
+        // Cleanup presence - Non-blocking
+        deleteDoc(presenceRef).catch(() => {}); 
         if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
         if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
     };
@@ -111,52 +127,73 @@ export default function PageEditor() {
 
     if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
     
-    titleUpdateTimeoutRef.current = setTimeout(async () => {
+    titleUpdateTimeoutRef.current = setTimeout(() => {
         setIsSaving(true);
-        try {
-          const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-          await updateDoc(pageRef, { title: newTitle });
-        } catch (error) {
-          console.error("Error updating title:", error);
-        } finally {
-          // Keep indicator for a brief moment to show completion
-          setTimeout(() => setIsSaving(false), 500);
-        }
+        const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
+        const updateData = { title: newTitle };
+        
+        updateDoc(pageRef, updateData)
+            .then(() => {
+                setTimeout(() => setIsSaving(false), 500);
+            })
+            .catch(async (err) => {
+                const permissionError = new FirestorePermissionError({
+                    path: pageRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                setIsSaving(false);
+            });
     }, 2000);
   }, [firestore, pageId, page]);
 
   const handleUpdateContent = useCallback((json: any) => {
     if (!firestore || !pageId) return;
     
-    // We do NOT set isSaving(true) here to avoid a re-render on every keystroke
     if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
 
-    contentUpdateTimeoutRef.current = setTimeout(async () => {
-      setIsSaving(true); // Only show syncing when the network request actually fires
-      try {
-        const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-        await updateDoc(pageRef, { 
-          content: json,
-          updatedAt: serverTimestamp()
+    contentUpdateTimeoutRef.current = setTimeout(() => {
+      setIsSaving(true);
+      const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
+      const updateData = { 
+        content: json,
+        updatedAt: serverTimestamp()
+      };
+      
+      updateDoc(pageRef, updateData)
+        .then(() => {
+            setTimeout(() => setIsSaving(false), 800);
+        })
+        .catch(async (err) => {
+            const permissionError = new FirestorePermissionError({
+                path: pageRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setIsSaving(false);
         });
-      } catch (error) {
-        console.error("Error updating content:", error);
-      } finally {
-        // Small delay to ensure the user sees the "Synced" state
-        setTimeout(() => setIsSaving(false), 800);
-      }
-    }, 3000); // 3 second pause in typing triggers a cloud sync
+    }, 3000);
   }, [firestore, pageId]);
 
   const toggleFavorite = async () => {
     if (!firestore || !page) return;
-    try {
-        const pageRef = doc(firestore, 'collaboration_pages', page.id);
-        await updateDoc(pageRef, { isFavorite: !page.isFavorite });
-        toast({ title: page.isFavorite ? 'Removed from favorites' : 'Added to favorites' });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed' });
-    }
+    const pageRef = doc(firestore, 'collaboration_pages', page.id);
+    const updateData = { isFavorite: !page.isFavorite };
+    
+    updateDoc(pageRef, updateData)
+        .then(() => {
+            toast({ title: !page.isFavorite ? 'Added to favorites' : 'Removed from favorites' });
+        })
+        .catch(async (err) => {
+            const permissionError = new FirestorePermissionError({
+                path: pageRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
   };
 
   const handleDelete = () => {
@@ -253,7 +290,7 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto py-8 px-8 space-y-2">
+        <div className="max-w-4xl mx-auto py-12 px-8 space-y-2">
             {/* Header Decorations */}
             <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
                 <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">

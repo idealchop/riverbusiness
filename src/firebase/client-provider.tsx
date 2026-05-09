@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
-import { getStorage, type FirebaseStorage } from 'firebase/storage';
-import { firebaseConfig } from './config';
+import { type FirebaseApp } from 'firebase/app';
+import { type Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { type Firestore } from 'firebase/firestore';
+import { type FirebaseStorage } from 'firebase/storage';
+import { initializeFirebase } from './index';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -28,32 +28,22 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   });
 
   useEffect(() => {
-    // This effect runs only on the client, after the component has mounted.
-    if (typeof window !== 'undefined') {
-        let firebaseApp: FirebaseApp;
-        if (!getApps().length) {
-            firebaseApp = initializeApp(firebaseConfig);
-        } else {
-            firebaseApp = getApp();
-        }
-
-        const auth = getAuth(firebaseApp);
-        const firestore = getFirestore(firebaseApp);
-        const storage = getStorage(firebaseApp);
-      
-        // Explicitly set session persistence to 'local'
+    // Standardize initialization through the singleton pattern
+    const initialized = initializeFirebase();
+    
+    if (initialized) {
+        const { firebaseApp, auth, firestore, storage } = initialized;
+        
+        // Configure Auth persistence once on start
         setPersistence(auth, browserLocalPersistence)
-            .then(() => {
-                // This ensures the user stays logged in across browser sessions.
-                setServices({ firebaseApp, auth, firestore, storage });
-            })
             .catch((error) => {
-                console.error("Firebase Auth persistence error:", error);
-                // Fallback to setting services anyway
+                console.warn("Firebase Auth persistence configuration notice:", error);
+            })
+            .finally(() => {
                 setServices({ firebaseApp, auth, firestore, storage });
             });
     }
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   return (
     <FirebaseProvider

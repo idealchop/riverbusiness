@@ -6,8 +6,24 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
-// This function ensures that Firebase is initialized only once.
+/**
+ * Singleton cache for Firebase services to prevent multiple initializations
+ * which can lead to Firestore assertion failures.
+ */
+let firebaseServices: {
+  firebaseApp: FirebaseApp;
+  auth: Auth;
+  firestore: Firestore;
+  storage: FirebaseStorage;
+} | null = null;
+
+// This function ensures that Firebase is initialized only once and cached.
 export function initializeFirebase() {
+  // Safety check for server-side environments
+  if (typeof window === 'undefined') return null;
+
+  if (firebaseServices) return firebaseServices;
+
   let firebaseApp: FirebaseApp;
 
   if (!getApps().length) {
@@ -20,7 +36,8 @@ export function initializeFirebase() {
   const firestore = getFirestore(firebaseApp);
   const storage = getStorage(firebaseApp);
 
-  return { firebaseApp, auth, firestore, storage };
+  firebaseServices = { firebaseApp, auth, firestore, storage };
+  return firebaseServices;
 }
 
 export * from './provider';
