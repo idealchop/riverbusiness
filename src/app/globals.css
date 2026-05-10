@@ -176,6 +176,11 @@
     color: inherit;
     font-weight: inherit;
   }
+
+  /* Alignment Utility */
+  .prose .text-left { text-align: left; }
+  .prose .text-center { text-align: center; }
+  .prose .text-right { text-align: right; }
 }
 
 @keyframes bounce-and-fade {

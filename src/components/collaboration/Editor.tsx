@@ -13,6 +13,9 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
 import { cn } from '@/lib/utils';
 import { 
     Bold, 
@@ -30,7 +33,18 @@ import {
     Quote,
     Code,
     Eraser,
-    Minus
+    Minus,
+    Type,
+    Highlighter,
+    Underline as UnderlineIcon,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    Combine,
+    Split,
+    Trash2,
+    Plus,
+    TableProperties
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -58,7 +72,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Helper to handle the actual upload and insertion
   const uploadAndInsertImage = useCallback(async (file: File) => {
     if (!editor || !storage || !auth?.currentUser) return;
 
@@ -90,6 +103,11 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     extensions: [
       StarterKit.configure({
           heading: { levels: [1, 2, 3] }
+      }),
+      Underline,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
       }),
       Placeholder.configure({
         placeholder: 'press "/" for commands...',
@@ -196,7 +214,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       {editable && (
         <TooltipProvider delayDuration={0}>
           <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-10">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
+                  {/* Text Structure */}
                   <div className="flex items-center gap-1 px-1">
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
@@ -214,7 +233,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                   
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  <div className="flex items-center gap-1 px-1">
+                  {/* Formatting */}
+                  <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().toggleBold().run()} 
                           active={editor.isActive('bold')}
@@ -228,16 +248,47 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                           label="Italic"
                       />
                       <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleCode().run()} 
-                          active={editor.isActive('code')}
-                          icon={<Code className="h-4 w-4" />}
-                          label="Inline Code"
+                          onClick={() => editor.chain().focus().toggleUnderline().run()} 
+                          active={editor.isActive('underline')}
+                          icon={<UnderlineIcon className="h-4 w-4" />}
+                          label="Underline"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleHighlight().run()} 
+                          active={editor.isActive('highlight')}
+                          icon={<Highlighter className="h-4 w-4" />}
+                          label="Highlight"
                       />
                   </div>
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  <div className="flex items-center gap-1 px-1">
+                  {/* Alignment */}
+                  <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().setTextAlign('left').run()} 
+                          active={editor.isActive({ textAlign: 'left' })}
+                          icon={<AlignLeft className="h-4 w-4" />}
+                          label="Align Left"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().setTextAlign('center').run()} 
+                          active={editor.isActive({ textAlign: 'center' })}
+                          icon={<AlignCenter className="h-4 w-4" />}
+                          label="Align Center"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().setTextAlign('right').run()} 
+                          active={editor.isActive({ textAlign: 'right' })}
+                          icon={<AlignRight className="h-4 w-4" />}
+                          label="Align Right"
+                      />
+                  </div>
+
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                  {/* Lists & Blocks */}
+                  <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().toggleBulletList().run()} 
                           active={editor.isActive('bulletList')}
@@ -260,12 +311,60 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  <div className="flex items-center gap-1 px-1">
+                  {/* Table Controls (Dynamic) */}
+                  <div className="flex items-center gap-0.5 px-1 bg-blue-50/50 rounded-xl">
                       <ToolbarButton 
                           onClick={insertGrid} 
                           active={editor.isActive('table')}
                           icon={<TableIcon className="h-4 w-4" />}
-                          label="Insert 3x3 Grid"
+                          label="New Grid"
+                      />
+                      {editor.isActive('table') && (
+                          <div className="flex items-center gap-0.5 animate-in fade-in zoom-in-95 duration-200">
+                               <ToolbarButton 
+                                  onClick={() => editor.chain().focus().addRowAfter().run()} 
+                                  icon={<Plus className="h-3 w-3" />}
+                                  label="Add Row Below"
+                              />
+                              <ToolbarButton 
+                                  onClick={() => editor.chain().focus().addColumnAfter().run()} 
+                                  icon={<div className="flex items-center rotate-90"><Plus className="h-3 w-3" /></div>}
+                                  label="Add Column After"
+                              />
+                              <ToolbarButton 
+                                  onClick={() => editor.chain().focus().mergeCells().run()} 
+                                  icon={<Combine className="h-3.5 w-3.5" />}
+                                  label="Merge Cells"
+                              />
+                              <ToolbarButton 
+                                  onClick={() => editor.chain().focus().splitCell().run()} 
+                                  icon={<Split className="h-3.5 w-3.5" />}
+                                  label="Split Cell"
+                              />
+                              <ToolbarButton 
+                                  onClick={() => editor.chain().focus().deleteTable().run()} 
+                                  icon={<Trash2 className="h-3.5 w-3.5 text-red-500" />}
+                                  label="Delete Grid"
+                              />
+                          </div>
+                      )}
+                  </div>
+
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                  {/* Media & Misc */}
+                  <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton 
+                          onClick={setLink} 
+                          active={editor.isActive('link')}
+                          icon={<LinkIcon className="h-4 w-4" />}
+                          label="Link"
+                      />
+                      <ToolbarButton 
+                          onClick={() => fileInputRef.current?.click()} 
+                          disabled={isUploading}
+                          icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
+                          label="Image"
                       />
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().setHorizontalRule().run()} 
@@ -276,29 +375,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  <div className="flex items-center gap-1 px-1">
-                      <ToolbarButton 
-                          onClick={setLink} 
-                          active={editor.isActive('link')}
-                          icon={<LinkIcon className="h-4 w-4" />}
-                          label="Insert Link"
-                      />
-                      <ToolbarButton 
-                          onClick={() => fileInputRef.current?.click()} 
-                          disabled={isUploading}
-                          icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
-                          label="Attach Image"
-                      />
-                  </div>
-
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-                  <div className="flex items-center gap-1 px-1">
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().unsetAllMarks().run()} 
-                          icon={<Eraser className="h-4 w-4" />}
-                          label="Clear Formatting"
-                      />
+                  {/* History */}
+                  <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().undo().run()} 
                           disabled={!editor.can().undo()}
