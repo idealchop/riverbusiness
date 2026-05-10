@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -24,17 +25,8 @@ export default function TrashPages() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  // Get full user profile to retrieve the correct companyId
-  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile } = useDoc<AppUser>(userDocRef);
-
-  const companyId = userProfile?.companyId || 'default';
-
-  // Fetch all pages for the company to filter locally (prevents index errors)
-  const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
-    collection(firestore, 'collaboration_pages'),
-    where('companyId', '==', companyId)
-  ) : null, [firestore, companyId]);
+  // Fetch all trashed pages globally - NO RESTRICTION
+  const pagesQuery = useMemoFirebase(() => (firestore) ? collection(firestore, 'collaboration_pages') : null, [firestore]);
 
   const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
 

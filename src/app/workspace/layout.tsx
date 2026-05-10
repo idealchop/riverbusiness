@@ -37,11 +37,8 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const companyId = user?.companyId || 'default';
 
-  // Fetch all organizational pages (trashed or not)
-  const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
-    collection(firestore, 'collaboration_pages'),
-    where('companyId', '==', companyId)
-  ) : null, [firestore, companyId]);
+  // Fetch all organizational pages (trashed or not) - NO RESTRICTION
+  const pagesQuery = useMemoFirebase(() => (firestore) ? collection(firestore, 'collaboration_pages') : null, [firestore]);
 
   const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
@@ -222,7 +219,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
              )}
              <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    {user?.businessName || 'Your Workspace'}
+                    Collaborative Workspace
                 </span>
              </div>
           </div>

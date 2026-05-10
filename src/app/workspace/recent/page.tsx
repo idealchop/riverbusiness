@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -14,17 +15,8 @@ export default function RecentPages() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  // Get full user profile to retrieve the correct companyId
-  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile } = useDoc<AppUser>(userDocRef);
-
-  const companyId = userProfile?.companyId || 'default';
-
-  // Fetch all pages for the company to filter/sort locally (prevents index errors)
-  const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
-    collection(firestore, 'collaboration_pages'),
-    where('companyId', '==', companyId)
-  ) : null, [firestore, companyId]);
+  // Fetch all pages globally to track recent activity across all teams - NO RESTRICTION
+  const pagesQuery = useMemoFirebase(() => (firestore) ? collection(firestore, 'collaboration_pages') : null, [firestore]);
 
   const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
 
@@ -55,7 +47,7 @@ export default function RecentPages() {
                 </div>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Recently Edited</h1>
-                    <p className="text-sm font-medium text-slate-500">Jump back into your most active documents.</p>
+                    <p className="text-sm font-medium text-slate-500">Jump back into the most active documents across the platform.</p>
                 </div>
             </div>
         </div>
