@@ -361,7 +361,7 @@ export default function PageEditor() {
                   <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50">
                       <RotateCcw className="h-3 w-3" /> restore document
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-xl text-red-400 font-bold text-[10px]">
+                  <Button variant="ghost" size="sm" className="h-8 rounded-xl text-red-400 font-bold text-[10px]" onClick={() => setIsDeleteDialogOpen(true)}>
                       delete permanently
                   </Button>
               </div>
@@ -471,45 +471,26 @@ export default function PageEditor() {
                 >
                     <Share2 className="h-4 w-4" />
                 </button>
+
+                <button 
+                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
+                    onClick={handleTrash}
+                    title="move to trash"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </button>
             </>
           )}
-          
-          <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
-                  {!page.isTrashed ? (
-                      <>
-                        <DropdownMenuItem onClick={handleShare} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <Share2 className="h-4 w-4 opacity-50" /> share settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'remove favorite' : 'add favorite'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleCreateSubpage} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <FilePlus className="h-4 w-4 opacity-50" /> add subpage
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={handleTrash} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                            <Trash2 className="h-4 w-4 opacity-50" /> move to trash
-                        </DropdownMenuItem>
-                      </>
-                  ) : (
-                      <>
-                        <DropdownMenuItem onClick={handleRestore} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <RotateCcw className="h-4 w-4 opacity-50" /> restore
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                            <Trash2 className="h-4 w-4 opacity-50" /> delete permanently
-                        </DropdownMenuItem>
-                      </>
-                  )}
-              </DropdownMenuContent>
-          </DropdownMenu>
+
+          {page.isTrashed && (
+              <button 
+                  className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  title="delete permanently"
+              >
+                  <Trash2 className="h-4 w-4" />
+              </button>
+          )}
         </div>
       </div>
 
