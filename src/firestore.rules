@@ -25,41 +25,41 @@ service cloud.firestore {
 
     // --- USER PROFILES & DIRECTORY ---
 
-    match /users/{allPaths=**} {
+    match /users/{document=**} {
       // Unrestricted access for all signed-in members to facilitate collaboration and presence
       allow read, write: if isAuthenticated();
     }
     
     // --- INVITATIONS & ONBOARDING ---
 
-    match /unclaimedProfiles/{allPaths=**} {
+    match /unclaimedProfiles/{document=**} {
       allow read, write: if isAuthenticated();
     }
 
-    match /unclaimedEmployees/{allPaths=**} {
+    match /unclaimedEmployees/{document=**} {
       allow read, write: if isAuthenticated();
     }
 
     // --- HR MULTI-TENANT DATA ---
 
-    match /hr_companies/{allPaths=**} {
+    match /hr_companies/{document=**} {
       allow read, write: if isAuthenticated();
     }
 
     // --- COLLABORATION PLATFORM ---
 
-    match /collaboration_pages/{allPaths=**} {
+    match /collaboration_pages/{document=**} {
       // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, organize or delete any page
       allow read, write: if isAuthenticated();
     }
     
-    match /collaboration_workspaces/{allPaths=**} {
+    match /collaboration_workspaces/{document=**} {
         allow read, write: if isAuthenticated();
     }
 
     // --- STATION & COMPLIANCE ---
 
-    match /waterStations/{allPaths=**} {
+    match /waterStations/{document=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }

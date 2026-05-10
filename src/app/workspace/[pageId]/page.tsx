@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { FullScreenLoader } from '@/components/ui/loader';
@@ -21,9 +21,10 @@ import {
   CheckCircle,
   Globe,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Users
 } from 'lucide-react';
-import type { CollabPage, SecurityRuleContext } from '@/lib/types';
+import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareDialog } from '@/components/collaboration/ShareDialog';
@@ -46,6 +47,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function PageEditor() {
   const { pageId } = useParams();
@@ -59,6 +66,9 @@ export default function PageEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: userProfile } = useDoc<AppUser>(userDocRef);
 
   // Use refs to keep track of the latest content for immediate saving on unmount
   const latestContentRef = useRef<any>(null);
@@ -91,7 +101,7 @@ export default function PageEditor() {
   }, [firestore, pageId]);
 
   useEffect(() => {
-    if (!firestore || !pageId || !user) return;
+    if (!firestore || !pageId || !user || !userProfile) return;
 
     setLoading(true);
     setPage(null);
@@ -101,8 +111,8 @@ export default function PageEditor() {
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
         userId: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || 'Contributor',
-        photoURL: user.photoURL || null,
+        name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'Contributor',
+        photoURL: userProfile.photoURL || user.photoURL || null,
         lastActive: serverTimestamp()
     };
     
@@ -141,7 +151,7 @@ export default function PageEditor() {
         forceSave(); // Immediate sync on navigation
         deleteDoc(presenceRef).catch(() => {}); 
     };
-  }, [firestore, pageId, router, user, forceSave]);
+  }, [firestore, pageId, router, user, userProfile, forceSave]);
 
   const handleUpdateTitle = useCallback((newTitle: string) => {
     if (!firestore || !pageId || !page || page.isTrashed) return;
@@ -271,33 +281,44 @@ export default function PageEditor() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex -space-x-2 mr-2">
-              {collaborators?.filter(c => c.id !== user?.uid).map(collab => (
-                  <Avatar key={collab.id} className="h-7 w-7 border-2 border-white shadow-sm ring-1 ring-slate-100">
-                      <AvatarImage src={collab.photoURL} />
-                      <AvatarFallback className="text-[10px] font-bold">{collab.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-              ))}
-              {collaborators && collaborators.length > 3 && (
-                  <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 border-2 border-white z-10">
-                      +{collaborators.length - 3}
-                  </div>
-              )}
-          </div>
+          {/* Collaborative Presence - Face Pile */}
+          <TooltipProvider delayDuration={0}>
+             <div className="flex items-center gap-1 p-1 px-2 rounded-full bg-slate-50 border border-slate-100 mr-2 shadow-inner">
+                <Users className="h-3 w-3 text-slate-400 mr-1" />
+                <div className="flex -space-x-1.5">
+                    {collaborators?.filter(c => c.id !== user?.uid).map(collab => (
+                        <Tooltip key={collab.id}>
+                            <TooltipTrigger asChild>
+                                <Avatar className="h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default">
+                                    <AvatarImage src={collab.photoURL} />
+                                    <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="rounded-lg px-2 py-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest">{collab.name}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ))}
+                    {(!collaborators || collaborators.length <= 1) && (
+                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest px-1">Alone</span>
+                    )}
+                </div>
+            </div>
 
-          <div className="w-20 flex justify-center">
-            {isSaving ? (
-               <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
-                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Syncing</span>
-               </div>
-            ) : (
-               <div className="flex items-center gap-1.5 opacity-40">
-                 <CheckCircle className="h-3 w-3 text-slate-400" />
-                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Saved</span>
-               </div>
-            )}
-          </div>
+            <div className="w-20 flex justify-center">
+                {isSaving ? (
+                <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Syncing</span>
+                </div>
+                ) : (
+                <div className="flex items-center gap-1.5 opacity-40">
+                    <CheckCircle className="h-3 w-3 text-slate-400" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Saved</span>
+                </div>
+                )}
+            </div>
+          </TooltipProvider>
           
           {!page.isTrashed && (
             <>
