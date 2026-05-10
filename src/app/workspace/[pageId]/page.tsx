@@ -108,6 +108,7 @@ const EMOJI_LIST = [
   { char: '💳', keywords: 'credit card' },
   { char: '🏠', keywords: 'home house' },
   { char: '🏪', keywords: 'store shop' },
+  { char: '🏪', keywords: 'store shop' },
   { char: '🏭', keywords: 'factory industrial' },
   { char: '🏗️', keywords: 'construction' },
   { char: '🚜', keywords: 'tractor' },
@@ -397,45 +398,39 @@ export default function PageEditor() {
         <div className="flex items-center gap-4">
           {/* Collaborative Presence - Face Pile */}
           <TooltipProvider delayDuration={0}>
-             <div className="flex items-center gap-1 p-1 px-2 rounded-full bg-slate-50 border border-slate-100 mr-2 shadow-inner">
-                <Users className="h-3 w-3 text-slate-400 mr-1" />
-                <div className="flex -space-x-1.5">
-                    {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
-                        const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
-                        const isOnline = collab.isActive;
-                        return (
-                        <Tooltip key={collab.id}>
-                            <TooltipTrigger asChild>
-                                <Avatar className={cn(
-                                    "h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default",
-                                    !isOnline && "grayscale opacity-50"
-                                )}>
-                                    <AvatarImage src={collab.photoURL} />
-                                    <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl">
-                                <div className="flex flex-col">
-                                    <p className="text-xs font-black text-slate-900 leading-none">
-                                        {collab.name}
+             <div className="flex -space-x-1.5 mr-4">
+                {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
+                    const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
+                    const isOnline = collab.isActive;
+                    return (
+                    <Tooltip key={collab.id}>
+                        <TooltipTrigger asChild>
+                            <Avatar className={cn(
+                                "h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default",
+                                !isOnline && "grayscale opacity-50"
+                            )}>
+                                <AvatarImage src={collab.photoURL} />
+                                <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl">
+                            <div className="flex flex-col">
+                                <p className="text-xs font-black text-slate-900 leading-none">
+                                    {collab.name}
+                                </p>
+                                {!isOnline ? (
+                                    <p className="text-[10px] font-bold text-slate-400 leading-none mt-1">
+                                        last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
                                     </p>
-                                    {!isOnline ? (
-                                        <p className="text-[10px] font-bold text-slate-400 leading-none mt-1">
-                                            last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
-                                        </p>
-                                    ) : (
-                                        <p className="text-[10px] font-black text-primary leading-none mt-1">
-                                            viewing now
-                                        </p>
-                                    )}
-                                </div>
-                            </TooltipContent>
-                        </Tooltip>
-                    )})}
-                    {(!collaborators || collaborators.length <= 1) && (
-                         <span className="text-[9px] font-bold text-slate-300 px-1">alone</span>
-                    )}
-                </div>
+                                ) : (
+                                    <p className="text-[10px] font-black text-primary leading-none mt-1">
+                                        viewing now
+                                    </p>
+                                )}
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                )})}
             </div>
 
             <div className="w-20 flex justify-center">
@@ -455,33 +450,27 @@ export default function PageEditor() {
           
           {!page.isTrashed && (
             <>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900"
+                <button 
                     onClick={handleCreateSubpage}
+                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"
                     title="add subpage"
                 >
                     <FilePlus className="h-4 w-4" />
-                </Button>
+                </button>
 
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={cn("h-8 w-8 rounded-lg transition-colors", page.isFavorite ? "text-amber-500 hover:text-amber-600" : "text-slate-400 hover:text-slate-900")}
+                <button 
+                    className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500 hover:text-amber-600" : "text-slate-400 hover:text-slate-900")}
                     onClick={toggleFavorite}
                 >
                     <Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} />
-                </Button>
+                </button>
                 
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900"
+                <button 
+                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"
                     onClick={handleShare}
                 >
                     <Share2 className="h-4 w-4" />
-                </Button>
+                </button>
             </>
           )}
           
