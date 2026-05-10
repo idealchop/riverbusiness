@@ -390,7 +390,7 @@ export default function PageEditor() {
           <Input 
             value={page.title} 
             onChange={(e) => handleUpdateTitle(e.target.value)}
-            className="border-none shadow-none focus-visible:ring-0 p-0 font-bold text-sm h-auto bg-transparent truncate max-w-[180px]"
+            className="border-0 shadow-none focus:ring-0 focus-visible:ring-0 p-0 font-bold text-sm h-auto bg-transparent truncate max-w-[180px]"
             readOnly={page.isTrashed}
           />
         </div>
@@ -581,7 +581,7 @@ export default function PageEditor() {
                 value={page.title} 
                 placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-6xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
+                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-6xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
                 readOnly={page.isTrashed}
             />
 
