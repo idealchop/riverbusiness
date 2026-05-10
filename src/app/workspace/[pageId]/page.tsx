@@ -91,19 +91,6 @@ export default function PageEditor() {
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
   const { data: rawCollaborators } = useCollection(presenceQuery);
 
-  // Child Pages Query - For the directory at the bottom
-  const childrenQuery = useMemoFirebase(() => (firestore && pageId) ? query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId as string)) : null, [firestore, pageId]);
-  const { data: rawChildren } = useCollection<CollabPage>(childrenQuery);
-  
-  const childrenPages = useMemo(() => {
-      if (!rawChildren) return [];
-      return [...rawChildren].filter(p => !p.isTrashed).sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-  }, [rawChildren]);
-
   // Sort and process collaborators for the face pile
   const collaborators = useMemo(() => {
     if (!rawCollaborators) return [];
@@ -570,53 +557,6 @@ export default function PageEditor() {
                     editable={!page.isTrashed}
                 />
             </div>
-
-            {/* Subpages List at the bottom */}
-            {!page.isTrashed && (
-                <div className="mt-24 pt-12 border-t border-slate-50 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                    <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">subpages</h4>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={handleCreateSubpage}
-                            className="h-8 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 shadow-sm"
-                        >
-                            <FilePlus className="mr-2 h-3.5 w-3.5" /> new subpage
-                        </Button>
-                    </div>
-                    
-                    {childrenPages.length > 0 ? (
-                        <div className="grid gap-3">
-                            {childrenPages.map(cp => (
-                                <Link key={cp.id} href={`/workspace/${cp.id}`}>
-                                    <div className="flex items-center justify-between p-5 rounded-[2rem] bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-2xl hover:-translate-y-0.5 transition-all group">
-                                        <div className="flex items-center gap-5">
-                                            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/5 transition-colors shadow-sm text-2xl">
-                                                {cp.icon || <FileText className="h-6 w-6" />}
-                                            </div>
-                                            <div>
-                                                <p className="text-base font-bold text-slate-900 leading-none">{cp.title || 'untitled'}</p>
-                                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-2">document link</p>
-                                            </div>
-                                        </div>
-                                        <div className="p-2.5 rounded-full opacity-0 group-hover:opacity-100 transition-all bg-primary/10 text-primary group-hover:translate-x-1">
-                                            <ChevronRight className="h-5 w-5" />
-                                        </div>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-12 rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center gap-4 bg-slate-50/20">
-                            <div className="p-4 rounded-full bg-white shadow-sm text-slate-200">
-                                <Layout className="h-8 w-8" />
-                            </div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">no subpages available</p>
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
       </ScrollArea>
 
