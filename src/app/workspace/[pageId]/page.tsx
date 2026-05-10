@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
@@ -30,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ShareDialog } from '@/components/collaboration/ShareDialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,22 +71,32 @@ export default function PageEditor() {
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<AppUser>(userDocRef);
 
-  // Use refs to keep track of the latest content for immediate saving on unmount
   const latestContentRef = useRef<any>(null);
   const latestTitleRef = useRef<string>('');
 
-  // Debounce refs
   const contentUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Presence Query - Sync other users looking at the same page
+  // Presence Query - Listen to all recent visitors
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
-  const { data: collaborators } = useCollection(presenceQuery);
+  const { data: rawCollaborators } = useCollection(presenceQuery);
+
+  // Sort and process collaborators for the face pile
+  const collaborators = useMemo(() => {
+    if (!rawCollaborators) return [];
+    return [...rawCollaborators].sort((a, b) => {
+        const timeA = a.lastActive?.seconds || 0;
+        const timeB = b.lastActive?.seconds || 0;
+        // Primary sort: Active status, Secondary sort: last active time
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return timeB - timeA;
+    });
+  }, [rawCollaborators]);
 
   const forceSave = useCallback(async () => {
     if (!firestore || !pageId || !latestContentRef.current) return;
     
-    // Clear existing debounce timeouts
     if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
     if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
 
@@ -96,7 +107,6 @@ export default function PageEditor() {
         updatedAt: serverTimestamp()
     };
     
-    // Fire and forget update on unmount
     updateDoc(pageRef, updateData).catch(() => {});
   }, [firestore, pageId]);
 
@@ -107,13 +117,14 @@ export default function PageEditor() {
     setPage(null);
     setIsSaving(false);
 
-    // Set local presence
+    // Set local presence - Mark as Active
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
         userId: user.uid,
         name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'Contributor',
         photoURL: userProfile.photoURL || user.photoURL || null,
-        lastActive: serverTimestamp()
+        lastActive: serverTimestamp(),
+        isActive: true
     };
     
     setDoc(presenceRef, presenceData).catch(async (err) => {
@@ -148,8 +159,12 @@ export default function PageEditor() {
 
     return () => {
         unsub();
-        forceSave(); // Immediate sync on navigation
-        deleteDoc(presenceRef).catch(() => {}); 
+        forceSave();
+        // Soft exit: Update status to inactive but keep the record for history
+        updateDoc(presenceRef, { 
+            isActive: false, 
+            lastActive: serverTimestamp() 
+        }).catch(() => {}); 
     };
   }, [firestore, pageId, router, user, userProfile, forceSave]);
 
@@ -286,19 +301,27 @@ export default function PageEditor() {
              <div className="flex items-center gap-1 p-1 px-2 rounded-full bg-slate-50 border border-slate-100 mr-2 shadow-inner">
                 <Users className="h-3 w-3 text-slate-400 mr-1" />
                 <div className="flex -space-x-1.5">
-                    {collaborators?.filter(c => c.id !== user?.uid).map(collab => (
+                    {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
+                        const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
+                        const isOnline = collab.isActive;
+                        return (
                         <Tooltip key={collab.id}>
                             <TooltipTrigger asChild>
-                                <Avatar className="h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default">
+                                <Avatar className={cn(
+                                    "h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default",
+                                    !isOnline && "grayscale opacity-50"
+                                )}>
                                     <AvatarImage src={collab.photoURL} />
                                     <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="rounded-lg px-2 py-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest">{collab.name}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest">
+                                    {collab.name} {!isOnline && `• Last seen ${formatDistanceToNow(lastActiveDate, { addSuffix: true })}`}
+                                </p>
                             </TooltipContent>
                         </Tooltip>
-                    ))}
+                    )})}
                     {(!collaborators || collaborators.length <= 1) && (
                          <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest px-1">alone</span>
                     )}
