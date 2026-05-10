@@ -499,12 +499,12 @@ export default function PageEditor() {
         <div className="max-w-4xl mx-auto px-8 pt-10 pb-32 space-y-2">
             {/* Page Icon (Emoji) */}
             {page.icon && (
-                <div className="relative group/icon -mt-20 z-10 w-fit">
-                    <div className="text-8xl p-4 bg-white rounded-[2.5rem] shadow-2xl border-4 border-white select-none">
+                <div className="relative group/icon -mt-12 z-10 w-fit">
+                    <div className="text-6xl select-none">
                         {page.icon}
                     </div>
                     {!page.isTrashed && (
-                        <div className="absolute -top-2 -right-2 opacity-0 group-hover/icon:opacity-100 transition-opacity">
+                        <div className="absolute -top-2 -right-6 opacity-0 group-hover/icon:opacity-100 transition-opacity">
                              <Button variant="secondary" size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg border-none text-red-500">
                                 <X className="h-3 w-3" />
                             </Button>
