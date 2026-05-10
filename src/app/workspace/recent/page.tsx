@@ -1,20 +1,24 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileText, Clock, History, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import type { CollabPage } from '@/lib/types';
+import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 
 export default function RecentPages() {
-  const { user } = useUser();
+  const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  const companyId = user?.companyId || 'default';
+  // Get full user profile to retrieve the correct companyId
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: userProfile } = useDoc<AppUser>(userDocRef);
+
+  const companyId = userProfile?.companyId || 'default';
 
   // Fetch all pages for the company to filter/sort locally (prevents index errors)
   const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
@@ -30,11 +34,15 @@ export default function RecentPages() {
     return [...allPages]
       .filter(p => !p.isTrashed)
       .sort((a, b) => {
-        const timeA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
-        const timeB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
+        const dateA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
+        const timeA = dateA || (a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0);
+        
+        const dateB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
+        const timeB = dateB || (b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0);
+        
         return timeB - timeA;
       })
-      .slice(0, 10);
+      .slice(0, 15);
   }, [allPages]);
 
   return (

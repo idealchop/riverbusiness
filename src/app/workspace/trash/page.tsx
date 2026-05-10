@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileText, Trash2, RotateCcw, XCircle, Info, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import type { CollabPage } from '@/lib/types';
+import type { CollabPage, AppUser } from '@/lib/types';
 import { 
     AlertDialog, 
     AlertDialogAction, 
@@ -21,10 +21,14 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function TrashPages() {
-  const { user } = useUser();
+  const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  const companyId = user?.companyId || 'default';
+  // Get full user profile to retrieve the correct companyId
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: userProfile } = useDoc<AppUser>(userDocRef);
+
+  const companyId = userProfile?.companyId || 'default';
 
   // Fetch all pages for the company to filter locally (prevents index errors)
   const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
@@ -38,7 +42,7 @@ export default function TrashPages() {
   const trashedPages = useMemo(() => {
     if (!allPages) return [];
     return [...allPages]
-      .filter(p => p.isTrashed)
+      .filter(p => p.isTrashed === true)
       .sort((a, b) => {
         const timeA = a.trashedAt instanceof Timestamp ? a.trashedAt.toMillis() : (a.trashedAt?.seconds ? a.trashedAt.seconds * 1000 : 0);
         const timeB = b.trashedAt instanceof Timestamp ? b.trashedAt.toMillis() : (b.trashedAt?.seconds ? b.trashedAt.seconds * 1000 : 0);
@@ -71,7 +75,7 @@ export default function TrashPages() {
             <div className="p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 flex items-start gap-4">
                 <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                    Documents in the trash are strictly read-only. You must restore them to resume collaborative editing. Items here still consume organizational storage limits.
+                    Documents in the trash are strictly read-only. You must restore them to resume collaborative editing.
                 </p>
             </div>
         </div>
@@ -117,7 +121,7 @@ export default function TrashPages() {
                                     <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
                                         <AlertDialogHeader>
                                             <AlertDialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Purge Permanently?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-slate-500 font-medium leading-relaxed pt-2">
+                                            <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
                                                 This action is irreversible. This document and its full collaborative block history will be erased from the secure cloud infrastructure.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
