@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -8,6 +9,10 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Link from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 import { cn } from '@/lib/utils';
 import { 
     Bold, 
@@ -20,13 +25,24 @@ import {
     Redo2,
     Link as LinkIcon,
     Image as ImageIcon,
-    Loader2
+    Loader2,
+    Table as TableIcon,
+    Quote,
+    Code,
+    Eraser,
+    Minus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface EditorProps {
   initialContent: any;
@@ -93,6 +109,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
           class: 'rounded-[2rem] border-4 border-white shadow-2xl max-w-full h-auto my-6 mx-auto block',
         },
       }),
+      Table.configure({
+          resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: initialContent,
     editable: editable,
@@ -103,30 +125,28 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         attributes: {
             class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-xl font-normal'
         },
-        // Handle Drag and Drop
         handleDrop: (view, event, slice, moved) => {
             if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
                 const file = event.dataTransfer.files[0];
                 if (file.type.startsWith('image/')) {
                     uploadAndInsertImage(file);
-                    return true; // handled
+                    return true;
                 }
             }
             return false;
         },
-        // Handle Paste
         handlePaste: (view, event) => {
             if (event.clipboardData && event.clipboardData.files && event.clipboardData.files[0]) {
                 const file = event.clipboardData.files[0];
                 if (file.type.startsWith('image/')) {
                     uploadAndInsertImage(file);
-                    return true; // handled
+                    return true;
                 }
             }
             return false;
         }
     }
-  }, [uploadAndInsertImage]); // Re-run if handler changes
+  }, [uploadAndInsertImage]);
 
   useEffect(() => {
     if (editor && initialContent && editor.isEmpty) {
@@ -145,6 +165,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       return;
     }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+
+  const insertGrid = () => {
+      if (!editor) return;
+      editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+      toast({ title: 'Grid inserted' });
   };
 
   const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,93 +194,138 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       />
 
       {editable && (
-        <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-10">
-            <div className="flex items-center gap-1">
-                <div className="flex items-center gap-1 px-1">
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
-                        active={editor.isActive('heading', { level: 1 })}
-                        icon={<Heading1 className="h-4 w-4" />}
-                    />
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
-                        active={editor.isActive('heading', { level: 2 })}
-                        icon={<Heading2 className="h-4 w-4" />}
-                    />
-                </div>
-                
-                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+        <TooltipProvider delayDuration={0}>
+          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-10">
+              <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 px-1">
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
+                          active={editor.isActive('heading', { level: 1 })}
+                          icon={<Heading1 className="h-4 w-4" />}
+                          label="Main Heading"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
+                          active={editor.isActive('heading', { level: 2 })}
+                          icon={<Heading2 className="h-4 w-4" />}
+                          label="Sub Heading"
+                      />
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                <div className="flex items-center gap-1 px-1">
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().toggleBold().run()} 
-                        active={editor.isActive('bold')}
-                        icon={<Bold className="h-4 w-4" />}
-                    />
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().toggleItalic().run()} 
-                        active={editor.isActive('italic')}
-                        icon={<Italic className="h-4 w-4" />}
-                    />
-                </div>
+                  <div className="flex items-center gap-1 px-1">
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleBold().run()} 
+                          active={editor.isActive('bold')}
+                          icon={<Bold className="h-4 w-4" />}
+                          label="Bold"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleItalic().run()} 
+                          active={editor.isActive('italic')}
+                          icon={<Italic className="h-4 w-4" />}
+                          label="Italic"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleCode().run()} 
+                          active={editor.isActive('code')}
+                          icon={<Code className="h-4 w-4" />}
+                          label="Inline Code"
+                      />
+                  </div>
 
-                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                <div className="flex items-center gap-1 px-1">
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().toggleBulletList().run()} 
-                        active={editor.isActive('bulletList')}
-                        icon={<List className="h-4 w-4" />}
-                    />
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().toggleTaskList().run()} 
-                        active={editor.isActive('taskList')}
-                        icon={<CheckSquare className="h-4 w-4" />}
-                    />
-                </div>
+                  <div className="flex items-center gap-1 px-1">
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleBulletList().run()} 
+                          active={editor.isActive('bulletList')}
+                          icon={<List className="h-4 w-4" />}
+                          label="Bullet List"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleTaskList().run()} 
+                          active={editor.isActive('taskList')}
+                          icon={<CheckSquare className="h-4 w-4" />}
+                          label="Task List"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().toggleBlockquote().run()} 
+                          active={editor.isActive('blockquote')}
+                          icon={<Quote className="h-4 w-4" />}
+                          label="Blockquote"
+                      />
+                  </div>
 
-                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                <div className="flex items-center gap-1 px-1">
-                    <ToolbarButton 
-                        onClick={setLink} 
-                        active={editor.isActive('link')}
-                        icon={<LinkIcon className="h-4 w-4" />}
-                    />
-                    <ToolbarButton 
-                        onClick={() => fileInputRef.current?.click()} 
-                        disabled={isUploading}
-                        icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
-                    />
-                </div>
+                  <div className="flex items-center gap-1 px-1">
+                      <ToolbarButton 
+                          onClick={insertGrid} 
+                          active={editor.isActive('table')}
+                          icon={<TableIcon className="h-4 w-4" />}
+                          label="Insert 3x3 Grid"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().setHorizontalRule().run()} 
+                          icon={<Minus className="h-4 w-4" />}
+                          label="Divider"
+                      />
+                  </div>
 
-                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                <div className="flex items-center gap-1 px-1">
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().undo().run()} 
-                        disabled={!editor.can().undo()}
-                        icon={<Undo2 className="h-4 w-4" />}
-                    />
-                    <ToolbarButton 
-                        onClick={() => editor.chain().focus().redo().run()} 
-                        disabled={!editor.can().redo()}
-                        icon={<Redo2 className="h-4 w-4" />}
-                    />
-                </div>
-            </div>
-            
-            {isUploading && (
-                <div className="w-full px-4 pb-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-primary transition-all duration-300"
-                            style={{ width: `${uploadProgress}%` }}
-                        />
-                    </div>
-                </div>
-            )}
-        </div>
+                  <div className="flex items-center gap-1 px-1">
+                      <ToolbarButton 
+                          onClick={setLink} 
+                          active={editor.isActive('link')}
+                          icon={<LinkIcon className="h-4 w-4" />}
+                          label="Insert Link"
+                      />
+                      <ToolbarButton 
+                          onClick={() => fileInputRef.current?.click()} 
+                          disabled={isUploading}
+                          icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
+                          label="Attach Image"
+                      />
+                  </div>
+
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
+                  <div className="flex items-center gap-1 px-1">
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().unsetAllMarks().run()} 
+                          icon={<Eraser className="h-4 w-4" />}
+                          label="Clear Formatting"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().undo().run()} 
+                          disabled={!editor.can().undo()}
+                          icon={<Undo2 className="h-4 w-4" />}
+                          label="Undo"
+                      />
+                      <ToolbarButton 
+                          onClick={() => editor.chain().focus().redo().run()} 
+                          disabled={!editor.can().redo()}
+                          icon={<Redo2 className="h-4 w-4" />}
+                          label="Redo"
+                      />
+                  </div>
+              </div>
+              
+              {isUploading && (
+                  <div className="w-full px-4 pb-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                      <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                              className="h-full bg-primary transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                          />
+                      </div>
+                  </div>
+              )}
+          </div>
+        </TooltipProvider>
       )}
 
       <EditorContent editor={editor} />
@@ -272,19 +343,26 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   );
 }
 
-function ToolbarButton({ onClick, active, disabled, icon }: { onClick: () => void, active?: boolean, disabled?: boolean, icon: React.ReactNode }) {
+function ToolbarButton({ onClick, active, disabled, icon, label }: { onClick: () => void, active?: boolean, disabled?: boolean, icon: React.ReactNode, label: string }) {
     return (
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={(e) => { e.preventDefault(); onClick(); }} 
-            disabled={disabled}
-            className={cn(
-                "h-9 w-9 rounded-xl transition-all",
-                active ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-slate-500 hover:bg-slate-100"
-            )}
-        >
-            {icon}
-        </Button>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={(e) => { e.preventDefault(); onClick(); }} 
+                    disabled={disabled}
+                    className={cn(
+                        "h-8 w-8 rounded-xl transition-all",
+                        active ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-slate-500 hover:bg-slate-100"
+                    )}
+                >
+                    {icon}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent className="rounded-xl font-bold text-[9px] uppercase tracking-widest bg-slate-900 text-white border-none px-3 py-1.5 shadow-2xl">
+                {label}
+            </TooltipContent>
+        </Tooltip>
     );
 }

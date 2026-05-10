@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,6 +93,88 @@
     border-width: 5px;
     border-style: solid;
     border-color: hsl(var(--primary)) transparent transparent transparent;
+  }
+
+  /* Table Styles */
+  .prose table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 1.5rem 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+  }
+
+  .prose table td,
+  .prose table th {
+    min-width: 1em;
+    border: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    vertical-align: top;
+    box-sizing: border-box;
+    position: relative;
+    text-align: left;
+  }
+
+  .prose table th {
+    font-weight: 800;
+    background-color: #f8fafc;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+
+  .prose table .selectedCell:after {
+    z-index: 2;
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    background: rgba(83, 142, 194, 0.1);
+    pointer-events: none;
+  }
+
+  /* Blockquote Style */
+  .prose blockquote {
+    border-left: 4px solid #538ec2;
+    padding-left: 2rem;
+    font-style: italic;
+    color: #475569;
+    margin: 2rem 0;
+    background: #f8fafc;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-radius: 0 1.5rem 1.5rem 0;
+  }
+
+  /* Code Block Style */
+  .prose pre {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    font-family: 'monospace';
+    font-size: 0.875rem;
+    line-height: 1.7;
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  .prose code {
+    background: #f1f5f9;
+    color: #538ec2;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+    font-weight: 600;
+  }
+
+  .prose pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-weight: inherit;
   }
 }
 
