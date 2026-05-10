@@ -474,7 +474,7 @@ export default function PageEditor() {
 
                 <button 
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
-                    onClick={handleTrash}
+                    onClick={() => setIsDeleteDialogOpen(true)}
                     title="move to trash"
                 >
                     <Trash2 className="h-4 w-4" />
@@ -596,7 +596,7 @@ export default function PageEditor() {
         </div>
       </ScrollArea>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={() => {}}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
