@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, orderBy, doc, addDoc, deleteDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, getDocs, writeBatch, updateDoc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -37,7 +37,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const companyId = user?.companyId || 'default';
 
-  // Use simple query without orderBy to avoid index permission issues, sort client-side
+  // Fetch all organizational pages (trashed or not)
   const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
     collection(firestore, 'collaboration_pages'),
     where('companyId', '==', companyId)
@@ -45,10 +45,12 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
-  // Client-side sorting for a snappy, reliable experience
+  // Active pages for the main navigation
   const pages = useMemo(() => {
       if (!rawPages) return [];
-      return [...rawPages].sort((a, b) => {
+      return [...rawPages]
+        .filter(p => !p.isTrashed)
+        .sort((a, b) => {
           const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
           const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
           return timeB - timeA;
@@ -69,6 +71,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       title: 'Untitled',
       createdBy: authUser.uid,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       content: {
           type: "doc",
           content: [{ type: "paragraph" }]
@@ -91,32 +94,50 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       });
   }, [firestore, authUser, companyId, router, toast]);
 
-  const handleDeletePage = useCallback(async (pageId: string) => {
-    if (!firestore || !companyId) return;
+  const handleSoftDelete = useCallback(async (pageId: string) => {
+    if (!firestore) return;
     try {
-        const batch = writeBatch(firestore);
-        
-        // Find children
-        const childrenQuery = query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId));
-        const childrenSnap = await getDocs(childrenQuery);
-        
-        childrenSnap.docs.forEach((childDoc) => {
-            batch.delete(childDoc.ref);
+        const pageRef = doc(firestore, 'collaboration_pages', pageId);
+        await updateDoc(pageRef, {
+            isTrashed: true,
+            trashedAt: serverTimestamp()
         });
-        
-        batch.delete(doc(firestore, 'collaboration_pages', pageId));
-        
-        await batch.commit();
         
         if (pathname.includes(pageId)) {
             router.push('/workspace');
         }
-        toast({ title: 'Document Removed' });
+        toast({ title: 'Moved to Trash' });
     } catch (error) {
-        console.error("Error deleting page:", error);
-        toast({ variant: 'destructive', title: 'Deletion failed' });
+        console.error("Error moving to trash:", error);
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
-  }, [firestore, companyId, pathname, router, toast]);
+  }, [firestore, pathname, router, toast]);
+
+  const handleRestorePage = useCallback(async (pageId: string) => {
+    if (!firestore) return;
+    try {
+        const pageRef = doc(firestore, 'collaboration_pages', pageId);
+        await updateDoc(pageRef, {
+            isTrashed: false,
+            trashedAt: null
+        });
+        toast({ title: 'Document Restored' });
+    } catch (error) {
+        console.error("Error restoring page:", error);
+        toast({ variant: 'destructive', title: 'Action failed' });
+    }
+  }, [firestore, toast]);
+
+  const handlePermanentDelete = useCallback(async (pageId: string) => {
+    if (!firestore) return;
+    try {
+        await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
+        toast({ title: 'Deleted Permanently' });
+    } catch (error) {
+        console.error("Error deleting permanently:", error);
+        toast({ variant: 'destructive', title: 'Action failed' });
+    }
+  }, [firestore, toast]);
 
   useEffect(() => {
     const handleRequestNewPage = (event: Event) => {
@@ -124,21 +145,39 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         handleCreatePage(customEvent.detail?.parentId || null);
     };
 
-    const handleRequestDeletePage = (event: Event) => {
+    const handleRequestTrashPage = (event: Event) => {
         const customEvent = event as CustomEvent;
         if (customEvent.detail?.pageId) {
-            handleDeletePage(customEvent.detail.pageId);
+            handleSoftDelete(customEvent.detail.pageId);
+        }
+    };
+
+    const handleRequestRestorePage = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            handleRestorePage(customEvent.detail.pageId);
+        }
+    };
+
+    const handleRequestPermanentDelete = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            handlePermanentDelete(customEvent.detail.pageId);
         }
     };
 
     window.addEventListener('request-new-collab-page', handleRequestNewPage);
-    window.addEventListener('request-delete-collab-page', handleRequestDeletePage);
+    window.addEventListener('request-delete-collab-page', handleRequestTrashPage);
+    window.addEventListener('request-restore-collab-page', handleRequestRestorePage);
+    window.addEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
     
     return () => {
         window.removeEventListener('request-new-collab-page', handleRequestNewPage);
-        window.removeEventListener('request-delete-collab-page', handleRequestDeletePage);
+        window.removeEventListener('request-delete-collab-page', handleRequestTrashPage);
+        window.removeEventListener('request-restore-collab-page', handleRequestRestorePage);
+        window.removeEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
     };
-  }, [handleCreatePage, handleDeletePage]);
+  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete]);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -170,7 +209,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         pages={pages || []}
         activePageId={pathname.split('/').pop() || null}
         onCreatePage={handleCreatePage}
-        onDeletePage={handleDeletePage}
         user={user}
       />
 

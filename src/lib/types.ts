@@ -85,6 +85,8 @@ export interface CollabPage {
     isFavorite?: boolean;
     isPublic?: boolean;
     shareToken?: string;
+    isTrashed?: boolean;
+    trashedAt?: any;
 }
 
 export interface HRAttendanceLog {

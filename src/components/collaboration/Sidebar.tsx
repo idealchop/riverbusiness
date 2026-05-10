@@ -1,7 +1,9 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
     ChevronRight, 
     ChevronDown, 
@@ -49,15 +51,15 @@ interface SidebarProps {
   pages: CollabPage[];
   activePageId: string | null;
   onCreatePage: (parentId: string | null) => void;
-  onDeletePage: (pageId: string) => void;
   user: AppUser | null;
 }
 
-export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, onDeletePage, user }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
+  const pathname = usePathname();
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [pageToDelete, setPageToDelete] = useState<string | null>(null);
+  const [pageToTrash, setPageToTrash] = useState<string | null>(null);
 
   const toggleExpand = (e: React.MouseEvent, pageId: string) => {
     e.preventDefault();
@@ -112,8 +114,8 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, o
                     <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-bold uppercase rounded-lg">
                         <Plus className="h-3.5 w-3.5" /> Add Subpage
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToDelete(page.id); }} className="gap-2 text-xs font-bold uppercase text-red-600 rounded-lg">
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-bold uppercase text-red-600 rounded-lg">
+                        <Trash2 className="h-3.5 w-3.5" /> Move to Trash
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -177,16 +179,26 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, o
                     </div>
                 )}
             </div>
-            <Button variant="ghost" className="w-full justify-start h-10 rounded-xl gap-3 font-bold text-xs text-slate-600">
-                <Settings className="h-4 w-4" />
-                Settings
-            </Button>
         </div>
       </div>
 
       {/* Pages Navigation */}
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
+            <div className="space-y-1">
+                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Internal Hub</h4>
+                <Link href="/workspace/recent">
+                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
+                        <History className="h-4 w-4" /> Recent
+                    </Button>
+                </Link>
+                <Link href="/workspace/trash">
+                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
+                        <Trash2 className="h-4 w-4" /> Trash
+                    </Button>
+                </Link>
+            </div>
+
             {favorites.length > 0 && !searchQuery && (
                 <div className="space-y-1">
                     <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Favorites</h4>
@@ -225,16 +237,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, o
                     New Page
                 </Button>
             </div>
-
-            <div className="pt-6 border-t border-slate-100 space-y-1">
-                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Internal Hub</h4>
-                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900">
-                    <History className="h-4 w-4" /> Recent
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900">
-                    <Trash2 className="h-4 w-4" /> Trash
-                </Button>
-            </div>
         </div>
       </ScrollArea>
 
@@ -251,21 +253,26 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, o
         </div>
       </div>
 
-      <AlertDialog open={!!pageToDelete} onOpenChange={() => setPageToDelete(null)}>
+      <AlertDialog open={!!pageToTrash} onOpenChange={() => setPageToTrash(null)}>
         <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Delete Page?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Move to Trash?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-              This action is permanent and will delete all nested subpages. This cannot be undone.
+              This document will be removed from your workspace but can be restored from the Trash folder within 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Keep</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
             <AlertDialogAction 
-                onClick={() => pageToDelete && onDeletePage(pageToDelete)}
+                onClick={() => {
+                    if (pageToTrash) {
+                        window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: pageToTrash } }));
+                        setPageToTrash(null);
+                    }
+                }}
                 className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
             >
-                Confirm Delete
+                Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

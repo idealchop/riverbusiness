@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -18,7 +19,9 @@ import {
   Layout,
   Trash2,
   CheckCircle,
-  Globe
+  Globe,
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -141,7 +144,7 @@ export default function PageEditor() {
   }, [firestore, pageId, router, user, forceSave]);
 
   const handleUpdateTitle = useCallback((newTitle: string) => {
-    if (!firestore || !pageId || !page) return;
+    if (!firestore || !pageId || !page || page.isTrashed) return;
     
     latestTitleRef.current = newTitle;
     setPage(prev => prev ? { ...prev, title: newTitle } : null);
@@ -151,7 +154,7 @@ export default function PageEditor() {
     titleUpdateTimeoutRef.current = setTimeout(() => {
         setIsSaving(true);
         const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-        const updateData = { title: newTitle };
+        const updateData = { title: newTitle, updatedAt: serverTimestamp() };
         
         updateDoc(pageRef, updateData)
             .then(() => {
@@ -170,7 +173,7 @@ export default function PageEditor() {
   }, [firestore, pageId, page]);
 
   const handleUpdateContent = useCallback((json: any) => {
-    if (!firestore || !pageId) return;
+    if (!firestore || !pageId || page?.isTrashed) return;
     
     latestContentRef.current = json;
 
@@ -198,7 +201,7 @@ export default function PageEditor() {
             setIsSaving(false);
         });
     }, 1000);
-  }, [firestore, pageId]);
+  }, [firestore, pageId, page?.isTrashed]);
 
   const toggleFavorite = async () => {
     if (!firestore || !page) return;
@@ -219,16 +222,39 @@ export default function PageEditor() {
         });
   };
 
-  const handleDelete = () => {
+  const handleTrash = () => {
       if (!page) return;
       window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
   };
+
+  const handleRestore = () => {
+      if (!page) return;
+      window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }));
+  }
 
   if (loading && !page) return <FullScreenLoader text="Opening Document" />;
   if (!page) return null;
 
   return (
     <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700">
+      
+      {page.isTrashed && (
+          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
+              <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <p className="text-xs font-bold text-red-900 uppercase tracking-tight">This document is in the trash bin</p>
+              </div>
+              <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] uppercase gap-2 hover:bg-red-50">
+                      <RotateCcw className="h-3 w-3" /> Restore document
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setIsDeleteDialogOpen(true)} className="h-8 rounded-xl text-red-400 font-bold text-[10px] uppercase">
+                      Delete permanently
+                  </Button>
+              </div>
+          </div>
+      )}
+
       {/* Document Meta Header */}
       <div className="sticky top-0 z-10 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
         <div className="flex items-center gap-2 min-w-0">
@@ -240,6 +266,7 @@ export default function PageEditor() {
             value={page.title} 
             onChange={(e) => handleUpdateTitle(e.target.value)}
             className="border-none shadow-none focus-visible:ring-0 p-0 font-bold text-sm h-auto bg-transparent truncate max-w-[200px]"
+            readOnly={page.isTrashed}
           />
         </div>
 
@@ -272,23 +299,27 @@ export default function PageEditor() {
             )}
           </div>
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={cn("h-8 w-8 rounded-lg transition-colors", page.isFavorite ? "text-amber-500 hover:text-amber-600" : "text-slate-400 hover:text-slate-900")}
-            onClick={toggleFavorite}
-          >
-            <Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900"
-            onClick={() => setIsShareDialogOpen(true)}
-          >
-            <Share2 className="h-4 w-4" />
-          </Button>
+          {!page.isTrashed && (
+            <>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 rounded-lg transition-colors", page.isFavorite ? "text-amber-500 hover:text-amber-600" : "text-slate-400 hover:text-slate-900")}
+                    onClick={toggleFavorite}
+                >
+                    <Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} />
+                </Button>
+                
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900"
+                    onClick={() => setIsShareDialogOpen(true)}
+                >
+                    <Share2 className="h-4 w-4" />
+                </Button>
+            </>
+          )}
           
           <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -297,16 +328,30 @@ export default function PageEditor() {
                   </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
-                  <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                      <Share2 className="h-4 w-4 opacity-50" /> Public Sharing Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                      <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-slate-50" />
-                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                      <Trash2 className="h-4 w-4 opacity-50" /> Delete Document
-                  </DropdownMenuItem>
+                  {!page.isTrashed ? (
+                      <>
+                        <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                            <Share2 className="h-4 w-4 opacity-50" /> Public Sharing Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                            <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-slate-50" />
+                        <DropdownMenuItem onClick={handleTrash} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                            <Trash2 className="h-4 w-4 opacity-50" /> Move to Trash
+                        </DropdownMenuItem>
+                      </>
+                  ) : (
+                      <>
+                        <DropdownMenuItem onClick={handleRestore} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                            <RotateCcw className="h-4 w-4 opacity-50" /> Restore Document
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-slate-50" />
+                        <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                            <Trash2 className="h-4 w-4 opacity-50" /> Delete Permanently
+                        </DropdownMenuItem>
+                      </>
+                  )}
               </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -314,15 +359,16 @@ export default function PageEditor() {
 
       <ScrollArea className="flex-1">
         <div className="max-w-4xl mx-auto py-12 px-8 space-y-2">
-            {/* Header Decorations */}
-            <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
-                <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
-                    <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
-                    <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add Cover
-                </Button>
-            </div>
+            {!page.isTrashed && (
+                <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
+                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
+                        <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
+                        <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add Cover
+                    </Button>
+                </div>
+            )}
             
             {/* Title Section */}
             <Input 
@@ -330,6 +376,7 @@ export default function PageEditor() {
                 placeholder="Untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
                 className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-6"
+                readOnly={page.isTrashed}
             />
 
             {/* Block Editor */}
@@ -338,6 +385,7 @@ export default function PageEditor() {
                     key={page.id} 
                     initialContent={page.content} 
                     onContentChange={handleUpdateContent} 
+                    editable={!page.isTrashed}
                 />
             </div>
         </div>
@@ -352,18 +400,29 @@ export default function PageEditor() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Delete Document?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+                {page.isTrashed ? 'Purge Permanently?' : 'Delete Document?'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-              This action is permanent and will delete this document and any potential subpages. This cannot be undone.
+              {page.isTrashed 
+                ? 'This action is irreversible. The document and its full block history will be erased from the secure cloud infrastructure.'
+                : 'This action will move the document to the Trash. You can restore it later if needed.'
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Keep</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
             <AlertDialogAction 
-                onClick={handleDelete}
+                onClick={() => {
+                    if (page.isTrashed) {
+                        window.dispatchEvent(new CustomEvent('request-permanent-delete-page', { detail: { pageId: page.id } }));
+                    } else {
+                        handleTrash();
+                    }
+                }}
                 className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
             >
-                Confirm Delete
+                {page.isTrashed ? 'Confirm Purge' : 'Move to Trash'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
