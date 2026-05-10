@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -16,6 +15,7 @@ import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
+import { ShareDialog } from '@/components/collaboration/ShareDialog';
 import { signOut } from 'firebase/auth';
 import { useMounted } from '@/hooks/use-mounted';
 
@@ -31,6 +31,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [sharingPageId, setSharingPageId] = useState<string | null>(null);
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
@@ -53,6 +54,11 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           return timeB - timeA;
       });
   }, [rawPages]);
+
+  const sharingPage = useMemo(() => {
+      if (!sharingPageId || !rawPages) return null;
+      return rawPages.find(p => p.id === sharingPageId) || null;
+  }, [sharingPageId, rawPages]);
 
   const handleCreatePage = useCallback(async (parentId: string | null = null) => {
     if (!firestore || !authUser || !companyId) {
@@ -136,6 +142,17 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     }
   }, [firestore, toast]);
 
+  const handleFavoriteToggle = useCallback(async (pageId: string, isFavorite: boolean) => {
+    if (!firestore) return;
+    try {
+        const pageRef = doc(firestore, 'collaboration_pages', pageId);
+        await updateDoc(pageRef, { isFavorite });
+        toast({ title: isFavorite ? 'Added to Favorites' : 'Removed from Favorites' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Action failed' });
+    }
+  }, [firestore, toast]);
+
   useEffect(() => {
     const handleRequestNewPage = (event: Event) => {
         const customEvent = event as CustomEvent;
@@ -163,18 +180,36 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         }
     };
 
+    const handleRequestFavorite = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            handleFavoriteToggle(customEvent.detail.pageId, customEvent.detail.isFavorite);
+        }
+    };
+
+    const handleRequestShare = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            setSharingPageId(customEvent.detail.pageId);
+        }
+    };
+
     window.addEventListener('request-new-collab-page', handleRequestNewPage);
     window.addEventListener('request-delete-collab-page', handleRequestTrashPage);
     window.addEventListener('request-restore-collab-page', handleRequestRestorePage);
     window.addEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
+    window.addEventListener('request-favorite-collab-page', handleRequestFavorite);
+    window.addEventListener('request-share-collab-page', handleRequestShare);
     
     return () => {
         window.removeEventListener('request-new-collab-page', handleRequestNewPage);
         window.removeEventListener('request-delete-collab-page', handleRequestTrashPage);
         window.removeEventListener('request-restore-collab-page', handleRequestRestorePage);
         window.removeEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
+        window.removeEventListener('request-favorite-collab-page', handleRequestFavorite);
+        window.removeEventListener('request-share-collab-page', handleRequestShare);
     };
-  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete]);
+  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle]);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -256,6 +291,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         onOpenChange={setIsAccountDialogOpen}
         initialTab={undefined}
       />
+
+      {sharingPage && (
+          <ShareDialog 
+            isOpen={!!sharingPageId} 
+            onOpenChange={(open) => !open && setSharingPageId(null)} 
+            page={sharingPage} 
+          />
+      )}
     </div>
   );
 }

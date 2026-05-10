@@ -32,7 +32,6 @@ import {
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ShareDialog } from '@/components/collaboration/ShareDialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -127,7 +126,6 @@ export default function PageEditor() {
   const [parentPage, setParentPage] = useState<CollabPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
 
@@ -321,23 +319,9 @@ export default function PageEditor() {
   const setIcon = (icon: string) => handleUpdateMeta({ icon });
   const removeIcon = () => handleUpdateMeta({ icon: '' });
 
-  const toggleFavorite = async () => {
-    if (!firestore || !page) return;
-    const pageRef = doc(firestore, 'collaboration_pages', page.id);
-    const updateData = { isFavorite: !page.isFavorite };
-    
-    updateDoc(pageRef, updateData)
-        .then(() => {
-            toast({ title: !page.isFavorite ? 'added favorite' : 'removed favorite' });
-        })
-        .catch(async (err) => {
-            const permissionError = new FirestorePermissionError({
-                path: pageRef.path,
-                operation: 'update',
-                requestResourceData: updateData
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        });
+  const toggleFavorite = () => {
+    if (!page) return;
+    window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }));
   };
 
   const handleCreateSubpage = () => {
@@ -354,6 +338,11 @@ export default function PageEditor() {
       if (!page) return;
       window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }));
   }
+
+  const handleShare = () => {
+      if (!page) return;
+      window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
+  };
 
   if (loading && !page) return <FullScreenLoader text="opening document" />;
   if (!page) return null;
@@ -489,7 +478,7 @@ export default function PageEditor() {
                     variant="ghost" 
                     size="icon" 
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900"
-                    onClick={() => setIsShareDialogOpen(true)}
+                    onClick={handleShare}
                 >
                     <Share2 className="h-4 w-4" />
                 </Button>
@@ -505,7 +494,7 @@ export default function PageEditor() {
               <DropdownMenuContent align="end" className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
                   {!page.isTrashed ? (
                       <>
-                        <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                        <DropdownMenuItem onClick={handleShare} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
                             <Share2 className="h-4 w-4 opacity-50" /> share settings
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
@@ -636,12 +625,6 @@ export default function PageEditor() {
             </div>
         </div>
       </ScrollArea>
-
-      <ShareDialog 
-        isOpen={isShareDialogOpen} 
-        onOpenChange={setIsShareDialogOpen} 
-        page={page} 
-      />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={() => {}}>
         <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">

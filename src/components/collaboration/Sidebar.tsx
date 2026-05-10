@@ -18,7 +18,8 @@ import {
     PanelLeftClose,
     History,
     FilePlus,
-    X
+    X,
+    Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,31 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     title="add subpage"
                 >
                     <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button 
+                    onClick={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }));
+                    }}
+                    className={cn(
+                        "h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center transition-colors",
+                        page.isFavorite ? "text-amber-500" : "text-slate-400 hover:text-amber-500"
+                    )}
+                    title={page.isFavorite ? "remove from favorites" : "add to favorites"}
+                >
+                    <Star className={cn("h-3.5 w-3.5", page.isFavorite && "fill-current")} />
+                </button>
+                <button 
+                    onClick={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
+                    }}
+                    className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+                    title="share document"
+                >
+                    <Share2 className="h-3.5 w-3.5" />
                 </button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
