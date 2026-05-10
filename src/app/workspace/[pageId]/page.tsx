@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
@@ -87,7 +86,6 @@ export default function PageEditor() {
     return [...rawCollaborators].sort((a, b) => {
         const timeA = a.lastActive?.seconds || 0;
         const timeB = b.lastActive?.seconds || 0;
-        // Primary sort: Active status, Secondary sort: last active time
         if (a.isActive && !b.isActive) return -1;
         if (!a.isActive && b.isActive) return 1;
         return timeB - timeA;
@@ -160,7 +158,6 @@ export default function PageEditor() {
     return () => {
         unsub();
         forceSave();
-        // Soft exit: Update status to inactive but keep the record for history
         updateDoc(presenceRef, { 
             isActive: false, 
             lastActive: serverTimestamp() 
@@ -267,13 +264,13 @@ export default function PageEditor() {
           <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
               <div className="flex items-center gap-3">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <p className="text-xs font-bold text-red-900 uppercase tracking-tight">this document is in the trash bin</p>
+                  <p className="text-xs font-bold text-red-900 leading-none">this document is in the trash bin</p>
               </div>
               <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] uppercase gap-2 hover:bg-red-50">
+                  <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50">
                       <RotateCcw className="h-3 w-3" /> restore document
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setIsDeleteDialogOpen(true)} className="h-8 rounded-xl text-red-400 font-bold text-[10px] uppercase">
+                  <Button variant="ghost" size="sm" onClick={() => setIsDeleteDialogOpen(true)} className="h-8 rounded-xl text-red-400 font-bold text-[10px]">
                       delete permanently
                   </Button>
               </div>
@@ -315,15 +312,26 @@ export default function PageEditor() {
                                     <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="rounded-lg px-2 py-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest">
-                                    {collab.name} {!isOnline && `• Last seen ${formatDistanceToNow(lastActiveDate, { addSuffix: true })}`}
-                                </p>
+                            <TooltipContent side="bottom" className="rounded-lg px-3 py-2 border-slate-100 shadow-xl bg-white">
+                                <div className="flex flex-col gap-0.5">
+                                    <p className="text-xs font-bold text-slate-900 leading-none">
+                                        {collab.name}
+                                    </p>
+                                    {!isOnline ? (
+                                        <p className="text-[9px] font-medium text-slate-400 leading-none">
+                                            last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
+                                        </p>
+                                    ) : (
+                                        <p className="text-[9px] font-bold text-primary leading-none">
+                                            viewing now
+                                        </p>
+                                    )}
+                                </div>
                             </TooltipContent>
                         </Tooltip>
                     )})}
                     {(!collaborators || collaborators.length <= 1) && (
-                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest px-1">alone</span>
+                         <span className="text-[9px] font-bold text-slate-300 px-1">alone</span>
                     )}
                 </div>
             </div>
@@ -332,12 +340,12 @@ export default function PageEditor() {
                 {isSaving ? (
                 <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">syncing</span>
+                    <span className="text-[9px] font-black text-primary">syncing</span>
                 </div>
                 ) : (
                 <div className="flex items-center gap-1.5 opacity-40">
                     <CheckCircle className="h-3 w-3 text-slate-400" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">saved</span>
+                    <span className="text-[9px] font-black text-slate-400">saved</span>
                 </div>
                 )}
             </div>
@@ -405,16 +413,15 @@ export default function PageEditor() {
         <div className="max-w-4xl mx-auto py-12 px-8 space-y-2">
             {!page.isTrashed && (
                 <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
-                        <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
+                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
+                        <Smile className="mr-1.5 h-3.5 w-3.5" /> add icon
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:bg-slate-50">
-                        <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add Cover
+                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
+                        <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> add cover
                     </Button>
                 </div>
             )}
             
-            {/* Title Section */}
             <Input 
                 value={page.title} 
                 placeholder="Untitled"
@@ -423,7 +430,6 @@ export default function PageEditor() {
                 readOnly={page.isTrashed}
             />
 
-            {/* Block Editor */}
             <div className="pt-2">
                 <Editor 
                     key={page.id} 
@@ -445,17 +451,17 @@ export default function PageEditor() {
         <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
-                {page.isTrashed ? 'Purge Permanently?' : 'Delete Document?'}
+                {page.isTrashed ? 'purge permanently?' : 'delete document?'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
               {page.isTrashed 
-                ? 'This action is irreversible. The document and its full block history will be erased from the secure cloud infrastructure.'
-                : 'This action will move the document to the Trash. You can restore it later if needed.'
+                ? 'this action is irreversible. the document and its full block history will be erased from the secure cloud infrastructure.'
+                : 'this action will move the document to the trash. you can restore it later if needed.'
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs">cancel</AlertDialogCancel>
             <AlertDialogAction 
                 onClick={() => {
                     if (page.isTrashed) {
@@ -464,9 +470,9 @@ export default function PageEditor() {
                         handleTrash();
                     }
                 }}
-                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
+                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs"
             >
-                {page.isTrashed ? 'Confirm Purge' : 'Move to Trash'}
+                {page.isTrashed ? 'confirm purge' : 'move to trash'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
