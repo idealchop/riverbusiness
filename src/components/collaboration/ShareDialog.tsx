@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -13,12 +14,29 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Globe, Copy, CheckCircle2, ShieldCheck, Mail, Send, Link as LinkIcon } from 'lucide-react';
+import { 
+    Globe, 
+    Copy, 
+    CheckCircle2, 
+    ShieldCheck, 
+    Send, 
+    Lock, 
+    Clock, 
+    KeyRound, 
+    ShieldAlert 
+} from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp, deleteField } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { CollabPage } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from '@/components/ui/select';
+import { addDays, addHours } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface ShareDialogProps {
@@ -32,33 +50,65 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
+  
+  const [isPasswordEnabled, setIsPasswordEnabled] = useState(!!page.sharePassword);
+  const [password, setPassword] = useState(page.sharePassword || '');
 
   const shareUrl = `${window.location.origin}/public/${page.shareToken || page.id}`;
 
-  const togglePublicAccess = async (enabled: boolean) => {
+  const updateSecuritySettings = async (updates: Partial<CollabPage>) => {
     if (!firestore || !page.id) return;
     setIsUpdating(true);
     try {
         const pageRef = doc(firestore, 'collaboration_pages', page.id);
-        const shareToken = page.shareToken || Math.random().toString(36).substring(2, 15);
-        
-        await updateDoc(pageRef, {
-            isPublic: enabled,
-            shareToken: shareToken
-        });
-        toast({ title: enabled ? 'Public sharing enabled' : 'Public access disabled' });
+        await updateDoc(pageRef, updates);
+        toast({ title: 'Security updated' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Update failed' });
     } finally {
         setIsUpdating(false);
     }
+  };
+
+  const togglePublicAccess = async (enabled: boolean) => {
+    const shareToken = page.shareToken || Math.random().toString(36).substring(2, 15);
+    updateSecuritySettings({
+        isPublic: enabled,
+        shareToken: enabled ? shareToken : deleteField()
+    });
+  };
+
+  const handleExpiryChange = (value: string) => {
+    let expiresAt: any = deleteField();
+    const now = new Date();
+
+    if (value === '24h') expiresAt = Timestamp.fromDate(addHours(now, 24));
+    if (value === '7d') expiresAt = Timestamp.fromDate(addDays(now, 7));
+
+    updateSecuritySettings({ expiresAt });
+  };
+
+  const togglePassword = (enabled: boolean) => {
+    setIsPasswordEnabled(enabled);
+    if (!enabled) {
+        setPassword('');
+        updateSecuritySettings({ sharePassword: deleteField() });
+    }
+  };
+
+  const savePassword = () => {
+    if (!password.trim()) {
+        toast({ variant: 'destructive', title: 'Key required', description: 'Please enter a password key.' });
+        return;
+    }
+    updateSecuritySettings({ sharePassword: password });
   };
 
   const copyLink = () => {
     navigator.clipboard.writeText(shareUrl);
     setHasCopied(true);
     setTimeout(() => setHasCopied(false), 2000);
-    toast({ title: 'Link copied to clipboard' });
+    toast({ title: 'Link copied' });
   };
 
   return (
@@ -81,7 +131,7 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
                 <div className="flex items-center justify-between p-5 rounded-3xl bg-slate-50 border border-slate-100">
                     <div className="space-y-0.5">
                         <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Public Access</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Allow anyone with the link to view</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shareable via URL</p>
                     </div>
                     <Switch 
                         checked={page.isPublic || false} 
@@ -91,7 +141,8 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
                 </div>
 
                 {page.isPublic && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
+                        {/* URL Section */}
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Live shareable link</Label>
                             <div className="flex gap-2">
@@ -113,29 +164,79 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
                             </div>
                         </div>
 
-                        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-3">
+                        {/* Security Tools */}
+                        <div className="space-y-4 pt-4 border-t border-slate-50">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Security Layer</h4>
+                            
+                            {/* Expiry Selector */}
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                                        <Clock className="h-4 w-4" />
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-600">Link Expiry</p>
+                                </div>
+                                <Select onValueChange={handleExpiryChange} defaultValue={page.expiresAt ? "active" : "never"}>
+                                    <SelectTrigger className="w-[120px] h-9 rounded-xl text-[10px] font-bold uppercase tracking-widest border-slate-100 shadow-none">
+                                        <SelectValue placeholder="Expires" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="never" className="text-[10px] font-bold uppercase">Never</SelectItem>
+                                        <SelectItem value="24h" className="text-[10px] font-bold uppercase">24 Hours</SelectItem>
+                                        <SelectItem value="7d" className="text-[10px] font-bold uppercase">7 Days</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Password Toggle */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                                            <Lock className="h-4 w-4" />
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-600">Encryption</p>
+                                    </div>
+                                    <Switch checked={isPasswordEnabled} onCheckedChange={togglePassword} disabled={isUpdating} />
+                                </div>
+                                
+                                {isPasswordEnabled && (
+                                    <div className="flex gap-2 animate-in slide-in-from-right-2 duration-300">
+                                        <Input 
+                                            placeholder="Enter access key..." 
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="h-10 rounded-xl bg-slate-50 border-slate-100 text-xs font-bold px-4"
+                                            disabled={isUpdating}
+                                        />
+                                        <Button 
+                                            size="sm" 
+                                            onClick={savePassword} 
+                                            className="h-10 rounded-xl px-4 font-bold text-[10px] uppercase tracking-widest"
+                                            disabled={isUpdating}
+                                        >
+                                            Set Key
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex items-start gap-3">
                             <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                             <p className="text-[10px] font-bold uppercase tracking-tight text-blue-900/60 leading-relaxed">
-                                Security note: Public pages are read-only. External visitors cannot modify blocks or view internal workspace meta.
+                                Encrypt or expire links for added security. Public pages are read-only.
                             </p>
                         </div>
                     </div>
                 )}
             </div>
-
-            <div className="space-y-4 pt-4 border-t border-slate-50">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Invite Contributors</h4>
-                <div className="flex gap-2">
-                    <Input placeholder="name@company.com" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none text-xs font-medium" />
-                    <Button size="icon" className="h-11 w-11 rounded-xl shadow-lg shadow-primary/20"><Send className="h-4 w-4" /></Button>
-                </div>
-            </div>
         </div>
 
-        <DialogFooter className="p-8 pt-0 flex justify-between items-center">
+        <DialogFooter className="p-8 pt-0 flex justify-between items-center bg-white">
             <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Sync Active</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Auth Secure</p>
             </div>
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Done</Button>
         </DialogFooter>

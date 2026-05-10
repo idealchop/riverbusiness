@@ -85,6 +85,8 @@ export interface CollabPage {
     isFavorite?: boolean;
     isPublic?: boolean;
     shareToken?: string;
+    sharePassword?: string;
+    expiresAt?: any;
     isTrashed?: boolean;
     trashedAt?: any;
 }
