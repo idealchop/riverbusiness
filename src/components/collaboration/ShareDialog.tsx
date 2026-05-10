@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -220,13 +219,6 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
                                     </div>
                                 )}
                             </div>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex items-start gap-3">
-                            <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                            <p className="text-[10px] font-bold uppercase tracking-tight text-blue-900/60 leading-relaxed">
-                                Encrypt or expire links for added security. Public pages are read-only.
-                            </p>
                         </div>
                     </div>
                 )}
