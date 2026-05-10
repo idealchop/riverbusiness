@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,9 @@ import {
   Globe,
   AlertTriangle,
   RotateCcw,
-  Users
+  Users,
+  FilePlus,
+  FileText
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +32,7 @@ import { ShareDialog } from '@/components/collaboration/ShareDialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +83,19 @@ export default function PageEditor() {
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
   const { data: rawCollaborators } = useCollection(presenceQuery);
 
+  // Child Pages Query - For the directory at the bottom
+  const childrenQuery = useMemoFirebase(() => (firestore && pageId) ? query(collection(firestore, 'collaboration_pages'), where('parentId', '==', pageId as string)) : null, [firestore, pageId]);
+  const { data: rawChildren } = useCollection<CollabPage>(childrenQuery);
+  
+  const childrenPages = useMemo(() => {
+      if (!rawChildren) return [];
+      return [...rawChildren].filter(p => !p.isTrashed).sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+  }, [rawChildren]);
+
   // Sort and process collaborators for the face pile
   const collaborators = useMemo(() => {
     if (!rawCollaborators) return [];
@@ -119,7 +135,7 @@ export default function PageEditor() {
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
         userId: user.uid,
-        name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'Contributor',
+        name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'contributor',
         photoURL: userProfile.photoURL || user.photoURL || null,
         lastActive: serverTimestamp(),
         isActive: true
@@ -130,7 +146,7 @@ export default function PageEditor() {
             path: presenceRef.path,
             operation: 'create',
             requestResourceData: presenceData
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });
 
@@ -151,7 +167,7 @@ export default function PageEditor() {
         const permissionError = new FirestorePermissionError({
             path: pageRef.path,
             operation: 'get'
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });
 
@@ -187,7 +203,7 @@ export default function PageEditor() {
                     path: pageRef.path,
                     operation: 'update',
                     requestResourceData: updateData
-                });
+                } satisfies SecurityRuleContext);
                 errorEmitter.emit('permission-error', permissionError);
                 setIsSaving(false);
             });
@@ -218,7 +234,7 @@ export default function PageEditor() {
                 path: pageRef.path,
                 operation: 'update',
                 requestResourceData: updateData
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
             setIsSaving(false);
         });
@@ -239,9 +255,14 @@ export default function PageEditor() {
                 path: pageRef.path,
                 operation: 'update',
                 requestResourceData: updateData
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
+  };
+
+  const handleCreateSubpage = () => {
+      if (!page) return;
+      window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id } }));
   };
 
   const handleTrash = () => {
@@ -356,6 +377,16 @@ export default function PageEditor() {
                 <Button 
                     variant="ghost" 
                     size="icon" 
+                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900"
+                    onClick={handleCreateSubpage}
+                    title="add subpage"
+                >
+                    <FilePlus className="h-4 w-4" />
+                </Button>
+
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
                     className={cn("h-8 w-8 rounded-lg transition-colors", page.isFavorite ? "text-amber-500 hover:text-amber-600" : "text-slate-400 hover:text-slate-900")}
                     onClick={toggleFavorite}
                 >
@@ -387,6 +418,9 @@ export default function PageEditor() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
                             <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'remove favorite' : 'add favorite'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleCreateSubpage} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
+                            <FilePlus className="h-4 w-4 opacity-50" /> add subpage
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={handleTrash} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
@@ -438,6 +472,33 @@ export default function PageEditor() {
                     editable={!page.isTrashed}
                 />
             </div>
+
+            {/* Subpages List at the bottom */}
+            {!page.isTrashed && childrenPages.length > 0 && (
+                <div className="mt-20 pt-10 border-t border-slate-50 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">subpages</h4>
+                    <div className="grid gap-3">
+                        {childrenPages.map(cp => (
+                            <Link key={cp.id} href={`/workspace/${cp.id}`}>
+                                <div className="flex items-center justify-between p-4 rounded-3xl bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-xl hover:-translate-y-0.5 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/5 transition-colors shadow-sm">
+                                            <FileText className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 leading-none">{cp.title || 'untitled'}</p>
+                                            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1.5">document link</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary/10 text-primary">
+                                        <ChevronRight className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
       </ScrollArea>
 
