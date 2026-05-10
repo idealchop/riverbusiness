@@ -76,7 +76,7 @@ export default function PageEditor() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteDialogOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<AppUser>(userDocRef);
@@ -312,7 +312,7 @@ export default function PageEditor() {
                   <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50">
                       <RotateCcw className="h-3 w-3" /> restore document
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setIsDeleteDialogOpen(true)} className="h-8 rounded-xl text-red-400 font-bold text-[10px]">
+                  <Button variant="ghost" size="sm" className="h-8 rounded-xl text-red-400 font-bold text-[10px]">
                       delete permanently
                   </Button>
               </div>
@@ -500,7 +500,7 @@ export default function PageEditor() {
             {/* Page Icon (Emoji) */}
             {page.icon && (
                 <div className="relative group/icon -mt-12 z-10 w-fit">
-                    <div className="text-6xl select-none">
+                    <div className="text-6xl select-none pt-4">
                         {page.icon}
                     </div>
                     {!page.isTrashed && (
@@ -566,7 +566,7 @@ export default function PageEditor() {
         page={page} 
       />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={() => {}}>
         <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
