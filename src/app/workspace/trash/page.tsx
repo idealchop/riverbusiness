@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileText, Trash2, RotateCcw, XCircle, Info, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,14 +26,25 @@ export default function TrashPages() {
 
   const companyId = user?.companyId || 'default';
 
-  const trashQuery = useMemoFirebase(() => (firestore && companyId) ? query(
+  // Fetch all pages for the company to filter locally (prevents index errors)
+  const pagesQuery = useMemoFirebase(() => (firestore && companyId) ? query(
     collection(firestore, 'collaboration_pages'),
-    where('companyId', '==', companyId),
-    where('isTrashed', '==', true),
-    orderBy('trashedAt', 'desc')
+    where('companyId', '==', companyId)
   ) : null, [firestore, companyId]);
 
-  const { data: trashedPages, isLoading } = useCollection<CollabPage>(trashQuery);
+  const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
+
+  // Filter for trashed pages and sort locally
+  const trashedPages = useMemo(() => {
+    if (!allPages) return [];
+    return [...allPages]
+      .filter(p => p.isTrashed)
+      .sort((a, b) => {
+        const timeA = a.trashedAt instanceof Timestamp ? a.trashedAt.toMillis() : (a.trashedAt?.seconds ? a.trashedAt.seconds * 1000 : 0);
+        const timeB = b.trashedAt instanceof Timestamp ? b.trashedAt.toMillis() : (b.trashedAt?.seconds ? b.trashedAt.seconds * 1000 : 0);
+        return timeB - timeA;
+      });
+  }, [allPages]);
 
   const handleRestore = (pageId: string) => {
     window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId } }));
@@ -44,77 +55,77 @@ export default function TrashPages() {
   };
 
   return (
-    <div className="min-h-full bg-slate-50/30 p-8 md:p-12 animate-in fade-in duration-700">
+    <div className="min-h-full bg-white p-8 md:p-12 animate-in fade-in duration-700">
       <div className="max-w-4xl mx-auto space-y-10">
         <div className="space-y-4">
             <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 rounded-2xl bg-red-50 text-red-600 shadow-inner">
+                <div className="p-3 rounded-2xl bg-red-50 text-red-600">
                     <Trash2 className="h-6 w-6" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Trash Bin</h1>
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Content Quarantine</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Trash Bin</h1>
+                    <p className="text-sm font-medium text-slate-500">Restore discarded documents or delete them forever.</p>
                 </div>
             </div>
             
-            <div className="p-4 rounded-2xl bg-white border border-slate-100 flex items-start gap-3 shadow-sm">
-                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <p className="text-[10px] font-bold uppercase tracking-tight text-slate-500 leading-relaxed">
-                    Documents in the trash are strictly read-only and hidden from collaborative feeds. Restore them to resume team editing.
+            <div className="p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 flex items-start gap-4">
+                <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <p className="text-sm font-medium text-slate-600 leading-relaxed">
+                    Documents in the trash are strictly read-only. You must restore them to resume collaborative editing. Items here still consume organizational storage limits.
                 </p>
             </div>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-4">
             {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                    <Card key={i} className="border-none bg-white/50 animate-pulse h-16 rounded-xl" />
+                    <Card key={i} className="border-none bg-slate-50 animate-pulse h-16 rounded-xl" />
                 ))
-            ) : trashedPages && trashedPages.length > 0 ? (
+            ) : trashedPages.length > 0 ? (
                 trashedPages.map(page => (
-                    <Card key={page.id} className="border-none shadow-sm bg-white group hover:shadow-md transition-all duration-300 rounded-xl">
-                        <CardContent className="p-4 flex items-center justify-between">
+                    <Card key={page.id} className="border border-slate-100 shadow-none rounded-2xl bg-white overflow-hidden group">
+                        <CardContent className="p-5 flex items-center justify-between">
                             <div className="flex items-center gap-4 min-w-0">
-                                <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-red-400 transition-colors shrink-0">
+                                <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 transition-colors shrink-0">
                                     <FileText className="h-5 w-5" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="font-bold text-slate-900 truncate">{page.title || 'Untitled'}</h3>
-                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                        <Calendar className="h-3 w-3" />
-                                        Discarded {page.trashedAt ? format((page.trashedAt as Timestamp).toDate(), 'MMM d, yyyy • p') : 'Recently'}
+                                    <h3 className="text-base font-bold text-slate-900 truncate">{page.title || 'Untitled Document'}</h3>
+                                    <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                        Discarded on {page.trashedAt ? format((page.trashedAt as Timestamp).toDate(), 'MMM d, yyyy') : 'Recently'}
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                                 <Button 
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => handleRestore(page.id)}
-                                    className="h-9 rounded-xl font-bold uppercase tracking-widest text-[10px] border-slate-100 gap-2 hover:bg-primary/5 hover:text-primary transition-all px-6 shadow-sm"
+                                    className="h-10 rounded-xl font-bold text-sm border-slate-200 gap-2 hover:bg-primary/5 hover:text-primary transition-all px-6"
                                 >
-                                    <RotateCcw className="h-3.5 w-3.5" /> Restore
+                                    <RotateCcw className="h-4 w-4" /> Restore
                                 </Button>
 
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
-                                            <XCircle className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
+                                            <XCircle className="h-5 w-5" />
                                         </Button>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
+                                    <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Purge Permanently?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-                                                This action is irreversible. The document and its full block history will be erased from the secure cloud infrastructure.
+                                            <AlertDialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Purge Permanently?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-slate-500 font-medium leading-relaxed pt-2">
+                                                This action is irreversible. This document and its full collaborative block history will be erased from the secure cloud infrastructure.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter className="pt-6">
-                                            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
+                                            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-sm">Cancel</AlertDialogCancel>
                                             <AlertDialogAction 
                                                 onClick={() => handlePermanentDelete(page.id)}
-                                                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
+                                                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-sm"
                                             >
                                                 Confirm Purge
                                             </AlertDialogAction>
@@ -126,9 +137,9 @@ export default function TrashPages() {
                     </Card>
                 ))
             ) : (
-                <div className="py-24 text-center opacity-30 flex flex-col items-center gap-4">
-                    <Trash2 className="h-12 w-12 text-slate-200" />
-                    <p className="text-xs font-black uppercase tracking-[0.3em]">Trash bin is empty</p>
+                <div className="py-24 text-center opacity-20 flex flex-col items-center gap-4">
+                    <Trash2 className="h-12 w-12 text-slate-400" />
+                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Trash bin is empty</p>
                 </div>
             )}
         </div>
