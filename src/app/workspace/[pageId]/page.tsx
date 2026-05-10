@@ -62,7 +62,13 @@ import {
 } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const COMMON_EMOJIS = ['📄', '📝', '📂', '📁', '🚀', '💡', '✅', '⚠️', '🛠️', '📊', '📈', '🏢', '💧', '🌊', '📅', '👤', '👥', '🔐', '📌', '⭐'];
+const COMMON_EMOJIS = [
+    '📄', '📝', '📂', '📁', '🚀', '💡', '✅', '⚠️', '🛠️', '📊', 
+    '📈', '🏢', '💧', '🌊', '📅', '👤', '👥', '🔐', '📌', '⭐',
+    '🔥', '🌈', '🌍', '⚡', '🍀', '🍎', '☕', '💻', '📱', '🔒',
+    '🔑', '💎', '🎨', '🎮', '⚽', '📣', '💬', '🔔', '📍', '🎯',
+    '💰', '💵', '💳', '🏠', '🏪', '🏭', '🏗️', '🚜', '🚛', '🚚'
+];
 
 export default function PageEditor() {
   const { pageId } = useParams();
@@ -500,7 +506,7 @@ export default function PageEditor() {
             {/* Page Icon (Emoji) */}
             {page.icon && (
                 <div className="relative group/icon -mt-12 z-10 w-fit">
-                    <div className="text-6xl select-none pt-4">
+                    <div className="text-5xl select-none pt-4">
                         {page.icon}
                     </div>
                     {!page.isTrashed && (
