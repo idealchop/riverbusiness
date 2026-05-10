@@ -39,7 +39,7 @@ import {
     Combine,
     Split,
     Highlighter,
-    Type
+    SeparatorHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -363,7 +363,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                       />
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().setHorizontalRule().run()} 
-                          icon={<Type className="h-4 w-4 rotate-90" />}
+                          icon={<SeparatorHorizontal className="h-4 w-4" />}
                           label="Divider"
                       />
                   </div>
