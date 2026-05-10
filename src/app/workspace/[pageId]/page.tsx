@@ -581,7 +581,7 @@ export default function PageEditor() {
                 value={page.title} 
                 placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-6xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
+                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-7xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
                 readOnly={page.isTrashed}
             />
 
