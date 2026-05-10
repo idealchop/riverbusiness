@@ -31,20 +31,16 @@ import {
     Loader2,
     Table as TableIcon,
     Quote,
-    Code,
-    Eraser,
-    Minus,
-    Type,
-    Highlighter,
+    Trash2,
+    Plus,
     Underline as UnderlineIcon,
     AlignLeft,
     AlignCenter,
     AlignRight,
     Combine,
     Split,
-    Trash2,
-    Plus,
-    TableProperties
+    Highlighter,
+    Type
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -368,7 +364,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                       />
                       <ToolbarButton 
                           onClick={() => editor.chain().focus().setHorizontalRule().run()} 
-                          icon={<Minus className="h-4 w-4" />}
+                          icon={<Type className="h-4 w-4 rotate-90" />}
                           label="Divider"
                       />
                   </div>

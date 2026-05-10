@@ -181,6 +181,13 @@
   .prose .text-left { text-align: left; }
   .prose .text-center { text-align: center; }
   .prose .text-right { text-align: right; }
+
+  /* Highlight Style */
+  .prose mark {
+    background-color: #fef08a;
+    border-radius: 0.25rem;
+    padding: 0 0.125rem;
+  }
 }
 
 @keyframes bounce-and-fade {
