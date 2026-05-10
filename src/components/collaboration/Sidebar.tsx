@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -101,24 +100,33 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
                 <FileText className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-600")} />
-                <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
+                <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'untitled'}</span>
             </div>
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
-                        <Plus className="h-3.5 w-3.5" /> add subpage
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer">
-                        <Trash2 className="h-3.5 w-3.5" /> move to trash
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
+                <button 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id); }}
+                    className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+                    title="add subpage"
+                >
+                    <Plus className="h-3.5 w-3.5" />
+                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center">
+                            <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                            <Plus className="h-3.5 w-3.5" /> add subpage
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer">
+                            <Trash2 className="h-3.5 w-3.5" /> move to trash
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
           </div>
         </Link>
         {isExpanded && hasChildren && (
@@ -196,7 +204,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                     activePageId === p.id ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                                 )}>
                                     <Star className="h-3.5 w-3.5 text-amber-500 fill-current" />
-                                    <span className="truncate">{p.title}</span>
+                                    <span className="truncate">{p.title || 'untitled'}</span>
                                 </div>
                              </Link>
                         ))}
@@ -224,7 +232,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 </Button>
             </div>
 
-            {/* Hub Section at bottom */}
+            {/* Management Section at bottom */}
             <div className="space-y-1 pt-4">
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
                 <Link href="/workspace/recent">

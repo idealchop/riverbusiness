@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,8 @@ import {
   RotateCcw,
   Users,
   FilePlus,
-  FileText
+  FileText,
+  Home
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -65,6 +66,7 @@ export default function PageEditor() {
   const { toast } = useToast();
 
   const [page, setPage] = useState<CollabPage | null>(null);
+  const [parentPage, setParentPage] = useState<CollabPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
@@ -129,6 +131,7 @@ export default function PageEditor() {
 
     setLoading(true);
     setPage(null);
+    setParentPage(null);
     setIsSaving(false);
 
     // Set local presence - Mark as Active
@@ -151,12 +154,22 @@ export default function PageEditor() {
     });
 
     const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-    const unsub = onSnapshot(pageRef, (snapshot) => {
+    const unsub = onSnapshot(pageRef, async (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        setPage({ id: snapshot.id, ...data } as CollabPage);
+        const currentPage = { id: snapshot.id, ...data } as CollabPage;
+        setPage(currentPage);
         latestContentRef.current = data.content;
         latestTitleRef.current = data.title;
+
+        // Fetch parent for navigation breadcrumb
+        if (data.parentId) {
+            const parentRef = doc(firestore, 'collaboration_pages', data.parentId);
+            const parentSnap = await getDoc(parentRef);
+            if (parentSnap.exists()) {
+                setParentPage({ id: parentSnap.id, ...parentSnap.data() } as CollabPage);
+            }
+        }
       } else {
         if (window.location.pathname.includes(pageId as string)) {
           router.push('/workspace');
@@ -248,7 +261,7 @@ export default function PageEditor() {
     
     updateDoc(pageRef, updateData)
         .then(() => {
-            toast({ title: !page.isFavorite ? 'added to favorites' : 'removed from favorites' });
+            toast({ title: !page.isFavorite ? 'added favorite' : 'removed favorite' });
         })
         .catch(async (err) => {
             const permissionError = new FirestorePermissionError({
@@ -298,17 +311,29 @@ export default function PageEditor() {
           </div>
       )}
 
-      {/* Document Meta Header */}
+      {/* Document Meta Header / Breadcrumbs */}
       <div className="sticky top-0 z-10 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 cursor-pointer">
-             <Layout className="h-4 w-4" />
-          </div>
+          <Link href="/workspace">
+            <div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors">
+                <Home className="h-4 w-4" />
+            </div>
+          </Link>
+          {parentPage && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+              <Link href={`/workspace/${parentPage.id}`}>
+                <span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[120px] truncate block">
+                    {parentPage.title || 'untitled'}
+                </span>
+              </Link>
+            </>
+          )}
           <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
           <Input 
             value={page.title} 
             onChange={(e) => handleUpdateTitle(e.target.value)}
-            className="border-none shadow-none focus-visible:ring-0 p-0 font-bold text-sm h-auto bg-transparent truncate max-w-[200px]"
+            className="border-none shadow-none focus-visible:ring-0 p-0 font-bold text-sm h-auto bg-transparent truncate max-w-[180px]"
             readOnly={page.isTrashed}
           />
         </div>
@@ -444,7 +469,7 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto py-12 px-8 space-y-2">
+        <div className="max-w-4xl mx-auto py-16 px-8 space-y-2">
             {!page.isTrashed && (
                 <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
                     <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
@@ -458,9 +483,9 @@ export default function PageEditor() {
             
             <Input 
                 value={page.title} 
-                placeholder="Untitled"
+                placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-6"
+                className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-6xl h-auto bg-transparent placeholder:text-slate-100 mb-8"
                 readOnly={page.isTrashed}
             />
 
@@ -474,29 +499,49 @@ export default function PageEditor() {
             </div>
 
             {/* Subpages List at the bottom */}
-            {!page.isTrashed && childrenPages.length > 0 && (
-                <div className="mt-20 pt-10 border-t border-slate-50 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">subpages</h4>
-                    <div className="grid gap-3">
-                        {childrenPages.map(cp => (
-                            <Link key={cp.id} href={`/workspace/${cp.id}`}>
-                                <div className="flex items-center justify-between p-4 rounded-3xl bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-xl hover:-translate-y-0.5 transition-all group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/5 transition-colors shadow-sm">
-                                            <FileText className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900 leading-none">{cp.title || 'untitled'}</p>
-                                            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1.5">document link</p>
-                                        </div>
-                                    </div>
-                                    <div className="p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-primary/10 text-primary">
-                                        <ChevronRight className="h-4 w-4" />
-                                    </div>
-                                </div>
-                            </Link>
-                        ))}
+            {!page.isTrashed && (
+                <div className="mt-24 pt-12 border-t border-slate-50 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">subpages</h4>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleCreateSubpage}
+                            className="h-8 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 shadow-sm"
+                        >
+                            <Plus className="mr-2 h-3.5 w-3.5" /> new subpage
+                        </Button>
                     </div>
+                    
+                    {childrenPages.length > 0 ? (
+                        <div className="grid gap-3">
+                            {childrenPages.map(cp => (
+                                <Link key={cp.id} href={`/workspace/${cp.id}`}>
+                                    <div className="flex items-center justify-between p-5 rounded-[2rem] bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-2xl hover:-translate-y-0.5 transition-all group">
+                                        <div className="flex items-center gap-5">
+                                            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/5 transition-colors shadow-sm">
+                                                <FileText className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-base font-bold text-slate-900 leading-none">{cp.title || 'untitled'}</p>
+                                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-2">document link</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-2.5 rounded-full opacity-0 group-hover:opacity-100 transition-all bg-primary/10 text-primary group-hover:translate-x-1">
+                                            <ChevronRight className="h-5 w-5" />
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="p-12 rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center gap-4 bg-slate-50/20">
+                            <div className="p-4 rounded-full bg-white shadow-sm text-slate-200">
+                                <Layout className="h-8 w-8" />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">no subpages available</p>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -509,7 +554,7 @@ export default function PageEditor() {
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
+        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
                 {page.isTrashed ? 'purge permanently?' : 'delete document?'}
@@ -522,7 +567,7 @@ export default function PageEditor() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs">cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">cancel</AlertDialogCancel>
             <AlertDialogAction 
                 onClick={() => {
                     if (page.isTrashed) {
@@ -531,7 +576,7 @@ export default function PageEditor() {
                         handleTrash();
                     }
                 }}
-                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs"
+                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
             >
                 {page.isTrashed ? 'confirm purge' : 'move to trash'}
             </AlertDialogAction>
@@ -541,3 +586,5 @@ export default function PageEditor() {
     </div>
   );
 }
+
+import { Plus, Loader2 } from 'lucide-react';

@@ -27,7 +27,6 @@ import { Separator } from '@/components/ui/separator';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
-import { Progress } from '@/components/ui/progress';
 
 interface EditorProps {
   initialContent: any;
@@ -77,7 +76,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
           heading: { levels: [1, 2, 3] }
       }),
       Placeholder.configure({
-        placeholder: 'Type "/" for commands...',
+        placeholder: 'press "/" for commands...',
       }),
       TaskList,
       TaskItem.configure({
@@ -102,7 +101,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-medium'
+            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-xl font-normal'
         },
         // Handle Drag and Drop
         handleDrop: (view, event, slice, moved) => {
@@ -117,7 +116,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         },
         // Handle Paste
         handlePaste: (view, event) => {
-            if (event.clipboardData && event.dataTransfer && event.clipboardData.files && event.clipboardData.files[0]) {
+            if (event.clipboardData && event.clipboardData.files && event.clipboardData.files[0]) {
                 const file = event.clipboardData.files[0];
                 if (file.type.startsWith('image/')) {
                     uploadAndInsertImage(file);
@@ -169,7 +168,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       />
 
       {editable && (
-        <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-6">
+        <div className="sticky top-14 z-10 mx-auto w-fit bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-10">
             <div className="flex items-center gap-1">
                 <div className="flex items-center gap-1 px-1">
                     <ToolbarButton 
@@ -261,7 +260,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       <EditorContent editor={editor} />
       
       {editable && (
-          <div className="pt-6 mt-6 border-t border-slate-50 flex items-center justify-between opacity-30">
+          <div className="pt-6 mt-12 border-t border-slate-50 flex items-center justify-between opacity-30">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative State Active</p>
               <div className="flex items-center gap-1">
                   <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">Enter</span>
