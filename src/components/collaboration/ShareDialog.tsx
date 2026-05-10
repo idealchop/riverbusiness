@@ -7,7 +7,6 @@ import {
     DialogHeader, 
     DialogTitle, 
     DialogDescription,
-    DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -17,12 +16,8 @@ import {
     Globe, 
     Copy, 
     CheckCircle2, 
-    ShieldCheck, 
-    Send, 
     Lock, 
     Clock, 
-    KeyRound, 
-    ShieldAlert 
 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { doc, updateDoc, Timestamp, deleteField } from 'firebase/firestore';
@@ -224,14 +219,6 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
                 )}
             </div>
         </div>
-
-        <DialogFooter className="p-8 pt-0 flex justify-between items-center bg-white">
-            <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Auth Secure</p>
-            </div>
-            <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Done</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
