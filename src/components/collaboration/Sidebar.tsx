@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -185,20 +184,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
       {/* Pages Navigation */}
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
-            <div className="space-y-1">
-                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Internal Hub</h4>
-                <Link href="/workspace/recent">
-                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <History className="h-4 w-4" /> Recent
-                    </Button>
-                </Link>
-                <Link href="/workspace/trash">
-                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <Trash2 className="h-4 w-4" /> Trash
-                    </Button>
-                </Link>
-            </div>
-
             {favorites.length > 0 && !searchQuery && (
                 <div className="space-y-1">
                     <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Favorites</h4>
@@ -219,7 +204,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             )}
 
             <div className="space-y-1">
-                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Company Workspace</h4>
+                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Workspace</h4>
                 <div className="space-y-0.5">
                     {rootPages.map(page => <NavItem key={page.id} page={page} />)}
                     {rootPages.length === 0 && !searchQuery && (
@@ -236,6 +221,21 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     <Plus className="h-3.5 w-3.5" />
                     New Page
                 </Button>
+            </div>
+
+            {/* Hub Section at bottom */}
+            <div className="space-y-1 pt-4">
+                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
+                <Link href="/workspace/recent">
+                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
+                        <History className="h-4 w-4" /> Recently Edited
+                    </Button>
+                </Link>
+                <Link href="/workspace/trash">
+                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
+                        <Trash2 className="h-4 w-4" /> Trash Bin
+                    </Button>
+                </Link>
             </div>
         </div>
       </ScrollArea>

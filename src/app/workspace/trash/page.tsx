@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Trash2, RotateCcw, XCircle, Info } from 'lucide-react';
+import { FileText, Trash2, RotateCcw, XCircle, Info, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import type { CollabPage } from '@/lib/types';
@@ -66,24 +65,25 @@ export default function TrashPages() {
             </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className="grid gap-3">
             {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                    <Card key={i} className="border-none bg-white/50 animate-pulse h-20 rounded-2xl" />
+                    <Card key={i} className="border-none bg-white/50 animate-pulse h-16 rounded-xl" />
                 ))
             ) : trashedPages && trashedPages.length > 0 ? (
                 trashedPages.map(page => (
-                    <Card key={page.id} className="border-none shadow-sm bg-white group hover:shadow-md transition-all duration-300 rounded-2xl">
-                        <CardContent className="p-5 flex items-center justify-between">
-                            <div className="flex items-center gap-5">
-                                <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-red-400 transition-colors">
+                    <Card key={page.id} className="border-none shadow-sm bg-white group hover:shadow-md transition-all duration-300 rounded-xl">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-red-400 transition-colors shrink-0">
                                     <FileText className="h-5 w-5" />
                                 </div>
-                                <div className="space-y-0.5">
-                                    <h3 className="font-bold text-slate-900">{page.title || 'Untitled'}</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                        Deleted {page.trashedAt ? format((page.trashedAt as Timestamp).toDate(), 'MMM d, yyyy • p') : 'Recently'}
-                                    </p>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-slate-900 truncate">{page.title || 'Untitled'}</h3>
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                        <Calendar className="h-3 w-3" />
+                                        Discarded {page.trashedAt ? format((page.trashedAt as Timestamp).toDate(), 'MMM d, yyyy • p') : 'Recently'}
+                                    </div>
                                 </div>
                             </div>
                             
@@ -92,14 +92,14 @@ export default function TrashPages() {
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => handleRestore(page.id)}
-                                    className="h-8 rounded-xl font-black uppercase tracking-widest text-[9px] border-slate-100 gap-2 hover:bg-primary/5 hover:text-primary transition-all"
+                                    className="h-9 rounded-xl font-bold uppercase tracking-widest text-[10px] border-slate-100 gap-2 hover:bg-primary/5 hover:text-primary transition-all px-6 shadow-sm"
                                 >
-                                    <RotateCcw className="h-3 w-3" /> Restore
+                                    <RotateCcw className="h-3.5 w-3.5" /> Restore
                                 </Button>
 
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
                                             <XCircle className="h-4 w-4" />
                                         </Button>
                                     </AlertDialogTrigger>
