@@ -220,7 +220,7 @@ export default function PageEditor() {
     
     updateDoc(pageRef, updateData)
         .then(() => {
-            toast({ title: !page.isFavorite ? 'Added to favorites' : 'Removed from favorites' });
+            toast({ title: !page.isFavorite ? 'added to favorites' : 'removed from favorites' });
         })
         .catch(async (err) => {
             const permissionError = new FirestorePermissionError({
@@ -242,7 +242,7 @@ export default function PageEditor() {
       window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }));
   }
 
-  if (loading && !page) return <FullScreenLoader text="Opening Document" />;
+  if (loading && !page) return <FullScreenLoader text="opening document" />;
   if (!page) return null;
 
   return (
@@ -252,14 +252,14 @@ export default function PageEditor() {
           <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
               <div className="flex items-center gap-3">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <p className="text-xs font-bold text-red-900 uppercase tracking-tight">This document is in the trash bin</p>
+                  <p className="text-xs font-bold text-red-900 uppercase tracking-tight">this document is in the trash bin</p>
               </div>
               <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] uppercase gap-2 hover:bg-red-50">
-                      <RotateCcw className="h-3 w-3" /> Restore document
+                      <RotateCcw className="h-3 w-3" /> restore document
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setIsDeleteDialogOpen(true)} className="h-8 rounded-xl text-red-400 font-bold text-[10px] uppercase">
-                      Delete permanently
+                      delete permanently
                   </Button>
               </div>
           </div>
@@ -300,7 +300,7 @@ export default function PageEditor() {
                         </Tooltip>
                     ))}
                     {(!collaborators || collaborators.length <= 1) && (
-                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest px-1">Alone</span>
+                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest px-1">alone</span>
                     )}
                 </div>
             </div>
@@ -309,12 +309,12 @@ export default function PageEditor() {
                 {isSaving ? (
                 <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Syncing</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">syncing</span>
                 </div>
                 ) : (
                 <div className="flex items-center gap-1.5 opacity-40">
                     <CheckCircle className="h-3 w-3 text-slate-400" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Saved</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">saved</span>
                 </div>
                 )}
             </div>
@@ -352,24 +352,24 @@ export default function PageEditor() {
                   {!page.isTrashed ? (
                       <>
                         <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <Share2 className="h-4 w-4 opacity-50" /> Public Sharing Settings
+                            <Share2 className="h-4 w-4 opacity-50" /> share settings
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={toggleFavorite} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                            <Star className="h-4 w-4 opacity-50" /> {page.isFavorite ? 'remove favorite' : 'add favorite'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={handleTrash} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                            <Trash2 className="h-4 w-4 opacity-50" /> Move to Trash
+                            <Trash2 className="h-4 w-4 opacity-50" /> move to trash
                         </DropdownMenuItem>
                       </>
                   ) : (
                       <>
                         <DropdownMenuItem onClick={handleRestore} className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer">
-                            <RotateCcw className="h-4 w-4 opacity-50" /> Restore Document
+                            <RotateCcw className="h-4 w-4 opacity-50" /> restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                            <Trash2 className="h-4 w-4 opacity-50" /> Delete Permanently
+                            <Trash2 className="h-4 w-4 opacity-50" /> delete permanently
                         </DropdownMenuItem>
                       </>
                   )}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -110,11 +111,11 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-bold uppercase rounded-lg">
-                        <Plus className="h-3.5 w-3.5" /> Add Subpage
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                        <Plus className="h-3.5 w-3.5" /> add subpage
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-bold uppercase text-red-600 rounded-lg">
-                        <Trash2 className="h-3.5 w-3.5" /> Move to Trash
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer">
+                        <Trash2 className="h-3.5 w-3.5" /> move to trash
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -228,12 +229,12 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
                 <Link href="/workspace/recent">
                     <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <History className="h-4 w-4" /> Recently Edited
+                        <History className="h-4 w-4" /> recently edited
                     </Button>
                 </Link>
                 <Link href="/workspace/trash">
                     <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <Trash2 className="h-4 w-4" /> Trash Bin
+                        <Trash2 className="h-4 w-4" /> trash bin
                     </Button>
                 </Link>
             </div>
