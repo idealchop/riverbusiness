@@ -24,7 +24,9 @@ import {
   Users,
   FilePlus,
   FileText,
-  Home
+  Home,
+  X,
+  Palette
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +60,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const COMMON_EMOJIS = ['📄', '📝', '📂', '📁', '🚀', '💡', '✅', '⚠️', '🛠️', '📊', '📈', '🏢', '💧', '🌊', '📅', '👤', '👥', '🔐', '📌', '⭐'];
 
 export default function PageEditor() {
   const { pageId } = useParams();
@@ -254,6 +260,21 @@ export default function PageEditor() {
     }, 1000);
   }, [firestore, pageId, page?.isTrashed]);
 
+  const handleUpdateMeta = async (data: Partial<CollabPage>) => {
+    if (!firestore || !page) return;
+    const pageRef = doc(firestore, 'collaboration_pages', page.id);
+    await updateDoc(pageRef, { ...data, updatedAt: serverTimestamp() });
+  };
+
+  const addRandomCover = () => {
+    const seed = Math.floor(Math.random() * 1000);
+    handleUpdateMeta({ coverImage: `https://picsum.photos/seed/${seed}/1200/400` });
+  };
+
+  const removeCover = () => handleUpdateMeta({ coverImage: '' });
+  const setIcon = (icon: string) => handleUpdateMeta({ icon });
+  const removeIcon = () => handleUpdateMeta({ icon: '' });
+
   const toggleFavorite = async () => {
     if (!firestore || !page) return;
     const pageRef = doc(firestore, 'collaboration_pages', page.id);
@@ -312,7 +333,7 @@ export default function PageEditor() {
       )}
 
       {/* Document Meta Header / Breadcrumbs */}
-      <div className="sticky top-0 z-10 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
+      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
         <div className="flex items-center gap-2 min-w-0">
           <Link href="/workspace">
             <div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors">
@@ -469,15 +490,67 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto py-16 px-8 space-y-2">
+        {/* Page Cover Image */}
+        <div className="relative group/cover">
+            {page.coverImage ? (
+                <div className="h-[30vh] w-full relative group">
+                    <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
+                    {!page.isTrashed && (
+                        <div className="absolute bottom-6 right-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest border-none">
+                                <Palette className="mr-1.5 h-3.5 w-3.5" /> change cover
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest border-none text-red-600">
+                                <X className="mr-1.5 h-3.5 w-3.5" /> remove
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            ) : null}
+        </div>
+
+        <div className="max-w-4xl mx-auto px-8 pt-10 pb-32 space-y-2">
+            {/* Page Icon (Emoji) */}
+            {page.icon && (
+                <div className="relative group/icon -mt-20 z-10 w-fit">
+                    <div className="text-8xl p-4 bg-white rounded-[2.5rem] shadow-2xl border-4 border-white select-none">
+                        {page.icon}
+                    </div>
+                    {!page.isTrashed && (
+                        <div className="absolute -top-2 -right-2 opacity-0 group-hover/icon:opacity-100 transition-opacity">
+                             <Button variant="secondary" size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg border-none text-red-500">
+                                <X className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {!page.isTrashed && (
                 <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
-                        <Smile className="mr-1.5 h-3.5 w-3.5" /> add icon
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
-                        <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> add cover
-                    </Button>
+                    {!page.icon && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
+                                    <Smile className="mr-1.5 h-3.5 w-3.5" /> add icon
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-64 p-2 rounded-2xl border-slate-100 shadow-3xl">
+                                <div className="grid grid-cols-5 gap-1">
+                                    {COMMON_EMOJIS.map(e => (
+                                        <button key={e} onClick={() => setIcon(e)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl transition-all">
+                                            {e}
+                                        </button>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    )}
+                    {!page.coverImage && (
+                        <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
+                            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> add cover
+                        </Button>
+                    )}
                 </div>
             )}
             
@@ -485,11 +558,11 @@ export default function PageEditor() {
                 value={page.title} 
                 placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-6xl h-auto bg-transparent placeholder:text-slate-100 mb-8"
+                className="border-none shadow-none focus-visible:ring-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
                 readOnly={page.isTrashed}
             />
 
-            <div className="pt-2">
+            <div className="">
                 <Editor 
                     key={page.id} 
                     initialContent={page.content} 
@@ -509,7 +582,7 @@ export default function PageEditor() {
                             onClick={handleCreateSubpage}
                             className="h-8 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 shadow-sm"
                         >
-                            <Plus className="mr-2 h-3.5 w-3.5" /> new subpage
+                            <FilePlus className="mr-2 h-3.5 w-3.5" /> new subpage
                         </Button>
                     </div>
                     
@@ -519,8 +592,8 @@ export default function PageEditor() {
                                 <Link key={cp.id} href={`/workspace/${cp.id}`}>
                                     <div className="flex items-center justify-between p-5 rounded-[2rem] bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-2xl hover:-translate-y-0.5 transition-all group">
                                         <div className="flex items-center gap-5">
-                                            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/5 transition-colors shadow-sm">
-                                                <FileText className="h-6 w-6" />
+                                            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:bg-primary/5 transition-colors shadow-sm text-2xl">
+                                                {cp.icon || <FileText className="h-6 w-6" />}
                                             </div>
                                             <div>
                                                 <p className="text-base font-bold text-slate-900 leading-none">{cp.title || 'untitled'}</p>
@@ -586,5 +659,3 @@ export default function PageEditor() {
     </div>
   );
 }
-
-import { Plus, Loader2 } from 'lucide-react';

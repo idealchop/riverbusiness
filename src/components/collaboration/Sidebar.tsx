@@ -99,7 +99,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </button>
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
-                <FileText className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-600")} />
+                <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                    {page.icon ? (
+                        <span className="text-xs leading-none select-none">{page.icon}</span>
+                    ) : (
+                        <FileText className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-600")} />
+                    )}
+                </div>
                 <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'untitled'}</span>
             </div>
 
@@ -203,7 +209,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                     "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all",
                                     activePageId === p.id ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                                 )}>
-                                    <Star className="h-3.5 w-3.5 text-amber-500 fill-current" />
+                                    <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                                        {p.icon ? (
+                                            <span className="text-[10px] leading-none">{p.icon}</span>
+                                        ) : (
+                                            <Star className="h-3.5 w-3.5 text-amber-500 fill-current" />
+                                        )}
+                                    </div>
                                     <span className="truncate">{p.title || 'untitled'}</span>
                                 </div>
                              </Link>
