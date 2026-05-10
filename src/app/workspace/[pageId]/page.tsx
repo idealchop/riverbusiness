@@ -27,7 +27,8 @@ import {
   Home,
   X,
   Palette,
-  Search
+  Search,
+  XCircle
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -139,11 +140,9 @@ export default function PageEditor() {
   const contentUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Presence Query - Listen to all recent visitors
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId as string, 'presence') : null, [firestore, pageId]);
   const { data: rawCollaborators } = useCollection(presenceQuery);
 
-  // Sort and process collaborators for the face pile
   const collaborators = useMemo(() => {
     if (!rawCollaborators) return [];
     return [...rawCollaborators].sort((a, b) => {
@@ -185,7 +184,6 @@ export default function PageEditor() {
     setParentPage(null);
     setIsSaving(false);
 
-    // Set local presence - Mark as Active
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
         userId: user.uid,
@@ -213,7 +211,6 @@ export default function PageEditor() {
         latestContentRef.current = data.content;
         latestTitleRef.current = data.title;
 
-        // Fetch parent for navigation breadcrumb
         if (data.parentId) {
             const parentRef = doc(firestore, 'collaboration_pages', data.parentId);
             const parentSnap = await getDoc(parentRef);
@@ -368,7 +365,6 @@ export default function PageEditor() {
           </div>
       )}
 
-      {/* Document Meta Header / Breadcrumbs */}
       <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
         <div className="flex items-center gap-2 min-w-0">
           <Link href="/workspace">
@@ -396,7 +392,6 @@ export default function PageEditor() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Collaborative Presence - Face Pile */}
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-4">
                 {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
@@ -495,7 +490,6 @@ export default function PageEditor() {
       </div>
 
       <ScrollArea className="flex-1">
-        {/* Page Cover Image */}
         <div className="relative group/cover">
             {page.coverImage ? (
                 <div className="h-[30vh] w-full relative group">
@@ -514,8 +508,7 @@ export default function PageEditor() {
             ) : null}
         </div>
 
-        <div className="max-w-4xl mx-auto px-8 pt-24 pb-32 space-y-2">
-            {/* Page Icon (Emoji) */}
+        <div className="max-w-4xl mx-auto px-8 pt-6 pb-32 space-y-2">
             {page.icon && (
                 <div className="relative group/icon -mt-12 z-10 w-fit">
                     <div className="text-5xl select-none pt-4">
