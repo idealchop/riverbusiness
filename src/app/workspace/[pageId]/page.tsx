@@ -26,7 +26,8 @@ import {
   FileText,
   Home,
   X,
-  Palette
+  Palette,
+  Search
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -62,12 +63,57 @@ import {
 } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const COMMON_EMOJIS = [
-    '📄', '📝', '📂', '📁', '🚀', '💡', '✅', '⚠️', '🛠️', '📊', 
-    '📈', '🏢', '💧', '🌊', '📅', '👤', '👥', '🔐', '📌', '⭐',
-    '🔥', '🌈', '🌍', '⚡', '🍀', '🍎', '☕', '💻', '📱', '🔒',
-    '🔑', '💎', '🎨', '🎮', '⚽', '📣', '💬', '🔔', '📍', '🎯',
-    '💰', '💵', '💳', '🏠', '🏪', '🏭', '🏗️', '🚜', '🚛', '🚚'
+const EMOJI_LIST = [
+  { char: '📄', keywords: 'document page file' },
+  { char: '📝', keywords: 'note pencil write' },
+  { char: '📂', keywords: 'folder open' },
+  { char: '📁', keywords: 'folder' },
+  { char: '🚀', keywords: 'rocket blast launch' },
+  { char: '💡', keywords: 'idea lightbulb' },
+  { char: '✅', keywords: 'check mark done' },
+  { char: '⚠️', keywords: 'warning alert' },
+  { char: '🛠️', keywords: 'tools repair' },
+  { char: '📊', keywords: 'chart graph' },
+  { char: '📈', keywords: 'chart growth' },
+  { char: '🏢', keywords: 'building office' },
+  { char: '💧', keywords: 'water drop' },
+  { char: '🌊', keywords: 'water wave' },
+  { char: '📅', keywords: 'calendar date' },
+  { char: '👤', keywords: 'user person' },
+  { char: '👥', keywords: 'users team' },
+  { char: '🔐', keywords: 'lock private' },
+  { char: '📌', keywords: 'pin' },
+  { char: '⭐', keywords: 'star favorite' },
+  { char: '🔥', keywords: 'fire hot' },
+  { char: '🌈', keywords: 'rainbow' },
+  { char: '🌍', keywords: 'earth globe' },
+  { char: '⚡', keywords: 'lightning bolt zap' },
+  { char: '🍀', keywords: 'clover luck' },
+  { char: '🍎', keywords: 'apple fruit' },
+  { char: '☕', keywords: 'coffee' },
+  { char: '💻', keywords: 'laptop computer' },
+  { char: '📱', keywords: 'mobile phone' },
+  { char: '🔒', keywords: 'lock' },
+  { char: '🔑', keywords: 'key' },
+  { char: '💎', keywords: 'diamond gem' },
+  { char: '🎨', keywords: 'art paint palette' },
+  { char: '🎮', keywords: 'game controller' },
+  { char: '⚽', keywords: 'soccer ball' },
+  { char: '📣', keywords: 'megaphone announce' },
+  { char: '💬', keywords: 'chat message' },
+  { char: '🔔', keywords: 'bell alert' },
+  { char: '📍', keywords: 'location pin' },
+  { char: '🎯', keywords: 'target goal' },
+  { char: '💰', keywords: 'money bag dollar' },
+  { char: '💵', keywords: 'money cash' },
+  { char: '💳', keywords: 'credit card' },
+  { char: '🏠', keywords: 'home house' },
+  { char: '🏪', keywords: 'store shop' },
+  { char: '🏭', keywords: 'factory industrial' },
+  { char: '🏗️', keywords: 'construction' },
+  { char: '🚜', keywords: 'tractor' },
+  { char: '🚛', keywords: 'truck' },
+  { char: '🚚', keywords: 'delivery truck' }
 ];
 
 export default function PageEditor() {
@@ -83,6 +129,7 @@ export default function PageEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [emojiSearch, setEmojiSearch] = useState('');
 
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<AppUser>(userDocRef);
@@ -108,6 +155,12 @@ export default function PageEditor() {
         return timeB - timeA;
     });
   }, [rawCollaborators]);
+
+  const filteredEmojis = useMemo(() => {
+    if (!emojiSearch) return EMOJI_LIST;
+    const s = emojiSearch.toLowerCase();
+    return EMOJI_LIST.filter(e => e.keywords.includes(s) || e.char.includes(s));
+  }, [emojiSearch]);
 
   const forceSave = useCallback(async () => {
     if (!firestore || !pageId || !latestContentRef.current) return;
@@ -372,17 +425,17 @@ export default function PageEditor() {
                                     <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="rounded-lg px-3 py-2 border-slate-100 shadow-xl bg-white">
-                                <div className="flex flex-col gap-0.5">
-                                    <p className="text-xs font-bold text-slate-900 leading-none">
+                            <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl">
+                                <div className="flex flex-col">
+                                    <p className="text-xs font-black text-slate-900 leading-none">
                                         {collab.name}
                                     </p>
                                     {!isOnline ? (
-                                        <p className="text-[9px] font-medium text-slate-400 leading-none">
+                                        <p className="text-[10px] font-bold text-slate-400 leading-none mt-1">
                                             last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
                                         </p>
                                     ) : (
-                                        <p className="text-[9px] font-bold text-primary leading-none">
+                                        <p className="text-[10px] font-black text-primary leading-none mt-1">
                                             viewing now
                                         </p>
                                     )}
@@ -522,19 +575,37 @@ export default function PageEditor() {
             {!page.isTrashed && (
                 <div className="flex items-center gap-4 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity mb-4">
                     {!page.icon && (
-                        <Popover>
+                        <Popover onOpenChange={(open) => { if (!open) setEmojiSearch(''); }}>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
                                     <Smile className="mr-1.5 h-3.5 w-3.5" /> add icon
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent align="start" className="w-64 p-2 rounded-2xl border-slate-100 shadow-3xl">
-                                <div className="grid grid-cols-5 gap-1">
-                                    {COMMON_EMOJIS.map(e => (
-                                        <button key={e} onClick={() => setIcon(e)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl transition-all">
-                                            {e}
-                                        </button>
-                                    ))}
+                            <PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl">
+                                <div className="space-y-3">
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                        <Input 
+                                            placeholder="search emojis..." 
+                                            className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner rounded-lg font-bold"
+                                            value={emojiSearch}
+                                            onChange={(e) => setEmojiSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <ScrollArea className="h-32 pr-2">
+                                        <div className="grid grid-cols-5 gap-1">
+                                            {filteredEmojis.map(e => (
+                                                <button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl transition-all">
+                                                    {e.char}
+                                                </button>
+                                            ))}
+                                            {filteredEmojis.length === 0 && (
+                                                <div className="col-span-5 py-8 text-center">
+                                                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">none found</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </ScrollArea>
                                 </div>
                             </PopoverContent>
                         </Popover>
