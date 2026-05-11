@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   FolderPlus, 
@@ -29,9 +29,13 @@ import {
   StarOff,
   Headset,
   FileSearch,
-  Clock
+  Clock,
+  Home,
+  X,
+  History,
+  Info
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -46,12 +50,12 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useStorage, useAuth, useDoc } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useStorage, useAuth, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy, setDoc, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import type { CloudFile, CloudFolder, AppUser, ChatMessage, Notification as NotificationType } from '@/lib/types';
+import type { CloudFile, CloudFolder, AppUser, ChatMessage, Notification as NotificationType, SecurityRuleContext } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -71,6 +75,7 @@ import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { LiveSupportDialog } from '@/components/dashboard/layout/LiveSupportDialog';
+import { formatDistanceToNow } from 'date-fns';
 
 const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2gb
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500mb
@@ -81,6 +86,7 @@ export default function RiverFilesPage() {
   const storage = useStorage();
   const auth = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -98,6 +104,54 @@ export default function RiverFilesPage() {
 
   // multi-tenant isolation
   const companyId = user?.companyId || 'unassigned';
+
+  // --- presence logic (collab standard) ---
+  const presenceQuery = useMemoFirebase(
+    () => (firestore && companyId !== 'unassigned') ? collection(firestore, 'hr_companies', companyId, 'files_presence') : null,
+    [firestore, companyId]
+  );
+  const { data: rawCollaborators } = useCollection(presenceQuery);
+
+  const collaborators = useMemo(() => {
+    if (!rawCollaborators) return [];
+    return [...rawCollaborators].sort((a, b) => {
+        const timeA = a.lastActive?.seconds || 0;
+        const timeB = b.lastActive?.seconds || 0;
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return timeB - timeA;
+    });
+  }, [rawCollaborators]);
+
+  useEffect(() => {
+    if (!firestore || !user || companyId === 'unassigned') return;
+
+    const presenceRef = doc(firestore, 'hr_companies', companyId, 'files_presence', user.id);
+    const presenceData = {
+        id: user.id,
+        name: user.name || user.email?.split('@')[0] || 'collaborator',
+        photoURL: user.photoURL || null,
+        lastActive: serverTimestamp(),
+        isActive: true,
+        lastPath: pathname
+    };
+    
+    setDoc(presenceRef, presenceData).catch(async (err) => {
+        const permissionError = new FirestorePermissionError({
+            path: presenceRef.path,
+            operation: 'create',
+            requestResourceData: presenceData
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    return () => {
+        updateDoc(presenceRef, { 
+            isActive: false, 
+            lastActive: serverTimestamp() 
+        }).catch(() => {}); 
+    };
+  }, [firestore, user, companyId, pathname]);
 
   // --- data queries ---
   const foldersQuery = useMemoFirebase(
@@ -183,24 +237,30 @@ export default function RiverFilesPage() {
   // --- handlers ---
   const handleCreateFolder = async () => {
     if (!firestore || !user || !newFolderName.trim()) return;
+    const newFolderData = {
+        name: newFolderName.trim().toLowerCase(),
+        parentId: currentFolderId,
+        ownerId: user.id,
+        ownerName: user.name,
+        ownerPhoto: user.photoURL || '',
+        companyId: companyId,
+        isFavorite: false,
+        isTrashed: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+    };
     try {
-        await addDoc(collection(firestore, 'cloud_folders'), {
-            name: newFolderName.trim().toLowerCase(),
-            parentId: currentFolderId,
-            ownerId: user.id,
-            ownerName: user.name,
-            ownerPhoto: user.photoURL || '',
-            companyId: companyId,
-            isFavorite: false,
-            isTrashed: false,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-        });
-        toast({ title: 'directory synced' });
+        await addDoc(collection(firestore, 'cloud_folders'), newFolderData);
+        toast({ title: 'directory synchronized' });
         setIsNewFolderOpen(false);
         setNewFolderName('');
     } catch (e) {
-        toast({ variant: 'destructive', title: 'sync blocked' });
+        const permissionError = new FirestorePermissionError({
+            path: '/cloud_folders',
+            operation: 'create',
+            requestResourceData: newFolderData
+        });
+        errorEmitter.emit('permission-error', permissionError);
     }
   };
 
@@ -225,7 +285,7 @@ export default function RiverFilesPage() {
         const path = `cloud_storage/${companyId}/${Date.now()}-${file.name}`;
         const url = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
 
-        await addDoc(collection(firestore, 'cloud_files'), {
+        const newFileData = {
             name: file.name.toLowerCase(),
             type: file.type,
             size: file.size,
@@ -239,8 +299,9 @@ export default function RiverFilesPage() {
             isTrashed: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
-        });
+        };
 
+        await addDoc(collection(firestore, 'cloud_files'), newFileData);
         toast({ title: 'asset synchronized' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'sync failure' });
@@ -336,7 +397,7 @@ export default function RiverFilesPage() {
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden font-sans lowercase">
-      {/* 1. unified global header */}
+      {/* global header (collab standard) */}
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
@@ -346,7 +407,48 @@ export default function RiverFilesPage() {
           </div>
         </Link>
         <div className="flex-1" />
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-6">
+          {/* team presence indicators */}
+          <TooltipProvider delayDuration={0}>
+             <div className="flex -space-x-1.5 mr-2">
+                {collaborators?.filter(c => c.id !== user?.id).map(collab => {
+                    const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
+                    const isOnline = collab.isActive;
+
+                    return (
+                    <Tooltip key={collab.id}>
+                        <TooltipTrigger asChild>
+                            <div className="relative">
+                                <Avatar className={cn(
+                                    "h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default",
+                                    !isOnline && "grayscale opacity-50"
+                                )}>
+                                    <AvatarImage src={collab.photoURL} />
+                                    <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl border">
+                            <div className="flex flex-col lowercase">
+                                <p className="text-xs font-black text-slate-900 leading-none">
+                                    {collab.name}
+                                </p>
+                                {!isOnline ? (
+                                    <p className="text-[10px] font-bold text-slate-400 leading-none mt-1">
+                                        last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
+                                    </p>
+                                ) : (
+                                    <p className="text-[10px] font-black text-primary leading-none mt-1">
+                                        viewing now
+                                    </p>
+                                )}
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                )})}
+            </div>
+          </TooltipProvider>
+
           <LiveSupportDialog 
             isOpen={isLiveSupportOpen}
             onOpenChange={setIsLiveSupportOpen}
@@ -382,78 +484,93 @@ export default function RiverFilesPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* 2. minimal side navigation */}
-        <aside className="w-64 border-r bg-slate-50/50 flex flex-col shrink-0">
-          <div className="p-6">
-            <nav className="space-y-1">
-              <SidebarItem 
-                active={activeTab === 'all'} 
-                onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} 
-                icon={<Globe className="h-4 w-4" />} 
-                label="company hub" 
-              />
-              <SidebarItem 
-                active={activeTab === 'favorites'} 
-                onClick={() => setActiveTab('favorites')} 
-                icon={<Star className="h-4 w-4" />} 
-                label="pinned assets" 
-              />
-              <SidebarItem 
-                active={activeTab === 'trash'} 
-                onClick={() => setActiveTab('trash')} 
-                icon={<Trash2 className="h-4 w-4" />} 
-                label="trash bin" 
-              />
-            </nav>
-          </div>
-
-          <div className="mt-auto p-6 space-y-6">
-            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3">
-              <div className="flex items-center justify-between text-[9px] font-black text-slate-400">
-                <span>shared quota</span>
-                <span className={cn(storagePercentage > 90 ? "text-red-500" : "text-slate-900")}>{Math.round(storagePercentage)}%</span>
-              </div>
-              <Progress value={storagePercentage} className={cn("h-1 bg-slate-100", storagePercentage > 90 && "[&>div]:bg-red-500")} />
-              <p className="text-[8px] font-bold text-slate-400 leading-none">
-                {formatSize(companyUsedStorage)} of 2gb shared
-              </p>
+        {/* side navigation (collab standard) */}
+        <aside className="w-72 border-r bg-slate-50/80 flex flex-col shrink-0 transition-all duration-300">
+          <div className="p-6 flex-1 overflow-y-auto space-y-8">
+            <div className="space-y-1">
+              <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">directories</h4>
+              <nav className="space-y-1">
+                <SidebarItem 
+                  active={activeTab === 'all'} 
+                  onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} 
+                  icon={<Globe className="h-4 w-4" />} 
+                  label="company hub" 
+                />
+                <SidebarItem 
+                  active={activeTab === 'favorites'} 
+                  onClick={() => setActiveTab('favorites')} 
+                  icon={<Star className="h-4 w-4" />} 
+                  label="pinned assets" 
+                />
+                <SidebarItem 
+                  active={activeTab === 'trash'} 
+                  onClick={() => setActiveTab('trash')} 
+                  icon={<Trash2 className="h-4 w-4" />} 
+                  label="trash bin" 
+                />
+              </nav>
             </div>
 
-            <div className="px-1 flex items-center gap-3">
-              <Avatar className="h-8 w-8 rounded-xl shadow-sm">
-                <AvatarImage src={user?.photoURL} />
-                <AvatarFallback className="text-[10px] font-black bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black text-slate-900 truncate tracking-tighter">{user?.name}</p>
-                <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">{user?.businessName || 'collaborator'}</p>
-              </div>
+            <div className="space-y-1">
+                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">management</h4>
+                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900">
+                    <History className="h-4 w-4" /> recently modified
+                </Button>
+                <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900" onClick={() => setIsNewFolderOpen(true)}>
+                    <FolderPlus className="h-4 w-4" /> new directory
+                </Button>
+            </div>
+          </div>
+
+          <div className="mt-auto p-4 border-t bg-slate-50/50">
+            <div className="p-4 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[9px] font-black text-slate-400">
+                        <span>collective quota</span>
+                        <span className={cn(storagePercentage > 90 ? "text-red-500" : "text-slate-900")}>{Math.round(storagePercentage)}%</span>
+                    </div>
+                    <Progress value={storagePercentage} className={cn("h-1 bg-slate-100", storagePercentage > 90 && "[&>div]:bg-red-500")} />
+                    <p className="text-[8px] font-bold text-slate-400 leading-none">
+                        {formatSize(companyUsedStorage)} of 2gb shared
+                    </p>
+                </div>
+                <Separator className="bg-slate-50" />
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 rounded-xl shadow-sm">
+                        <AvatarImage src={user?.photoURL} />
+                        <AvatarFallback className="text-[10px] font-black bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-black text-slate-900 truncate tracking-tighter">{user?.businessName || 'company hub'}</p>
+                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">shared team storage</p>
+                    </div>
+                </div>
             </div>
           </div>
         </aside>
 
-        {/* 3. main workspace area */}
+        {/* main workspace area */}
         <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* browser breadcrumbs & search */}
-          <header className="h-14 border-b flex items-center justify-between px-6 bg-white shrink-0">
-            <div className="flex items-center gap-2 overflow-hidden">
+          {/* header breadcrumbs & tools */}
+          <header className="h-14 border-b flex items-center justify-between px-6 bg-white/95 backdrop-blur-sm shrink-0 sticky top-0 z-20">
+            <div className="flex items-center gap-2 overflow-hidden min-w-0">
               <button 
                 onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }}
                 className={cn(
-                  "text-[9px] font-black transition-colors", 
-                  currentFolderId ? "text-slate-400 hover:text-slate-900" : "text-blue-600"
+                  "p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors", 
+                  !currentFolderId && "text-slate-900"
                 )}
               >
-                hub
+                <Home className="h-4 w-4" />
               </button>
               {currentFolderPath.map((folder, idx) => (
                 <React.Fragment key={folder.id}>
-                  <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
                   <button 
                     onClick={() => { setActiveTab('all'); setCurrentFolderId(folder.id); }}
                     className={cn(
-                      "text-[9px] font-black whitespace-nowrap truncate max-w-[120px] transition-colors",
-                      idx === currentFolderPath.length - 1 ? "text-blue-600" : "text-slate-400 hover:text-slate-900"
+                      "text-xs font-bold whitespace-nowrap truncate max-w-[150px] transition-colors",
+                      idx === currentFolderPath.length - 1 ? "text-slate-900" : "text-slate-400 hover:text-slate-900"
                     )}
                   >
                     {folder.name}
@@ -463,11 +580,11 @@ export default function RiverFilesPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="relative w-64 hidden md:block">
+              <div className="relative group/search hidden md:block w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input 
-                  placeholder="search hub..." 
-                  className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-[11px] font-bold"
+                  placeholder="quick find assets..." 
+                  className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-bold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -476,32 +593,32 @@ export default function RiverFilesPage() {
               <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
                 <button 
                   onClick={() => setViewMode('grid')} 
-                  className={cn("p-1.5 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
+                  className={cn("p-1.5 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-primary" : "text-slate-400")}
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </button>
                 <button 
                   onClick={() => setViewMode('list')} 
-                  className={cn("p-1.5 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
+                  className={cn("p-1.5 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-primary" : "text-slate-400")}
                 >
                   <ListIcon className="h-4 w-4" />
                 </button>
               </div>
 
-              <Separator orientation="vertical" className="h-5 mx-1 bg-slate-100" />
+              <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-9 px-4 rounded-xl font-black text-[9px] shadow-lg shadow-blue-600/10 gap-2">
-                    <Plus className="h-3.5 w-3.5" /> sync new
+                  <Button className="h-9 px-4 rounded-xl font-black text-[9px] shadow-lg shadow-primary/10 gap-2">
+                    <Plus className="h-3.5 w-3.5" /> sync asset
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
-                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-[9px] cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
+                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
                     <FolderPlus className="h-4 w-4 text-blue-500" /> new folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
-                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-[9px] cursor-pointer relative">
+                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer relative">
                     <Upload className="h-4 w-4 text-primary" /> 
                     sync file
                     <input 
@@ -516,10 +633,10 @@ export default function RiverFilesPage() {
             </div>
           </header>
 
-          {/* main context */}
+          {/* main context area */}
           <main className="flex-1 overflow-auto bg-white">
             <ScrollArea className="h-full">
-              <div className="p-8">
+              <div className="p-8 pb-32">
                 {(loadingFolders || loadingFiles) ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                     {Array.from({ length: 12 }).map((_, i) => (
@@ -527,12 +644,12 @@ export default function RiverFilesPage() {
                     ))}
                   </div>
                 ) : (currentFolders.length === 0 && currentFiles.length === 0) ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center py-40">
+                  <div className="h-full flex flex-col items-center justify-center text-center py-40 animate-in fade-in duration-700">
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-lg font-black text-slate-900 leading-none">drive empty</h3>
-                    <p className="text-[9px] font-bold text-slate-400 mt-4 max-w-[200px] leading-relaxed">sync an asset to the shared hub to begin.</p>
+                    <h3 className="text-xl font-black text-slate-900 leading-none">organizational hub empty</h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-4 max-w-[220px] leading-relaxed">sync your first asset to the shared company drive to begin collaboration.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -575,17 +692,17 @@ export default function RiverFilesPage() {
         </div>
       </div>
 
-      {/* sync status overlay */}
+      {/* asset synchronization overlay */}
       {isUploading && (
-        <div className="fixed bottom-8 right-8 z-[100] bg-slate-900 text-white p-5 rounded-[2rem] shadow-3xl border border-white/10 flex flex-col gap-4 min-w-[300px] animate-in slide-in-from-bottom-10 duration-700">
+        <div className="fixed bottom-8 right-8 z-[100] bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-3xl border border-white/10 flex flex-col gap-4 min-w-[320px] animate-in slide-in-from-bottom-10 duration-700">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-white/10 flex items-center justify-center">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary-light" />
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[9px] font-black">hub sync active</p>
-                        <p className="text-[8px] font-bold text-slate-400 mt-1">uploading shared asset...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">hub synchronization</p>
+                        <p className="text-[8px] font-bold text-slate-400 mt-1">uploading shared organizational asset...</p>
                     </div>
                 </div>
                 <span className="text-xs font-black tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -594,7 +711,7 @@ export default function RiverFilesPage() {
         </div>
       )}
 
-      {/* create folder modal */}
+      {/* create directory modal */}
       <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
         <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-3xl p-8 bg-white">
             <DialogHeader className="space-y-4">
@@ -602,14 +719,14 @@ export default function RiverFilesPage() {
                     <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-black tracking-tighter text-slate-900">directory label</DialogTitle>
-                    <DialogDescription className="text-slate-400 font-bold text-[8px] mt-1">
-                        organize team content into shared organizational units
+                    <DialogTitle className="text-xl font-black tracking-tighter text-slate-900">directory synchronization</DialogTitle>
+                    <DialogDescription className="text-slate-400 font-bold text-[9px] mt-1 uppercase tracking-wider">
+                        organize collective team content into shared organizational units
                     </DialogDescription>
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[9px] font-black text-slate-400 ml-1">folder name</Label>
+                <Label className="text-[9px] font-black text-slate-400 ml-1 uppercase tracking-widest">folder label</Label>
                 <Input 
                     autoFocus
                     placeholder="e.g. logistics records" 
@@ -620,8 +737,8 @@ export default function RiverFilesPage() {
                 />
             </div>
             <DialogFooter className="gap-2">
-                <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-[9px] text-slate-400">cancel</Button>
-                <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-black text-[9px] shadow-lg shadow-primary/20">
+                <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-[10px] uppercase tracking-widest text-slate-400">cancel</Button>
+                <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20">
                     authorize
                 </Button>
             </DialogFooter>
@@ -644,11 +761,11 @@ function SidebarItem({ active, onClick, label, icon }: { active: boolean, onClic
         >
             <div className={cn(
                 "p-1.5 rounded-lg transition-all duration-300",
-                active ? "bg-blue-600 text-white shadow-md shadow-blue-600/30" : "bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600"
+                active ? "bg-primary text-white shadow-md shadow-primary/30" : "bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-primary"
             )}>
                 {icon}
             </div>
-            <span className={cn("text-[10px] font-black transition-all", active ? "translate-x-1" : "")}>{label}</span>
+            <span className={cn("text-[11px] font-bold transition-all", active ? "translate-x-1" : "")}>{label}</span>
         </button>
     );
 }
@@ -666,22 +783,22 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
             <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer">
                             {folder.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
                             {folder.isFavorite ? 'unpin asset' : 'pin to hub'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer text-green-600">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer text-green-600">
                             <CheckCircle2 className="h-3 w-3" /> restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> delete forever
                         </DropdownMenuItem>
                     </>
@@ -692,15 +809,15 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
 
     if (viewMode === 'list') {
         return (
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-xl transition-all group animate-in fade-in duration-500">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 hover:border-primary/20 hover:shadow-xl transition-all group animate-in fade-in duration-500">
                 <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={onOpen}>
                     <div className="p-2.5 rounded-xl bg-blue-50 text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
                         <Folder className="h-5 w-5 fill-current" />
                     </div>
                     <div className="space-y-0.5">
-                        <p className="text-xs font-black text-slate-900 leading-none">{folder.name}</p>
+                        <p className="text-sm font-bold text-slate-900 leading-none">{folder.name}</p>
                         <div className="flex items-center gap-2">
-                             <span className="text-[8px] font-black text-slate-400">synced by {folder.ownerName}</span>
+                             <span className="text-[10px] font-bold text-slate-400">synced by {folder.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -723,8 +840,8 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                             <Folder className="h-6 w-6 fill-current" />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-black text-slate-900 truncate leading-none mb-1.5 tracking-tighter">{folder.name}</p>
-                            <p className="text-[8px] font-black text-slate-400">directory</p>
+                            <p className="text-sm font-black text-slate-900 truncate leading-none mb-1.5 tracking-tighter">{folder.name}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">directory</p>
                         </div>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50">
@@ -733,10 +850,10 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                                 <AvatarImage src={folder.ownerPhoto} />
                                 <AvatarFallback className="text-[8px] font-black bg-slate-100 text-slate-400">{initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[8px] font-black text-slate-400 truncate max-w-[70px]">{folder.ownerName?.split(' ')[0]}</span>
+                            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[80px]">{folder.ownerName?.split(' ')[0]}</span>
                         </div>
                         {folder.isFavorite && !isTrashView && (
-                            <Star className="h-3 w-3 text-amber-400 fill-current" />
+                            <Star className="h-3.5 w-3.5 text-amber-400 fill-current" />
                         )}
                     </div>
                 </div>
@@ -758,25 +875,25 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
             <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
                             {file.isFavorite ? 'unpin asset' : 'pin to hub'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer">
                             <Download className="h-3 w-3 text-slate-400" /> download local
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer text-green-600">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer text-green-600">
                             <CheckCircle2 className="h-3 w-3" /> restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> delete forever
                         </DropdownMenuItem>
                     </>
@@ -793,11 +910,11 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         {icon}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-900 truncate max-w-[300px]">{file.name}</span>
+                        <span className="text-sm font-bold text-slate-900 truncate max-w-[300px]">{file.name}</span>
                         <div className="flex items-center gap-3">
-                            <span className="text-[8px] font-black text-slate-400">{formatSize(file.size)}</span>
+                            <span className="text-[10px] font-bold text-slate-400">{formatSize(file.size)}</span>
                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[8px] font-black text-primary">synced by {file.ownerName}</span>
+                            <span className="text-[10px] font-bold text-primary">synced by {file.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -819,8 +936,8 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         {icon}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-900 truncate leading-tight mb-2 tracking-tighter">{file.name}</p>
-                        <div className="flex items-center justify-between text-[8px] font-black text-slate-400">
+                        <p className="text-sm font-black text-slate-900 truncate leading-tight mb-2 tracking-tighter">{file.name}</p>
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                             <span>{formatSize(file.size)}</span>
                         </div>
                     </div>
@@ -830,10 +947,10 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                                 <AvatarImage src={file.ownerPhoto} />
                                 <AvatarFallback className="text-[8px] font-black bg-slate-100 text-slate-400">{initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[8px] font-black text-slate-400 truncate max-w-[70px]">{file.ownerName?.split(' ')[0]}</span>
+                            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[80px]">{file.ownerName?.split(' ')[0]}</span>
                         </div>
                         {file.isFavorite && !isTrashView && (
-                            <Star className="h-3 w-3 text-amber-400 fill-current" />
+                            <Star className="h-3.5 w-3.5 text-amber-400 fill-current" />
                         )}
                     </div>
                 </div>
@@ -841,3 +958,5 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
         </Card>
     );
 }
+
+import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
