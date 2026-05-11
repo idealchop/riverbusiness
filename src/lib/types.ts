@@ -49,6 +49,8 @@ export interface CloudFile {
     url: string;
     folderId: string | null;
     ownerId: string;
+    ownerName?: string;
+    ownerPhoto?: string;
     companyId: string;
     isFavorite: boolean;
     isTrashed: boolean;
@@ -62,6 +64,8 @@ export interface CloudFolder {
     name: string;
     parentId: string | null;
     ownerId: string;
+    ownerName?: string;
+    ownerPhoto?: string;
     companyId: string;
     isFavorite: boolean;
     isTrashed: boolean;

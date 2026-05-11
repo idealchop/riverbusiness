@@ -28,7 +28,9 @@ import {
   Download,
   Info,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Loader2,
+  User as UserIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,6 +62,8 @@ import {
     DialogDescription,
     DialogFooter 
 } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500MB
@@ -144,12 +148,12 @@ export default function RiverFilesPage() {
     return path;
   }, [currentFolderId, allFolders]);
 
-  const usedStorage = useMemo(() => {
+  const companyUsedStorage = useMemo(() => {
     if (!allFiles) return 0;
     return allFiles.filter(f => !f.isTrashed).reduce((acc, f) => acc + f.size, 0);
   }, [allFiles]);
 
-  const storagePercentage = (usedStorage / STORAGE_QUOTA_BYTES) * 100;
+  const storagePercentage = (companyUsedStorage / STORAGE_QUOTA_BYTES) * 100;
 
   // --- Handlers ---
   const handleCreateFolder = async () => {
@@ -159,6 +163,8 @@ export default function RiverFilesPage() {
             name: newFolderName.trim(),
             parentId: currentFolderId,
             ownerId: user.id,
+            ownerName: user.name,
+            ownerPhoto: user.photoURL || '',
             companyId: companyId,
             isFavorite: false,
             isTrashed: false,
@@ -182,8 +188,8 @@ export default function RiverFilesPage() {
         return;
     }
 
-    if (usedStorage + file.size > STORAGE_QUOTA_BYTES) {
-        toast({ variant: 'destructive', title: 'Storage full', description: 'You have reached your 2GB limit.' });
+    if (companyUsedStorage + file.size > STORAGE_QUOTA_BYTES) {
+        toast({ variant: 'destructive', title: 'Storage full', description: 'Company has reached the 2GB shared limit.' });
         return;
     }
 
@@ -201,6 +207,8 @@ export default function RiverFilesPage() {
             url,
             folderId: currentFolderId,
             ownerId: user.id,
+            ownerName: user.name,
+            ownerPhoto: user.photoURL || '',
             companyId: companyId,
             isFavorite: false,
             isTrashed: false,
@@ -300,7 +308,7 @@ export default function RiverFilesPage() {
                         onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }}
                         className={cn("text-xs font-bold uppercase tracking-widest transition-colors", currentFolderId ? "text-slate-400 hover:text-slate-900" : "text-blue-600")}
                     >
-                        Root
+                        Company Hub
                     </button>
                     {currentFolderPath.map((folder, idx) => (
                         <React.Fragment key={folder.id}>
@@ -323,7 +331,7 @@ export default function RiverFilesPage() {
                 <div className="relative w-full md:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input 
-                        placeholder="Search files..." 
+                        placeholder="Search team files..." 
                         className="pl-10 h-10 rounded-xl bg-slate-50 border-none shadow-inner"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -333,7 +341,7 @@ export default function RiverFilesPage() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button className="rounded-xl h-10 px-6 font-bold shadow-lg shadow-blue-600/10">
-                            <Plus className="mr-2 h-4 w-4" /> New
+                            <Plus className="mr-2 h-4 w-4" /> Add
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border-slate-100 shadow-2xl">
@@ -359,7 +367,7 @@ export default function RiverFilesPage() {
         {/* Filters and Storage Warning */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
-                <FilterButton active={activeTab === 'all'} onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} label="My Files" icon={<HardDrive className="h-3.5 w-3.5" />} />
+                <FilterButton active={activeTab === 'all'} onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} label="Company Files" icon={<HardDrive className="h-3.5 w-3.5" />} />
                 <FilterButton active={activeTab === 'favorites'} onClick={() => setActiveTab('favorites')} label="Favorites" icon={<Star className="h-3.5 w-3.5" />} />
                 <FilterButton active={activeTab === 'trash'} onClick={() => setActiveTab('trash')} label="Trash" icon={<Trash2 className="h-3.5 w-3.5" />} />
                 <Separator orientation="vertical" className="h-4 mx-2" />
@@ -373,13 +381,13 @@ export default function RiverFilesPage() {
                 {storagePercentage > 90 && (
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-100 text-amber-700 animate-pulse">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Storage 90% full</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Shared Storage 90% Full</span>
                     </div>
                 )}
-                <div className="flex flex-col gap-1.5 min-w-[140px]">
+                <div className="flex flex-col gap-1.5 min-w-[160px]">
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        <span>{formatSize(usedStorage)} used</span>
-                        <span>2 GB</span>
+                        <span>{formatSize(companyUsedStorage)} used</span>
+                        <span>Company Quota 2GB</span>
                     </div>
                     <Progress value={storagePercentage} className="h-1.5 bg-slate-100" />
                 </div>
@@ -393,7 +401,7 @@ export default function RiverFilesPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Syncing to Cloud</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Syncing Team Asset</span>
                 </div>
                 <span className="text-xs font-black tabular-nums">{uploadProgress.toFixed(0)}%</span>
             </div>
@@ -414,8 +422,8 @@ export default function RiverFilesPage() {
                 <div className="p-8 rounded-[3rem] bg-slate-200 mb-6">
                     <HardDrive className="h-16 w-16 text-slate-400" />
                 </div>
-                <h3 className="text-xl font-black uppercase tracking-widest">Workspace is empty</h3>
-                <p className="text-sm font-medium mt-2">Start by creating a folder or uploading your first business document.</p>
+                <h3 className="text-xl font-black uppercase tracking-widest">Shared hub is empty</h3>
+                <p className="text-sm font-medium mt-2">Start collaborating by creating a folder or uploading the first team document.</p>
             </div>
         ) : (
             <div className={cn(
@@ -464,17 +472,17 @@ export default function RiverFilesPage() {
                     <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
                         <FolderPlus className="h-6 w-6" />
                     </div>
-                    <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">New Folder</DialogTitle>
+                    <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">New Team Folder</DialogTitle>
                 </div>
                 <DialogDescription className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-                    Create a structured organization unit
+                    Create a shared organization unit for the company
                 </DialogDescription>
             </DialogHeader>
             <div className="py-6">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Folder name</Label>
                 <Input 
                     autoFocus
-                    placeholder="e.g. Q4 Financials" 
+                    placeholder="e.g. Shared Assets" 
                     className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 mt-2"
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
@@ -512,13 +520,24 @@ function FilterButton({ active, onClick, label, icon }: { active: boolean, onCli
 
 function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore, onPermanentDelete, isTrashView }: any) {
     const content = (
-        <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-blue-50 text-blue-500 group-hover:scale-110 transition-transform duration-300">
-                <Folder className="h-6 w-6 fill-current" />
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-blue-50 text-blue-500 group-hover:scale-110 transition-transform duration-300">
+                    <Folder className="h-6 w-6 fill-current" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900 truncate leading-none pt-0.5">{folder.name}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Directory</p>
+                </div>
             </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-900 truncate leading-none pt-0.5">{folder.name}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Directory</p>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5 ring-1 ring-white">
+                        <AvatarImage src={folder.ownerPhoto} />
+                        <AvatarFallback className="text-[8px] font-black">{folder.ownerName?.charAt(0) || '?'}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[80px]">{folder.ownerName?.split(' ')[0]}</span>
+                </div>
             </div>
         </div>
     );
@@ -529,6 +548,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                 <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={onOpen}>
                     <Folder className="h-5 w-5 text-blue-400 fill-current" />
                     <span className="text-sm font-bold">{folder.name}</span>
+                    <Badge variant="outline" className="text-[8px] font-bold uppercase py-0 px-2 h-4 border-slate-100">{folder.ownerName}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                     <ItemActions item={folder} onFavorite={onFavorite} onDelete={onDelete} onRestore={onRestore} onPermanentDelete={onPermanentDelete} isTrashView={isTrashView} />
@@ -567,6 +587,26 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity">{format(new Date(file.createdAt?.seconds * 1000 || Date.now()), 'MMM d')}</span>
                 </div>
             </div>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5 cursor-help">
+                                    <Avatar className="h-5 w-5 ring-1 ring-white">
+                                        <AvatarImage src={file.ownerPhoto} />
+                                        <AvatarFallback className="text-[8px] font-black">{file.ownerName?.charAt(0) || '?'}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[80px]">{file.ownerName?.split(' ')[0]}</span>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="rounded-xl text-[10px] font-bold uppercase tracking-widest py-1 px-3">
+                                Uploaded by {file.ownerName}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+            </div>
         </div>
     );
 
@@ -577,7 +617,11 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                     <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center">{icon}</div>
                     <div className="flex flex-col">
                         <span className="text-sm font-bold">{file.name}</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatSize(file.size)}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatSize(file.size)}</span>
+                            <span className="text-[10px] text-slate-300">•</span>
+                            <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">{file.ownerName}</span>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -646,6 +690,3 @@ function ItemActions({ item, onFavorite, onDelete, onRestore, onPermanentDelete,
     );
 }
 
-function Loader2({ className }: { className?: string }) {
-    return <Clock className={cn("animate-spin", className)} />;
-}
