@@ -130,6 +130,10 @@ export default function PageEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
+  
+  // Live Typing States
+  const [localIsTyping, setLocalIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<AppUser>(userDocRef);
@@ -154,11 +158,39 @@ export default function PageEditor() {
     });
   }, [rawCollaborators]);
 
+  const typingCollaborators = useMemo(() => {
+    if (!collaborators || !user) return [];
+    return collaborators.filter(c => c.id !== user.uid && c.isTyping && c.isActive);
+  }, [collaborators, user]);
+
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch) return EMOJI_LIST;
     const s = emojiSearch.toLowerCase();
     return EMOJI_LIST.filter(e => e.keywords.includes(s) || e.char.includes(s));
   }, [emojiSearch]);
+
+  const setTypingState = useCallback(async (isTyping: boolean) => {
+    if (!firestore || !pageId || !user || isTyping === localIsTyping) return;
+    
+    setLocalIsTyping(isTyping);
+    const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
+    try {
+        await updateDoc(presenceRef, { 
+            isTyping,
+            lastActive: serverTimestamp() 
+        });
+    } catch (e) {
+        // Silent fail for presence updates
+    }
+  }, [firestore, pageId, user, localIsTyping]);
+
+  const triggerTypingIndicator = useCallback(() => {
+    setTypingState(true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      setTypingState(false);
+    }, 3000);
+  }, [setTypingState]);
 
   const forceSave = useCallback(async () => {
     if (!firestore || !pageId || !latestContentRef.current) return;
@@ -190,7 +222,8 @@ export default function PageEditor() {
         name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'contributor',
         photoURL: userProfile.photoURL || user.photoURL || null,
         lastActive: serverTimestamp(),
-        isActive: true
+        isActive: true,
+        isTyping: false
     };
     
     setDoc(presenceRef, presenceData).catch(async (err) => {
@@ -237,8 +270,10 @@ export default function PageEditor() {
         forceSave();
         updateDoc(presenceRef, { 
             isActive: false, 
+            isTyping: false,
             lastActive: serverTimestamp() 
         }).catch(() => {}); 
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [firestore, pageId, router, user, userProfile, forceSave]);
 
@@ -247,6 +282,8 @@ export default function PageEditor() {
     
     latestTitleRef.current = newTitle;
     setPage(prev => prev ? { ...prev, title: newTitle } : null);
+    
+    triggerTypingIndicator();
 
     if (titleUpdateTimeoutRef.current) clearTimeout(titleUpdateTimeoutRef.current);
     
@@ -269,12 +306,14 @@ export default function PageEditor() {
                 setIsSaving(false);
             });
     }, 1000);
-  }, [firestore, pageId, page]);
+  }, [firestore, pageId, page, triggerTypingIndicator]);
 
   const handleUpdateContent = useCallback((json: any) => {
     if (!firestore || !pageId || page?.isTrashed) return;
     
     latestContentRef.current = json;
+    
+    triggerTypingIndicator();
 
     if (contentUpdateTimeoutRef.current) clearTimeout(contentUpdateTimeoutRef.current);
 
@@ -300,7 +339,7 @@ export default function PageEditor() {
             setIsSaving(false);
         });
     }, 1000);
-  }, [firestore, pageId, page?.isTrashed]);
+  }, [firestore, pageId, page?.isTrashed, triggerTypingIndicator]);
 
   const handleUpdateMeta = async (data: Partial<CollabPage>) => {
     if (!firestore || !page) return;
@@ -392,21 +431,46 @@ export default function PageEditor() {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Live Typing Status Text */}
+          {typingCollaborators.length > 0 && (
+              <div className="hidden lg:flex items-center animate-in fade-in slide-in-from-right-2 duration-300">
+                  <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] italic mr-4">
+                      {typingCollaborators.length === 1 
+                          ? `${typingCollaborators[0].name.split(' ')[0]} is typing...` 
+                          : `${typingCollaborators.length} people are typing...`}
+                  </span>
+              </div>
+          )}
+
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-4">
                 {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
                     const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
                     const isOnline = collab.isActive;
+                    const isTyping = collab.isTyping;
+
                     return (
                     <Tooltip key={collab.id}>
                         <TooltipTrigger asChild>
-                            <Avatar className={cn(
-                                "h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default",
-                                !isOnline && "grayscale opacity-50"
-                            )}>
-                                <AvatarImage src={collab.photoURL} />
-                                <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                                <Avatar className={cn(
+                                    "h-6 w-6 border-2 border-white shadow-sm hover:z-20 transition-all cursor-default",
+                                    !isOnline && "grayscale opacity-50",
+                                    isTyping && "ring-2 ring-primary ring-offset-1 animate-pulse"
+                                )}>
+                                    <AvatarImage src={collab.photoURL} />
+                                    <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                {isTyping && (
+                                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-primary rounded-full border border-white flex items-center justify-center animate-bounce shadow-sm">
+                                        <div className="flex gap-0.5">
+                                            <div className="w-0.5 h-0.5 rounded-full bg-white animate-pulse" />
+                                            <div className="w-0.5 h-0.5 rounded-full bg-white animate-pulse delay-75" />
+                                            <div className="w-0.5 h-0.5 rounded-full bg-white animate-pulse delay-150" />
+                                        </div>
+                                     </div>
+                                )}
+                            </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl">
                             <div className="flex flex-col">
@@ -419,7 +483,7 @@ export default function PageEditor() {
                                     </p>
                                 ) : (
                                     <p className="text-[10px] font-black text-primary leading-none mt-1">
-                                        viewing now
+                                        {isTyping ? 'typing currently...' : 'viewing now'}
                                     </p>
                                 )}
                             </div>
@@ -511,7 +575,7 @@ export default function PageEditor() {
         <div className="max-w-4xl mx-auto px-8 pt-10 pb-32 space-y-2">
             {page.icon && (
                 <div className="relative group/icon z-10 w-fit">
-                    <div className={cn("text-5xl select-none pt-4", page.coverImage && "-mt-12")}>
+                    <div className={cn("text-5xl select-none pt-4")}>
                         {page.icon}
                     </div>
                     {!page.isTrashed && (
@@ -570,11 +634,11 @@ export default function PageEditor() {
                 </div>
             )}
             
-            <input 
+            <Input 
                 value={page.title} 
                 placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full outline-none"
+                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
                 readOnly={page.isTrashed}
             />
 
