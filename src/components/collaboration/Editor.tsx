@@ -301,8 +301,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         .focus()
         .setTextSelection({ from, to })
         .deleteSelection()
-        .insertContentAt(from, text)
         .unsetMark('strike')
+        .insertContent(text)
         .run();
 
       setAiPreview(null);
