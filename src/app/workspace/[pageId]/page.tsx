@@ -28,7 +28,8 @@ import {
   X,
   Palette,
   Search,
-  XCircle
+  XCircle,
+  MousePointer2
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -108,7 +109,6 @@ const EMOJI_LIST = [
   { char: '💵', keywords: 'money cash' },
   { char: '💳', keywords: 'credit card' },
   { char: '🏠', keywords: 'home house' },
-  { char: '🏪', keywords: 'store shop' },
   { char: '🏪', keywords: 'store shop' },
   { char: '🏭', keywords: 'factory industrial' },
   { char: '🏗️', keywords: 'construction' },
@@ -385,7 +385,7 @@ export default function PageEditor() {
   if (!page) return null;
 
   return (
-    <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700">
+    <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700 relative">
       
       {page.isTrashed && (
           <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
@@ -403,6 +403,27 @@ export default function PageEditor() {
               </div>
           </div>
       )}
+
+      {/* Typing Sidebar Indicator - Minimal vertical line */}
+      <div className="fixed left-0 top-[20%] bottom-[20%] w-1.5 z-30 pointer-events-none flex flex-col justify-center gap-2">
+          {typingCollaborators.map((c, i) => (
+              <TooltipProvider key={c.id}>
+                  <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                          <div 
+                              className={cn(
+                                "w-1.5 rounded-r-full animate-pulse transition-all duration-500 cursor-pointer pointer-events-auto",
+                                i === 0 ? "h-24 bg-primary" : "h-16 bg-blue-300"
+                              )}
+                          />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="bg-slate-900 text-white rounded-xl border-none font-bold text-[10px] uppercase tracking-widest px-3 py-1.5">
+                          {c.name} is typing...
+                      </TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+          ))}
+      </div>
 
       <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
         <div className="flex items-center gap-2 min-w-0">
@@ -422,26 +443,10 @@ export default function PageEditor() {
             </>
           )}
           <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-          <Input 
-            value={page.title} 
-            onChange={(e) => handleUpdateTitle(e.target.value)}
-            className="border-0 shadow-none focus:ring-0 focus-visible:ring-0 p-0 font-bold text-sm h-auto bg-transparent truncate max-w-[180px]"
-            readOnly={page.isTrashed}
-          />
+          <span className="text-xs font-bold text-slate-900 truncate max-w-[180px]">{page.title || 'untitled'}</span>
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Live Typing Status Text */}
-          {typingCollaborators.length > 0 && (
-              <div className="hidden lg:flex items-center animate-in fade-in slide-in-from-right-2 duration-300">
-                  <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] italic mr-4">
-                      {typingCollaborators.length === 1 
-                          ? `${typingCollaborators[0].name.split(' ')[0]} is typing...` 
-                          : `${typingCollaborators.length} people are typing...`}
-                  </span>
-              </div>
-          )}
-
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-4">
                 {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
@@ -461,15 +466,6 @@ export default function PageEditor() {
                                     <AvatarImage src={collab.photoURL} />
                                     <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                {isTyping && (
-                                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-primary rounded-full border border-white flex items-center justify-center animate-bounce shadow-sm">
-                                        <div className="flex gap-0.5">
-                                            <div className="w-0.5 h-0.5 rounded-full bg-white animate-pulse" />
-                                            <div className="w-0.5 h-0.5 rounded-full bg-white animate-pulse delay-75" />
-                                            <div className="w-0.5 h-0.5 rounded-full bg-white animate-pulse delay-150" />
-                                        </div>
-                                     </div>
-                                )}
                             </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl">
@@ -634,11 +630,11 @@ export default function PageEditor() {
                 </div>
             )}
             
-            <Input 
+            <input 
                 value={page.title} 
                 placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
+                className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-6xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block"
                 readOnly={page.isTrashed}
             />
 
