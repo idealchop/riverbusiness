@@ -236,7 +236,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
-              // Wrap original in <s> tags and append suggested text
+              // Wrap original in <s> tags and append suggested text for comparison
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
@@ -291,13 +291,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // CRITICAL: Delete the entire range (which contains ~~Original~~ and Suggestion)
-      // and insert ONLY the clean suggested text.
+      // Atomic Google Docs Approval: Delete the entire range (old + new) and insert ONLY the clean new text
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike') // Explicitly ensure no leftover strike mark
+        .unsetMark('strike') // Explicitly clear any inherited strike formatting
         .run();
 
       setAiPreview(null);
