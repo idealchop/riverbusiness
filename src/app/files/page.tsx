@@ -31,7 +31,8 @@ import {
   History,
   Info,
   Palette,
-  XCircle
+  XCircle,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -361,7 +362,7 @@ export default function SharedFilesPage() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Loading your files" />;
+  if (isUserLoading) return <FullScreenLoader text="Loading your workspace" />;
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
@@ -369,8 +370,8 @@ export default function SharedFilesPage() {
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
           <div className="flex flex-col">
-            <span className="font-bold text-xs text-slate-900 leading-tight">Shared</span>
-            <span className="font-bold text-[10px] text-slate-400 leading-tight">Files</span>
+            <span className="font-bold text-xs text-slate-900 leading-tight uppercase tracking-widest">Shared</span>
+            <span className="font-bold text-[10px] text-slate-400 leading-tight uppercase tracking-[0.4em]">Files</span>
           </div>
         </Link>
         <div className="flex-1" />
@@ -719,30 +720,30 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
     const Actions = () => (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg bg-white/80 backdrop-blur-md shadow-lg border border-slate-100 hover:bg-white">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
+            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
-                            {folder.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
+                            {folder.isFavorite ? <StarOff className="h-3.5 w-3.5 text-amber-500" /> : <Star className="h-3.5 w-3.5 text-amber-500" />}
                             {folder.isFavorite ? 'Remove from starred' : 'Add to starred'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Move to trash
+                            <Trash2 className="h-3.5 w-3.5" /> Move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer text-green-600">
-                            <CheckCircle2 className="h-3 w-3" /> Restore
+                            <RotateCcw className="h-3.5 w-3.5" /> Restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Delete forever
+                            <Trash2 className="h-3.5 w-3.5" /> Delete forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -772,28 +773,28 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
     }
 
     return (
-        <Card className="border-none shadow-none rounded-[2rem] bg-white group hover:shadow-2xl transition-all duration-500 cursor-pointer relative overflow-hidden animate-in zoom-in-95" onClick={onOpen}>
+        <Card className="border-none shadow-none rounded-[2rem] bg-slate-50/50 group hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 cursor-pointer relative overflow-hidden animate-in zoom-in-95" onClick={onOpen}>
             <CardContent className="p-6">
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <div className="absolute top-4 right-4 z-20">
                     <Actions />
                 </div>
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="p-4 rounded-2xl bg-blue-50 text-blue-500 group-hover:scale-110 transition-transform duration-500 shadow-inner border border-blue-100/50">
-                            <Folder className="h-6 w-6 fill-current" />
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col items-center text-center gap-3">
+                        <div className="p-5 rounded-[2rem] bg-white text-primary shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+                            <Folder className="h-8 w-8 fill-current" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-slate-900 truncate leading-none mb-1.5 tracking-tight">{folder.name}</p>
+                        <div className="min-w-0 w-full">
+                            <p className="text-sm font-bold text-slate-900 truncate px-2 leading-none mb-1.5">{folder.name}</p>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Folder</p>
                         </div>
                     </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100/50">
                         <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6 rounded-lg shadow-sm">
+                            <Avatar className="h-6 w-6 rounded-lg shadow-sm border-2 border-white">
                                 <AvatarImage src={folder.ownerPhoto} />
                                 <AvatarFallback className="text-[8px] font-bold bg-slate-100 text-slate-400">{initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[10px] font-semibold text-slate-400 truncate max-w-[80px]">{folder.ownerName?.split(' ')[0]}</span>
+                            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[60px]">{folder.ownerName?.split(' ')[0]}</span>
                         </div>
                         {folder.isFavorite && !isTrashView && (
                             <Star className="h-3.5 w-3.5 text-amber-400 fill-current" />
@@ -811,33 +812,33 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
     const Actions = () => (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg bg-white/80 backdrop-blur-md shadow-lg border border-slate-100 hover:bg-white">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
+            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
-                            {file.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
+                            {file.isFavorite ? <StarOff className="h-3.5 w-3.5 text-amber-500" /> : <Star className="h-3.5 w-3.5 text-amber-500" />}
                             {file.isFavorite ? 'Remove from starred' : 'Add to starred'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
-                            <Download className="h-3 w-3 text-slate-400" /> Download
+                            <Download className="h-3.5 w-3.5 text-slate-400" /> Download
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Move to trash
+                            <Trash2 className="h-3.5 w-3.5" /> Move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer text-green-600">
-                            <CheckCircle2 className="h-3 w-3" /> Restore
+                            <RotateCcw className="h-3.5 w-3.5" /> Restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Delete forever
+                            <Trash2 className="h-3.5 w-3.5" /> Delete forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -869,28 +870,28 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
     }
 
     return (
-        <Card className="border-none shadow-none rounded-[2rem] bg-white group hover:shadow-2xl transition-all duration-500 cursor-pointer relative overflow-hidden animate-in zoom-in-95" onClick={() => window.open(file.url, '_blank')}>
+        <Card className="border-none shadow-none rounded-[2rem] bg-slate-50/50 group hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 cursor-pointer relative overflow-hidden animate-in zoom-in-95" onClick={() => window.open(file.url, '_blank')}>
             <CardContent className="p-6">
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <div className="absolute top-4 right-4 z-20">
                     <Actions />
                 </div>
-                <div className="flex flex-col gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-500 shadow-inner border border-slate-100/50">
-                        {icon}
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900 truncate leading-tight mb-2 tracking-tight">{file.name}</p>
-                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            <span>{formatSize(file.size)}</span>
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col items-center text-center gap-3">
+                        <div className="h-16 w-16 rounded-[1.5rem] bg-white flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-500 shadow-sm border border-slate-100">
+                            {icon}
+                        </div>
+                        <div className="min-w-0 w-full">
+                            <p className="text-sm font-bold text-slate-900 truncate leading-none mb-1.5 px-2">{file.name}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{formatSize(file.size)}</p>
                         </div>
                     </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100/50">
                         <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6 rounded-lg shadow-sm">
+                            <Avatar className="h-6 w-6 rounded-lg shadow-sm border-2 border-white">
                                 <AvatarImage src={file.ownerPhoto} />
                                 <AvatarFallback className="text-[8px] font-bold bg-slate-100 text-slate-400">{initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[10px] font-semibold text-slate-400 truncate max-w-[80px]">{file.ownerName?.split(' ')[0]}</span>
+                            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[60px]">{file.ownerName?.split(' ')[0]}</span>
                         </div>
                         {file.isFavorite && !isTrashView && (
                             <Star className="h-3.5 w-3.5 text-amber-400 fill-current" />
