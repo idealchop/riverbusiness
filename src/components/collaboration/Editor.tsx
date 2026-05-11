@@ -39,7 +39,8 @@ import {
     Type,
     ArrowRight,
     History,
-    Zap
+    Zap,
+    Undo2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -240,12 +241,22 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
+              // Store original range and text
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
                   from, 
-                  to 
+                  to: from + data.suggestedText.length // Expected new 'to'
               });
+
+              // Replace current selection with AI text immediately
+              editor.chain()
+                .focus()
+                .deleteRange(from, to)
+                .insertContentAt(from, data.suggestedText)
+                .run();
+
+              toast({ title: 'AI Suggestion applied' });
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
               toast({ title: 'Content generated' });
@@ -255,7 +266,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       }
     } catch (error: any) {
       console.error('AI Error:', error);
-      toast({ variant: 'destructive', title: 'Assistant Notice', description: error.message });
+      toast({ variant: 'destructive', title: 'Assistant notice', description: error.message });
     } finally {
       clearInterval(statusInterval);
       setIsAiProcessing(false);
@@ -263,17 +274,23 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     }
   };
 
-  const applyAiSuggestion = () => {
+  const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
+      // Revert the range to original text
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
-        .insertContentAt(aiPreview.from, aiPreview.text)
+        .insertContentAt(aiPreview.from, aiPreview.originalText)
         .run();
         
       setAiPreview(null);
-      toast({ title: 'AI Changes Applied' });
+      toast({ title: 'AI Changes reverted' });
+  };
+
+  const acceptAiSuggestion = () => {
+      setAiPreview(null);
+      toast({ title: 'AI Changes accepted' });
   };
 
   if (!editor) return null;
@@ -379,59 +396,54 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         </TooltipProvider>
       )}
 
-      {/* AI Suggestion Card - Modern Diff UI */}
+      {/* AI Suggestion Controls - Inline Bar */}
       {aiPreview && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-              <Card className="w-full max-w-2xl border-none shadow-3xl rounded-[2.5rem] bg-white overflow-hidden animate-in zoom-in-95 duration-500">
-                  <div className="bg-slate-50 p-8 border-b">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                                <Sparkles className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">AI Suggestion</h3>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verify and apply improvements</p>
-                            </div>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => setAiPreview(null)} className="rounded-full text-slate-400 hover:text-slate-900">
-                            <X className="h-5 w-5" />
-                        </Button>
+          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500">
+              <Card className="border-none shadow-3xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/20 text-primary">
+                        <Sparkles className="h-4 w-4" />
                     </div>
-                  </div>
-                  <CardContent className="p-8 space-y-8">
-                      <div className="space-y-4">
-                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 flex items-center gap-2">
-                            <History className="h-3.5 w-3.5" /> Original Text
-                          </Label>
-                          <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 italic text-slate-400 line-through text-lg leading-relaxed">
-                              {aiPreview.originalText}
-                          </div>
-                      </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest">AI Suggestion applied</p>
+                </div>
+                
+                <Separator orientation="vertical" className="h-4 bg-white/10" />
 
-                      <div className="space-y-4">
-                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
-                            <Zap className="h-3.5 w-3.5" /> AI Recommendation
-                          </Label>
-                          <div className="p-6 rounded-3xl bg-blue-50/50 border-2 border-primary/20 text-slate-900 font-bold text-xl leading-relaxed shadow-inner">
-                              {aiPreview.text}
-                          </div>
-                      </div>
-                  </CardContent>
-                  <div className="p-8 pt-4 bg-slate-50 border-t flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contextual refinement complete</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Button variant="ghost" onClick={() => setAiPreview(null)} className="h-12 px-8 rounded-xl font-bold text-xs">
-                            Discard
-                        </Button>
-                        <Button onClick={applyAiSuggestion} className="h-12 px-12 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
-                            <Check className="mr-2 h-4 w-4" /> Apply Changes
-                        </Button>
-                      </div>
-                  </div>
+                <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                    onClick={acceptAiSuggestion}
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-9 w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white transition-all"
+                                >
+                                    <Check className="h-5 w-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
+                                Accept Changes
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                    onClick={discardAiSuggestion}
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-9 w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                                >
+                                    <X className="h-5 w-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
+                                Revert Changes
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
               </Card>
           </div>
       )}
