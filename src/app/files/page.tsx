@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { 
   FolderPlus, 
@@ -50,11 +50,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useStorage, useAuth, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import type { CloudFile, CloudFolder, AppUser, ChatMessage, Notification as NotificationType, SecurityRuleContext } from '@/lib/types';
+import type { CloudFile, CloudFolder, AppUser, Notification as NotificationType, SecurityRuleContext } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -72,13 +72,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
-import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { formatDistanceToNow } from 'date-fns';
+import Image from 'next/image';
 
 const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500MB
 
-export default function RiverFilesPage() {
+export default function SharedFilesPage() {
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const storage = useStorage();
@@ -99,7 +99,6 @@ export default function RiverFilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
 
-  // Multi-tenant isolation
   const companyId = user?.companyId || 'unassigned';
 
   // Presence logic
@@ -133,14 +132,7 @@ export default function RiverFilesPage() {
         lastPath: pathname
     };
     
-    setDoc(presenceRef, presenceData).catch(async (err) => {
-        const permissionError = new FirestorePermissionError({
-            path: presenceRef.path,
-            operation: 'create',
-            requestResourceData: presenceData
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-    });
+    setDoc(presenceRef, presenceData).catch(() => {});
 
     return () => {
         updateDoc(presenceRef, { 
@@ -242,7 +234,7 @@ export default function RiverFilesPage() {
     };
     try {
         await addDoc(collection(firestore, 'cloud_folders'), newFolderData);
-        toast({ title: 'Directory Synchronized' });
+        toast({ title: 'Directory synchronized' });
         setIsNewFolderOpen(false);
         setNewFolderName('');
     } catch (e) {
@@ -250,7 +242,7 @@ export default function RiverFilesPage() {
             path: '/cloud_folders',
             operation: 'create',
             requestResourceData: newFolderData
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     }
   };
@@ -260,12 +252,12 @@ export default function RiverFilesPage() {
     if (!file || !firestore || !storage || !auth || !user) return;
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast({ variant: 'destructive', title: 'Limit Exceeded', description: 'Maximum 500MB per file.' });
+        toast({ variant: 'destructive', title: 'Limit exceeded', description: 'Maximum 500MB per file.' });
         return;
     }
 
     if (companyUsedStorage + file.size > STORAGE_QUOTA_BYTES) {
-        toast({ variant: 'destructive', title: 'Quota Reached', description: '2GB organizational limit reached.' });
+        toast({ variant: 'destructive', title: 'Quota reached', description: '2GB organizational limit reached.' });
         return;
     }
 
@@ -293,9 +285,9 @@ export default function RiverFilesPage() {
         };
 
         await addDoc(collection(firestore, 'cloud_files'), newFileData);
-        toast({ title: 'Asset Synchronized' });
+        toast({ title: 'Asset synchronized' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Sync Failure' });
+        toast({ variant: 'destructive', title: 'Sync failure' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -310,7 +302,7 @@ export default function RiverFilesPage() {
             updatedAt: serverTimestamp()
         });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Update Blocked' });
+        toast({ variant: 'destructive', title: 'Update blocked' });
     }
   };
 
@@ -322,9 +314,9 @@ export default function RiverFilesPage() {
             trashedAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'Moved to trash bin' });
+        toast({ title: 'Moved to trash' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Action Failed' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   };
 
@@ -336,9 +328,9 @@ export default function RiverFilesPage() {
             trashedAt: null,
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'Restored to hub' });
+        toast({ title: 'Restored from trash' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Action Failed' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   };
 
@@ -348,7 +340,7 @@ export default function RiverFilesPage() {
         await deleteDoc(doc(firestore, collectionName, item.id));
         toast({ title: 'Purged permanently' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Purge Blocked' });
+        toast({ variant: 'destructive', title: 'Purge blocked' });
     }
   };
 
@@ -369,11 +361,10 @@ export default function RiverFilesPage() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Opening Cloud Hub" />;
+  if (isUserLoading) return <FullScreenLoader text="Opening Cloud Workspace" />;
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
-      {/* Unified Header */}
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
@@ -384,7 +375,6 @@ export default function RiverFilesPage() {
         </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-2 sm:gap-6">
-          {/* Team presence */}
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-2">
                 {collaborators?.filter(c => c.id !== user?.id).map(collab => {
@@ -443,17 +433,16 @@ export default function RiverFilesPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Navigation */}
-        <aside className="w-72 border-r bg-slate-50/80 flex flex-col shrink-0 transition-all duration-300">
+        <aside className="w-72 border-r bg-slate-50/80 flex flex-col shrink-0">
           <div className="p-6 flex-1 overflow-y-auto space-y-8">
             <div className="space-y-1">
-              <h4 className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Directories</h4>
+              <h4 className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Workspace</h4>
               <nav className="space-y-1">
                 <SidebarItem 
                   active={activeTab === 'all'} 
                   onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} 
                   icon={<Globe className="h-4 w-4" />} 
-                  label="Shared Files" 
+                  label="Company Hub" 
                 />
                 <SidebarItem 
                   active={activeTab === 'favorites'} 
@@ -473,7 +462,7 @@ export default function RiverFilesPage() {
             <div className="space-y-1">
                 <h4 className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Management</h4>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-semibold text-xs text-slate-500 hover:text-slate-900">
-                    <History className="h-4 w-4" /> Recently Modified
+                    <History className="h-4 w-4" /> Recent Activity
                 </Button>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-semibold text-xs text-slate-500 hover:text-slate-900" onClick={() => setIsNewFolderOpen(true)}>
                     <FolderPlus className="h-4 w-4" /> New Directory
@@ -485,12 +474,12 @@ export default function RiverFilesPage() {
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-[9px] font-bold text-slate-400">
-                        <span>Collective Quota</span>
+                        <span>Shared Quota</span>
                         <span className={cn(storagePercentage > 90 ? "text-red-500" : "text-slate-900")}>{Math.round(storagePercentage)}%</span>
                     </div>
                     <Progress value={storagePercentage} className={cn("h-1 bg-slate-100", storagePercentage > 90 && "[&>div]:bg-red-500")} />
                     <p className="text-[8px] font-bold text-slate-400 leading-none">
-                        {formatSize(companyUsedStorage)} of 2GB shared
+                        {formatSize(companyUsedStorage)} of 2GB used
                     </p>
                 </div>
                 <Separator className="bg-slate-50" />
@@ -500,15 +489,14 @@ export default function RiverFilesPage() {
                         <AvatarFallback className="text-[10px] font-bold bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.businessName || 'Shared Files'}</p>
-                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Organizational storage</p>
+                        <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.businessName || 'Shared Workspace'}</p>
+                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Corporate Storage</p>
                     </div>
                 </div>
             </div>
           </div>
         </aside>
 
-        {/* Main Workspace Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-white">
           <header className="h-14 border-b flex items-center justify-between px-6 bg-white/95 backdrop-blur-sm shrink-0 sticky top-0 z-20">
             <div className="flex items-center gap-2 overflow-hidden min-w-0">
@@ -605,8 +593,8 @@ export default function RiverFilesPage() {
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 leading-none">Shared Files Empty</h3>
-                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Sync your first asset to the shared drive to begin collaboration.</p>
+                    <h3 className="text-xl font-bold text-slate-900 leading-none">Shared Workspace Empty</h3>
+                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Synchronize your first asset to the organizational drive to begin collaboration.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -649,7 +637,6 @@ export default function RiverFilesPage() {
         </div>
       </div>
 
-      {/* Upload Progress Overlay */}
       {isUploading && (
         <div className="fixed bottom-8 right-8 z-[100] bg-slate-900 text-white p-5 rounded-3xl shadow-3xl border border-white/10 flex flex-col gap-4 min-w-[320px] animate-in slide-in-from-bottom-10 duration-700">
             <div className="flex items-center justify-between">
@@ -658,8 +645,8 @@ export default function RiverFilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Syncing Asset</p>
-                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Uploading to Shared Files...</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">Synchronizing Asset</p>
+                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Uploading to Shared Workspace...</p>
                     </div>
                 </div>
                 <span className="text-xs font-bold tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -668,7 +655,6 @@ export default function RiverFilesPage() {
         </div>
       )}
 
-      {/* Create Directory Modal */}
       <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
         <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-3xl p-8 bg-white">
             <DialogHeader className="space-y-4">
@@ -683,7 +669,7 @@ export default function RiverFilesPage() {
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder Name</Label>
+                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Directory Name</Label>
                 <Input 
                     autoFocus
                     placeholder="e.g. Project Assets" 
@@ -756,7 +742,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Delete forever
+                            <Trash2 className="h-3 w-3" /> Delete permanently
                         </DropdownMenuItem>
                     </>
                 )}
@@ -851,7 +837,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Delete forever
+                            <Trash2 className="h-3 w-3" /> Delete permanently
                         </DropdownMenuItem>
                     </>
                 )}
@@ -913,27 +899,5 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                 </div>
             </CardContent>
         </Card>
-    );
-}
-
-function SidebarItem({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
-    return (
-        <button 
-            onClick={onClick}
-            className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group relative",
-                active 
-                    ? "bg-white text-slate-900 shadow-md shadow-slate-200/50" 
-                    : "text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm"
-            )}
-        >
-            <div className={cn(
-                "p-1.5 rounded-lg transition-all duration-300",
-                active ? "bg-primary text-white shadow-md shadow-primary/30" : "bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-primary"
-            )}>
-                {icon}
-            </div>
-            <span className={cn("text-[11px] font-semibold transition-all", active ? "translate-x-1" : "")}>{label}</span>
-        </button>
     );
 }
