@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   FolderPlus, 
   Upload, 
@@ -184,7 +185,7 @@ export default function RiverFilesPage() {
     if (!firestore || !user || !newFolderName.trim()) return;
     try {
         await addDoc(collection(firestore, 'cloud_folders'), {
-            name: newFolderName.trim(),
+            name: newFolderName.trim().toLowerCase(),
             parentId: currentFolderId,
             ownerId: user.id,
             ownerName: user.name,
@@ -225,7 +226,7 @@ export default function RiverFilesPage() {
         const url = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
 
         await addDoc(collection(firestore, 'cloud_files'), {
-            name: file.name,
+            name: file.name.toLowerCase(),
             type: file.type,
             size: file.size,
             url,
@@ -269,7 +270,7 @@ export default function RiverFilesPage() {
             trashedAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'moved to shared trash' });
+        toast({ title: 'moved to trash bin' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'action failed' });
     }
@@ -293,7 +294,7 @@ export default function RiverFilesPage() {
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, collectionName, item.id));
-        toast({ title: 'purged' });
+        toast({ title: 'purged permanently' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'purge blocked' });
     }
@@ -334,14 +335,14 @@ export default function RiverFilesPage() {
   if (isUserLoading) return <FullScreenLoader text="opening cloud hub" />;
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-white overflow-hidden font-sans lowercase">
       {/* 1. unified global header */}
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
           <div className="flex flex-col">
-            <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">river</span>
-            <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">files</span>
+            <span className="font-black text-xs text-slate-900 leading-tight">river</span>
+            <span className="font-bold text-[10px] text-slate-400 leading-tight">files</span>
           </div>
         </Link>
         <div className="flex-1" />
@@ -408,12 +409,12 @@ export default function RiverFilesPage() {
 
           <div className="mt-auto p-6 space-y-6">
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3">
-              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+              <div className="flex items-center justify-between text-[9px] font-black text-slate-400">
                 <span>shared quota</span>
                 <span className={cn(storagePercentage > 90 ? "text-red-500" : "text-slate-900")}>{Math.round(storagePercentage)}%</span>
               </div>
               <Progress value={storagePercentage} className={cn("h-1 bg-slate-100", storagePercentage > 90 && "[&>div]:bg-red-500")} />
-              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+              <p className="text-[8px] font-bold text-slate-400 leading-none">
                 {formatSize(companyUsedStorage)} of 2gb shared
               </p>
             </div>
@@ -424,8 +425,8 @@ export default function RiverFilesPage() {
                 <AvatarFallback className="text-[10px] font-black bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black text-slate-900 truncate uppercase tracking-tighter">{user?.name}</p>
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{user?.businessName || 'collaborator'}</p>
+                <p className="text-[11px] font-black text-slate-900 truncate tracking-tighter">{user?.name}</p>
+                <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">{user?.businessName || 'collaborator'}</p>
               </div>
             </div>
           </div>
@@ -439,7 +440,7 @@ export default function RiverFilesPage() {
               <button 
                 onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }}
                 className={cn(
-                  "text-[9px] font-black uppercase tracking-[0.2em] transition-colors", 
+                  "text-[9px] font-black transition-colors", 
                   currentFolderId ? "text-slate-400 hover:text-slate-900" : "text-blue-600"
                 )}
               >
@@ -451,7 +452,7 @@ export default function RiverFilesPage() {
                   <button 
                     onClick={() => { setActiveTab('all'); setCurrentFolderId(folder.id); }}
                     className={cn(
-                      "text-[9px] font-black uppercase tracking-[0.2em] whitespace-nowrap truncate max-w-[120px] transition-colors",
+                      "text-[9px] font-black whitespace-nowrap truncate max-w-[120px] transition-colors",
                       idx === currentFolderPath.length - 1 ? "text-blue-600" : "text-slate-400 hover:text-slate-900"
                     )}
                   >
@@ -466,7 +467,7 @@ export default function RiverFilesPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input 
                   placeholder="search hub..." 
-                  className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-[11px] font-bold lowercase"
+                  className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-[11px] font-bold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -491,16 +492,16 @@ export default function RiverFilesPage() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-9 px-4 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-blue-600/10 gap-2">
+                  <Button className="h-9 px-4 rounded-xl font-black text-[9px] shadow-lg shadow-blue-600/10 gap-2">
                     <Plus className="h-3.5 w-3.5" /> sync new
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
-                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
+                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-[9px] cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
                     <FolderPlus className="h-4 w-4 text-blue-500" /> new folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
-                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer relative">
+                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-[9px] cursor-pointer relative">
                     <Upload className="h-4 w-4 text-primary" /> 
                     sync file
                     <input 
@@ -530,8 +531,8 @@ export default function RiverFilesPage() {
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-lg font-black uppercase tracking-[0.4em] text-slate-900 leading-none">drive empty</h3>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-4 max-w-[200px] leading-relaxed">sync an asset to the shared hub to begin.</p>
+                    <h3 className="text-lg font-black text-slate-900 leading-none">drive empty</h3>
+                    <p className="text-[9px] font-bold text-slate-400 mt-4 max-w-[200px] leading-relaxed">sync an asset to the shared hub to begin.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -583,8 +584,8 @@ export default function RiverFilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary-light" />
                     </div>
                     <div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em]">hub sync active</p>
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">uploading shared asset...</p>
+                        <p className="text-[9px] font-black">hub sync active</p>
+                        <p className="text-[8px] font-bold text-slate-400 mt-1">uploading shared asset...</p>
                     </div>
                 </div>
                 <span className="text-xs font-black tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -601,26 +602,26 @@ export default function RiverFilesPage() {
                     <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-black tracking-tighter text-slate-900 uppercase">directory label</DialogTitle>
-                    <DialogDescription className="text-slate-400 font-bold uppercase tracking-widest text-[8px] mt-1">
+                    <DialogTitle className="text-xl font-black tracking-tighter text-slate-900">directory label</DialogTitle>
+                    <DialogDescription className="text-slate-400 font-bold text-[8px] mt-1">
                         organize team content into shared organizational units
                     </DialogDescription>
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">folder name</Label>
+                <Label className="text-[9px] font-black text-slate-400 ml-1">folder name</Label>
                 <Input 
                     autoFocus
                     placeholder="e.g. logistics records" 
-                    className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 mt-2 text-xs shadow-inner lowercase"
+                    className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 mt-2 text-xs shadow-inner"
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                 />
             </div>
             <DialogFooter className="gap-2">
-                <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-[9px] uppercase tracking-widest text-slate-400">cancel</Button>
-                <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20">
+                <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-[9px] text-slate-400">cancel</Button>
+                <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-black text-[9px] shadow-lg shadow-primary/20">
                     authorize
                 </Button>
             </DialogFooter>
@@ -647,7 +648,7 @@ function SidebarItem({ active, onClick, label, icon }: { active: boolean, onClic
             )}>
                 {icon}
             </div>
-            <span className={cn("text-[10px] font-black uppercase tracking-widest transition-all", active ? "translate-x-1" : "")}>{label}</span>
+            <span className={cn("text-[10px] font-black transition-all", active ? "translate-x-1" : "")}>{label}</span>
         </button>
     );
 }
@@ -665,22 +666,22 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
             <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer">
                             {folder.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
                             {folder.isFavorite ? 'unpin asset' : 'pin to hub'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest cursor-pointer text-green-600">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer text-green-600">
                             <CheckCircle2 className="h-3 w-3" /> restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> delete forever
                         </DropdownMenuItem>
                     </>
@@ -697,9 +698,9 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                         <Folder className="h-5 w-5 fill-current" />
                     </div>
                     <div className="space-y-0.5">
-                        <p className="text-xs font-black text-slate-900 leading-none lowercase">{folder.name}</p>
+                        <p className="text-xs font-black text-slate-900 leading-none">{folder.name}</p>
                         <div className="flex items-center gap-2">
-                             <span className="text-[8px] font-black uppercase text-slate-400">synced by {folder.ownerName}</span>
+                             <span className="text-[8px] font-black text-slate-400">synced by {folder.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -722,8 +723,8 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                             <Folder className="h-6 w-6 fill-current" />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-black text-slate-900 truncate leading-none mb-1.5 uppercase tracking-tighter lowercase">{folder.name}</p>
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">directory</p>
+                            <p className="text-xs font-black text-slate-900 truncate leading-none mb-1.5 tracking-tighter">{folder.name}</p>
+                            <p className="text-[8px] font-black text-slate-400">directory</p>
                         </div>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50">
@@ -732,7 +733,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                                 <AvatarImage src={folder.ownerPhoto} />
                                 <AvatarFallback className="text-[8px] font-black bg-slate-100 text-slate-400">{initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70px]">{folder.ownerName?.split(' ')[0]}</span>
+                            <span className="text-[8px] font-black text-slate-400 truncate max-w-[70px]">{folder.ownerName?.split(' ')[0]}</span>
                         </div>
                         {folder.isFavorite && !isTrashView && (
                             <Star className="h-3 w-3 text-amber-400 fill-current" />
@@ -757,25 +758,25 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
             <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
                             {file.isFavorite ? 'unpin asset' : 'pin to hub'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer">
                             <Download className="h-3 w-3 text-slate-400" /> download local
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest cursor-pointer text-green-600">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] cursor-pointer text-green-600">
                             <CheckCircle2 className="h-3 w-3" /> restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] uppercase tracking-widest text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-[8px] text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
                             <Trash2 className="h-3 w-3" /> delete forever
                         </DropdownMenuItem>
                     </>
@@ -792,11 +793,11 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         {icon}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-900 truncate max-w-[300px] lowercase">{file.name}</span>
+                        <span className="text-xs font-black text-slate-900 truncate max-w-[300px]">{file.name}</span>
                         <div className="flex items-center gap-3">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{formatSize(file.size)}</span>
+                            <span className="text-[8px] font-black text-slate-400">{formatSize(file.size)}</span>
                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[8px] font-black text-primary uppercase tracking-widest">synced by {file.ownerName}</span>
+                            <span className="text-[8px] font-black text-primary">synced by {file.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -818,8 +819,8 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         {icon}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-900 truncate leading-tight mb-2 uppercase tracking-tighter lowercase">{file.name}</p>
-                        <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-slate-400">
+                        <p className="text-xs font-black text-slate-900 truncate leading-tight mb-2 tracking-tighter">{file.name}</p>
+                        <div className="flex items-center justify-between text-[8px] font-black text-slate-400">
                             <span>{formatSize(file.size)}</span>
                         </div>
                     </div>
@@ -829,7 +830,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                                 <AvatarImage src={file.ownerPhoto} />
                                 <AvatarFallback className="text-[8px] font-black bg-slate-100 text-slate-400">{initials}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70px]">{file.ownerName?.split(' ')[0]}</span>
+                            <span className="text-[8px] font-black text-slate-400 truncate max-w-[70px]">{file.ownerName?.split(' ')[0]}</span>
                         </div>
                         {file.isFavorite && !isTrashView && (
                             <Star className="h-3 w-3 text-amber-400 fill-current" />
