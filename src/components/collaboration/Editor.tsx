@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
@@ -39,7 +39,16 @@ import {
     Combine,
     Split,
     Highlighter,
-    SeparatorHorizontal
+    SeparatorHorizontal,
+    Sparkles,
+    Check,
+    X,
+    Eraser,
+    Wand2,
+    History,
+    Languages,
+    Type,
+    ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -64,8 +73,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const auth = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // AI States
+  const [showAiToolbar, setShowAiToolbar] = useState(false);
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [aiPreview, setAiPreview] = useState<{ text: string, range: { from: number, to: number } } | null>(null);
 
   const uploadAndInsertImage = useCallback(async (file: File) => {
     if (!editor || !storage || !auth?.currentUser) return;
@@ -194,10 +209,59 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // AI Writing Companion Logic
+  const callAiAssistant = async (action: string) => {
+    if (!editor) return;
+    
+    const { from, to } = editor.state.selection;
+    const selectedText = editor.state.doc.textBetween(from, to, ' ');
+    const textToProcess = selectedText || editor.getText();
+    const context = editor.getText(); // Basic context for now
+
+    setIsAiProcessing(true);
+    setShowAiToolbar(false);
+
+    try {
+      const response = await fetch('/api/ai/assistant', {
+        method: 'POST',
+        body: JSON.stringify({
+          text: textToProcess,
+          action,
+          context
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.suggestedText) {
+          if (selectedText) {
+              // High-fidelity suggestion mode: Show preview
+              setAiPreview({ text: data.suggestedText, range: { from, to } });
+          } else {
+              // Global insert mode
+              editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
+              toast({ title: 'Content generated' });
+          }
+      }
+    } catch (error) {
+      console.error('AI Processing Error:', error);
+      toast({ variant: 'destructive', title: 'Assistant Busy', description: 'Could not process your request. Please try again.' });
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
+  const applyAiSuggestion = () => {
+      if (!editor || !aiPreview) return;
+      editor.chain().focus().insertContentAt({ from: aiPreview.range.from, to: aiPreview.range.to }, aiPreview.text).run();
+      setAiPreview(null);
+      toast({ title: 'Applied changes' });
+  };
+
   if (!editor) return null;
 
   return (
-    <div className="group">
+    <div className="group relative">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -206,10 +270,52 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         className="hidden" 
       />
 
+      {/* Tiptap Bubble Menu for Highlights */}
+      {editable && (
+          <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+              <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1 rounded-2xl flex items-center gap-1 animate-in fade-in zoom-in-95">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => callAiAssistant('improve')} 
+                    className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5"
+                  >
+                      <Sparkles className="h-3.5 w-3.5" /> ✨ Improve
+                  </Button>
+                  <Separator orientation="vertical" className="h-4 mx-1" />
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Languages className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Type className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('rewrite')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Undo2 className="h-3.5 w-3.5" /></Button>
+              </div>
+          </BubbleMenu>
+      )}
+
       {editable && (
         <TooltipProvider delayDuration={0}>
-          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
+          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
               <div className="flex items-center gap-0.5">
+                  {/* AI Writing Entry */}
+                  <div className="flex items-center px-1">
+                      <Button 
+                        onClick={() => setShowAiToolbar(!showAiToolbar)}
+                        className={cn(
+                            "h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500",
+                            showAiToolbar 
+                                ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" 
+                                : "bg-slate-900 text-white hover:bg-slate-800"
+                        )}
+                      >
+                          {isAiProcessing ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                              <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} />
+                          )}
+                          Assistant
+                      </Button>
+                  </div>
+
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
                   {/* Text Structure */}
                   <div className="flex items-center gap-1 px-1">
                       <ToolbarButton 
@@ -306,7 +412,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  {/* Table Controls (Dynamic) */}
+                  {/* Table Controls */}
                   <div className="flex items-center gap-0.5 px-1 bg-blue-50/50 rounded-xl">
                       <ToolbarButton 
                           onClick={insertGrid} 
@@ -347,7 +453,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  {/* Media & Misc */}
+                  {/* Media */}
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton 
                           onClick={setLink} 
@@ -360,11 +466,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                           disabled={isUploading}
                           icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
                           label="Image"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().setHorizontalRule().run()} 
-                          icon={<SeparatorHorizontal className="h-4 w-4" />}
-                          label="Divider"
                       />
                   </div>
 
@@ -386,6 +487,19 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                       />
                   </div>
               </div>
+
+              {/* Expandable AI Sub-Toolbar */}
+              {showAiToolbar && (
+                  <div className="w-full px-2 py-1.5 flex items-center gap-1.5 animate-in slide-in-from-top-2 duration-300">
+                      <div className="h-px flex-1 bg-slate-100" />
+                      <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve writing" onClick={() => callAiAssistant('improve')} />
+                      <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
+                      <AiAction icon={<Type className="h-3 w-3" />} label="Make professional" onClick={() => callAiAssistant('professional')} />
+                      <AiAction icon={<Eraser className="h-3 w-3" />} label="Simplify" onClick={() => callAiAssistant('simplify')} />
+                      <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue writing" onClick={() => callAiAssistant('continue')} />
+                      <div className="h-px flex-1 bg-slate-100" />
+                  </div>
+              )}
               
               {isUploading && (
                   <div className="w-full px-4 pb-1 animate-in fade-in slide-in-from-top-1 duration-300">
@@ -401,14 +515,52 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         </TooltipProvider>
       )}
 
+      {/* AI Preview Overlay (Floating next to selection) */}
+      {aiPreview && (
+          <div className="fixed z-50 animate-in fade-in zoom-in-95 duration-300" style={{ 
+              top: '50%', left: '50%', transform: 'translate(-50%, -50%)'
+          }}>
+              <Card className="w-[450px] rounded-3xl border-none shadow-3xl bg-white/95 backdrop-blur-xl p-6 space-y-6">
+                  <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                              <Sparkles className="h-4 w-4" />
+                          </div>
+                          <p className="text-xs font-black uppercase tracking-widest">Assistant Suggestion</p>
+                      </div>
+                      <button onClick={() => setAiPreview(null)} className="text-slate-400 hover:text-slate-900"><X className="h-4 w-4" /></button>
+                  </div>
+
+                  <ScrollArea className="max-h-[250px] rounded-2xl bg-slate-50 border border-slate-100 p-4 shadow-inner">
+                      <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
+                          {aiPreview.text}
+                      </p>
+                  </ScrollArea>
+
+                  <div className="grid grid-cols-2 gap-3">
+                      <Button variant="outline" onClick={() => setAiPreview(null)} className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest">Discard</Button>
+                      <Button onClick={applyAiSuggestion} className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest gap-2">
+                          <Check className="h-4 w-4" /> Replace selected
+                      </Button>
+                  </div>
+              </Card>
+          </div>
+      )}
+
       <EditorContent editor={editor} />
       
       {editable && (
           <div className="pt-6 mt-12 border-t border-slate-50 flex items-center justify-between opacity-30">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative State Active</p>
-              <div className="flex items-center gap-1">
-                  <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">Enter</span>
-                  <span className="text-[8px] font-bold text-slate-400">new block</span>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative AI State Active</p>
+              <div className="flex items-center gap-3">
+                   <div className="flex items-center gap-1">
+                      <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">/</span>
+                      <span className="text-[8px] font-bold text-slate-400">AI commands</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                      <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">Enter</span>
+                      <span className="text-[8px] font-bold text-slate-400">new block</span>
+                  </div>
               </div>
           </div>
       )}
@@ -437,5 +589,19 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: { onClick: ()
                 {label}
             </TooltipContent>
         </Tooltip>
+    );
+}
+
+function AiAction({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick: () => void }) {
+    return (
+        <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClick}
+            className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all"
+        >
+            {icon}
+            {label}
+        </Button>
     );
 }

@@ -1,4 +1,5 @@
 import { chatbot } from '@/ai/flows/chatbot-flow';
+import { writingAssistant } from '@/ai/flows/writing-assistant-flow';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -14,16 +15,21 @@ export async function POST(
   const json = await req.json();
 
   if (flowPath === 'chat') {
-    // chatbot returns a ReadableStream<string>
     const stream = await chatbot(json);
-    
-    // In Next.js App Router and AI SDK v3+, simply return a Response with the stream.
-    // The browser will handle the stream chunks as they arrive.
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
       },
     });
+  }
+
+  if (flowPath === 'assistant') {
+    try {
+      const result = await writingAssistant(json);
+      return NextResponse.json(result);
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ error: 'not found' }, { status: 404 });
