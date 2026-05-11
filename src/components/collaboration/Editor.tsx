@@ -224,7 +224,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     
     setAiStatus('Analyzing your writing...');
     const statusInterval = setInterval(() => {
-        const statuses = ['Analyzing your writing...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
+        const statuses = ['Analyzing context...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
         setAiStatus(statuses[Math.floor(Math.random() * statuses.length)]);
     }, 1500);
 
@@ -239,9 +239,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'The assistant is currently unavailable.');
+      }
+
       const data = await response.json();
 
-      if (data.suggestedText) {
+      if (data && data.suggestedText) {
           if (selectedText) {
               setAiPreview({ 
                   text: data.suggestedText, 
@@ -254,11 +259,11 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               toast({ title: 'Content generated' });
           }
       } else {
-          throw new Error('No suggestion received');
+          throw new Error('The AI was unable to generate a response. Try selecting a different section of text.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI Error:', error);
-      toast({ variant: 'destructive', title: 'Assistant Busy', description: 'Please try again in a moment.' });
+      toast({ variant: 'destructive', title: 'Assistant Notice', description: error.message });
     } finally {
       clearInterval(statusInterval);
       setIsAiProcessing(false);
@@ -386,22 +391,22 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       {aiPreview && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
               <Card className="w-full max-w-2xl border-none shadow-3xl rounded-[2.5rem] bg-white overflow-hidden animate-in zoom-in-95 duration-500">
-                  <CardHeader className="bg-slate-50 p-8 border-b">
+                  <div className="bg-slate-50 p-8 border-b">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="p-3 rounded-2xl bg-primary/10 text-primary">
                                 <Sparkles className="h-6 w-6" />
                             </div>
                             <div>
-                                <CardTitle className="text-xl font-black uppercase tracking-tight">AI Suggestion</CardTitle>
-                                <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verify and apply improvements</CardDescription>
+                                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">AI Suggestion</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verify and apply improvements</p>
                             </div>
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => setAiPreview(null)} className="rounded-full text-slate-400 hover:text-slate-900">
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
-                  </CardHeader>
+                  </div>
                   <CardContent className="p-8 space-y-8">
                       <div className="space-y-4">
                           <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 flex items-center gap-2">
@@ -421,7 +426,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                           </div>
                       </div>
                   </CardContent>
-                  <DialogFooter className="p-8 pt-4 bg-slate-50 border-t flex items-center justify-between gap-4">
+                  <div className="p-8 pt-4 bg-slate-50 border-t flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contextual refinement complete</p>
@@ -434,7 +439,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                             <Check className="mr-2 h-4 w-4" /> Apply Changes
                         </Button>
                       </div>
-                  </DialogFooter>
+                  </div>
               </Card>
           </div>
       )}

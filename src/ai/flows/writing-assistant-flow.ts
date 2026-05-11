@@ -40,7 +40,15 @@ const prompt = ai.definePrompt({
   name: 'writingAssistantPrompt',
   input: { schema: WritingAssistantInputSchema },
   output: { schema: WritingAssistantOutputSchema },
-  prompt: `You are an expert writing assistant and editor. 
+  config: {
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  },
+  prompt: `You are an expert writing assistant and editor for a high-fidelity business platform.
   Perform the following action: {{action}}
   
   Target Text: """{{text}}"""
@@ -49,7 +57,7 @@ const prompt = ai.definePrompt({
   Rules:
   - Return ONLY the improved text within the JSON output.
   - Maintain the existing format and intent.
-  - Tone: Professional, clear, and consistent with a high-fidelity business environment.
+  - Tone: Professional, clear, and consistent.
   
   Actions Guide:
   - improve: Make the text better, clearer, and more engaging.
@@ -72,7 +80,9 @@ const writingAssistantFlow = ai.defineFlow(
   },
   async input => {
     const { output } = await prompt(input);
-    if (!output) throw new Error('AI failed to generate a suggestion.');
+    if (!output || !output.suggestedText) {
+      throw new Error('The AI was unable to generate a suggestion for this text. Please try refining your selection.');
+    }
     return output;
   }
 );
