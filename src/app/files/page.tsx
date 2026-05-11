@@ -108,7 +108,7 @@ export default function SharedFilesPage() {
 
   const companyId = user?.companyId || 'unassigned';
 
-  // Presence logic
+  // Real-time Presence Logic
   const presenceQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? collection(firestore, 'hr_companies', companyId, 'files_presence') : null,
     [firestore, companyId]
@@ -133,6 +133,7 @@ export default function SharedFilesPage() {
     }
   }, [isUserLoading, isUserDocLoading, authUser, user, router]);
 
+  // Update Presence Status
   useEffect(() => {
     if (!firestore || !user || companyId === 'unassigned') return;
 
@@ -156,7 +157,7 @@ export default function SharedFilesPage() {
     };
   }, [firestore, user, companyId, pathname]);
 
-  // Data queries
+  // Shared Data Queries
   const foldersQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_folders'),
@@ -183,7 +184,7 @@ export default function SharedFilesPage() {
   );
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
 
-  // Computed views
+  // Filtered Views
   const currentFolders = useMemo(() => {
     if (!allFolders) return [];
     let list = allFolders;
@@ -231,10 +232,10 @@ export default function SharedFilesPage() {
 
   const storagePercentage = (companyUsedStorage / STORAGE_QUOTA_BYTES) * 100;
 
-  // Global upload logic
+  // File Upload Logic
   const performUpload = async (file: File) => {
-    if (!file || !firestore || !storage || !auth || !user) {
-        if (!auth?.currentUser) toast({ variant: 'destructive', title: 'Session expired', description: 'Please log in again.' });
+    if (!file || !firestore || !storage || !auth?.currentUser || !user) {
+        toast({ variant: 'destructive', title: 'Session required', description: 'Please ensure you are logged in.' });
         return;
     }
 
@@ -311,7 +312,7 @@ export default function SharedFilesPage() {
     }
   };
 
-  // Handlers
+  // Organizational Management Handlers
   const handleCreateFolder = async () => {
     if (!firestore || !user || !newFolderName.trim()) return;
     const newFolderData = {
@@ -332,12 +333,7 @@ export default function SharedFilesPage() {
         setIsNewFolderOpen(false);
         setNewFolderName('');
     } catch (e) {
-        const permissionError = new FirestorePermissionError({
-            path: '/cloud_folders',
-            operation: 'create',
-            requestResourceData: newFolderData
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: 'destructive', title: 'Create failed' });
     }
   };
 
@@ -349,7 +345,7 @@ export default function SharedFilesPage() {
             updatedAt: serverTimestamp()
         });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Update blocked' });
+        toast({ variant: 'destructive', title: 'Action blocked' });
     }
   };
 
@@ -375,7 +371,7 @@ export default function SharedFilesPage() {
             trashedAt: null,
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'Restored from trash' });
+        toast({ title: 'Restored' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'Action failed' });
     }
@@ -517,10 +513,10 @@ export default function SharedFilesPage() {
             <div className="space-y-1">
                 <h4 className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Options</h4>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-semibold text-xs text-slate-500 hover:text-slate-900">
-                    <History className="h-4 w-4" /> Activity
+                    <History className="h-4 w-4" /> Activity log
                 </Button>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-semibold text-xs text-slate-500 hover:text-slate-900" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4" /> New folder
+                    <FolderPlus className="h-4 w-4" /> Create folder
                 </Button>
             </div>
           </div>
@@ -539,13 +535,12 @@ export default function SharedFilesPage() {
                 </div>
                 <Separator className="bg-slate-50" />
                 <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8 rounded-xl shadow-sm">
-                        <AvatarImage src={user?.photoURL} />
-                        <AvatarFallback className="text-[10px] font-bold bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <div className="h-8 w-8 rounded-xl bg-blue-50 flex items-center justify-center text-primary font-black text-xs shadow-sm">
+                        {user?.businessName?.charAt(0) || 'T'}
+                    </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.businessName || 'Team drive'}</p>
-                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Company space</p>
+                        <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.businessName || 'Team space'}</p>
+                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Shared organizational drive</p>
                     </div>
                 </div>
             </div>
@@ -600,7 +595,7 @@ export default function SharedFilesPage() {
               <div className="relative group/search hidden md:block w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input 
-                  placeholder="Search files..." 
+                  placeholder="Search your files..." 
                   className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -626,18 +621,18 @@ export default function SharedFilesPage() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-9 px-4 rounded-xl font-bold text-xs gap-2">
+                  <Button className="h-9 px-4 rounded-xl font-bold text-xs gap-2 shadow-lg shadow-primary/10">
                     <Plus className="h-3.5 w-3.5" /> Add file
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4 text-blue-500" /> New folder
+                    <FolderPlus className="h-4 w-4 text-blue-500" /> Create folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="h-4 w-4 text-primary" /> 
-                    Upload file
+                    Upload asset
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -658,8 +653,8 @@ export default function SharedFilesPage() {
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 leading-none">No files found</h3>
-                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Upload a file or create a folder to get started with your team.</p>
+                    <h3 className="text-xl font-bold text-slate-900 leading-none">Your team hub is empty</h3>
+                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Drop a file or create a folder to start organizing together.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -711,8 +706,8 @@ export default function SharedFilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading...</p>
-                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Adding to team space...</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading asset</p>
+                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Syncing to team cloud space...</p>
                     </div>
                 </div>
                 <span className="text-xs font-bold tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -730,7 +725,7 @@ export default function SharedFilesPage() {
                 <div>
                     <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New folder</DialogTitle>
                     <DialogDescription className="text-slate-400 font-semibold text-xs mt-1">
-                        Create a space for your team's files.
+                        Create a shared space for your team's assets.
                     </DialogDescription>
                 </div>
             </DialogHeader>
@@ -748,7 +743,7 @@ export default function SharedFilesPage() {
             <DialogFooter className="gap-2">
                 <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
                 <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
-                    Create folder
+                    Confirm folder
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -766,7 +761,7 @@ export default function SharedFilesPage() {
                         <div className="min-w-0">
                             <DialogTitle className="text-lg font-bold text-white truncate">{previewFile?.name}</DialogTitle>
                             <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                {previewFile && formatSize(previewFile.size)} • Added by {previewFile?.ownerName}
+                                {previewFile && formatSize(previewFile.size)} • Synced by {previewFile?.ownerName}
                             </DialogDescription>
                         </div>
                     </div>
@@ -813,7 +808,7 @@ export default function SharedFilesPage() {
                                 <FileText className="h-24 w-24" />
                             </div>
                             <div className="space-y-4">
-                                <p className="text-white font-bold text-lg">Preview not supported for this format</p>
+                                <p className="text-white font-bold text-lg">Preview unavailable for this format</p>
                                 <Button asChild className="rounded-xl h-12 px-10 font-bold">
                                     <a href={previewFile?.url} download={previewFile?.name}>Download to view locally</a>
                                 </Button>
@@ -823,7 +818,7 @@ export default function SharedFilesPage() {
                 </div>
                 
                 <div className="p-6 bg-black/20 border-t border-white/5 flex items-center justify-between">
-                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">River Secure Storage</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Authorized Team Document</p>
                     <div className="flex items-center gap-3">
                          <Button variant="outline" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest bg-transparent text-white border-white/10 hover:bg-white hover:text-slate-900" onClick={() => window.open(previewFile?.url, '_blank')}>
                             <Download className="mr-2 h-3.5 w-3.5" /> Full Resolution
@@ -1006,7 +1001,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-semibold text-slate-400">{formatSize(file.size)}</span>
                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[10px] font-semibold text-primary">Added by {file.ownerName}</span>
+                            <span className="text-[10px] font-semibold text-primary">Synced by {file.ownerName}</span>
                         </div>
                     </div>
                 </div>
