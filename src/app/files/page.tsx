@@ -31,7 +31,8 @@ import {
   Home,
   X,
   History,
-  Info
+  Info,
+  Palette
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,8 +75,8 @@ import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { formatDistanceToNow } from 'date-fns';
 
-const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2gb
-const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500mb
+const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
+const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500MB
 
 export default function RiverFilesPage() {
   const { user: authUser, isUserLoading } = useUser();
@@ -98,10 +99,10 @@ export default function RiverFilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
 
-  // multi-tenant isolation
+  // Multi-tenant isolation
   const companyId = user?.companyId || 'unassigned';
 
-  // presence logic (collab standard)
+  // Presence logic
   const presenceQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? collection(firestore, 'hr_companies', companyId, 'files_presence') : null,
     [firestore, companyId]
@@ -125,7 +126,7 @@ export default function RiverFilesPage() {
     const presenceRef = doc(firestore, 'hr_companies', companyId, 'files_presence', user.id);
     const presenceData = {
         id: user.id,
-        name: user.name || user.email?.split('@')[0] || 'collaborator',
+        name: user.name || user.email?.split('@')[0] || 'Collaborator',
         photoURL: user.photoURL || null,
         lastActive: serverTimestamp(),
         isActive: true,
@@ -149,7 +150,7 @@ export default function RiverFilesPage() {
     };
   }, [firestore, user, companyId, pathname]);
 
-  // data queries
+  // Data queries
   const foldersQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_folders'),
@@ -176,7 +177,7 @@ export default function RiverFilesPage() {
   );
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
 
-  // computed views
+  // Computed views
   const currentFolders = useMemo(() => {
     if (!allFolders) return [];
     let list = allFolders;
@@ -224,11 +225,11 @@ export default function RiverFilesPage() {
 
   const storagePercentage = (companyUsedStorage / STORAGE_QUOTA_BYTES) * 100;
 
-  // handlers
+  // Handlers
   const handleCreateFolder = async () => {
     if (!firestore || !user || !newFolderName.trim()) return;
     const newFolderData = {
-        name: newFolderName.trim().toLowerCase(),
+        name: newFolderName.trim(),
         parentId: currentFolderId,
         ownerId: user.id,
         ownerName: user.name,
@@ -241,7 +242,7 @@ export default function RiverFilesPage() {
     };
     try {
         await addDoc(collection(firestore, 'cloud_folders'), newFolderData);
-        toast({ title: 'directory synchronized' });
+        toast({ title: 'Directory Synchronized' });
         setIsNewFolderOpen(false);
         setNewFolderName('');
     } catch (e) {
@@ -259,12 +260,12 @@ export default function RiverFilesPage() {
     if (!file || !firestore || !storage || !auth || !user) return;
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast({ variant: 'destructive', title: 'limit exceeded', description: 'max 500mb per file' });
+        toast({ variant: 'destructive', title: 'Limit Exceeded', description: 'Maximum 500MB per file.' });
         return;
     }
 
     if (companyUsedStorage + file.size > STORAGE_QUOTA_BYTES) {
-        toast({ variant: 'destructive', title: 'quota reached', description: '2gb organizational limit reached' });
+        toast({ variant: 'destructive', title: 'Quota Reached', description: '2GB organizational limit reached.' });
         return;
     }
 
@@ -276,7 +277,7 @@ export default function RiverFilesPage() {
         const url = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
 
         const newFileData = {
-            name: file.name.toLowerCase(),
+            name: file.name,
             type: file.type,
             size: file.size,
             url,
@@ -292,9 +293,9 @@ export default function RiverFilesPage() {
         };
 
         await addDoc(collection(firestore, 'cloud_files'), newFileData);
-        toast({ title: 'asset synchronized' });
+        toast({ title: 'Asset Synchronized' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'sync failure' });
+        toast({ variant: 'destructive', title: 'Sync Failure' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -309,7 +310,7 @@ export default function RiverFilesPage() {
             updatedAt: serverTimestamp()
         });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'update blocked' });
+        toast({ variant: 'destructive', title: 'Update Blocked' });
     }
   };
 
@@ -321,9 +322,9 @@ export default function RiverFilesPage() {
             trashedAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'moved to trash bin' });
+        toast({ title: 'Moved to trash bin' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'action failed' });
+        toast({ variant: 'destructive', title: 'Action Failed' });
     }
   };
 
@@ -335,9 +336,9 @@ export default function RiverFilesPage() {
             trashedAt: null,
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'restored to hub' });
+        toast({ title: 'Restored to hub' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'action failed' });
+        toast({ variant: 'destructive', title: 'Action Failed' });
     }
   };
 
@@ -345,16 +346,16 @@ export default function RiverFilesPage() {
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, collectionName, item.id));
-        toast({ title: 'purged permanently' });
+        toast({ title: 'Purged permanently' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'purge blocked' });
+        toast({ variant: 'destructive', title: 'Purge Blocked' });
     }
   };
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 b';
+    if (bytes === 0) return '0 B';
     const k = 1024;
-    const sizes = ['b', 'kb', 'mb', 'gb'];
+    const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
@@ -368,22 +369,22 @@ export default function RiverFilesPage() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading) return <FullScreenLoader text="opening cloud hub" />;
+  if (isUserLoading) return <FullScreenLoader text="Opening Cloud Hub" />;
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden font-sans lowercase">
-      {/* 1. unified global header (presence only, minimal) */}
+    <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
+      {/* Global Header */}
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
           <div className="flex flex-col">
-            <span className="font-black text-xs text-slate-900 leading-tight">river</span>
-            <span className="font-bold text-[10px] text-slate-400 leading-tight">files</span>
+            <span className="font-black text-xs text-slate-900 leading-tight">River</span>
+            <span className="font-bold text-[10px] text-slate-400 leading-tight">Files</span>
           </div>
         </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-2 sm:gap-6">
-          {/* team presence indicators */}
+          {/* Team presence */}
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-2">
                 {collaborators?.filter(c => c.id !== user?.id).map(collab => {
@@ -404,17 +405,17 @@ export default function RiverFilesPage() {
                             </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl border">
-                            <div className="flex flex-col lowercase">
+                            <div className="flex flex-col">
                                 <p className="text-xs font-black text-slate-900 leading-none">
                                     {collab.name}
                                 </p>
                                 {!isOnline ? (
                                     <p className="text-[10px] font-bold text-slate-400 leading-none mt-1">
-                                        last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
+                                        Last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
                                     </p>
                                 ) : (
                                     <p className="text-[10px] font-black text-primary leading-none mt-1">
-                                        viewing now
+                                        Viewing now
                                     </p>
                                 )}
                             </div>
@@ -442,40 +443,40 @@ export default function RiverFilesPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* side navigation (collab standard) */}
+        {/* Sidebar Navigation */}
         <aside className="w-72 border-r bg-slate-50/80 flex flex-col shrink-0 transition-all duration-300">
           <div className="p-6 flex-1 overflow-y-auto space-y-8">
             <div className="space-y-1">
-              <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">directories</h4>
+              <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Directories</h4>
               <nav className="space-y-1">
                 <SidebarItem 
                   active={activeTab === 'all'} 
                   onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} 
                   icon={<Globe className="h-4 w-4" />} 
-                  label="company hub" 
+                  label="Company Hub" 
                 />
                 <SidebarItem 
                   active={activeTab === 'favorites'} 
                   onClick={() => setActiveTab('favorites')} 
                   icon={<Star className="h-4 w-4" />} 
-                  label="pinned assets" 
+                  label="Pinned Assets" 
                 />
                 <SidebarItem 
                   active={activeTab === 'trash'} 
                   onClick={() => setActiveTab('trash')} 
                   icon={<Trash2 className="h-4 w-4" />} 
-                  label="trash bin" 
+                  label="Trash Bin" 
                 />
               </nav>
             </div>
 
             <div className="space-y-1">
-                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">management</h4>
+                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900">
-                    <History className="h-4 w-4" /> recently modified
+                    <History className="h-4 w-4" /> Recently Modified
                 </Button>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4" /> new directory
+                    <FolderPlus className="h-4 w-4" /> New Directory
                 </Button>
             </div>
           </div>
@@ -484,12 +485,12 @@ export default function RiverFilesPage() {
             <div className="p-4 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm space-y-4">
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-[9px] font-black text-slate-400">
-                        <span>collective quota</span>
+                        <span>Collective Quota</span>
                         <span className={cn(storagePercentage > 90 ? "text-red-500" : "text-slate-900")}>{Math.round(storagePercentage)}%</span>
                     </div>
                     <Progress value={storagePercentage} className={cn("h-1 bg-slate-100", storagePercentage > 90 && "[&>div]:bg-red-500")} />
                     <p className="text-[8px] font-bold text-slate-400 leading-none">
-                        {formatSize(companyUsedStorage)} of 2gb shared
+                        {formatSize(companyUsedStorage)} of 2GB shared
                     </p>
                 </div>
                 <Separator className="bg-slate-50" />
@@ -499,17 +500,16 @@ export default function RiverFilesPage() {
                         <AvatarFallback className="text-[10px] font-black bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-black text-slate-900 truncate tracking-tighter">{user?.businessName || 'company hub'}</p>
-                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">shared team storage</p>
+                        <p className="text-[11px] font-black text-slate-900 truncate tracking-tighter">{user?.businessName || 'Company Hub'}</p>
+                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Shared Team Storage</p>
                     </div>
                 </div>
             </div>
           </div>
         </aside>
 
-        {/* main workspace area */}
+        {/* Main Workspace Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* header breadcrumbs & tools */}
           <header className="h-14 border-b flex items-center justify-between px-6 bg-white/95 backdrop-blur-sm shrink-0 sticky top-0 z-20">
             <div className="flex items-center gap-2 overflow-hidden min-w-0">
               <button 
@@ -541,7 +541,7 @@ export default function RiverFilesPage() {
               <div className="relative group/search hidden md:block w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input 
-                  placeholder="quick find assets..." 
+                  placeholder="Quick find assets..." 
                   className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-bold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -567,18 +567,18 @@ export default function RiverFilesPage() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-9 px-4 rounded-xl font-black text-[9px] shadow-lg shadow-primary/10 gap-2">
-                    <Plus className="h-3.5 w-3.5" /> sync asset
+                  <Button className="h-9 px-4 rounded-xl font-black text-[9px] uppercase shadow-lg shadow-primary/10 gap-2">
+                    <Plus className="h-3.5 w-3.5" /> Sync Asset
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4 text-blue-500" /> new folder
+                    <FolderPlus className="h-4 w-4 text-blue-500" /> New Folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer relative">
                     <Upload className="h-4 w-4 text-primary" /> 
-                    sync file
+                    Sync File
                     <input 
                       type="file" 
                       className="absolute inset-0 opacity-0 cursor-pointer" 
@@ -591,7 +591,6 @@ export default function RiverFilesPage() {
             </div>
           </header>
 
-          {/* main context area */}
           <main className="flex-1 overflow-auto bg-white">
             <ScrollArea className="h-full">
               <div className="p-8 pb-32">
@@ -606,8 +605,8 @@ export default function RiverFilesPage() {
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-black text-slate-900 leading-none">organizational hub empty</h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-4 max-w-[220px] leading-relaxed">sync your first asset to the shared company drive to begin collaboration.</p>
+                    <h3 className="text-xl font-black text-slate-900 leading-none">Organizational Hub Empty</h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Sync your first asset to the shared company drive to begin collaboration.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -650,7 +649,7 @@ export default function RiverFilesPage() {
         </div>
       </div>
 
-      {/* asset synchronization overlay */}
+      {/* Upload Progress Overlay */}
       {isUploading && (
         <div className="fixed bottom-8 right-8 z-[100] bg-slate-900 text-white p-5 rounded-[2.5rem] shadow-3xl border border-white/10 flex flex-col gap-4 min-w-[320px] animate-in slide-in-from-bottom-10 duration-700">
             <div className="flex items-center justify-between">
@@ -659,8 +658,8 @@ export default function RiverFilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest">hub synchronization</p>
-                        <p className="text-[8px] font-bold text-slate-400 mt-1">uploading shared organizational asset...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Hub Synchronization</p>
+                        <p className="text-[8px] font-bold text-slate-400 mt-1">Uploading shared organizational asset...</p>
                     </div>
                 </div>
                 <span className="text-xs font-black tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -669,7 +668,7 @@ export default function RiverFilesPage() {
         </div>
       )}
 
-      {/* create directory modal */}
+      {/* Create Directory Modal */}
       <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
         <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-3xl p-8 bg-white">
             <DialogHeader className="space-y-4">
@@ -677,17 +676,17 @@ export default function RiverFilesPage() {
                     <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-black tracking-tighter text-slate-900">directory synchronization</DialogTitle>
+                    <DialogTitle className="text-xl font-black tracking-tighter text-slate-900">Directory Synchronization</DialogTitle>
                     <DialogDescription className="text-slate-400 font-bold text-[9px] mt-1 uppercase tracking-wider">
-                        organize collective team content into shared organizational units
+                        Organize collective team content into shared organizational units.
                     </DialogDescription>
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[9px] font-black text-slate-400 ml-1 uppercase tracking-widest">folder label</Label>
+                <Label className="text-[9px] font-black text-slate-400 ml-1 uppercase tracking-widest">Folder Label</Label>
                 <Input 
                     autoFocus
-                    placeholder="e.g. logistics records" 
+                    placeholder="e.g. Logistics Records" 
                     className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 mt-2 text-xs shadow-inner"
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
@@ -695,9 +694,9 @@ export default function RiverFilesPage() {
                 />
             </div>
             <DialogFooter className="gap-2">
-                <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-[10px] uppercase tracking-widest text-slate-400">cancel</Button>
+                <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-[10px] uppercase tracking-widest text-slate-400">Cancel</Button>
                 <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20">
-                    authorize
+                    Authorize
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -743,21 +742,21 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer">
                             {folder.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
-                            {folder.isFavorite ? 'unpin asset' : 'pin to hub'}
+                            {folder.isFavorite ? 'Unpin asset' : 'Pin to hub'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> move to trash
+                            <Trash2 className="h-3 w-3" /> Move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer text-green-600">
-                            <CheckCircle2 className="h-3 w-3" /> restore
+                            <CheckCircle2 className="h-3 w-3" /> Restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> delete forever
+                            <Trash2 className="h-3 w-3" /> Delete forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -775,7 +774,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                     <div className="space-y-0.5">
                         <p className="text-sm font-bold text-slate-900 leading-none">{folder.name}</p>
                         <div className="flex items-center gap-2">
-                             <span className="text-[10px] font-bold text-slate-400">synced by {folder.ownerName}</span>
+                             <span className="text-[10px] font-bold text-slate-400">Synced by {folder.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -799,7 +798,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-sm font-black text-slate-900 truncate leading-none mb-1.5 tracking-tighter">{folder.name}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">directory</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Directory</p>
                         </div>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50">
@@ -835,24 +834,24 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
-                            {file.isFavorite ? 'unpin asset' : 'pin to hub'}
+                            {file.isFavorite ? 'Unpin asset' : 'Pin to hub'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer">
-                            <Download className="h-3 w-3 text-slate-400" /> download local
+                            <Download className="h-3 w-3 text-slate-400" /> Download local
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> move to trash
+                            <Trash2 className="h-3 w-3" /> Move to trash
                         </DropdownMenuItem>
                     </>
                 ) : (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRestore(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs cursor-pointer text-green-600">
-                            <CheckCircle2 className="h-3 w-3" /> restore
+                            <CheckCircle2 className="h-3 w-3" /> Restore
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-bold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> delete forever
+                            <Trash2 className="h-3 w-3" /> Delete forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -872,7 +871,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-bold text-slate-400">{formatSize(file.size)}</span>
                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[10px] font-bold text-primary">synced by {file.ownerName}</span>
+                            <span className="text-[10px] font-bold text-primary">Synced by {file.ownerName}</span>
                         </div>
                     </div>
                 </div>
