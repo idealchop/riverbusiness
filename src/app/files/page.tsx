@@ -72,6 +72,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
+import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { formatDistanceToNow } from 'date-fns';
 import Image from 'next/image';
 
