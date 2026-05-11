@@ -48,6 +48,7 @@ const newUserSchema = z.object({
     address: z.string().min(1, { message: 'Address is required' }),
     contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
     clientType: z.string().min(1, { message: 'Plan type is required' }),
+    role: z.enum(['Admin', 'User']).default('User'),
     plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
     isPrepaid: z.boolean().default(false),
     planPrice: z.coerce.number().min(0, "Price cannot be negative."),
@@ -85,6 +86,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
             clientId: '', name: '', businessEmail: '', businessName: '', address: '',
             contactNumber: '', clientType: '', plan: null, planPrice: 0, initialTopUp: 0,
             accountType: 'Single',
+            role: 'User',
             isPrepaid: false,
             customPlanDetails: {
                 litersPerMonth: 0, bonusLiters: 0, pricePerLiter: 0, gallonQuantity: 0, gallonPrice: 0,
@@ -123,8 +125,9 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
         if (!firestore) return;
         setIsSubmitting(true);
         try {
+            const normalizedClientId = values.clientId.trim().toUpperCase();
             const batch = writeBatch(firestore);
-            const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', values.clientId);
+            const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', normalizedClientId);
             const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
 
             if (unclaimedProfileSnap.exists()) {
@@ -138,6 +141,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
             // Infrastructure alignment: Set default hrRole and companyId
             const profileData: any = {
                 ...rest, 
+                clientId: normalizedClientId,
                 plan: {
                     name: plan.name,
                     price: planPrice,
@@ -145,9 +149,8 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                 },
                 isPrepaid: values.isPrepaid,
                 customPlanDetails: { ...values.customPlanDetails },
-                role: 'User',
                 hrRole: 'owner', // Default to owner for the claiming client
-                companyId: values.clientId, // Link everything to this client ID
+                companyId: normalizedClientId, // Link everything to this client ID
                 accountStatus: 'Active',
                 totalConsumptionLiters: (selectedAccountType !== 'Parent' && !plan.isConsumptionBased) ? (values.customPlanDetails?.litersPerMonth || 0) : 0,
                 topUpBalanceCredits: selectedAccountType === 'Parent' ? (initialTopUp || 0) : 0,
@@ -234,7 +237,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                 <div className="space-y-6">
                                     <h3 className="font-semibold text-lg">Step 1: Business & Account Type</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                      <FormField control={newUserForm.control} name="clientId" render={({ field }) => (<FormItem><FormLabel>Client ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                                      <FormField control={newUserForm.control} name="clientId" render={({ field }) => (<FormItem><FormLabel>Client ID</FormLabel><FormControl><Input {...field} placeholder="e.g. SC-12345" /></FormControl><FormMessage /></FormItem>)}/>
                                       <FormField control={newUserForm.control} name="businessName" render={({ field }) => (<FormItem><FormLabel>Business Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                                       <FormField control={newUserForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                                       <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (<FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -242,7 +245,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                       <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Business Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                                       <Separator className="md:col-span-2"/>
                                       <FormField control={newUserForm.control} name="accountType" render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
+                                        <FormItem className="md:col-span-1">
                                             <FormLabel>Account Type</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
@@ -250,6 +253,17 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                                     <SelectItem value="Single">Single Account</SelectItem>
                                                     <SelectItem value="Parent">Parent Account</SelectItem>
                                                     <SelectItem value="Branch">Branch Account</SelectItem>
+                                                </SelectContent>
+                                            </Select><FormMessage />
+                                        </FormItem>)}/>
+                                      <FormField control={newUserForm.control} name="role" render={({ field }) => (
+                                        <FormItem className="md:col-span-1">
+                                            <FormLabel>System Access Role</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="User">User (Standard)</SelectItem>
+                                                    <SelectItem value="Admin">Admin (Full Access)</SelectItem>
                                                 </SelectContent>
                                             </Select><FormMessage />
                                         </FormItem>)}/>

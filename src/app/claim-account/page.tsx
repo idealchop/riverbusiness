@@ -17,6 +17,7 @@ import type { AppUser } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle } from 'lucide-react';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
+import { Badge } from '@/components/ui/badge';
 
 const claimSchema = z.object({
   clientId: z.string().min(1, { message: 'Client ID is required.' }),
@@ -70,16 +71,16 @@ export default function ClaimAccountPage() {
       return;
     }
 
-    const { clientId } = data;
+    const normalizedClientId = data.clientId.trim().toUpperCase();
 
     try {
-      const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', clientId);
+      const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', normalizedClientId);
       const userProfileRef = doc(firestore, 'users', authUser.uid);
       
       const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
 
       if (!unclaimedProfileSnap.exists()) {
-        toast({ variant: 'destructive', title: 'Claim Failed', description: 'The provided Client ID is invalid.' });
+        toast({ variant: 'destructive', title: 'Claim Failed', description: 'The provided Client ID is invalid or does not exist.' });
         return;
       }
       
@@ -96,9 +97,9 @@ export default function ClaimAccountPage() {
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         accountStatus: 'Active',
-        role: 'User',
-        hrRole: 'owner', // The person claiming the Client ID is the primary owner
-        companyId: clientId, // Client ID acts as the multi-tenant isolator
+        role: unclaimedData.role || 'User', // Honor the role assigned by the admin
+        hrRole: unclaimedData.hrRole || 'owner', // Default to owner if not specified
+        companyId: normalizedClientId, // Ensure companyId is consistent with the verified clientId
       } as AppUser;
       
       batch.set(userProfileRef, newUserData);
@@ -111,7 +112,7 @@ export default function ClaimAccountPage() {
 
     } catch (error) {
       console.error("Error claiming profile: ", error);
-      toast({ variant: 'destructive', title: 'Claim Failed', description: 'An unexpected error occurred.' });
+      toast({ variant: 'destructive', title: 'Claim Failed', description: 'An unexpected error occurred during profile synchronization.' });
     }
   };
 
@@ -144,8 +145,8 @@ export default function ClaimAccountPage() {
                             <p className="text-slate-900">{claimedProfile.clientId}</p>
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <p className="text-[9px] text-slate-400 uppercase font-bold mb-1">Corporate Role</p>
-                            <p className="text-slate-900 capitalize">{claimedProfile.hrRole}</p>
+                            <p className="text-[9px] text-slate-400 uppercase font-bold mb-1">System Role</p>
+                            <p className="text-slate-900 capitalize">{claimedProfile.role}</p>
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 md:col-span-2">
                             <p className="text-[9px] text-slate-400 uppercase font-bold mb-1">Assigned Address</p>
@@ -159,7 +160,7 @@ export default function ClaimAccountPage() {
                     <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-between">
                         <div>
                             <p className="font-bold text-slate-900">{claimedProfile.plan?.name}</p>
-                            <p className="text-xs text-blue-600 font-medium">Auto-Refill Logistics Enabled</p>
+                            <p className="text-xs text-blue-600 font-medium">Fulfillment Sync Active</p>
                         </div>
                         <Badge variant="outline" className="bg-white border-blue-200 text-blue-700">Verified</Badge>
                     </div>
@@ -167,8 +168,8 @@ export default function ClaimAccountPage() {
             </div>
           </CardContent>
           <CardFooter className="pb-10 px-10">
-            <Button onClick={() => router.push('/dashboard')} className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">
-              Launch Dashboard
+            <Button onClick={() => router.push(claimedProfile.role === 'Admin' ? '/admin' : '/dashboard')} className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">
+              Launch Workspace
             </Button>
           </CardFooter>
         </Card>
@@ -190,24 +191,24 @@ export default function ClaimAccountPage() {
           <CardContent className="pt-4">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="clientId" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Client identification</Label>
+                <Label htmlFor="clientId" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Client identification</Label>
                 <Input
                   id="clientId"
                   placeholder="e.g. SC-12345"
-                  className="h-14 rounded-2xl bg-slate-50 border-slate-200 px-5 font-bold focus-visible:ring-primary/20"
+                  className="h-14 rounded-2xl bg-slate-50 border-slate-200 px-5 font-bold focus-visible:ring-primary/20 uppercase"
                   {...register('clientId')}
                   disabled={isSubmitting}
                 />
-                {errors.clientId && <p className="text-xs font-medium text-destructive mt-1 ml-1">{errors.clientId.message}</p>}
+                {errors.clientId && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.clientId.message}</p>}
               </div>
-              <Button type="submit" className="w-full h-14 rounded-2xl font-bold text-base shadow-xl shadow-primary/10" disabled={isSubmitting}>
+              <Button type="submit" className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/10" disabled={isSubmitting}>
                 {isSubmitting ? <Loader /> : 'Link Profile'}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="justify-center pb-8">
-             <p className="text-center text-xs text-muted-foreground font-medium">
-                Need help? Contact our sales executive or email <a href="mailto:support@riverph.com" className="font-bold text-primary hover:underline">support@riverph.com</a>.
+             <p className="text-center text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                Need help? Contact our sales executive or email <a href="mailto:support@riverph.com" className="font-black text-primary hover:underline">support@riverph.com</a>.
              </p>
           </CardFooter>
         </Card>
