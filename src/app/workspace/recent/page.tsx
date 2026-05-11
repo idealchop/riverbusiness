@@ -45,7 +45,7 @@ export default function RecentPages() {
                     <History className="h-6 w-6" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Recently Edited</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Recently edited</h1>
                     <p className="text-sm font-medium text-slate-500">Jump back into the most active documents across the platform.</p>
                 </div>
             </div>
@@ -65,7 +65,7 @@ export default function RecentPages() {
                                     <FileText className="h-5 w-5" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-base font-bold text-slate-900 truncate">{page.title || 'Untitled Document'}</h3>
+                                    <h3 className="text-base font-bold text-slate-900 truncate">{page.title || 'Untitled document'}</h3>
                                     <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                                         <Clock className="h-3.5 w-3.5" />
                                         Modified {page.updatedAt ? formatDistanceToNow((page.updatedAt as Timestamp).toDate(), { addSuffix: true }) : 'Recently'}

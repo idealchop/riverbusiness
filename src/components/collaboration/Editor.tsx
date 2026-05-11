@@ -243,15 +243,18 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               
               editor.chain()
                 .focus()
-                .insertContent(combinedHtml)
+                .deleteRange(from, to)
+                .insertContentAt(from, combinedHtml)
                 .run();
 
-              const newTo = editor.state.selection.to;
+              // Track exactly where the replacement occurred
+              const insertedText = selectedText + " " + data.suggestedText;
+              const newTo = from + insertedText.length;
 
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
-                  from, 
+                  from: from, 
                   to: newTo
               });
 
@@ -290,12 +293,13 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Delete the entire preview block and insert only the clean AI text
-      // We explicitly unset marks to ensure no leftover strikethrough from <s> tag
+      // Atomic command to delete the preview and insert the clean suggestion
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
+        // Explicitly unset the strike mark to prevent any carry-over from the <s> tag
+        .unsetMark('strike')
         .run();
 
       setAiPreview(null);
@@ -327,8 +331,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                       <Sparkles className="h-3.5 w-3.5" /> Improve
                   </Button>
                   <Separator orientation="vertical" className="h-4 mx-1" />
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Fix Grammar"><Languages className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Make Professional"><Type className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Fix grammar"><Languages className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Make professional"><Type className="h-3.5 w-3.5" /></Button>
               </div>
           </BubbleMenu>
       )}

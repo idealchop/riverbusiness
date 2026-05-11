@@ -198,7 +198,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     className="w-full justify-start h-10 rounded-xl border-slate-200 bg-white shadow-sm gap-3 font-bold text-xs"
                 >
                     <Search className="h-4 w-4 text-slate-400" />
-                    {isSearching ? '' : 'Quick Find'}
+                    {isSearching ? '' : 'Quick find'}
                 </Button>
                 {isSearching && (
                     <div className="absolute inset-0 z-50">
@@ -256,7 +256,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     {rootPages.map(page => <NavItem key={page.id} page={page} />)}
                     {rootPages.length === 0 && !searchQuery && (
                         <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Empty Workspace</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Empty workspace</p>
                         </div>
                     )}
                 </div>
@@ -266,7 +266,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     className="w-full justify-start h-9 rounded-lg gap-2 text-xs font-bold text-slate-400 hover:text-primary hover:bg-primary/5 mt-2"
                 >
                     <Plus className="h-3.5 w-3.5" />
-                    New Page
+                    New page
                 </Button>
             </div>
 
@@ -275,12 +275,12 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
                 <Link href="/workspace/recent">
                     <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <History className="h-4 w-4" /> Recently Edited
+                        <History className="h-4 w-4" /> Recently edited
                     </Button>
                 </Link>
                 <Link href="/workspace/trash">
                     <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <Trash2 className="h-4 w-4" /> Trash Bin
+                        <Trash2 className="h-4 w-4" /> Trash bin
                     </Button>
                 </Link>
             </div>
@@ -295,7 +295,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </div>
             <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-900 truncate uppercase tracking-tighter">{user?.businessName}</p>
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-none mt-1">Enterprise Workspace</p>
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-none mt-1">Enterprise workspace</p>
             </div>
         </div>
       </div>
@@ -303,9 +303,9 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
       <AlertDialog open={!!pageToTrash} onOpenChange={() => setPageToTrash(null)}>
         <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Move to Trash?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Move to trash?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-              This document will be removed from your workspace but can be restored from the Trash folder within 30 days.
+              This document will be removed from your workspace but can be restored from the trash folder within 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
