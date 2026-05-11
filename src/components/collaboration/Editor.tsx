@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -39,13 +39,11 @@ import {
     Combine,
     Split,
     Highlighter,
-    SeparatorHorizontal,
     Sparkles,
     Check,
     X,
     Eraser,
     Wand2,
-    History,
     Languages,
     Type,
     ArrowRight
@@ -80,7 +78,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   // AI States
   const [showAiToolbar, setShowAiToolbar] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
-  const [aiPreview, setAiPreview] = useState<{ text: string, range: { from: number, to: number } } | null>(null);
+  const [aiStatus, setAiStatus] = useState('');
+  const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
 
   const uploadAndInsertImage = useCallback(async (file: File) => {
     if (!editor || !storage || !auth?.currentUser) return;
@@ -209,21 +208,29 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // AI Writing Companion Logic
+  // AI Assistant Logic
   const callAiAssistant = async (action: string) => {
     if (!editor) return;
     
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, ' ');
     const textToProcess = selectedText || editor.getText();
-    const context = editor.getText(); // Basic context for now
+    const context = editor.getText();
 
     setIsAiProcessing(true);
     setShowAiToolbar(false);
+    
+    // Status text cycling for better UX
+    setAiStatus('Analyzing your writing...');
+    const statusInterval = setInterval(() => {
+        const statuses = ['Analyzing your writing...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
+        setAiStatus(statuses[Math.floor(Math.random() * statuses.length)]);
+    }, 1500);
 
     try {
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: textToProcess,
           action,
@@ -235,25 +242,34 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data.suggestedText) {
           if (selectedText) {
-              // High-fidelity suggestion mode: Show preview
-              setAiPreview({ text: data.suggestedText, range: { from, to } });
+              setAiPreview({ 
+                  text: data.suggestedText, 
+                  originalText: selectedText,
+                  from, 
+                  to 
+              });
           } else {
-              // Global insert mode
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
               toast({ title: 'Content generated' });
           }
       }
     } catch (error) {
-      console.error('AI Processing Error:', error);
-      toast({ variant: 'destructive', title: 'Assistant Busy', description: 'Could not process your request. Please try again.' });
+      console.error('AI Error:', error);
+      toast({ variant: 'destructive', title: 'Assistant Busy', description: 'Please try again in a moment.' });
     } finally {
+      clearInterval(statusInterval);
       setIsAiProcessing(false);
+      setAiStatus('');
     }
   };
 
   const applyAiSuggestion = () => {
       if (!editor || !aiPreview) return;
-      editor.chain().focus().insertContentAt({ from: aiPreview.range.from, to: aiPreview.range.to }, aiPreview.text).run();
+      editor.chain()
+        .focus()
+        .deleteRange(aiPreview.from, aiPreview.to)
+        .insertContentAt(aiPreview.from, aiPreview.text)
+        .run();
       setAiPreview(null);
       toast({ title: 'Applied changes' });
   };
@@ -270,7 +286,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         className="hidden" 
       />
 
-      {/* Tiptap Bubble Menu for Highlights */}
+      {/* Tiptap Bubble Menu */}
       {editable && (
           <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
               <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1 rounded-2xl flex items-center gap-1 animate-in fade-in zoom-in-95">
@@ -280,21 +296,28 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     onClick={() => callAiAssistant('improve')} 
                     className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5"
                   >
-                      <Sparkles className="h-3.5 w-3.5" /> ✨ Improve
+                      <Sparkles className="h-3.5 w-3.5" />✨ Improve
                   </Button>
                   <Separator orientation="vertical" className="h-4 mx-1" />
                   <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Languages className="h-3.5 w-3.5" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Type className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('rewrite')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Undo2 className="h-3.5 w-3.5" /></Button>
               </div>
           </BubbleMenu>
       )}
 
       {editable && (
         <TooltipProvider delayDuration={0}>
-          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
+          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
+              {isAiProcessing && (
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10">
+                      <div className="flex items-center gap-3">
+                          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{aiStatus}</span>
+                      </div>
+                  </div>
+              )}
+
               <div className="flex items-center gap-0.5">
-                  {/* AI Writing Entry */}
                   <div className="flex items-center px-1">
                       <Button 
                         onClick={() => setShowAiToolbar(!showAiToolbar)}
@@ -305,265 +328,85 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                                 : "bg-slate-900 text-white hover:bg-slate-800"
                         )}
                       >
-                          {isAiProcessing ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                              <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} />
-                          )}
+                          <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} />
                           Assistant
                       </Button>
                   </div>
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  {/* Text Structure */}
                   <div className="flex items-center gap-1 px-1">
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
-                          active={editor.isActive('heading', { level: 1 })}
-                          icon={<Heading1 className="h-4 w-4" />}
-                          label="Main Heading"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
-                          active={editor.isActive('heading', { level: 2 })}
-                          icon={<Heading2 className="h-4 w-4" />}
-                          label="Sub Heading"
-                      />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="H1" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="H2" />
                   </div>
                   
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  {/* Formatting */}
                   <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleBold().run()} 
-                          active={editor.isActive('bold')}
-                          icon={<Bold className="h-4 w-4" />}
-                          label="Bold"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleItalic().run()} 
-                          active={editor.isActive('italic')}
-                          icon={<Italic className="h-4 w-4" />}
-                          label="Italic"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleUnderline().run()} 
-                          active={editor.isActive('underline')}
-                          icon={<UnderlineIcon className="h-4 w-4" />}
-                          label="Underline"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleHighlight().run()} 
-                          active={editor.isActive('highlight')}
-                          icon={<Highlighter className="h-4 w-4" />}
-                          label="Highlight"
-                      />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} label="Bold" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Highlighter className="h-4 w-4" />} label="Highlight" />
                   </div>
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  {/* Alignment */}
                   <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().setTextAlign('left').run()} 
-                          active={editor.isActive({ textAlign: 'left' })}
-                          icon={<AlignLeft className="h-4 w-4" />}
-                          label="Align Left"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().setTextAlign('center').run()} 
-                          active={editor.isActive({ textAlign: 'center' })}
-                          icon={<AlignCenter className="h-4 w-4" />}
-                          label="Align Center"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().setTextAlign('right').run()} 
-                          active={editor.isActive({ textAlign: 'right' })}
-                          icon={<AlignRight className="h-4 w-4" />}
-                          label="Align Right"
-                      />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="List" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Tasks" />
                   </div>
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-                  {/* Lists & Blocks */}
                   <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleBulletList().run()} 
-                          active={editor.isActive('bulletList')}
-                          icon={<List className="h-4 w-4" />}
-                          label="Bullet List"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleTaskList().run()} 
-                          active={editor.isActive('taskList')}
-                          icon={<CheckSquare className="h-4 w-4" />}
-                          label="Task List"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().toggleBlockquote().run()} 
-                          active={editor.isActive('blockquote')}
-                          icon={<Quote className="h-4 w-4" />}
-                          label="Blockquote"
-                      />
-                  </div>
-
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-                  {/* Table Controls */}
-                  <div className="flex items-center gap-0.5 px-1 bg-blue-50/50 rounded-xl">
-                      <ToolbarButton 
-                          onClick={insertGrid} 
-                          active={editor.isActive('table')}
-                          icon={<TableIcon className="h-4 w-4" />}
-                          label="New Grid"
-                      />
-                      {editor.isActive('table') && (
-                          <div className="flex items-center gap-0.5 animate-in fade-in zoom-in-95 duration-200">
-                               <ToolbarButton 
-                                  onClick={() => editor.chain().focus().addRowAfter().run()} 
-                                  icon={<Plus className="h-3 w-3" />}
-                                  label="Add Row Below"
-                              />
-                              <ToolbarButton 
-                                  onClick={() => editor.chain().focus().addColumnAfter().run()} 
-                                  icon={<div className="flex items-center rotate-90"><Plus className="h-3 w-3" /></div>}
-                                  label="Add Column After"
-                              />
-                              <ToolbarButton 
-                                  onClick={() => editor.chain().focus().mergeCells().run()} 
-                                  icon={<Combine className="h-3.5 w-3.5" />}
-                                  label="Merge Cells"
-                              />
-                              <ToolbarButton 
-                                  onClick={() => editor.chain().focus().splitCell().run()} 
-                                  icon={<Split className="h-3.5 w-3.5" />}
-                                  label="Split Cell"
-                              />
-                              <ToolbarButton 
-                                  onClick={() => editor.chain().focus().deleteTable().run()} 
-                                  icon={<Trash2 className="h-3.5 w-3.5 text-red-500" />}
-                                  label="Delete Grid"
-                              />
-                          </div>
-                      )}
-                  </div>
-
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-                  {/* Media */}
-                  <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton 
-                          onClick={setLink} 
-                          active={editor.isActive('link')}
-                          icon={<LinkIcon className="h-4 w-4" />}
-                          label="Link"
-                      />
-                      <ToolbarButton 
-                          onClick={() => fileInputRef.current?.click()} 
-                          disabled={isUploading}
-                          icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />}
-                          label="Image"
-                      />
-                  </div>
-
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-                  {/* History */}
-                  <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().undo().run()} 
-                          disabled={!editor.can().undo()}
-                          icon={<Undo2 className="h-4 w-4" />}
-                          label="Undo"
-                      />
-                      <ToolbarButton 
-                          onClick={() => editor.chain().focus().redo().run()} 
-                          disabled={!editor.can().redo()}
-                          icon={<Redo2 className="h-4 w-4" />}
-                          label="Redo"
-                      />
+                      <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Link" />
+                      <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Image" />
                   </div>
               </div>
 
-              {/* Expandable AI Sub-Toolbar */}
               {showAiToolbar && (
                   <div className="w-full px-2 py-1.5 flex items-center gap-1.5 animate-in slide-in-from-top-2 duration-300">
                       <div className="h-px flex-1 bg-slate-100" />
                       <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve writing" onClick={() => callAiAssistant('improve')} />
                       <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
                       <AiAction icon={<Type className="h-3 w-3" />} label="Make professional" onClick={() => callAiAssistant('professional')} />
-                      <AiAction icon={<Eraser className="h-3 w-3" />} label="Simplify" onClick={() => callAiAssistant('simplify')} />
-                      <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue writing" onClick={() => callAiAssistant('continue')} />
+                      <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue" onClick={() => callAiAssistant('continue')} />
                       <div className="h-px flex-1 bg-slate-100" />
-                  </div>
-              )}
-              
-              {isUploading && (
-                  <div className="w-full px-4 pb-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                      <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div 
-                              className="h-full bg-primary transition-all duration-300"
-                              style={{ width: `${uploadProgress}%` }}
-                          />
-                      </div>
                   </div>
               )}
           </div>
         </TooltipProvider>
       )}
 
-      {/* AI Preview Overlay (Floating next to selection) */}
+      {/* AI Suggestion Preview UI */}
       {aiPreview && (
-          <div className="fixed z-50 animate-in fade-in zoom-in-95 duration-300" style={{ 
-              top: '50%', left: '50%', transform: 'translate(-50%, -50%)'
-          }}>
-              <Card className="w-[450px] rounded-3xl border-none shadow-3xl bg-white/95 backdrop-blur-xl p-6 space-y-6">
-                  <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                              <Sparkles className="h-4 w-4" />
-                          </div>
-                          <p className="text-xs font-black uppercase tracking-widest">Assistant Suggestion</p>
-                      </div>
-                      <button onClick={() => setAiPreview(null)} className="text-slate-400 hover:text-slate-900"><X className="h-4 w-4" /></button>
-                  </div>
-
-                  <ScrollArea className="max-h-[250px] rounded-2xl bg-slate-50 border border-slate-100 p-4 shadow-inner">
-                      <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
-                          {aiPreview.text}
-                      </p>
-                  </ScrollArea>
-
-                  <div className="grid grid-cols-2 gap-3">
-                      <Button variant="outline" onClick={() => setAiPreview(null)} className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest">Discard</Button>
-                      <Button onClick={applyAiSuggestion} className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest gap-2">
-                          <Check className="h-4 w-4" /> Replace selected
-                      </Button>
-                  </div>
-              </Card>
-          </div>
-      )}
-
-      <EditorContent editor={editor} />
-      
-      {editable && (
-          <div className="pt-6 mt-12 border-t border-slate-50 flex items-center justify-between opacity-30">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Collaborative AI State Active</p>
-              <div className="flex items-center gap-3">
-                   <div className="flex items-center gap-1">
-                      <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">/</span>
-                      <span className="text-[8px] font-bold text-slate-400">AI commands</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                      <span className="p-1 rounded-md border text-[8px] font-black uppercase tracking-tighter">Enter</span>
-                      <span className="text-[8px] font-bold text-slate-400">new block</span>
-                  </div>
+          <div className="absolute z-40 right-[-120px] top-1/2 -translate-y-1/2 animate-in fade-in slide-in-from-left-4 duration-300">
+              <div className="flex flex-col gap-2 p-1.5 bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.15)] rounded-2xl">
+                  <button onClick={applyAiSuggestion} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
+                      <Check className="h-5 w-5" />
+                  </button>
+                  <button onClick={() => setAiPreview(null)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                      <X className="h-5 w-5" />
+                  </button>
               </div>
           </div>
       )}
+
+      <div className="relative">
+          {aiPreview && (
+              <div 
+                className="absolute inset-0 z-10 pointer-events-none p-6 rounded-3xl bg-blue-50/80 border-2 border-primary/20 animate-pulse flex flex-col gap-4 overflow-hidden shadow-inner"
+                style={{ top: '10px' }} // Local vertical nudge
+              >
+                  <p className="text-slate-400 line-through opacity-50 text-lg">{aiPreview.originalText}</p>
+                  <p className="text-primary font-bold text-xl leading-relaxed">{aiPreview.text}</p>
+                  <div className="mt-auto flex items-center gap-2">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">AI Suggestion active</span>
+                  </div>
+              </div>
+          )}
+          <EditorContent editor={editor} className={cn(aiPreview && "opacity-0")} />
+      </div>
     </div>
   );
 }
@@ -572,16 +415,8 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: { onClick: ()
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={(e) => { e.preventDefault(); onClick(); }} 
-                    disabled={disabled}
-                    className={cn(
-                        "h-8 w-8 rounded-xl transition-all",
-                        active ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-slate-500 hover:bg-slate-100"
-                    )}
-                >
+                <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); onClick(); }} disabled={disabled}
+                    className={cn("h-8 w-8 rounded-xl transition-all", active ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-slate-500 hover:bg-slate-100")}>
                     {icon}
                 </Button>
             </TooltipTrigger>
@@ -594,12 +429,8 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: { onClick: ()
 
 function AiAction({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick: () => void }) {
     return (
-        <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onClick}
-            className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all"
-        >
+        <Button variant="ghost" size="sm" onClick={onClick}
+            className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all">
             {icon}
             {label}
         </Button>
