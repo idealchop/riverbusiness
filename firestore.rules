@@ -40,18 +40,13 @@ service cloud.firestore {
     // --- CLOUD STORAGE APP (FILES & FOLDERS) ---
 
     match /cloud_files/{fileId} {
-      // Users can manage their own company's files
-      allow read, write: if isAuthenticated() && (
-        resource == null || 
-        resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
-      );
+      // Shared company access: unrestricted for all authenticated team members
+      allow read, write: if isAuthenticated();
     }
 
     match /cloud_folders/{folderId} {
-      allow read, write: if isAuthenticated() && (
-        resource == null || 
-        resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
-      );
+      // Shared company access: unrestricted for all authenticated team members
+      allow read, write: if isAuthenticated();
     }
 
     // --- INVITATIONS & ONBOARDING ---

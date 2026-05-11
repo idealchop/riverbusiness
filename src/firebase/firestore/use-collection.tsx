@@ -82,7 +82,8 @@ export function useCollection<T = any>(
       },
       async (err: FirestoreError) => {
         if (err.code === 'permission-denied') {
-            const path = (memoizedTargetRefOrQuery as any).path || 'unknown collection';
+            // Attempt to resolve path for better error context
+            const path = (memoizedTargetRefOrQuery as any).path || (memoizedTargetRefOrQuery as any)._query?.path?.toString() || 'unknown collection';
             const permissionError = new FirestorePermissionError({
                 path,
                 operation: 'list',

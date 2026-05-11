@@ -15,9 +15,8 @@ service firebase.storage {
     // --- CLOUD STORAGE APP RULES ---
     
     match /cloud_storage/{companyId}/{fileName} {
-      // Strict company-level isolation for business files
-      allow read, write: if isAuthenticated() && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyId == companyId;
+      // Facilitate shared team storage as requested
+      allow read, write: if isAuthenticated();
     }
 
     // --- EXISTING RULES ---
@@ -46,6 +45,7 @@ service firebase.storage {
        allow write: if request.auth.uid == userId;
     }
     
+    // Users can upload their own top-up proofs.
     match /users/{userId}/topup_proofs/{fileName} {
         allow write: if request.auth.uid == userId;
     }

@@ -84,7 +84,8 @@ export default function RiverFilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
 
-  const companyId = user?.companyId || 'default';
+  // Synchronize companyId only when user is loaded to prevent early access denials
+  const companyId = user?.companyId;
 
   // --- Data Queries ---
   const foldersQuery = useMemoFirebase(
@@ -133,7 +134,7 @@ export default function RiverFilesPage() {
     if (searchTerm) {
         list = list.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-    return list.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+    return list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   }, [allFiles, currentFolderId, searchTerm, activeTab]);
 
   const currentFolderPath = useMemo(() => {
@@ -157,7 +158,7 @@ export default function RiverFilesPage() {
 
   // --- Handlers ---
   const handleCreateFolder = async () => {
-    if (!firestore || !user || !newFolderName.trim()) return;
+    if (!firestore || !user || !companyId || !newFolderName.trim()) return;
     try {
         await addDoc(collection(firestore, 'cloud_folders'), {
             name: newFolderName.trim(),
@@ -181,7 +182,7 @@ export default function RiverFilesPage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !firestore || !storage || !auth || !user) return;
+    if (!file || !firestore || !storage || !auth || !user || !companyId) return;
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
         toast({ variant: 'destructive', title: 'File too large', description: 'Maximum file size is 500MB.' });
@@ -292,7 +293,7 @@ export default function RiverFilesPage() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Initializing Cloud Storage" />;
+  if (isUserLoading || !companyId) return <FullScreenLoader text="Initializing Team Workspace" />;
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50 animate-in fade-in duration-700">
@@ -584,7 +585,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                 <p className="text-sm font-bold text-slate-900 truncate leading-tight mb-1">{file.name}</p>
                 <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <span>{formatSize(file.size)}</span>
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">{format(new Date(file.createdAt?.seconds * 1000 || Date.now()), 'MMM d')}</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">{format(new Date((file.createdAt?.seconds || 0) * 1000 || Date.now()), 'MMM d')}</span>
                 </div>
             </div>
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
@@ -689,4 +690,3 @@ function ItemActions({ item, onFavorite, onDelete, onRestore, onPermanentDelete,
         </DropdownMenu>
     );
 }
-
