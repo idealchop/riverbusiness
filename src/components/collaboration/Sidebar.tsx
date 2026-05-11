@@ -107,14 +107,14 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         <FileText className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-600")} />
                     )}
                 </div>
-                <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'untitled'}</span>
+                <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
             </div>
 
             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
                 <button 
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id); }}
                     className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
-                    title="add subpage"
+                    title="Add subpage"
                 >
                     <Plus className="h-3.5 w-3.5" />
                 </button>
@@ -128,7 +128,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         "h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center transition-colors",
                         page.isFavorite ? "text-amber-500" : "text-slate-400 hover:text-amber-500"
                     )}
-                    title={page.isFavorite ? "remove from favorites" : "add to favorites"}
+                    title={page.isFavorite ? "Remove from favorites" : "Add to favorites"}
                 >
                     <Star className={cn("h-3.5 w-3.5", page.isFavorite && "fill-current")} />
                 </button>
@@ -139,7 +139,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
                     }}
                     className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
-                    title="share document"
+                    title="Share document"
                 >
                     <Share2 className="h-3.5 w-3.5" />
                 </button>
@@ -151,10 +151,10 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
                         <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
-                            <Plus className="h-3.5 w-3.5" /> add subpage
+                            <Plus className="h-3.5 w-3.5" /> Add subpage
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer">
-                            <Trash2 className="h-3.5 w-3.5" /> move to trash
+                            <Trash2 className="h-3.5 w-3.5" /> Move to trash
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -242,7 +242,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                             <Star className="h-3.5 w-3.5 text-amber-500 fill-current" />
                                         )}
                                     </div>
-                                    <span className="truncate">{p.title || 'untitled'}</span>
+                                    <span className="truncate">{p.title || 'Untitled'}</span>
                                 </div>
                              </Link>
                         ))}
@@ -275,12 +275,12 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
                 <Link href="/workspace/recent">
                     <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <History className="h-4 w-4" /> recently edited
+                        <History className="h-4 w-4" /> Recently Edited
                     </Button>
                 </Link>
                 <Link href="/workspace/trash">
                     <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <Trash2 className="h-4 w-4" /> trash bin
+                        <Trash2 className="h-4 w-4" /> Trash Bin
                     </Button>
                 </Link>
             </div>

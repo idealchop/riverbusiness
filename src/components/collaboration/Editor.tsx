@@ -114,7 +114,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         types: ['heading', 'paragraph'],
       }),
       Placeholder.configure({
-        placeholder: 'press "/" for commands...',
+        placeholder: 'Press "/" for commands...',
       }),
       TaskList,
       TaskItem.configure({

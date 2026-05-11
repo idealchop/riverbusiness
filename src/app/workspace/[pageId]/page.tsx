@@ -219,7 +219,7 @@ export default function PageEditor() {
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
         userId: user.uid,
-        name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'contributor',
+        name: userProfile.name || user.displayName || user.email?.split('@')[0] || 'Contributor',
         photoURL: userProfile.photoURL || user.photoURL || null,
         lastActive: serverTimestamp(),
         isActive: true,
@@ -381,7 +381,7 @@ export default function PageEditor() {
       window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
   };
 
-  if (loading && !page) return <FullScreenLoader text="opening document" />;
+  if (loading && !page) return <FullScreenLoader text="Opening document" />;
   if (!page) return null;
 
   return (
@@ -391,14 +391,14 @@ export default function PageEditor() {
           <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
               <div className="flex items-center gap-3">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <p className="text-xs font-bold text-red-900 leading-none">this document is in the trash bin</p>
+                  <p className="text-xs font-bold text-red-900 leading-none">This document is in the trash bin</p>
               </div>
               <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50">
-                      <RotateCcw className="h-3 w-3" /> restore document
+                      <RotateCcw className="h-3 w-3" /> Restore document
                   </Button>
                   <Button variant="ghost" size="sm" className="h-8 rounded-xl text-red-400 font-bold text-[10px]" onClick={() => setIsDeleteDialogOpen(true)}>
-                      delete permanently
+                      Delete permanently
                   </Button>
               </div>
           </div>
@@ -437,13 +437,13 @@ export default function PageEditor() {
               <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
               <Link href={`/workspace/${parentPage.id}`}>
                 <span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[120px] truncate block">
-                    {parentPage.title || 'untitled'}
+                    {parentPage.title || 'Untitled'}
                 </span>
               </Link>
             </>
           )}
           <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-          <span className="text-xs font-bold text-slate-900 truncate max-w-[180px]">{page.title || 'untitled'}</span>
+          <span className="text-xs font-bold text-slate-900 truncate max-w-[180px]">{page.title || 'Untitled'}</span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -468,18 +468,18 @@ export default function PageEditor() {
                                 </Avatar>
                             </div>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl">
+                        <TooltipContent side="bottom" className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl border">
                             <div className="flex flex-col">
                                 <p className="text-xs font-black text-slate-900 leading-none">
                                     {collab.name}
                                 </p>
                                 {!isOnline ? (
                                     <p className="text-[10px] font-bold text-slate-400 leading-none mt-1">
-                                        last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
+                                        Last seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
                                     </p>
                                 ) : (
                                     <p className="text-[10px] font-black text-primary leading-none mt-1">
-                                        {isTyping ? 'typing currently...' : 'viewing now'}
+                                        {isTyping ? 'Typing currently...' : 'Viewing now'}
                                     </p>
                                 )}
                             </div>
@@ -492,12 +492,12 @@ export default function PageEditor() {
                 {isSaving ? (
                 <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="text-[9px] font-black text-primary">syncing</span>
+                    <span className="text-[9px] font-black text-primary">Syncing</span>
                 </div>
                 ) : (
                 <div className="flex items-center gap-1.5 opacity-40">
                     <CheckCircle className="h-3 w-3 text-slate-400" />
-                    <span className="text-[9px] font-black text-slate-400">saved</span>
+                    <span className="text-[9px] font-black text-slate-400">Saved</span>
                 </div>
                 )}
             </div>
@@ -508,7 +508,7 @@ export default function PageEditor() {
                 <button 
                     onClick={handleCreateSubpage}
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"
-                    title="add subpage"
+                    title="Add subpage"
                 >
                     <FilePlus className="h-4 w-4" />
                 </button>
@@ -530,7 +530,7 @@ export default function PageEditor() {
                 <button 
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
                     onClick={() => setIsDeleteDialogOpen(true)}
-                    title="move to trash"
+                    title="Move to trash"
                 >
                     <Trash2 className="h-4 w-4" />
                 </button>
@@ -541,7 +541,7 @@ export default function PageEditor() {
               <button 
                   className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
                   onClick={() => setIsDeleteDialogOpen(true)}
-                  title="delete permanently"
+                  title="Delete permanently"
               >
                   <Trash2 className="h-4 w-4" />
               </button>
@@ -557,10 +557,10 @@ export default function PageEditor() {
                     {!page.isTrashed && (
                         <div className="absolute bottom-6 right-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest border-none">
-                                <Palette className="mr-1.5 h-3.5 w-3.5" /> change cover
+                                <Palette className="mr-1.5 h-3.5 w-3.5" /> Change cover
                             </Button>
                             <Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest border-none text-red-600">
-                                <X className="mr-1.5 h-3.5 w-3.5" /> remove
+                                <X className="mr-1.5 h-3.5 w-3.5" /> Remove
                             </Button>
                         </div>
                     )}
@@ -590,7 +590,7 @@ export default function PageEditor() {
                         <Popover onOpenChange={(open) => { if (!open) setEmojiSearch(''); }}>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
-                                    <Smile className="mr-1.5 h-3.5 w-3.5" /> add icon
+                                    <Smile className="mr-1.5 h-3.5 w-3.5" /> Add icon
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl">
@@ -598,7 +598,7 @@ export default function PageEditor() {
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                                         <Input 
-                                            placeholder="search emojis..." 
+                                            placeholder="Search emojis..." 
                                             className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner rounded-lg font-bold"
                                             value={emojiSearch}
                                             onChange={(e) => setEmojiSearch(e.target.value)}
@@ -613,7 +613,7 @@ export default function PageEditor() {
                                             ))}
                                             {filteredEmojis.length === 0 && (
                                                 <div className="col-span-5 py-8 text-center">
-                                                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">none found</p>
+                                                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">None found</p>
                                                 </div>
                                             )}
                                         </div>
@@ -624,7 +624,7 @@ export default function PageEditor() {
                     )}
                     {!page.coverImage && (
                         <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
-                            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> add cover
+                            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add cover
                         </Button>
                     )}
                 </div>
@@ -632,7 +632,7 @@ export default function PageEditor() {
             
             <input 
                 value={page.title} 
-                placeholder="untitled"
+                placeholder="Untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
                 className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block"
                 readOnly={page.isTrashed}
@@ -653,17 +653,17 @@ export default function PageEditor() {
         <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
-                {page.isTrashed ? 'purge permanently?' : 'delete document?'}
+                {page.isTrashed ? 'Purge permanently?' : 'Delete document?'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
               {page.isTrashed 
-                ? 'this action is irreversible. the document and its full block history will be erased from the secure cloud infrastructure.'
-                : 'this action will move the document to the trash. you can restore it later if needed.'
+                ? 'This action is irreversible. The document and its full block history will be erased from the secure cloud infrastructure.'
+                : 'This action will move the document to the trash. You can restore it later if needed.'
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
             <AlertDialogAction 
                 onClick={() => {
                     if (page.isTrashed) {
@@ -674,7 +674,7 @@ export default function PageEditor() {
                 }}
                 className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
             >
-                {page.isTrashed ? 'confirm purge' : 'move to trash'}
+                {page.isTrashed ? 'Confirm purge' : 'Move to trash'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
