@@ -32,7 +32,9 @@ import {
   Info,
   Palette,
   XCircle,
-  RotateCcw
+  RotateCcw,
+  PlayCircle,
+  Maximize2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,6 +101,7 @@ export default function SharedFilesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
+  const [previewFile, setPreviewFile] = useState<CloudFile | null>(null);
 
   const companyId = user?.companyId || 'unassigned';
 
@@ -626,6 +629,7 @@ export default function SharedFilesPage() {
                         onDelete={() => moveToTrash(file, 'cloud_files')}
                         onRestore={() => restoreFromTrash(file, 'cloud_files')}
                         onPermanentDelete={() => permanentDelete(file, 'cloud_files')}
+                        onPreview={() => setPreviewFile(file)}
                         formatSize={formatSize}
                         isTrashView={activeTab === 'trash'}
                       />
@@ -686,6 +690,86 @@ export default function SharedFilesPage() {
                     Create folder
                 </Button>
             </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-none shadow-3xl bg-slate-900 rounded-[2.5rem]">
+            <div className="flex flex-col h-[80vh]">
+                <div className="p-6 flex items-center justify-between bg-black/20 backdrop-blur-md border-b border-white/5">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2.5 rounded-xl bg-white/10 text-white">
+                            {previewFile && getFileIcon(previewFile.type)}
+                        </div>
+                        <div className="min-w-0">
+                            <DialogTitle className="text-lg font-bold text-white truncate">{previewFile?.name}</DialogTitle>
+                            <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {previewFile && formatSize(previewFile.size)} • Added by {previewFile?.ownerName}
+                            </DialogDescription>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl" onClick={() => window.open(previewFile?.url, '_blank')}>
+                            <Download className="h-5 w-5" />
+                        </Button>
+                        <DialogClose asChild>
+                            <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl">
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </DialogClose>
+                    </div>
+                </div>
+
+                <div className="flex-1 flex items-center justify-center p-8 bg-black/40 relative">
+                    {previewFile?.type.startsWith('image/') ? (
+                        <div className="relative w-full h-full">
+                            <Image 
+                                src={previewFile.url} 
+                                alt={previewFile.name} 
+                                fill 
+                                className="object-contain" 
+                                unoptimized
+                            />
+                        </div>
+                    ) : previewFile?.type.startsWith('video/') ? (
+                        <video 
+                            src={previewFile.url} 
+                            controls 
+                            autoPlay 
+                            className="max-w-full max-h-full rounded-2xl shadow-2xl"
+                        />
+                    ) : previewFile?.type.startsWith('audio/') ? (
+                        <div className="flex flex-col items-center gap-6">
+                            <div className="p-10 rounded-[3rem] bg-white/10 text-primary">
+                                <Music className="h-20 w-20" />
+                            </div>
+                            <audio src={previewFile.url} controls className="w-80" />
+                        </div>
+                    ) : (
+                        <div className="text-center space-y-6">
+                            <div className="p-10 rounded-[3rem] bg-white/10 text-white/20">
+                                <FileText className="h-24 w-24" />
+                            </div>
+                            <div className="space-y-4">
+                                <p className="text-white font-bold text-lg">Preview not supported for this format</p>
+                                <Button asChild className="rounded-xl h-12 px-10 font-bold">
+                                    <a href={previewFile?.url} download={previewFile?.name}>Download to view locally</a>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="p-6 bg-black/20 border-t border-white/5 flex items-center justify-between">
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">River Secure Storage</p>
+                    <div className="flex items-center gap-3">
+                         <Button variant="outline" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest bg-transparent text-white border-white/10 hover:bg-white hover:text-slate-900" onClick={() => window.open(previewFile?.url, '_blank')}>
+                            <Download className="mr-2 h-3.5 w-3.5" /> Full Resolution
+                         </Button>
+                    </div>
+                </div>
+            </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -806,7 +890,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
     );
 }
 
-function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPermanentDelete, formatSize, isTrashView }: any) {
+function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPermanentDelete, onPreview, formatSize, isTrashView }: any) {
     const initials = file.ownerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '?';
 
     const Actions = () => (
@@ -819,6 +903,9 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
             <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border-slate-100 shadow-2xl">
                 {!isTrashView ? (
                     <>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
+                            <Maximize2 className="h-3.5 w-3.5 text-slate-400" /> Open Preview
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3.5 w-3.5 text-amber-500" /> : <Star className="h-3.5 w-3.5 text-amber-500" />}
                             {file.isFavorite ? 'Remove from starred' : 'Add to starred'}
@@ -846,10 +933,12 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
         </DropdownMenu>
     );
 
+    const isPreviewable = file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/') || file.type === 'application/pdf';
+
     if (viewMode === 'list') {
         return (
             <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 hover:border-primary/20 hover:shadow-xl transition-all group animate-in fade-in duration-500">
-                <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={() => window.open(file.url, '_blank')}>
+                <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={onPreview}>
                     <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner border border-slate-100 group-hover:bg-primary/5 transition-all">
                         {icon}
                     </div>
@@ -870,15 +959,18 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
     }
 
     return (
-        <Card className="border-none shadow-none rounded-[2rem] bg-slate-50/50 group hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 cursor-pointer relative overflow-hidden animate-in zoom-in-95" onClick={() => window.open(file.url, '_blank')}>
+        <Card className="border-none shadow-none rounded-[2rem] bg-slate-50/50 group hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 cursor-pointer relative overflow-hidden animate-in zoom-in-95" onClick={onPreview}>
             <CardContent className="p-6">
                 <div className="absolute top-4 right-4 z-20">
                     <Actions />
                 </div>
                 <div className="flex flex-col gap-6">
                     <div className="flex flex-col items-center text-center gap-3">
-                        <div className="h-16 w-16 rounded-[1.5rem] bg-white flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-500 shadow-sm border border-slate-100">
+                        <div className="h-16 w-16 rounded-[1.5rem] bg-white flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-500 shadow-sm border border-slate-100 relative">
                             {icon}
+                            {file.type.startsWith('video/') && (
+                                <PlayCircle className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            )}
                         </div>
                         <div className="min-w-0 w-full">
                             <p className="text-sm font-bold text-slate-900 truncate leading-none mb-1.5 px-2">{file.name}</p>
