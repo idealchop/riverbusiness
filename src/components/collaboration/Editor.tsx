@@ -26,10 +26,6 @@ import {
     Link as LinkIcon,
     Image as ImageIcon,
     Loader2,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    Highlighter,
     Sparkles,
     Check,
     X,
@@ -37,7 +33,8 @@ import {
     Languages,
     Type,
     ArrowRight,
-    Palette
+    Palette,
+    Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -50,7 +47,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface EditorProps {
   initialContent: any;
@@ -71,6 +68,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const [showAiToolbar, setShowAiToolbar] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiStatus, setAiStatus] = useState('');
+  const [customGoal, setCustomGoal] = useState('');
   const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
 
   const uploadAndInsertImage = useCallback(async (file: File) => {
@@ -194,8 +192,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // AI Assistant Logic
-  const callAiAssistant = async (action: string) => {
+  const callAiAssistant = async (action: string, customInstruction?: string) => {
     if (!editor) return;
     
     const { from, to } = editor.state.selection;
@@ -224,6 +221,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         body: JSON.stringify({
           text: textToProcess,
           action,
+          customGoal: customInstruction,
           context
         })
       });
@@ -237,8 +235,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
-              // Diff View: Strikethrough original + plain suggestion
-              // We use <s> instead of <strike> for explicit control
+              // Standard Diff View: ~~Original~~ Suggested
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
@@ -247,15 +244,13 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                 .insertContentAt(from, combinedHtml)
                 .run();
 
-              // Track exactly where the replacement occurred
-              const insertedText = selectedText + " " + data.suggestedText;
-              const newTo = from + insertedText.length;
-
+              // Track the precise insertion to allow for accurate approval/discard
+              const newPos = editor.state.selection.to;
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
                   from: from, 
-                  to: newTo
+                  to: newPos
               });
 
               toast({ title: 'AI suggestion applied' });
@@ -264,7 +259,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               toast({ title: 'Content generated' });
           }
       } else {
-          throw new Error('The AI was unable to generate a response. Try selecting a different section of text.');
+          throw new Error('The AI was unable to generate a response.');
       }
     } catch (error: any) {
       console.error('AI Error:', error);
@@ -273,13 +268,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       clearInterval(statusInterval);
       setIsAiProcessing(false);
       setAiStatus('');
+      setCustomGoal('');
     }
   };
 
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Delete the entire preview block and restore original plain text
+      // Atomic restoration of original text
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
@@ -293,13 +289,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Atomic command to delete the preview and insert the clean suggestion
+      // Clean replacement: delete diff range and insert clean suggestion
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        // Explicitly unset the strike mark to prevent any carry-over from the <s> tag
-        .unsetMark('strike')
+        .unsetMark('strike') // Ensure formatting is strictly clean
         .run();
 
       setAiPreview(null);
@@ -396,13 +391,32 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               </div>
 
               {showAiToolbar && (
-                  <div className="w-full px-2 py-1.5 flex items-center gap-1.5 animate-in slide-in-from-top-2 duration-300">
-                      <div className="h-px flex-1 bg-slate-100" />
-                      <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
-                      <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
-                      <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
-                      <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue" onClick={() => callAiAssistant('continue')} />
-                      <div className="h-px flex-1 bg-slate-100" />
+                  <div className="w-full px-2 py-1.5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-px flex-1 bg-slate-100" />
+                        <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
+                        <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
+                        <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
+                        <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue" onClick={() => callAiAssistant('continue')} />
+                        <div className="h-px flex-1 bg-slate-100" />
+                      </div>
+                      <div className="flex items-center gap-2 px-2 pb-1">
+                          <Input 
+                            placeholder="What's your goal for this text? (e.g. Make it more persuasive)" 
+                            value={customGoal}
+                            onChange={(e) => setCustomGoal(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && customGoal.trim() && callAiAssistant('custom', customGoal)}
+                            className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] shadow-inner"
+                          />
+                          <Button 
+                            disabled={!customGoal.trim()}
+                            onClick={() => callAiAssistant('custom', customGoal)}
+                            size="icon" 
+                            className="h-9 w-9 rounded-xl shrink-0"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                          </Button>
+                      </div>
                   </div>
               )}
           </div>

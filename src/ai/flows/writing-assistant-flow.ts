@@ -20,8 +20,10 @@ const WritingAssistantInputSchema = z.object({
     'expand',
     'professional',
     'simplify',
-    'continue'
+    'continue',
+    'custom'
   ]).describe('The action to perform on the text.'),
+  customGoal: z.string().optional().describe('A custom instruction or goal for the AI to achieve.'),
   context: z.string().optional().describe('Surrounding document context for better understanding.'),
 });
 export type WritingAssistantInput = z.infer<typeof WritingAssistantInputSchema>;
@@ -49,7 +51,12 @@ const prompt = ai.definePrompt({
     ],
   },
   prompt: `You are an expert writing assistant and editor for a high-fidelity business platform.
-  Perform the following action: {{action}}
+  
+  {{#if (eq action "custom")}}
+  Your Goal: {{{customGoal}}}
+  {{else}}
+  Action to Perform: {{action}}
+  {{/if}}
   
   Target Text: """{{text}}"""
   {{#if context}}Surrounding Context: """{{context}}"""{{/if}}
@@ -68,6 +75,7 @@ const prompt = ai.definePrompt({
   - professional: Adjust tone for executive or formal corporate communication.
   - simplify: Make the text easier to read while retaining all core meaning.
   - continue: Generate the next logical paragraph or sentences based on the context.
+  - custom: Follow the provided custom goal precisely.
 
   Return the result as a JSON object with the "suggestedText" field.`,
 });
@@ -81,7 +89,7 @@ const writingAssistantFlow = ai.defineFlow(
   async input => {
     const { output } = await prompt(input);
     if (!output || !output.suggestedText) {
-      throw new Error('The AI was unable to generate a suggestion for this text. Please try refining your selection.');
+      throw new Error('The AI was unable to generate a suggestion for this text. Please try refining your selection or instruction.');
     }
     return output;
   }
