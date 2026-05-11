@@ -236,13 +236,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
+              const originalFrom = from;
               // Wrap original in <s> tags and append suggested text for comparison
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
                 .focus()
                 .deleteRange(from, to)
-                .insertContent(combinedHtml)
+                .insertContentAt(originalFrom, combinedHtml)
                 .run();
 
               const currentTo = editor.state.selection.to;
@@ -250,7 +251,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
-                  from: from, 
+                  from: originalFrom, 
                   to: currentTo
               });
 
@@ -276,10 +277,11 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Remove the entire diff range and restore original text only
+      // Select the entire comparison range and restore original text
       editor.chain()
         .focus()
-        .deleteRange(aiPreview.from, aiPreview.to)
+        .setTextSelection({ from: aiPreview.from, to: aiPreview.to })
+        .deleteSelection()
         .insertContentAt(aiPreview.from, aiPreview.originalText)
         .unsetMark('strike')
         .run();
@@ -291,12 +293,13 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Atomic Google Docs Approval: Delete the entire range (old + new) and insert ONLY the clean new text
+      // Select the entire comparison range (<s>old</s> new) and replace it ONLY with the new text
       editor.chain()
         .focus()
-        .deleteRange(aiPreview.from, aiPreview.to)
+        .setTextSelection({ from: aiPreview.from, to: aiPreview.to })
+        .deleteSelection()
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike') // Explicitly clear any inherited strike formatting
+        .unsetMark('strike') // Ensure no leftover formatting from the old text range
         .run();
 
       setAiPreview(null);
