@@ -508,7 +508,7 @@ export default function PageEditor() {
             ) : null}
         </div>
 
-        <div className="max-w-4xl mx-auto px-8 pt-10 pb-32 space-y-2">
+        <div className="max-w-4xl mx-auto px-8 pt-20 pb-32 space-y-2">
             {page.icon && (
                 <div className="relative group/icon -mt-12 z-10 w-fit">
                     <div className="text-5xl select-none pt-4">
