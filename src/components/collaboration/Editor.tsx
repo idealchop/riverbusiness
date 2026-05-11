@@ -236,6 +236,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
+              // Wrap original in <s> tags and append suggested text
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
@@ -244,13 +245,13 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                 .insertContent(combinedHtml)
                 .run();
 
-              const newTo = editor.state.selection.to;
+              const currentTo = editor.state.selection.to;
               
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
                   from: from, 
-                  to: newTo
+                  to: currentTo
               });
 
               toast({ title: 'AI suggestion applied' });
@@ -275,26 +276,28 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
+      // Remove the entire diff range and restore original text only
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.originalText)
+        .unsetMark('strike')
         .run();
         
       setAiPreview(null);
-      toast({ title: 'AI changes reverted' });
+      toast({ title: 'Changes discarded' });
   };
 
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Atomic transaction: Delete the whole comparison block and insert only the clean version
-      // This effectively "removes the old version" and keeps only the new one
+      // CRITICAL: Delete the entire range (which contains ~~Original~~ and Suggestion)
+      // and insert ONLY the clean suggested text.
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike') // Ensure the new text is not struck through
+        .unsetMark('strike') // Explicitly ensure no leftover strike mark
         .run();
 
       setAiPreview(null);
@@ -464,7 +467,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Revert original
+                                Discard suggestion
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
