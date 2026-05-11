@@ -235,7 +235,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
-              // Standard Diff View: ~~Original~~ Suggested
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
@@ -244,7 +243,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                 .insertContentAt(from, combinedHtml)
                 .run();
 
-              // Track the precise insertion to allow for accurate approval/discard
               const newPos = editor.state.selection.to;
               setAiPreview({ 
                   text: data.suggestedText, 
@@ -275,7 +273,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Atomic restoration of original text
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
@@ -289,12 +286,11 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Clean replacement: delete diff range and insert clean suggestion
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike') // Ensure formatting is strictly clean
+        .unsetMark('strike')
         .run();
 
       setAiPreview(null);
@@ -313,7 +309,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         className="hidden" 
       />
 
-      {/* Tiptap Bubble Menu */}
       {editable && (
           <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
               <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1 rounded-2xl flex items-center gap-1 animate-in fade-in zoom-in-95">
@@ -423,7 +418,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         </TooltipProvider>
       )}
 
-      {/* AI Suggestion Controls - Inline Bar */}
       {aiPreview && (
           <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500">
               <Card className="border-none shadow-3xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6">

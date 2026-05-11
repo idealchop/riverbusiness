@@ -52,7 +52,7 @@ const prompt = ai.definePrompt({
   },
   prompt: `You are an expert writing assistant and editor for a high-fidelity business platform.
   
-  {{#if (eq action "custom")}}
+  {{#if customGoal}}
   Your Goal: {{{customGoal}}}
   {{else}}
   Action to Perform: {{action}}
