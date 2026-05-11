@@ -134,6 +134,83 @@
     pointer-events: none;
   }
 
+  /* List Styles */
+  .prose ul {
+    list-style-type: disc;
+    margin: 1.25em 0 1.25em 1.5em;
+    padding-left: 0.5rem;
+  }
+  .prose ol {
+    list-style-type: decimal;
+    margin: 1.25em 0 1.25em 1.5em;
+    padding-left: 0.5rem;
+  }
+  .prose li {
+    margin: 0.5em 0;
+  }
+  .prose li p {
+    margin: 0;
+  }
+
+  /* Task List Styles */
+  .prose ul[data-type="taskList"] {
+    list-style: none;
+    padding: 0;
+    margin: 1.25em 0;
+  }
+  .prose ul[data-type="taskList"] li {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+  .prose ul[data-type="taskList"] label {
+    user-select: none;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .prose ul[data-type="taskList"] input[type="checkbox"] {
+    appearance: none;
+    background-color: #fff;
+    margin: 0.25rem 0 0 0;
+    font-family: inherit;
+    color: currentColor;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #cbd5e1;
+    border-radius: 0.4rem;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .prose ul[data-type="taskList"] input[type="checkbox"]:hover {
+    border-color: #538ec2;
+    background-color: #f8fafc;
+  }
+  .prose ul[data-type="taskList"] input[type="checkbox"]:checked {
+    background-color: #538ec2;
+    border-color: #538ec2;
+  }
+  .prose ul[data-type="taskList"] input[type="checkbox"]::before {
+    content: "";
+    width: 0.65rem;
+    height: 0.65rem;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1rem 1rem #fff;
+    transform-origin: bottom left;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  .prose ul[data-type="taskList"] input[type="checkbox"]:checked::before {
+    transform: scale(1);
+  }
+  .prose ul[data-type="taskList"] div {
+    flex: 1;
+  }
+
   /* Typography Hierarchy for Prose */
   .prose h1 {
     @apply text-3xl font-black mb-6 mt-10 text-slate-900 leading-tight;
