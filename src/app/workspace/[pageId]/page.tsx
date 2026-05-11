@@ -508,7 +508,7 @@ export default function PageEditor() {
             ) : null}
         </div>
 
-        <div className="max-w-4xl mx-auto px-8 pt-20 pb-32 space-y-2">
+        <div className="max-w-4xl mx-auto px-8 pt-10 pb-32 space-y-2">
             {page.icon && (
                 <div className="relative group/icon -mt-12 z-10 w-fit">
                     <div className="text-5xl select-none pt-4">
@@ -570,11 +570,11 @@ export default function PageEditor() {
                 </div>
             )}
             
-            <Input 
+            <input 
                 value={page.title} 
                 placeholder="untitled"
                 onChange={(e) => handleUpdateTitle(e.target.value)}
-                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-7xl h-auto bg-transparent placeholder:text-slate-100 mb-2 w-full"
+                className="border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 font-black text-5xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full outline-none"
                 readOnly={page.isTrashed}
             />
 

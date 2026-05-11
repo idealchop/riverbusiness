@@ -136,7 +136,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-xl font-normal'
+            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal'
         },
         handleDrop: (view, event, slice, moved) => {
             if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
@@ -208,7 +208,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       {editable && (
         <TooltipProvider delayDuration={0}>
-          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-10">
+          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-1.5 rounded-[1.5rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
               <div className="flex items-center gap-0.5">
                   {/* Text Structure */}
                   <div className="flex items-center gap-1 px-1">
