@@ -45,7 +45,6 @@ service firebase.storage {
        allow write: if request.auth.uid == userId;
     }
     
-    // Users can upload their own top-up proofs.
     match /users/{userId}/topup_proofs/{fileName} {
         allow write: if request.auth.uid == userId;
     }

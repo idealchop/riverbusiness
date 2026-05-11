@@ -30,7 +30,7 @@ service cloud.firestore {
     // --- USER PROFILES & DIRECTORY ---
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read, write: if isOwner(userId) || isAdmin() || isAuthenticated();
     }
     
     match /users/{allPaths=**} {
@@ -40,12 +40,12 @@ service cloud.firestore {
     // --- CLOUD STORAGE APP (FILES & FOLDERS) ---
 
     match /cloud_files/{fileId} {
-      // Shared company access: unrestricted for all authenticated team members
+      // Open collaborative model for the shared company drive
       allow read, write: if isAuthenticated();
     }
 
     match /cloud_folders/{folderId} {
-      // Shared company access: unrestricted for all authenticated team members
+      // Open collaborative model for the shared company drive
       allow read, write: if isAuthenticated();
     }
 
