@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -23,26 +23,17 @@ import {
     Heading1, 
     Heading2, 
     CheckSquare,
-    Undo2,
-    Redo2,
     Link as LinkIcon,
     Image as ImageIcon,
     Loader2,
-    Table as TableIcon,
-    Quote,
-    Trash2,
     Plus,
-    Underline as UnderlineIcon,
     AlignLeft,
     AlignCenter,
     AlignRight,
-    Combine,
-    Split,
     Highlighter,
     Sparkles,
     Check,
     X,
-    Eraser,
     Wand2,
     Languages,
     Type,
@@ -52,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -309,8 +301,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                       <Sparkles className="h-3.5 w-3.5" />✨ Improve
                   </Button>
                   <Separator orientation="vertical" className="h-4 mx-1" />
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Languages className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Type className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Fix Grammar"><Languages className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Make Professional"><Type className="h-3.5 w-3.5" /></Button>
               </div>
           </BubbleMenu>
       )}
