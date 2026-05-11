@@ -202,16 +202,16 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     const context = editor.getText();
 
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Selection required', description: 'Please type or highlight some text first.' });
+        toast({ variant: 'destructive', title: 'Selection required', description: 'Please highlight some text first.' });
         return;
     }
 
     setIsAiProcessing(true);
     setShowAiToolbar(false);
     
-    setAiStatus('Analyzing your writing...');
+    setAiStatus('Analyzing context...');
     const statusInterval = setInterval(() => {
-        const statuses = ['Analyzing context...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
+        const statuses = ['Processing logic...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
         setAiStatus(statuses[Math.floor(Math.random() * statuses.length)]);
     }, 1500);
 
@@ -237,6 +237,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       if (data && data.suggestedText) {
           if (selectedText) {
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
+              const prevDocSize = editor.state.doc.content.size;
               
               editor.chain()
                 .focus()
@@ -244,12 +245,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                 .insertContentAt(from, combinedHtml)
                 .run();
 
-              const newPos = editor.state.selection.to;
+              const currentDocSize = editor.state.doc.content.size;
+              const actualInsertedLength = currentDocSize - (prevDocSize - (to - from));
+              
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
                   from: from, 
-                  to: newPos
+                  to: from + actualInsertedLength
               });
 
               toast({ title: 'AI suggestion applied' });
@@ -287,12 +290,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Atomic action: delete the comparison range and insert ONLY the clean suggested text
+      // Atomic transaction: Delete the whole comparison block and insert only the clean version
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike') // Ensure no leftover strike marks at this position
+        .unsetMark('strike')
         .run();
 
       setAiPreview(null);
@@ -399,7 +402,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                       </div>
                       <div className="flex items-center gap-2 px-2 pb-1">
                           <Input 
-                            placeholder="What's your goal for this text? (e.g. Make it more persuasive)" 
+                            placeholder="Type a goal (e.g. Make this sound more persuasive)" 
                             value={customGoal}
                             onChange={(e) => setCustomGoal(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && customGoal.trim() && callAiAssistant('custom', customGoal)}
@@ -427,7 +430,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     <div className="p-2 rounded-full bg-primary/20 text-primary">
                         <Sparkles className="h-4 w-4" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Reviewing changes</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Review changes</p>
                 </div>
                 
                 <Separator orientation="vertical" className="h-4 bg-white/10" />
