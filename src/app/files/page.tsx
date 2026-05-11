@@ -34,7 +34,8 @@ import {
   XCircle,
   RotateCcw,
   PlayCircle,
-  Maximize2
+  Maximize2,
+  FileUp
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ export default function SharedFilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
   const [previewFile, setPreviewFile] = useState<CloudFile | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const companyId = user?.companyId || 'unassigned';
 
@@ -221,38 +223,8 @@ export default function SharedFilesPage() {
 
   const storagePercentage = (companyUsedStorage / STORAGE_QUOTA_BYTES) * 100;
 
-  // Handlers
-  const handleCreateFolder = async () => {
-    if (!firestore || !user || !newFolderName.trim()) return;
-    const newFolderData = {
-        name: newFolderName.trim(),
-        parentId: currentFolderId,
-        ownerId: user.id,
-        ownerName: user.name,
-        ownerPhoto: user.photoURL || '',
-        companyId: companyId,
-        isFavorite: false,
-        isTrashed: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-    };
-    try {
-        await addDoc(collection(firestore, 'cloud_folders'), newFolderData);
-        toast({ title: 'Folder created' });
-        setIsNewFolderOpen(false);
-        setNewFolderName('');
-    } catch (e) {
-        const permissionError = new FirestorePermissionError({
-            path: '/cloud_folders',
-            operation: 'create',
-            requestResourceData: newFolderData
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Global upload logic
+  const performUpload = async (file: File) => {
     if (!file || !firestore || !storage || !auth || !user) return;
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -295,6 +267,64 @@ export default function SharedFilesPage() {
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) performUpload(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      performUpload(files[0]);
+    }
+  };
+
+  // Handlers
+  const handleCreateFolder = async () => {
+    if (!firestore || !user || !newFolderName.trim()) return;
+    const newFolderData = {
+        name: newFolderName.trim(),
+        parentId: currentFolderId,
+        ownerId: user.id,
+        ownerName: user.name,
+        ownerPhoto: user.photoURL || '',
+        companyId: companyId,
+        isFavorite: false,
+        isTrashed: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+    };
+    try {
+        await addDoc(collection(firestore, 'cloud_folders'), newFolderData);
+        toast({ title: 'Folder created' });
+        setIsNewFolderOpen(false);
+        setNewFolderName('');
+    } catch (e) {
+        const permissionError = new FirestorePermissionError({
+            path: '/cloud_folders',
+            operation: 'create',
+            requestResourceData: newFolderData
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
     }
   };
 
@@ -501,7 +531,23 @@ export default function SharedFilesPage() {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <div 
+          className="flex-1 flex flex-col min-w-0 bg-white relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drop Overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-4 border-primary border-dashed rounded-xl m-4 flex flex-col items-center justify-center animate-in fade-in duration-300">
+                <div className="p-6 rounded-full bg-white shadow-2xl scale-110 animate-bounce">
+                    <FileUp className="h-12 w-12 text-primary" />
+                </div>
+                <h3 className="mt-6 text-2xl font-black text-primary uppercase tracking-widest">Drop to upload</h3>
+                <p className="text-sm font-bold text-primary/60 mt-2">Release to sync file to team hub</p>
+            </div>
+          )}
+
           <header className="h-14 border-b flex items-center justify-between px-6 bg-white/95 backdrop-blur-sm shrink-0 sticky top-0 z-20">
             <div className="flex items-center gap-2 overflow-hidden min-w-0">
               <button 
