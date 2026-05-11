@@ -16,16 +16,16 @@ service firebase.storage {
     }
 
     // --- SHARED CLOUD STORAGE ---
-    // allow public read to support shareable links and frictionless team collaboration.
-    // allow any authenticated user to write/upload to facilitate an open organizational drive.
+    // Allow public read to support shareable links and frictionless team collaboration.
+    // Allow any authenticated user to write/upload to facilitate an open organizational drive.
     match /cloud_storage/{allPaths=**} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
 
-    // --- FLEXIBLE USER ASSETS ---
-    // allow any authenticated user to manage profile photos, payment proofs, and chat attachments.
-    // this removes strict individual ownership for a more flexible team environment.
+    // --- FLEXIBLE ASSETS ---
+    // Allow any authenticated user to manage profile photos, payment proofs, chat attachments, and collab images.
+    // This removes strict individual ownership for a more flexible team environment.
     match /users/{allPaths=**} {
       allow read, write: if isAuthenticated();
     }
@@ -37,7 +37,7 @@ service firebase.storage {
     }
 
     // --- SECURE ADMINISTRATIVE ASSETS ---
-    // only admins can manage official station documents, contracts, and internal uploads.
+    // Only admins can manage official station documents, contracts, and internal uploads.
     match /admin_uploads/{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
@@ -51,7 +51,7 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // --- PUBLIC ASSETS ---
+    // --- PUBLIC MARKETING ASSETS ---
     match /Sales Portal/{allPaths=**} {
       allow read: if true;
     }
@@ -59,7 +59,7 @@ service firebase.storage {
       allow read: if true;
     }
 
-    // fallback rule for other paths: any authenticated user can read, only admins can write
+    // Fallback rule: any authenticated user can read, only admins can write to root/other paths
     match /{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

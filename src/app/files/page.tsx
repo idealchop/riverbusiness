@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -21,7 +22,6 @@ import {
   Archive,
   Plus,
   Download,
-  CheckCircle2,
   Loader2,
   Globe,
   MoreHorizontal,
@@ -31,7 +31,6 @@ import {
   History,
   Palette,
   XCircle,
-  RotateCcw,
   PlayCircle,
   Maximize2,
   FileUp
@@ -51,12 +50,12 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useStorage, useAuth, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useStorage, useAuth, useDoc } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, orderBy, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import type { CloudFile, CloudFolder, AppUser, Notification as NotificationType, SecurityRuleContext } from '@/lib/types';
+import type { CloudFile, CloudFolder, AppUser, Notification as NotificationType } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -126,16 +125,9 @@ export default function SharedFilesPage() {
     });
   }, [rawCollaborators]);
 
-  // Redirect to claim if user document doesn't exist but auth does
-  useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && authUser && user === null) {
-        router.push('/claim-account');
-    }
-  }, [isUserLoading, isUserDocLoading, authUser, user, router]);
-
   // Update Presence Status
   useEffect(() => {
-    if (!firestore || !user || companyId === 'unassigned') return;
+    if (!firestore || !user || !user.id || companyId === 'unassigned') return;
 
     const presenceRef = doc(firestore, 'hr_companies', companyId, 'files_presence', user.id);
     const presenceData = {
@@ -150,10 +142,12 @@ export default function SharedFilesPage() {
     setDoc(presenceRef, presenceData).catch(() => {});
 
     return () => {
-        updateDoc(presenceRef, { 
-            isActive: false, 
-            lastActive: serverTimestamp() 
-        }).catch(() => {}); 
+        if (user?.id) {
+            updateDoc(presenceRef, { 
+                isActive: false, 
+                lastActive: serverTimestamp() 
+            }).catch(() => {}); 
+        }
     };
   }, [firestore, user, companyId, pathname]);
 
@@ -234,7 +228,7 @@ export default function SharedFilesPage() {
 
   // File Upload Logic
   const performUpload = async (file: File) => {
-    if (!file || !firestore || !storage || !auth?.currentUser || !user) {
+    if (!file || !firestore || !storage || !auth?.currentUser) {
         toast({ variant: 'destructive', title: 'Session required', description: 'Please ensure you are logged in.' });
         return;
     }
@@ -262,9 +256,9 @@ export default function SharedFilesPage() {
             size: file.size,
             url,
             folderId: currentFolderId,
-            ownerId: user.id,
-            ownerName: user.name,
-            ownerPhoto: user.photoURL || '',
+            ownerId: auth.currentUser.uid,
+            ownerName: user?.name || auth.currentUser.email?.split('@')[0] || 'Member',
+            ownerPhoto: user?.photoURL || '',
             companyId: companyId,
             isFavorite: false,
             isTrashed: false,
@@ -276,7 +270,7 @@ export default function SharedFilesPage() {
         toast({ title: 'File uploaded' });
     } catch (e) {
         console.error("Upload process error:", e);
-        toast({ variant: 'destructive', title: 'Upload failed', description: 'Please check your connection and try again.' });
+        toast({ variant: 'destructive', title: 'Upload failed', description: 'Check your permissions and try again.' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -314,13 +308,13 @@ export default function SharedFilesPage() {
 
   // Organizational Management Handlers
   const handleCreateFolder = async () => {
-    if (!firestore || !user || !newFolderName.trim()) return;
+    if (!firestore || !authUser || !newFolderName.trim()) return;
     const newFolderData = {
         name: newFolderName.trim(),
         parentId: currentFolderId,
-        ownerId: user.id,
-        ownerName: user.name,
-        ownerPhoto: user.photoURL || '',
+        ownerId: authUser.uid,
+        ownerName: user?.name || authUser.email?.split('@')[0] || 'Member',
+        ownerPhoto: user?.photoURL || '',
         companyId: companyId,
         isFavorite: false,
         isTrashed: false,
@@ -428,7 +422,7 @@ export default function SharedFilesPage() {
         <div className="flex items-center gap-2 sm:gap-6">
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-2">
-                {collaborators?.filter(c => c.id !== user?.id).map(collab => {
+                {collaborators?.filter(c => c.id !== authUser?.uid).map(collab => {
                     const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
                     const isOnline = collab.isActive;
 
