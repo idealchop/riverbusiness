@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -286,11 +287,12 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
+      // Atomic action: delete the comparison range and insert ONLY the clean suggested text
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike')
+        .unsetMark('strike') // Ensure no leftover strike marks at this position
         .run();
 
       setAiPreview(null);
