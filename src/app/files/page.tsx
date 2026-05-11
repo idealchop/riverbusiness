@@ -27,8 +27,6 @@ import {
   Globe,
   MoreHorizontal,
   StarOff,
-  Headset,
-  FileSearch,
   Clock,
   Home,
   X,
@@ -74,7 +72,6 @@ import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
-import { LiveSupportDialog } from '@/components/dashboard/layout/LiveSupportDialog';
 import { formatDistanceToNow } from 'date-fns';
 
 const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2gb
@@ -100,12 +97,11 @@ export default function RiverFilesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
-  const [isLiveSupportOpen, setIsLiveSupportOpen] = useState(false);
 
   // multi-tenant isolation
   const companyId = user?.companyId || 'unassigned';
 
-  // --- presence logic (collab standard) ---
+  // presence logic (collab standard)
   const presenceQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? collection(firestore, 'hr_companies', companyId, 'files_presence') : null,
     [firestore, companyId]
@@ -153,7 +149,7 @@ export default function RiverFilesPage() {
     };
   }, [firestore, user, companyId, pathname]);
 
-  // --- data queries ---
+  // data queries
   const foldersQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_folders'),
@@ -180,13 +176,7 @@ export default function RiverFilesPage() {
   );
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
 
-  const chatMessagesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, 'users', authUser.uid, 'chatMessages'), orderBy('timestamp', 'asc'));
-  }, [firestore, authUser]);
-  const { data: chatMessages } = useCollection<ChatMessage>(chatMessagesQuery);
-
-  // --- computed views ---
+  // computed views
   const currentFolders = useMemo(() => {
     if (!allFolders) return [];
     let list = allFolders;
@@ -234,7 +224,7 @@ export default function RiverFilesPage() {
 
   const storagePercentage = (companyUsedStorage / STORAGE_QUOTA_BYTES) * 100;
 
-  // --- handlers ---
+  // handlers
   const handleCreateFolder = async () => {
     if (!firestore || !user || !newFolderName.trim()) return;
     const newFolderData = {
@@ -361,21 +351,6 @@ export default function RiverFilesPage() {
     }
   };
 
-  const handleMessageSubmit = async (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    if (!firestore || !user) return;
-    const messagesCollection = collection(firestore, 'users', user.id, 'chatMessages');
-    try {
-        await addDoc(messagesCollection, { ...messagePayload, timestamp: serverTimestamp() });
-        await updateDoc(doc(firestore, 'users', user.id), {
-            lastChatMessage: messagePayload.text || 'attachment',
-            lastChatTimestamp: serverTimestamp(),
-            hasUnreadUserMessages: true
-        });
-    } catch(error) {
-        toast({ variant: 'destructive', title: 'dispatch failed' });
-    }
-  };
-
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 b';
     const k = 1024;
@@ -397,7 +372,7 @@ export default function RiverFilesPage() {
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden font-sans lowercase">
-      {/* global header (collab standard) */}
+      {/* 1. unified global header (presence only, minimal) */}
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
@@ -448,23 +423,6 @@ export default function RiverFilesPage() {
                 )})}
             </div>
           </TooltipProvider>
-
-          <LiveSupportDialog 
-            isOpen={isLiveSupportOpen}
-            onOpenChange={setIsLiveSupportOpen}
-            user={user}
-            chatMessages={chatMessages || []}
-            onMessageSubmit={handleMessageSubmit}
-          >
-            <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100">
-              <Headset className="h-5 w-5 text-slate-600" />
-              {(user?.hasUnreadAdminMessages) && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background shadow-sm" />}
-            </Button>
-          </LiveSupportDialog>
-          
-          <Button asChild variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100 hidden sm:flex">
-            <Link href="/documentation" target="_blank"><FileSearch className="h-5 w-5 text-slate-600" /></Link>
-          </Button>
 
           <NotificationPopover 
             notifications={notifications || []}
@@ -775,7 +733,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
 
     const Actions = () => (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg bg-white/80 backdrop-blur-md shadow-lg border border-slate-100 hover:bg-white">
                     <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>
@@ -867,7 +825,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
 
     const Actions = () => (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg bg-white/80 backdrop-blur-md shadow-lg border border-slate-100 hover:bg-white">
                     <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>
@@ -958,5 +916,3 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
         </Card>
     );
 }
-
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
