@@ -40,19 +40,28 @@ const prompt = ai.definePrompt({
   name: 'writingAssistantPrompt',
   input: { schema: WritingAssistantInputSchema },
   output: { schema: WritingAssistantOutputSchema },
-  prompt: `You are an expert writing assistant and editor integrated into a high-fidelity business document workspace.
+  prompt: `You are an expert writing assistant and editor. 
+  Perform the following action: {{action}}
   
-  Action to perform: {{action}}
   Target Text: """{{text}}"""
-  {{#if context}}Document Context: """{{context}}"""{{/if}}
+  {{#if context}}Surrounding Context: """{{context}}"""{{/if}}
 
-  Your goal is to perform the requested action while maintaining the professional tone of River Business.
-  - If 'continue', write the next few logical sentences or a paragraph that follows the user's thought.
-  - If 'fix-grammar', focus on accuracy and clarity without rewriting the entire style unless it's broken.
-  - If 'professional', adjust the vocabulary and structure to be suitable for an executive corporate environment.
-  - If 'simplify', break down complex jargon or sentences into clear, accessible language.
+  Rules:
+  - Return ONLY the improved text within the JSON output.
+  - Maintain the existing format and intent.
+  - Tone: Professional, clear, and consistent with a high-fidelity business environment.
+  
+  Actions Guide:
+  - improve: Make the text better, clearer, and more engaging.
+  - rewrite: Express the same idea using more effective vocabulary.
+  - fix-grammar: Correct spelling, punctuation, and grammatical structure.
+  - summarize: Condense the text into its most important points.
+  - expand: Elaborate on the ideas with relevant detail.
+  - professional: Adjust tone for executive or formal corporate communication.
+  - simplify: Make the text easier to read while retaining all core meaning.
+  - continue: Generate the next logical paragraph or sentences based on the context.
 
-  Return the result as a JSON object with the "suggestedText" field containing the updated text.`,
+  Return the result as a JSON object with the "suggestedText" field.`,
 });
 
 const writingAssistantFlow = ai.defineFlow(
@@ -63,6 +72,7 @@ const writingAssistantFlow = ai.defineFlow(
   },
   async input => {
     const { output } = await prompt(input);
-    return output!;
+    if (!output) throw new Error('AI failed to generate a suggestion.');
+    return output;
   }
 );

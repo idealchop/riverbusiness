@@ -46,7 +46,9 @@ import {
     Wand2,
     Languages,
     Type,
-    ArrowRight
+    ArrowRight,
+    History,
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -59,6 +61,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Card, CardContent } from '@/components/ui/card';
 
 interface EditorProps {
   initialContent: any;
@@ -194,12 +197,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
-  const insertGrid = () => {
-      if (!editor) return;
-      editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-      toast({ title: 'Grid inserted' });
-  };
-
   const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -217,10 +214,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     const textToProcess = selectedText || editor.getText();
     const context = editor.getText();
 
+    if (!textToProcess.trim()) {
+        toast({ variant: 'destructive', title: 'Selection required', description: 'Please type or highlight some text first.' });
+        return;
+    }
+
     setIsAiProcessing(true);
     setShowAiToolbar(false);
     
-    // Status text cycling for better UX
     setAiStatus('Analyzing your writing...');
     const statusInterval = setInterval(() => {
         const statuses = ['Analyzing your writing...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
@@ -252,6 +253,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
               toast({ title: 'Content generated' });
           }
+      } else {
+          throw new Error('No suggestion received');
       }
     } catch (error) {
       console.error('AI Error:', error);
@@ -265,13 +268,15 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
   const applyAiSuggestion = () => {
       if (!editor || !aiPreview) return;
+      
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
         .run();
+        
       setAiPreview(null);
-      toast({ title: 'Applied changes' });
+      toast({ title: 'AI Changes Applied' });
   };
 
   if (!editor) return null;
@@ -366,9 +371,9 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               {showAiToolbar && (
                   <div className="w-full px-2 py-1.5 flex items-center gap-1.5 animate-in slide-in-from-top-2 duration-300">
                       <div className="h-px flex-1 bg-slate-100" />
-                      <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve writing" onClick={() => callAiAssistant('improve')} />
-                      <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
-                      <AiAction icon={<Type className="h-3 w-3" />} label="Make professional" onClick={() => callAiAssistant('professional')} />
+                      <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
+                      <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
+                      <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
                       <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue" onClick={() => callAiAssistant('continue')} />
                       <div className="h-px flex-1 bg-slate-100" />
                   </div>
@@ -377,35 +382,65 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         </TooltipProvider>
       )}
 
-      {/* AI Suggestion Preview UI */}
+      {/* AI Suggestion Card - Modern Diff UI */}
       {aiPreview && (
-          <div className="absolute z-40 right-[-120px] top-1/2 -translate-y-1/2 animate-in fade-in slide-in-from-left-4 duration-300">
-              <div className="flex flex-col gap-2 p-1.5 bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.15)] rounded-2xl">
-                  <button onClick={applyAiSuggestion} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                      <Check className="h-5 w-5" />
-                  </button>
-                  <button onClick={() => setAiPreview(null)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                      <X className="h-5 w-5" />
-                  </button>
-              </div>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+              <Card className="w-full max-w-2xl border-none shadow-3xl rounded-[2.5rem] bg-white overflow-hidden animate-in zoom-in-95 duration-500">
+                  <CardHeader className="bg-slate-50 p-8 border-b">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                                <Sparkles className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl font-black uppercase tracking-tight">AI Suggestion</CardTitle>
+                                <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verify and apply improvements</CardDescription>
+                            </div>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setAiPreview(null)} className="rounded-full text-slate-400 hover:text-slate-900">
+                            <X className="h-5 w-5" />
+                        </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8 space-y-8">
+                      <div className="space-y-4">
+                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 flex items-center gap-2">
+                            <History className="h-3.5 w-3.5" /> Original Text
+                          </Label>
+                          <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 italic text-slate-400 line-through text-lg leading-relaxed">
+                              {aiPreview.originalText}
+                          </div>
+                      </div>
+
+                      <div className="space-y-4">
+                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
+                            <Zap className="h-3.5 w-3.5" /> AI Recommendation
+                          </Label>
+                          <div className="p-6 rounded-3xl bg-blue-50/50 border-2 border-primary/20 text-slate-900 font-bold text-xl leading-relaxed shadow-inner">
+                              {aiPreview.text}
+                          </div>
+                      </div>
+                  </CardContent>
+                  <DialogFooter className="p-8 pt-4 bg-slate-50 border-t flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contextual refinement complete</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Button variant="ghost" onClick={() => setAiPreview(null)} className="h-12 px-8 rounded-xl font-bold text-xs">
+                            Discard
+                        </Button>
+                        <Button onClick={applyAiSuggestion} className="h-12 px-12 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
+                            <Check className="mr-2 h-4 w-4" /> Apply Changes
+                        </Button>
+                      </div>
+                  </DialogFooter>
+              </Card>
           </div>
       )}
 
       <div className="relative">
-          {aiPreview && (
-              <div 
-                className="absolute inset-0 z-10 pointer-events-none p-6 rounded-3xl bg-blue-50/80 border-2 border-primary/20 animate-pulse flex flex-col gap-4 overflow-hidden shadow-inner"
-                style={{ top: '10px' }} // Local vertical nudge
-              >
-                  <p className="text-slate-400 line-through opacity-50 text-lg">{aiPreview.originalText}</p>
-                  <p className="text-primary font-bold text-xl leading-relaxed">{aiPreview.text}</p>
-                  <div className="mt-auto flex items-center gap-2">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">AI Suggestion active</span>
-                  </div>
-              </div>
-          )}
-          <EditorContent editor={editor} className={cn(aiPreview && "opacity-0")} />
+          <EditorContent editor={editor} />
       </div>
     </div>
   );
