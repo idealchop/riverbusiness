@@ -4,68 +4,65 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // --- HELPER FUNCTIONS ---
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isAdmin() {
+      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
-    // --- CLOUD STORAGE APP RULES ---
-    
-    match /cloud_storage/{companyId}/{fileName} {
-      // Facilitate shared team storage as requested
+    // --- SHARED CLOUD STORAGE ---
+    // allow public read to support shareable links and frictionless team collaboration.
+    // allow any authenticated user to write/upload to facilitate an open organizational drive.
+    match /cloud_storage/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // --- FLEXIBLE USER ASSETS ---
+    // allow any authenticated user to manage profile photos, payment proofs, and chat attachments.
+    // this removes strict individual ownership for a more flexible team environment.
+    match /users/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /chats/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /collab_images/{allPaths=**} {
       allow read, write: if isAuthenticated();
     }
 
-    // --- EXISTING RULES ---
-
-    match /admin_uploads/{adminId}/{path=**} {
-      allow write: if request.auth.uid == adminId && isAdmin();
-    }
-
-    match /userContracts/{userId}/{fileName} {
+    // --- SECURE ADMINISTRATIVE ASSETS ---
+    // only admins can manage official station documents, contracts, and internal uploads.
+    match /admin_uploads/{allPaths=**} {
+      allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
-    
-    match /stations/{stationId}/{path=**} {
-        allow write: if isAdmin();
+    match /userContracts/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    match /stations/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    match /users/{userId}/profile/{fileName} {
-      allow write: if request.auth.uid == userId;
-    }
-
-    match /users/{userId}/support_profile/{fileName} {
-      allow write: if request.auth.uid == userId && isAdmin();
-    }
-
-    match /users/{userId}/payments/{fileName} {
-       allow write: if request.auth.uid == userId;
-    }
-    
-    match /users/{userId}/topup_proofs/{fileName} {
-        allow write: if request.auth.uid == userId;
-    }
-
-    match /chats/{userId}/{fileName} {
-        allow write: if request.auth.uid == userId || isAdmin();
-    }
-
-    match /collab_images/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /{path=**} {
-      allow read: if request.auth != null;
-    }
-
+    // --- PUBLIC ASSETS ---
     match /Sales Portal/{allPaths=**} {
-      allow read;
+      allow read: if true;
     }
-     match /River Mobile/{allPaths=**} {
-      allow read;
+    match /River Mobile/{allPaths=**} {
+      allow read: if true;
+    }
+
+    // fallback rule for other paths: any authenticated user can read, only admins can write
+    match /{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }
