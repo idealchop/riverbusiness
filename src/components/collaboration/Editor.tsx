@@ -237,7 +237,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
-              // Implement Strikethrough Diff View
+              // Diff View: Strikethrough original + plain suggestion
+              // We use <s> instead of <strike> for explicit control
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
@@ -245,7 +246,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                 .insertContent(combinedHtml)
                 .run();
 
-              // Selection should be at the end of inserted content. Capture current position.
               const newTo = editor.state.selection.to;
 
               setAiPreview({ 
@@ -276,7 +276,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Revert the range to original text
+      // Delete the entire preview block and restore original plain text
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
@@ -290,8 +290,8 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Remove the original (struck-through) part and just keep the suggested text
-      // We explicitly insert the plain text to ensure all marks from the diff view are purged
+      // Delete the entire preview block and insert only the clean AI text
+      // We explicitly unset marks to ensure no leftover strikethrough from <s> tag
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
@@ -299,7 +299,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         .run();
 
       setAiPreview(null);
-      toast({ title: 'AI changes accepted' });
+      toast({ title: 'AI suggestion accepted' });
   };
 
   if (!editor) return null;
@@ -413,7 +413,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     <div className="p-2 rounded-full bg-primary/20 text-primary">
                         <Sparkles className="h-4 w-4" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest">Reviewing changes</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Reviewing changes</p>
                 </div>
                 
                 <Separator orientation="vertical" className="h-4 bg-white/10" />
@@ -432,7 +432,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Accept Suggestion
+                                Accept suggestion
                             </TooltipContent>
                         </Tooltip>
 
@@ -448,7 +448,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Revert Original
+                                Revert original
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
