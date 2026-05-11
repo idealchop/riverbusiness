@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -33,7 +32,8 @@ import {
   XCircle,
   PlayCircle,
   Maximize2,
-  FileUp
+  FileUp,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -229,17 +229,17 @@ export default function SharedFilesPage() {
   // File Upload Logic
   const performUpload = async (file: File) => {
     if (!file || !firestore || !storage || !auth?.currentUser) {
-        toast({ variant: 'destructive', title: 'Session required', description: 'Please ensure you are logged in.' });
+        toast({ variant: 'destructive', title: 'Session Required', description: 'Please ensure you are logged in.' });
         return;
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast({ variant: 'destructive', title: 'File too large', description: 'Maximum limit is 500MB.' });
+        toast({ variant: 'destructive', title: 'File Too Large', description: 'Maximum limit is 500MB.' });
         return;
     }
 
     if (companyUsedStorage + file.size > STORAGE_QUOTA_BYTES) {
-        toast({ variant: 'destructive', title: 'Storage full', description: 'Your team reached the 2GB limit.' });
+        toast({ variant: 'destructive', title: 'Storage Full', description: 'Your team reached the 2GB limit.' });
         return;
     }
 
@@ -270,7 +270,7 @@ export default function SharedFilesPage() {
         toast({ title: 'File uploaded' });
     } catch (e) {
         console.error("Upload process error:", e);
-        toast({ variant: 'destructive', title: 'Upload failed', description: 'Check your permissions and try again.' });
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Check your permissions and try again.' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -327,7 +327,7 @@ export default function SharedFilesPage() {
         setIsNewFolderOpen(false);
         setNewFolderName('');
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Create failed' });
+        toast({ variant: 'destructive', title: 'Create Failed' });
     }
   };
 
@@ -339,7 +339,7 @@ export default function SharedFilesPage() {
             updatedAt: serverTimestamp()
         });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Action blocked' });
+        toast({ variant: 'destructive', title: 'Action Blocked' });
     }
   };
 
@@ -353,7 +353,7 @@ export default function SharedFilesPage() {
         });
         toast({ title: 'Moved to trash' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action Failed' });
     }
   };
 
@@ -367,7 +367,7 @@ export default function SharedFilesPage() {
         });
         toast({ title: 'Restored' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action Failed' });
     }
   };
 
@@ -377,7 +377,7 @@ export default function SharedFilesPage() {
         await deleteDoc(doc(firestore, collectionName, item.id));
         toast({ title: 'Deleted forever' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Delete blocked' });
+        toast({ variant: 'destructive', title: 'Delete Blocked' });
     }
   };
 
@@ -553,7 +553,7 @@ export default function SharedFilesPage() {
                 <div className="p-6 rounded-full bg-white shadow-2xl scale-110 animate-bounce">
                     <FileUp className="h-12 w-12 text-primary" />
                 </div>
-                <h3 className="mt-6 text-2xl font-black text-primary uppercase tracking-widest">Drop to upload</h3>
+                <h3 className="mt-6 text-2xl font-black text-primary uppercase tracking-widest">Drop to Upload</h3>
                 <p className="text-sm font-bold text-primary/60 mt-2">Release to sync file to team hub</p>
             </div>
           )}
@@ -616,17 +616,17 @@ export default function SharedFilesPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="h-9 px-4 rounded-xl font-bold text-xs gap-2 shadow-lg shadow-primary/10">
-                    <Plus className="h-3.5 w-3.5" /> Add file
+                    <Plus className="h-3.5 w-3.5" /> Add File
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4 text-blue-500" /> Create folder
+                    <FolderPlus className="h-4 w-4 text-blue-500" /> Create Folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="h-4 w-4 text-primary" /> 
-                    Upload asset
+                    Upload Asset
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -700,7 +700,7 @@ export default function SharedFilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading asset</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading Asset</p>
                         <p className="text-[8px] font-semibold text-slate-400 mt-1">Syncing to team cloud space...</p>
                     </div>
                 </div>
@@ -717,14 +717,14 @@ export default function SharedFilesPage() {
                     <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New folder</DialogTitle>
+                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New Folder</DialogTitle>
                     <DialogDescription className="text-slate-400 font-semibold text-xs mt-1">
                         Create a shared space for your team's assets.
                     </DialogDescription>
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder name</Label>
+                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder Name</Label>
                 <Input 
                     autoFocus
                     placeholder="e.g. Project Assets" 
@@ -737,7 +737,7 @@ export default function SharedFilesPage() {
             <DialogFooter className="gap-2">
                 <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
                 <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
-                    Confirm folder
+                    Confirm Folder
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -863,11 +863,11 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             {folder.isFavorite ? <StarOff className="h-3.5 w-3.5 text-amber-500" /> : <Star className="h-3.5 w-3.5 text-amber-500" />}
-                            {folder.isFavorite ? 'Remove from starred' : 'Add to starred'}
+                            {folder.isFavorite ? 'Remove from Starred' : 'Add to Starred'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3.5 w-3.5" /> Move to trash
+                            <Trash2 className="h-3.5 w-3.5" /> Move to Trash
                         </DropdownMenuItem>
                     </>
                 ) : (
@@ -877,7 +877,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3.5 w-3.5" /> Delete forever
+                            <Trash2 className="h-3.5 w-3.5" /> Delete Forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -958,14 +958,14 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3.5 w-3.5 text-amber-500" /> : <Star className="h-3.5 w-3.5 text-amber-500" />}
-                            {file.isFavorite ? 'Remove from starred' : 'Add to starred'}
+                            {file.isFavorite ? 'Remove from Starred' : 'Add to Starred'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             <Download className="h-3.5 w-3.5 text-slate-400" /> Download
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3.5 w-3.5" /> Move to trash
+                            <Trash2 className="h-3.5 w-3.5" /> Move to Trash
                         </DropdownMenuItem>
                     </>
                 ) : (
@@ -975,7 +975,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3.5 w-3.5" /> Delete forever
+                            <Trash2 className="h-3.5 w-3.5" /> Delete Forever
                         </DropdownMenuItem>
                     </>
                 )}
