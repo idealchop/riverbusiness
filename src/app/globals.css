@@ -134,6 +134,23 @@
     pointer-events: none;
   }
 
+  /* Typography Hierarchy for Prose */
+  .prose h1 {
+    @apply text-3xl font-black mb-6 mt-10 text-slate-900 leading-tight;
+  }
+
+  .prose h2 {
+    @apply text-2xl font-bold mb-4 mt-8 text-slate-800 leading-tight;
+  }
+
+  .prose h3 {
+    @apply text-xl font-bold mb-3 mt-6 text-slate-800;
+  }
+
+  .prose p {
+    @apply mb-4;
+  }
+
   /* Blockquote Style */
   .prose blockquote {
     border-left: 4px solid #538ec2;
