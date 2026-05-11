@@ -26,7 +26,6 @@ import {
     Link as LinkIcon,
     Image as ImageIcon,
     Loader2,
-    Plus,
     AlignLeft,
     AlignCenter,
     AlignRight,
@@ -38,13 +37,10 @@ import {
     Languages,
     Type,
     ArrowRight,
-    History,
-    Zap,
-    Undo2
+    Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +50,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 
 interface EditorProps {
   initialContent: any;
@@ -241,20 +237,22 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       if (data && data.suggestedText) {
           if (selectedText) {
-              // Store original range and text
+              // Implement Strikethrough Diff View
+              const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
+              
+              editor.chain()
+                .focus()
+                .insertContent(combinedHtml)
+                .run();
+
+              const newTo = editor.state.selection.to;
+
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
                   from, 
-                  to: from + data.suggestedText.length // Expected new 'to'
+                  to: newTo
               });
-
-              // Replace current selection with AI text immediately
-              editor.chain()
-                .focus()
-                .deleteRange(from, to)
-                .insertContentAt(from, data.suggestedText)
-                .run();
 
               toast({ title: 'AI Suggestion applied' });
           } else {
@@ -289,6 +287,15 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   };
 
   const acceptAiSuggestion = () => {
+      if (!editor || !aiPreview) return;
+      
+      // Remove the original (struck-through) part and just keep the suggested text
+      editor.chain()
+        .focus()
+        .deleteRange(aiPreview.from, aiPreview.to)
+        .insertContentAt(aiPreview.from, aiPreview.text)
+        .run();
+
       setAiPreview(null);
       toast({ title: 'AI Changes accepted' });
   };
@@ -315,7 +322,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     onClick={() => callAiAssistant('improve')} 
                     className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5"
                   >
-                      <Sparkles className="h-3.5 w-3.5" />✨ Improve
+                      <Sparkles className="h-3.5 w-3.5" /> Improve
                   </Button>
                   <Separator orientation="vertical" className="h-4 mx-1" />
                   <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Fix Grammar"><Languages className="h-3.5 w-3.5" /></Button>
@@ -364,7 +371,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} label="Bold" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Highlighter className="h-4 w-4" />} label="Highlight" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Palette className="h-4 w-4" />} label="Highlight" />
                   </div>
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
@@ -404,7 +411,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                     <div className="p-2 rounded-full bg-primary/20 text-primary">
                         <Sparkles className="h-4 w-4" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest">AI Suggestion applied</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Reviewing changes</p>
                 </div>
                 
                 <Separator orientation="vertical" className="h-4 bg-white/10" />
@@ -423,7 +430,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Accept Changes
+                                Accept Suggestion
                             </TooltipContent>
                         </Tooltip>
 
@@ -439,7 +446,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Revert Changes
+                                Revert Original
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
