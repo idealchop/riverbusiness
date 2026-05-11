@@ -1,4 +1,3 @@
-
 'use client';
 
 import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata, getDownloadURL } from 'firebase/storage';
@@ -28,21 +27,27 @@ export function uploadFileWithProgress(
     
   return new Promise((resolve, reject) => {
     // Critical Step: Ensure user is authenticated before attempting upload.
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
       const authError = new Error("User not authenticated.");
       console.error("[UPLOAD] Error: User is not authenticated. Upload blocked.", authError);
       onProgress(0); // Reset progress on error
       return reject(authError);
     }
     
+    if (!storage) {
+        return reject(new Error("Storage service is not available."));
+    }
+
     const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
     uploadTask.on(
       'state_changed',
       (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        onProgress(progress);
+        // Guard against division by zero
+        const total = snapshot.totalBytes > 0 ? snapshot.totalBytes : 1;
+        const progress = (snapshot.bytesTransferred / total) * 100;
+        onProgress(Math.min(progress, 100));
       },
       (error) => {
         console.error("[UPLOAD] error:", error);

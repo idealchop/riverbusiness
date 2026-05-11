@@ -29,7 +29,6 @@ import {
   Home,
   X,
   History,
-  Info,
   Palette,
   XCircle,
   RotateCcw,
@@ -92,7 +91,7 @@ export default function SharedFilesPage() {
   const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: user } = useDoc<AppUser>(userDocRef);
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -104,6 +103,8 @@ export default function SharedFilesPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
   const [previewFile, setPreviewFile] = useState<CloudFile | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const companyId = user?.companyId || 'unassigned';
 
@@ -124,6 +125,13 @@ export default function SharedFilesPage() {
         return timeB - timeA;
     });
   }, [rawCollaborators]);
+
+  // Redirect to claim if user document doesn't exist but auth does
+  useEffect(() => {
+    if (!isUserLoading && !isUserDocLoading && authUser && user === null) {
+        router.push('/claim-account');
+    }
+  }, [isUserLoading, isUserDocLoading, authUser, user, router]);
 
   useEffect(() => {
     if (!firestore || !user || companyId === 'unassigned') return;
@@ -225,7 +233,10 @@ export default function SharedFilesPage() {
 
   // Global upload logic
   const performUpload = async (file: File) => {
-    if (!file || !firestore || !storage || !auth || !user) return;
+    if (!file || !firestore || !storage || !auth || !user) {
+        if (!auth?.currentUser) toast({ variant: 'destructive', title: 'Session expired', description: 'Please log in again.' });
+        return;
+    }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
         toast({ variant: 'destructive', title: 'File too large', description: 'Maximum limit is 500MB.' });
@@ -263,7 +274,8 @@ export default function SharedFilesPage() {
         await addDoc(collection(firestore, 'cloud_files'), newFileData);
         toast({ title: 'File uploaded' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Upload failed' });
+        console.error("Upload process error:", e);
+        toast({ variant: 'destructive', title: 'Upload failed', description: 'Please check your connection and try again.' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -273,6 +285,7 @@ export default function SharedFilesPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) performUpload(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -395,16 +408,24 @@ export default function SharedFilesPage() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Loading your workspace" />;
+  if (isUserLoading || isUserDocLoading) return <FullScreenLoader text="Loading your workspace" />;
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        onChange={handleFileUpload}
+        disabled={isUploading}
+      />
+
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
           <div className="flex flex-col">
-            <span className="font-bold text-xs text-slate-900 leading-tight uppercase tracking-widest">Shared</span>
-            <span className="font-bold text-[10px] text-slate-400 leading-tight uppercase tracking-[0.4em]">Files</span>
+            <span className="font-bold text-xs text-slate-900 leading-tight">Shared</span>
+            <span className="font-bold text-[10px] text-slate-400 leading-tight">Files</span>
           </div>
         </Link>
         <div className="flex-1" />
@@ -614,15 +635,9 @@ export default function SharedFilesPage() {
                     <FolderPlus className="h-4 w-4 text-blue-500" /> New folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
-                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer relative">
+                  <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="h-4 w-4 text-primary" /> 
                     Upload file
-                    <input 
-                      type="file" 
-                      className="absolute inset-0 opacity-0 cursor-pointer" 
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                    />
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -978,8 +993,6 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
             </DropdownMenuContent>
         </DropdownMenu>
     );
-
-    const isPreviewable = file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/') || file.type === 'application/pdf';
 
     if (viewMode === 'list') {
         return (
