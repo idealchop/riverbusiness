@@ -63,7 +63,7 @@ import {
     DialogFooter,
     DialogClose 
 } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -75,12 +75,15 @@ const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2gb
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500mb
 
 export default function RiverFilesPage() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const storage = useStorage();
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: user } = useDoc<AppUser>(userDocRef);
 
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -97,7 +100,7 @@ export default function RiverFilesPage() {
 
   // --- data queries ---
   const foldersQuery = useMemoFirebase(
-    () => (firestore) ? query(
+    () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_folders'),
         where('companyId', '==', companyId),
         where('isTrashed', '==', activeTab === 'trash')
@@ -107,7 +110,7 @@ export default function RiverFilesPage() {
   const { data: allFolders, isLoading: loadingFolders } = useCollection<CloudFolder>(foldersQuery);
 
   const filesQuery = useMemoFirebase(
-    () => (firestore) ? query(
+    () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_files'),
         where('companyId', '==', companyId),
         where('isTrashed', '==', activeTab === 'trash')
@@ -117,15 +120,15 @@ export default function RiverFilesPage() {
   const { data: allFiles, isLoading: loadingFiles } = useCollection<CloudFile>(filesQuery);
 
   const notificationsQuery = useMemoFirebase(
-    () => (firestore && user) ? query(collection(firestore, 'users', user.id, 'notifications'), orderBy('date', 'desc')) : null,
-    [firestore, user]
+    () => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')) : null,
+    [firestore, authUser]
   );
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
 
   const chatMessagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'users', user.id, 'chatMessages'), orderBy('timestamp', 'asc'));
-  }, [firestore, user]);
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, 'users', authUser.uid, 'chatMessages'), orderBy('timestamp', 'asc'));
+  }, [firestore, authUser]);
   const { data: chatMessages } = useCollection<ChatMessage>(chatMessagesQuery);
 
   // --- computed views ---
