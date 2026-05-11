@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
   FolderPlus, 
@@ -20,19 +20,18 @@ import {
   Music,
   Archive,
   Plus,
-  Share2,
   Download,
   CheckCircle2,
   Loader2,
   Globe,
   MoreHorizontal,
   StarOff,
-  Clock,
   Home,
   X,
   History,
   Info,
-  Palette
+  Palette,
+  XCircle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -235,7 +234,7 @@ export default function SharedFilesPage() {
     };
     try {
         await addDoc(collection(firestore, 'cloud_folders'), newFolderData);
-        toast({ title: 'Directory synchronized' });
+        toast({ title: 'Folder created' });
         setIsNewFolderOpen(false);
         setNewFolderName('');
     } catch (e) {
@@ -253,12 +252,12 @@ export default function SharedFilesPage() {
     if (!file || !firestore || !storage || !auth || !user) return;
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast({ variant: 'destructive', title: 'Limit exceeded', description: 'Maximum 500MB per file.' });
+        toast({ variant: 'destructive', title: 'File too large', description: 'Maximum limit is 500MB.' });
         return;
     }
 
     if (companyUsedStorage + file.size > STORAGE_QUOTA_BYTES) {
-        toast({ variant: 'destructive', title: 'Quota reached', description: '2GB organizational limit reached.' });
+        toast({ variant: 'destructive', title: 'Storage full', description: 'Your team reached the 2GB limit.' });
         return;
     }
 
@@ -286,9 +285,9 @@ export default function SharedFilesPage() {
         };
 
         await addDoc(collection(firestore, 'cloud_files'), newFileData);
-        toast({ title: 'Asset synchronized' });
+        toast({ title: 'File uploaded' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Sync failure' });
+        toast({ variant: 'destructive', title: 'Upload failed' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -339,9 +338,9 @@ export default function SharedFilesPage() {
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, collectionName, item.id));
-        toast({ title: 'Purged permanently' });
+        toast({ title: 'Deleted forever' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Purge blocked' });
+        toast({ variant: 'destructive', title: 'Delete blocked' });
     }
   };
 
@@ -362,7 +361,7 @@ export default function SharedFilesPage() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Opening Cloud Workspace" />;
+  if (isUserLoading) return <FullScreenLoader text="Loading your files" />;
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
@@ -443,30 +442,30 @@ export default function SharedFilesPage() {
                   active={activeTab === 'all'} 
                   onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }} 
                   icon={<Globe className="h-4 w-4" />} 
-                  label="Company Hub" 
+                  label="Team home" 
                 />
                 <SidebarItem 
                   active={activeTab === 'favorites'} 
                   onClick={() => setActiveTab('favorites')} 
                   icon={<Star className="h-4 w-4" />} 
-                  label="Pinned Assets" 
+                  label="Starred files" 
                 />
                 <SidebarItem 
                   active={activeTab === 'trash'} 
                   onClick={() => setActiveTab('trash')} 
                   icon={<Trash2 className="h-4 w-4" />} 
-                  label="Trash Bin" 
+                  label="Trash" 
                 />
               </nav>
             </div>
 
             <div className="space-y-1">
-                <h4 className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Management</h4>
+                <h4 className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Options</h4>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-semibold text-xs text-slate-500 hover:text-slate-900">
-                    <History className="h-4 w-4" /> Recent Activity
+                    <History className="h-4 w-4" /> Activity
                 </Button>
                 <Button variant="ghost" className="w-full justify-start h-9 rounded-lg gap-3 font-semibold text-xs text-slate-500 hover:text-slate-900" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4" /> New Directory
+                    <FolderPlus className="h-4 w-4" /> New folder
                 </Button>
             </div>
           </div>
@@ -475,7 +474,7 @@ export default function SharedFilesPage() {
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-[9px] font-bold text-slate-400">
-                        <span>Shared Quota</span>
+                        <span>Team storage</span>
                         <span className={cn(storagePercentage > 90 ? "text-red-500" : "text-slate-900")}>{Math.round(storagePercentage)}%</span>
                     </div>
                     <Progress value={storagePercentage} className={cn("h-1 bg-slate-100", storagePercentage > 90 && "[&>div]:bg-red-500")} />
@@ -490,8 +489,8 @@ export default function SharedFilesPage() {
                         <AvatarFallback className="text-[10px] font-bold bg-blue-50 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.businessName || 'Shared Workspace'}</p>
-                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Corporate Storage</p>
+                        <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.businessName || 'Team drive'}</p>
+                        <p className="text-[8px] font-bold text-slate-400 leading-none mt-0.5">Company space</p>
                     </div>
                 </div>
             </div>
@@ -530,7 +529,7 @@ export default function SharedFilesPage() {
               <div className="relative group/search hidden md:block w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input 
-                  placeholder="Find assets..." 
+                  placeholder="Search files..." 
                   className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -557,17 +556,17 @@ export default function SharedFilesPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="h-9 px-4 rounded-xl font-bold text-xs gap-2">
-                    <Plus className="h-3.5 w-3.5" /> Sync Asset
+                    <Plus className="h-3.5 w-3.5" /> Add file
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
-                    <FolderPlus className="h-4 w-4 text-blue-500" /> New Folder
+                    <FolderPlus className="h-4 w-4 text-blue-500" /> New folder
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
                   <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer relative">
                     <Upload className="h-4 w-4 text-primary" /> 
-                    Sync File
+                    Upload file
                     <input 
                       type="file" 
                       className="absolute inset-0 opacity-0 cursor-pointer" 
@@ -594,8 +593,8 @@ export default function SharedFilesPage() {
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 leading-none">Shared Workspace Empty</h3>
-                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Synchronize your first asset to the organizational drive to begin collaboration.</p>
+                    <h3 className="text-xl font-bold text-slate-900 leading-none">No files found</h3>
+                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Upload a file or create a folder to get started with your team.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -646,8 +645,8 @@ export default function SharedFilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Synchronizing Asset</p>
-                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Uploading to Shared Workspace...</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading...</p>
+                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Adding to team space...</p>
                     </div>
                 </div>
                 <span className="text-xs font-bold tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -663,14 +662,14 @@ export default function SharedFilesPage() {
                     <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New Directory</DialogTitle>
+                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New folder</DialogTitle>
                     <DialogDescription className="text-slate-400 font-semibold text-xs mt-1">
-                        Organize team content into shared organizational units.
+                        Create a space for your team's files.
                     </DialogDescription>
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Directory Name</Label>
+                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder name</Label>
                 <Input 
                     autoFocus
                     placeholder="e.g. Project Assets" 
@@ -683,7 +682,7 @@ export default function SharedFilesPage() {
             <DialogFooter className="gap-2">
                 <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
                 <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
-                    Create Folder
+                    Create folder
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -729,7 +728,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             {folder.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
-                            {folder.isFavorite ? 'Unpin asset' : 'Pin to hub'}
+                            {folder.isFavorite ? 'Remove from starred' : 'Add to starred'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
@@ -743,7 +742,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Delete permanently
+                            <Trash2 className="h-3 w-3" /> Delete forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -761,7 +760,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                     <div className="space-y-0.5">
                         <p className="text-sm font-bold text-slate-900 leading-none">{folder.name}</p>
                         <div className="flex items-center gap-2">
-                             <span className="text-[10px] font-semibold text-slate-400">Synced by {folder.ownerName}</span>
+                             <span className="text-[10px] font-semibold text-slate-400">Added by {folder.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -785,7 +784,7 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-slate-900 truncate leading-none mb-1.5 tracking-tight">{folder.name}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Directory</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Folder</p>
                         </div>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50">
@@ -821,10 +820,10 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3 w-3 text-amber-500" /> : <Star className="h-3 w-3 text-amber-500" />}
-                            {file.isFavorite ? 'Unpin asset' : 'Pin to hub'}
+                            {file.isFavorite ? 'Remove from starred' : 'Add to starred'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
-                            <Download className="h-3 w-3 text-slate-400" /> Download local
+                            <Download className="h-3 w-3 text-slate-400" /> Download
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
@@ -838,7 +837,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPermanentDelete(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700">
-                            <Trash2 className="h-3 w-3" /> Delete permanently
+                            <Trash2 className="h-3 w-3" /> Delete forever
                         </DropdownMenuItem>
                     </>
                 )}
@@ -858,7 +857,7 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-semibold text-slate-400">{formatSize(file.size)}</span>
                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[10px] font-semibold text-primary">Synced by {file.ownerName}</span>
+                            <span className="text-[10px] font-semibold text-primary">Added by {file.ownerName}</span>
                         </div>
                     </div>
                 </div>
