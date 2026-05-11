@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -8,10 +7,8 @@ import {
   Search, 
   File, 
   Folder, 
-  MoreVertical, 
   Star, 
   Trash2, 
-  Clock, 
   LayoutGrid, 
   List as ListIcon,
   ChevronRight,
@@ -21,19 +18,12 @@ import {
   Video,
   Music,
   Archive,
-  ArrowLeft,
-  Filter,
   Plus,
   Share2,
   Download,
-  Info,
   CheckCircle2,
-  AlertTriangle,
   Loader2,
-  User as UserIcon,
-  Recent,
   Globe,
-  Settings,
   MoreHorizontal,
   StarOff
 } from 'lucide-react';
@@ -51,11 +41,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useStorage, useAuth } from '@/firebase';
-import { collection, query, where, orderBy, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { CloudFile, CloudFolder, AppUser } from '@/lib/types';
+import type { CloudFile, CloudFolder } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +56,8 @@ import {
     DialogHeader, 
     DialogTitle, 
     DialogDescription,
-    DialogFooter 
+    DialogFooter,
+    DialogClose 
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -89,7 +81,7 @@ export default function RiverFilesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
 
-  // Multi-tenant isolation
+  // Multi-tenant isolation - Shared across company
   const companyId = user?.companyId || 'unassigned';
 
   // --- Data Queries ---
@@ -377,7 +369,7 @@ export default function RiverFilesPage() {
                   </button>
                   {currentFolderPath.map((folder, idx) => (
                       <React.Fragment key={folder.id}>
-                          <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
+                          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
                           <button 
                               onClick={() => { setActiveTab('all'); setCurrentFolderId(folder.id); }}
                               className={cn(
