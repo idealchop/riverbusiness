@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -34,7 +35,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
 
-    const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'users'), where('role', '==', 'User')) : null, [firestore, isAdmin]);
+    // REMOVED: where('role', '==', 'User') filter to ensure all clients (User/Admin) show up
+    const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'users')) : null, [firestore, isAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
     const unclaimedProfilesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'unclaimedProfiles') : null, [firestore, isAdmin]);
@@ -102,7 +104,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [allDeliveries]);
 
     const stats = useMemo(() => {
-        const totalClients = (appUsers?.length || 0) + (unclaimedProfiles?.length || 0);
+        // Exclude system admin from client count for accuracy
+        const activeClients = appUsers?.filter(u => u.email !== 'admin@riverph.com').length || 0;
+        const totalClients = activeClients + (unclaimedProfiles?.length || 0);
         const activeRefills = refillRequests?.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length || 0;
 
         return [

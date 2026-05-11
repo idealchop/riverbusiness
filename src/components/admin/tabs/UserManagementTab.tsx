@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -124,7 +125,9 @@ export function UserManagementTab({
     }, [refillRequests]);
 
     const filteredUsers = useMemo(() => {
-        const allUsers = appUsers || [];
+        // Exclude system super admin from client view
+        const allUsers = (appUsers || []).filter(u => u.email !== 'admin@riverph.com');
+        
         if (!localSearchTerm) return allUsers;
         return allUsers.filter(user =>
             user.clientId?.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
