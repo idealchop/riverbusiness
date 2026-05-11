@@ -77,7 +77,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     if (!editor || !storage || !auth?.currentUser) return;
 
     if (!file.type.startsWith('image/')) {
-        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop or paste an image file.' });
+        toast({ variant: 'destructive', title: 'Invalid file', description: 'Please drop or paste an image file.' });
         return;
     }
 
@@ -245,6 +245,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                 .insertContent(combinedHtml)
                 .run();
 
+              // Selection should be at the end of inserted content. Capture current position.
               const newTo = editor.state.selection.to;
 
               setAiPreview({ 
@@ -254,7 +255,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                   to: newTo
               });
 
-              toast({ title: 'AI Suggestion applied' });
+              toast({ title: 'AI suggestion applied' });
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
               toast({ title: 'Content generated' });
@@ -283,13 +284,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         .run();
         
       setAiPreview(null);
-      toast({ title: 'AI Changes reverted' });
+      toast({ title: 'AI changes reverted' });
   };
 
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
       // Remove the original (struck-through) part and just keep the suggested text
+      // We explicitly insert the plain text to ensure all marks from the diff view are purged
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
@@ -297,7 +299,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         .run();
 
       setAiPreview(null);
-      toast({ title: 'AI Changes accepted' });
+      toast({ title: 'AI changes accepted' });
   };
 
   if (!editor) return null;
@@ -393,7 +395,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                   <div className="w-full px-2 py-1.5 flex items-center gap-1.5 animate-in slide-in-from-top-2 duration-300">
                       <div className="h-px flex-1 bg-slate-100" />
                       <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
-                      <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
+                      <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
                       <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
                       <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue" onClick={() => callAiAssistant('continue')} />
                       <div className="h-px flex-1 bg-slate-100" />
