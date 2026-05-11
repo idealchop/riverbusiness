@@ -295,7 +295,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
         .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike')
+        .unsetMark('strike') // Ensure the new text is not struck through
         .run();
 
       setAiPreview(null);
