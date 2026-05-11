@@ -17,6 +17,10 @@ service cloud.firestore {
       );
     }
 
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
     // --- GLOBAL RULES ---
 
     match /{document=**} {
@@ -25,11 +29,31 @@ service cloud.firestore {
 
     // --- USER PROFILES & DIRECTORY ---
 
-    match /users/{allPaths=**} {
-      // Unrestricted access for all signed-in members to facilitate collaboration and presence
-      allow read, write: if isAuthenticated();
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
     }
     
+    match /users/{allPaths=**} {
+      allow read: if isAuthenticated();
+    }
+    
+    // --- CLOUD STORAGE APP (FILES & FOLDERS) ---
+
+    match /cloud_files/{fileId} {
+      // Users can manage their own company's files
+      allow read, write: if isAuthenticated() && (
+        resource == null || 
+        resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+      );
+    }
+
+    match /cloud_folders/{folderId} {
+      allow read, write: if isAuthenticated() && (
+        resource == null || 
+        resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+      );
+    }
+
     // --- INVITATIONS & ONBOARDING ---
 
     match /unclaimedProfiles/{allPaths=**} {
@@ -49,8 +73,6 @@ service cloud.firestore {
     // --- COLLABORATION PLATFORM ---
 
     match /collaboration_pages/{allPaths=**} {
-      // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, organize or delete any page
-      // Use broad recursive match to avoid permission issues on nested structures like 'presence'
       allow read, write: if isAuthenticated();
     }
     

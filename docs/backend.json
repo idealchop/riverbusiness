@@ -15,6 +15,7 @@
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
         "totalConsumptionLiters": { "type": "number" },
+        "usedStorageBytes": { "type": "number", "description": "Current storage consumption in bytes." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"] },
         "lastLogin": { "type": "string", "format": "date-time" },
         "role": { "type": "string", "enum": ["Admin", "User"] },
@@ -24,51 +25,46 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "onboardingComplete": { "type": "boolean" },
         "plan": { "type": "object" },
-        "customPlanDetails": { "type": "object" },
-        "hrProfile": {
-            "type": "object",
-            "properties": {
-                "firstName": { "type": "string" },
-                "lastName": { "type": "string" },
-                "employeeNumber": { "type": "string", "description": "Unique auto-generated employee ID." },
-                "salaryType": { "type": "string", "enum": ["daily", "weekly", "monthly", "bimonthly"] },
-                "rate": { "type": "number" },
-                "startDate": { "type": "string", "format": "date" },
-                "position": { "type": "string" },
-                "department": { "type": "string" }
-            }
-        }
+        "customPlanDetails": { "type": "object" }
       },
       "required": ["id", "name", "email", "role", "createdAt"]
     },
-    "CollabWorkspace": {
-        "title": "CollabWorkspace",
+    "CloudFile": {
+        "title": "CloudFile",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
-            "companyId": { "type": "string" },
             "name": { "type": "string" },
-            "createdBy": { "type": "string" },
-            "createdAt": { "type": "string", "format": "date-time" }
+            "type": { "type": "string", "description": "MIME type" },
+            "size": { "type": "number", "description": "Size in bytes" },
+            "url": { "type": "string" },
+            "folderId": { "type": "string", "description": "Parent folder ID or null for root" },
+            "ownerId": { "type": "string" },
+            "companyId": { "type": "string" },
+            "isFavorite": { "type": "boolean" },
+            "isTrashed": { "type": "boolean" },
+            "trashedAt": { "type": "string", "format": "date-time" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "updatedAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["companyId", "name", "createdBy"]
+        "required": ["name", "type", "size", "url", "ownerId", "companyId"]
     },
-    "CollabPage": {
-        "title": "CollabPage",
+    "CloudFolder": {
+        "title": "CloudFolder",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
+            "name": { "type": "string" },
+            "parentId": { "type": "string", "description": "Parent folder ID or null for root" },
+            "ownerId": { "type": "string" },
             "companyId": { "type": "string" },
-            "workspaceId": { "type": "string" },
-            "parentId": { "type": "string", "description": "Parent page ID for nested structure." },
-            "title": { "type": "string" },
-            "icon": { "type": "string" },
-            "coverImage": { "type": "string" },
-            "content": { "type": "object", "description": "JSON representation of the TipTap document." },
-            "createdBy": { "type": "string" },
-            "createdAt": { "type": "string", "format": "date-time" }
+            "isFavorite": { "type": "boolean" },
+            "isTrashed": { "type": "boolean" },
+            "trashedAt": { "type": "string", "format": "date-time" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "updatedAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["companyId", "workspaceId", "title", "createdBy"]
+        "required": ["name", "ownerId", "companyId"]
     }
   },
   "auth": {
@@ -79,13 +75,13 @@
       "schema": { "$ref": "#/entities/AppUser" },
       "description": "Stores user and employee profile information."
     },
-    "/collaboration_workspaces/{workspaceId}": {
-        "schema": { "$ref": "#/entities/CollabWorkspace" },
-        "description": "Organizational workspaces for document collaboration."
+    "/cloud_files/{fileId}": {
+        "schema": { "$ref": "#/entities/CloudFile" },
+        "description": "Metadata for files stored in cloud storage."
     },
-    "/collaboration_pages/{pageId}": {
-        "schema": { "$ref": "#/entities/CollabPage" },
-        "description": "Individual collaborative pages containing blocks of content."
+    "/cloud_folders/{folderId}": {
+        "schema": { "$ref": "#/entities/CloudFolder" },
+        "description": "Folder structures for organizational storage."
     }
   }
 }

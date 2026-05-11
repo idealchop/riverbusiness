@@ -12,6 +12,7 @@ export interface AppUser {
     contactNumber?: string;
     notificationEmails?: string[];
     totalConsumptionLiters: number; 
+    usedStorageBytes?: number; // Quota tracking
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     role: 'Admin' | 'User';
@@ -40,22 +41,49 @@ export interface AppUser {
     supportPhotoURL?: string;
 }
 
+export interface CloudFile {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    folderId: string | null;
+    ownerId: string;
+    companyId: string;
+    isFavorite: boolean;
+    isTrashed: boolean;
+    trashedAt?: any;
+    createdAt: any;
+    updatedAt: any;
+}
+
+export interface CloudFolder {
+    id: string;
+    name: string;
+    parentId: string | null;
+    ownerId: string;
+    companyId: string;
+    isFavorite: boolean;
+    isTrashed: boolean;
+    trashedAt?: any;
+    createdAt: any;
+    updatedAt: any;
+}
+
 export interface HREmployeeProfile {
     firstName: string;
     lastName: string;
-    employeeNumber: string; // Auto-generated ID: EMP-YYYY-XXXX
+    employeeNumber: string; 
     salaryType: 'daily' | 'weekly' | 'monthly' | 'bimonthly';
     rate: number;
     startDate: string;
     position: string;
     department: string;
     status: 'Active' | 'Terminated' | 'On Leave';
-    // Philippine Statutory Benefits
     sssNumber?: string;
     philhealthNumber?: string;
     pagibigNumber?: string;
     tinNumber?: string;
-    // Recurring Deduction Amounts
     sssDeduction?: number;
     philhealthDeduction?: number;
     pagibigDeduction?: number;
@@ -78,7 +106,7 @@ export interface CollabPage {
     title: string;
     icon?: string;
     coverImage?: string;
-    content?: any; // TipTap JSON
+    content?: any; 
     createdBy: string;
     createdAt: any;
     updatedAt?: any;
@@ -96,11 +124,11 @@ export interface HRAttendanceLog {
     companyId: string;
     employeeId: string;
     employeeName: string;
-    date: string; // yyyy-MM-dd
+    date: string; 
     timeIn: any;
     timeOut?: any;
     totalMinutes?: number;
-    action?: 'IN' | 'OUT'; // for session state tracking
+    action?: 'IN' | 'OUT'; 
     gps_lat?: number;
     gps_long?: number;
     validation_status: 'Valid' | 'Invalid';

@@ -1,71 +1,67 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
 
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
     function isAdmin() {
-      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
-    // --- ADMIN-SPECIFIC WRITE RULES ---
+    // --- CLOUD STORAGE APP RULES ---
+    
+    match /cloud_storage/{companyId}/{fileName} {
+      // Strict company-level isolation for business files
+      allow read, write: if isAuthenticated() && 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyId == companyId;
+    }
 
-    // Rule for admins uploading delivery proofs or sanitation reports on behalf of users.
+    // --- EXISTING RULES ---
+
     match /admin_uploads/{adminId}/{path=**} {
       allow write: if request.auth.uid == adminId && isAdmin();
     }
 
-    // Rule for admins uploading contracts for users.
     match /userContracts/{userId}/{fileName} {
       allow write: if isAdmin();
     }
     
-    // Rule for admins managing water station documents (agreements, compliance).
     match /stations/{stationId}/{path=**} {
         allow write: if isAdmin();
     }
 
-    // --- USER-SPECIFIC WRITE RULES ---
-
-    // Users can upload their own profile photo.
     match /users/{userId}/profile/{fileName} {
       allow write: if request.auth.uid == userId;
     }
 
-    // Admin can upload their support profile photo.
     match /users/{userId}/support_profile/{fileName} {
       allow write: if request.auth.uid == userId && isAdmin();
     }
 
-    // Users can upload their own payment proofs.
     match /users/{userId}/payments/{fileName} {
        allow write: if request.auth.uid == userId;
     }
     
-    // Users can upload their own top-up proofs.
     match /users/{userId}/topup_proofs/{fileName} {
         allow write: if request.auth.uid == userId;
     }
 
-    // Rule for both users and admins to upload chat attachments.
     match /chats/{userId}/{fileName} {
         allow write: if request.auth.uid == userId || isAdmin();
     }
 
-    // Rule for collab document images
     match /collab_images/{userId}/{fileName} {
       allow write: if request.auth.uid == userId;
     }
     
-    // --- READ RULES ---
-
-    // Allow authenticated users to read from any of these paths.
-    // This covers viewing profile photos, proofs, reports, contracts etc.
     match /{path=**} {
       allow read: if request.auth != null;
     }
 
-    // Public assets for login/marketing pages are readable by anyone.
     match /Sales Portal/{allPaths=**} {
       allow read;
     }
