@@ -237,22 +237,20 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       if (data && data.suggestedText) {
           if (selectedText) {
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
-              const prevDocSize = editor.state.doc.content.size;
               
               editor.chain()
                 .focus()
                 .deleteRange(from, to)
-                .insertContentAt(from, combinedHtml)
+                .insertContent(combinedHtml)
                 .run();
 
-              const currentDocSize = editor.state.doc.content.size;
-              const actualInsertedLength = currentDocSize - (prevDocSize - (to - from));
+              const newTo = editor.state.selection.to;
               
               setAiPreview({ 
                   text: data.suggestedText, 
                   originalText: selectedText,
                   from: from, 
-                  to: from + actualInsertedLength
+                  to: newTo
               });
 
               toast({ title: 'AI suggestion applied' });
@@ -291,6 +289,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       if (!editor || !aiPreview) return;
       
       // Atomic transaction: Delete the whole comparison block and insert only the clean version
+      // This effectively "removes the old version" and keeps only the new one
       editor.chain()
         .focus()
         .deleteRange(aiPreview.from, aiPreview.to)
