@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useToast } from "@/hooks/use-toast"
@@ -10,7 +9,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-import { CheckCircle, AlertTriangle } from "lucide-react"
+import { CheckCircle2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function Toaster() {
@@ -19,11 +18,18 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, variant, ...props }) {
-        const Icon = variant === "destructive" ? AlertTriangle : CheckCircle;
+        const isDestructive = variant === "destructive";
+        const Icon = isDestructive ? AlertCircle : CheckCircle2;
+        
         return (
           <Toast key={id} variant={variant} {...props}>
-            <div className="flex items-start gap-3">
-              <Icon className="h-6 w-6 mt-0.5 text-primary-foreground" />
+            <div className="flex items-start gap-4">
+              <div className={cn(
+                  "p-2 rounded-xl mt-0.5 shadow-sm",
+                  isDestructive ? "bg-red-50 text-red-600" : "bg-blue-50 text-primary"
+              )}>
+                <Icon className="h-5 w-5" />
+              </div>
               <div className="grid gap-1">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && (

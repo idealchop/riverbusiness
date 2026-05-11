@@ -62,7 +62,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const handleCreatePage = useCallback(async (parentId: string | null = null) => {
     if (!firestore || !authUser || !companyId) {
-        toast({ title: "Initializing", description: "Please wait a moment while the workspace prepares." });
+        toast({ title: "Initializing", description: "Please wait a moment while the workspace prepares your environment." });
         return;
     }
 
@@ -84,7 +84,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     addDoc(pagesCol, newPage)
       .then((docRef) => {
         router.push(`/workspace/${docRef.id}`);
-        toast({ title: 'New Document Created' });
+        toast({ title: 'New document created', description: 'Your clean canvas is ready. Start capturing your organizational knowledge now.' });
       })
       .catch(async (err) => {
         const permissionError = new FirestorePermissionError({
@@ -93,7 +93,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             requestResourceData: newPage
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        toast({ variant: 'destructive', title: 'Creation Failed' });
+        toast({ variant: 'destructive', title: 'Creation failed', description: 'Could not create the document due to a security or connection error.' });
       });
   }, [firestore, authUser, companyId, router, toast]);
 
@@ -109,10 +109,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         if (pathname.includes(pageId)) {
             router.push('/workspace');
         }
-        toast({ title: 'Moved to Trash' });
+        toast({ title: 'Moved to trash', description: 'The document has been archived in the trash bin and can be restored within 30 days.' });
     } catch (error) {
         console.error("Error moving to trash:", error);
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action failed', description: 'The system encountered an error while trying to archive this document.' });
     }
   }, [firestore, pathname, router, toast]);
 
@@ -124,10 +124,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             isTrashed: false,
             trashedAt: null
         });
-        toast({ title: 'Document Restored' });
+        toast({ title: 'Document restored', description: 'The document has been successfully moved back to your active workspace.' });
     } catch (error) {
         console.error("Error restoring page:", error);
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action failed', description: 'Failed to restore the document from the trash bin.' });
     }
   }, [firestore, toast]);
 
@@ -135,10 +135,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
-        toast({ title: 'Deleted Permanently' });
+        toast({ title: 'Purged permanently', description: 'The document and all associated data have been permanently erased from the system.' });
     } catch (error) {
         console.error("Error deleting permanently:", error);
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action failed', description: 'Could not permanently delete the document at this time.' });
     }
   }, [firestore, toast]);
 
@@ -147,9 +147,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isFavorite });
-        toast({ title: isFavorite ? 'Added to Favorites' : 'Removed from Favorites' });
+        toast({ 
+            title: isFavorite ? 'Added to favorites' : 'Removed from favorites', 
+            description: isFavorite 
+                ? 'This document is now pinned to your favorites sidebar for quick access.' 
+                : 'The document has been removed from your favorites list.' 
+        });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action failed', description: 'Your preference could not be updated due to a synchronization issue.' });
     }
   }, [firestore, toast]);
 
@@ -230,7 +235,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   };
 
   if (!isMounted || isUserLoading || !authUser || isLoggingOut) {
-    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Initializing Workspace"} />;
+    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Initializing workspace"} />;
   }
 
   return (
@@ -249,12 +254,12 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-4">
              {!isSidebarOpen && (
                 <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="h-8 w-8 rounded-lg">
-                    <Menu className="h-4 w-4" />
+                    <Menu className="h-5 w-5" />
                 </Button>
              )}
              <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Collaborative Workspace
+                    Collaborative workspace
                 </span>
              </div>
           </div>

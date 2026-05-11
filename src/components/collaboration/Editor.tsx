@@ -89,10 +89,10 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         setUploadProgress(progress);
       });
       editor.chain().focus().setImage({ src: url }).run();
-      toast({ title: 'Image attached' });
+      toast({ title: 'Image attached', description: 'The visual asset has been successfully integrated into your document.' });
     } catch (error) {
       console.error('Image upload failed:', error);
-      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image.' });
+      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image to the document.' });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -202,7 +202,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     const context = editor.getText();
 
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Selection required', description: 'Please highlight some text first.' });
+        toast({ variant: 'destructive', title: 'Selection required', description: 'Please highlight some text first so the AI knows what to improve.' });
         return;
     }
 
@@ -237,7 +237,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       if (data && data.suggestedText) {
           if (selectedText) {
               const originalFrom = from;
-              // Wrap original in <s> tags and append suggested text for comparison
+              // Comparison mode: wrap original in <s> tags and append suggested text
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
               editor.chain()
@@ -255,10 +255,10 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                   to: currentTo
               });
 
-              toast({ title: 'AI suggestion applied' });
+              toast({ title: 'AI suggestion applied', description: 'Review the comparison in your document and choose to accept or discard the changes.' });
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
-              toast({ title: 'Content generated' });
+              toast({ title: 'Content generated', description: 'New text has been added at the bottom of your document.' });
           }
       } else {
           throw new Error('The AI was unable to generate a response.');
@@ -279,16 +279,17 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       
       const { from, to, originalText } = aiPreview;
       
+      // Select the entire comparison range and replace with clean original
       editor.chain()
         .focus()
         .setTextSelection({ from, to })
         .deleteSelection()
         .insertContentAt(from, originalText)
-        .unsetMark('strike')
+        .unsetMark('strike') // Ensure no leftover strike
         .run();
         
       setAiPreview(null);
-      toast({ title: 'Changes discarded' });
+      toast({ title: 'Changes discarded', description: 'The original version of your text has been restored successfully.' });
   };
 
   const acceptAiSuggestion = () => {
@@ -296,17 +297,17 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       
       const { from, to, text } = aiPreview;
       
-      // Atomic "Google Docs" replacement: Remove entire comparison and insert clean new text
+      // Select the entire comparison range and replace with clean AI text
       editor.chain()
         .focus()
         .setTextSelection({ from, to })
         .deleteSelection()
-        .unsetMark('strike')
-        .insertContent(text)
+        .unsetMark('strike') // Critical: Purge the strike formatting
+        .insertContentAt(from, text)
         .run();
 
       setAiPreview(null);
-      toast({ title: 'AI suggestion accepted' });
+      toast({ title: 'AI suggestion accepted', description: 'The document has been updated with the improved version. The old text has been purged.' });
   };
 
   if (!editor) return null;
@@ -432,7 +433,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       {aiPreview && (
           <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500">
-              <Card className="border-none shadow-3xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6">
+              <Card className="border-none shadow-[0_30px_90px_rgba(0,0,0,0.2)] rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6 border border-white/10">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-full bg-primary/20 text-primary">
                         <Sparkles className="h-4 w-4" />
