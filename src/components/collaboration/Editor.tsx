@@ -243,7 +243,7 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
               editor.chain()
                 .focus()
                 .deleteRange(from, to)
-                .insertContentAt(originalFrom, combinedHtml)
+                .insertContent(combinedHtml)
                 .run();
 
               const currentTo = editor.state.selection.to;
@@ -277,12 +277,13 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Select the entire comparison range and restore original text
+      const { from, to, originalText } = aiPreview;
+      
       editor.chain()
         .focus()
-        .setTextSelection({ from: aiPreview.from, to: aiPreview.to })
+        .setTextSelection({ from, to })
         .deleteSelection()
-        .insertContentAt(aiPreview.from, aiPreview.originalText)
+        .insertContentAt(from, originalText)
         .unsetMark('strike')
         .run();
         
@@ -293,13 +294,15 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
       
-      // Select the entire comparison range (<s>old</s> new) and replace it ONLY with the new text
+      const { from, to, text } = aiPreview;
+      
+      // Atomic "Google Docs" replacement: Remove entire comparison and insert clean new text
       editor.chain()
         .focus()
-        .setTextSelection({ from: aiPreview.from, to: aiPreview.to })
+        .setTextSelection({ from, to })
         .deleteSelection()
-        .insertContentAt(aiPreview.from, aiPreview.text)
-        .unsetMark('strike') // Ensure no leftover formatting from the old text range
+        .insertContentAt(from, text)
+        .unsetMark('strike')
         .run();
 
       setAiPreview(null);

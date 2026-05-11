@@ -52,6 +52,7 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -130,7 +131,7 @@ export default function PageEditor() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
   
-  // Live Typing States
+  // Live typing states
   const [localIsTyping, setLocalIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -403,7 +404,7 @@ export default function PageEditor() {
           </div>
       )}
 
-      {/* Typing Sidebar Indicator - Minimal vertical line */}
+      {/* Typing sidebar indicator */}
       <div className="fixed left-0 top-[20%] bottom-[20%] w-1.5 z-30 pointer-events-none flex flex-col justify-center gap-2">
           {typingCollaborators.map((c, i) => (
               <TooltipProvider key={c.id}>
