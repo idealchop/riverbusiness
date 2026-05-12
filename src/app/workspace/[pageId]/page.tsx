@@ -113,6 +113,7 @@ const EMOJI_LIST = [
   { char: '💳', keywords: 'credit card' },
   { char: '🏠', keywords: 'home house' },
   { char: '🏪', keywords: 'store shop' },
+  { char: '🏢', keywords: 'building office' },
   { char: '🏭', keywords: 'factory industrial' },
   { char: '🏗️', keywords: 'construction' },
   { char: '🚜', keywords: 'tractor' },
@@ -433,7 +434,7 @@ function PageEditorContent() {
       return (
           <div className="h-full flex flex-col items-center justify-center bg-white space-y-4 animate-in fade-in duration-500">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Syncing changes...</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Syncing Changes...</p>
           </div>
       );
   }
@@ -448,14 +449,14 @@ function PageEditorContent() {
           <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
               <div className="flex items-center gap-3">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <p className="text-xs font-bold text-red-900 leading-none">This document is in the trash bin</p>
+                  <p className="text-xs font-bold text-red-900 leading-none">This Document Is In The Trash Bin</p>
               </div>
               <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50">
-                      <RotateCcw className="h-3 w-3" /> Restore document
+                      <RotateCcw className="h-3 w-3" /> Restore Document
                   </Button>
                   <Button variant="ghost" size="sm" className="h-8 rounded-xl text-red-400 font-bold text-[10px]" onClick={() => setIsDeleteDialogOpen(true)}>
-                      Delete permanently
+                      Delete Permanently
                   </Button>
               </div>
           </div>
@@ -565,7 +566,7 @@ function PageEditorContent() {
                 <button 
                     onClick={handleCreateSubpage}
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"
-                    title="Add subpage"
+                    title="Add Subpage"
                 >
                     <FilePlus className="h-4 w-4" />
                 </button>
@@ -587,7 +588,7 @@ function PageEditorContent() {
                 <button 
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
                     onClick={() => setIsDeleteDialogOpen(true)}
-                    title="Move to trash"
+                    title="Move To Trash"
                 >
                     <Trash2 className="h-4 w-4" />
                 </button>
@@ -598,7 +599,7 @@ function PageEditorContent() {
               <button 
                   className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
                   onClick={() => setIsDeleteDialogOpen(true)}
-                  title="Delete permanently"
+                  title="Delete Permanently"
               >
                   <Trash2 className="h-4 w-4" />
               </button>
@@ -614,7 +615,7 @@ function PageEditorContent() {
                     {!page.isTrashed && (
                         <div className="absolute bottom-6 right-8 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest border-none">
-                                <Palette className="mr-1.5 h-3.5 w-3.5" /> Change cover
+                                <Palette className="mr-1.5 h-3.5 w-3.5" /> Change Cover
                             </Button>
                             <Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest border-none text-red-600">
                                 <X className="mr-1.5 h-3.5 w-3.5" /> Remove
@@ -647,7 +648,7 @@ function PageEditorContent() {
                         <Popover onOpenChange={(open) => { if (!open) setEmojiSearch(''); }}>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
-                                    <Smile className="mr-1.5 h-3.5 w-3.5" /> Add icon
+                                    <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl">
@@ -681,7 +682,7 @@ function PageEditorContent() {
                     )}
                     {!page.coverImage && (
                         <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400 hover:bg-slate-50">
-                            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add cover
+                            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Add Cover
                         </Button>
                     )}
                 </div>
@@ -713,7 +714,7 @@ function PageEditorContent() {
         <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
-                {page.isTrashed ? 'Purge permanently?' : 'Delete document?'}
+                {page.isTrashed ? 'Purge Permanently?' : 'Delete Document?'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
               {page.isTrashed 
@@ -734,7 +735,7 @@ function PageEditorContent() {
                 }}
                 className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
             >
-                {page.isTrashed ? 'Confirm purge' : 'Move to trash'}
+                {page.isTrashed ? 'Confirm Purge' : 'Move To Trash'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
