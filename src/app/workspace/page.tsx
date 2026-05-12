@@ -69,14 +69,14 @@ export default function WorkspaceLandingPage() {
                     <LogoBlack className="h-20 w-20" />
                 </div>
                 
-                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none">
+                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-10">
                     Ready, when you are.
                 </h1>
 
-                <div className="relative w-full max-w-2xl mx-auto pt-8">
+                <div className="relative w-full max-w-2xl mx-auto">
                     <div className={cn(
-                      "relative bg-white rounded-3xl border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
-                      "shadow-sm ring-0 outline-none"
+                      "relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
+                      "shadow-none ring-0 outline-none"
                     )}>
                         <div className="flex items-end">
                             <textarea 
@@ -99,7 +99,7 @@ export default function WorkspaceLandingPage() {
                                     onClick={handleAskAi}
                                     disabled={!prompt.trim() || isProcessing}
                                     size="icon"
-                                    className="h-10 w-10 rounded-full shadow-sm active:scale-95 transition-all bg-slate-900 hover:bg-slate-800"
+                                    className="h-10 w-10 rounded-full shadow-none active:scale-95 transition-all bg-slate-900 hover:bg-slate-800"
                                 >
                                     {isProcessing ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -113,32 +113,32 @@ export default function WorkspaceLandingPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 max-w-xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
                 <Card 
                     onClick={handleNewDoc}
-                    className="border border-slate-100 shadow-none rounded-2xl bg-white group hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                    className="border border-slate-100 shadow-none rounded-[2rem] bg-white group hover:border-slate-200 transition-all duration-300 cursor-pointer active:scale-[0.98]"
                 >
-                    <CardContent className="p-5 space-y-4">
-                        <div className="h-10 w-10 rounded-xl bg-blue-50 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <CardContent className="p-6 flex flex-col items-start gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-900 flex items-center justify-center group-hover:scale-105 transition-transform">
                             <Plus className="h-5 w-5" />
                         </div>
                         <div className="space-y-0.5">
-                            <h3 className="text-base font-bold text-slate-900">New document</h3>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                            <h3 className="text-sm font-bold text-slate-900">New document</h3>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none">
                                 Start from a clean canvas
                             </p>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-none rounded-2xl bg-slate-900 text-white group hover:bg-slate-800 transition-all duration-500 cursor-pointer active:scale-[0.98]">
-                    <CardContent className="p-5 space-y-4">
-                        <div className="h-10 w-10 rounded-xl bg-white/10 text-primary-light flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Card className="border border-slate-100 shadow-none rounded-[2rem] bg-white group hover:border-slate-200 transition-all duration-300 cursor-pointer active:scale-[0.98]">
+                    <CardContent className="p-6 flex flex-col items-start gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-900 flex items-center justify-center group-hover:scale-105 transition-transform">
                             <Sparkles className="h-5 w-5" />
                         </div>
                         <div className="space-y-0.5">
-                            <h3 className="text-base font-bold">Knowledge base</h3>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                            <h3 className="text-sm font-bold text-slate-900">Knowledge base</h3>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none">
                                 Browse shared libraries
                             </p>
                         </div>
