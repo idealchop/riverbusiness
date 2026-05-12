@@ -12,8 +12,12 @@ const ChatbotInputSchema = z.object({
 });
 export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
 
+/**
+ * Handles the chatbot interaction with streaming support.
+ * Returns a StreamResponse containing an AsyncIterable of chunks.
+ */
 export async function chatbot(input: ChatbotInput) {
-  const { stream } = ai.generateStream({
+  return ai.generateStream({
     prompt: `You are a helpful assistant for the River Business app.
     The user is asking for help with their water consumption.
     Be concise and helpful.
@@ -26,6 +30,4 @@ export async function chatbot(input: ChatbotInput) {
       content: [{ text: m.content as string }],
     })),
   });
-
-  return stream.text;
 }

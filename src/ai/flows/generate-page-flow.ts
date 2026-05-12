@@ -2,17 +2,17 @@
 /**
  * @fileOverview A document generation AI agent.
  *
- * - generatePageContent - A function that streams generated document content.
+ * - generatePageContent - A function that returns a Genkit stream for document content.
  */
 
 import { ai } from '@/ai/genkit';
 
 /**
  * Generates structured document content based on a user prompt.
- * Returns an async iterable of strings.
+ * Returns a StreamResponse object from Genkit.
  */
 export async function generatePageContent(input: { prompt: string }) {
-  const { stream } = ai.generateStream({
+  return ai.generateStream({
     prompt: `You are an expert document architect. Your task is to generate a comprehensive, professional, and well-structured document based on the user's prompt.
     
     User Prompt: "${input.prompt}"
@@ -26,6 +26,4 @@ export async function generatePageContent(input: { prompt: string }) {
     Example Output:
     <h1>Project Roadmap</h1><p>The following phases outline the execution...</p><h2>Phase 1</h2><ul><li>Requirement gathering</li></ul>`,
   });
-
-  return stream.text;
 }

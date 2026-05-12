@@ -17,12 +17,14 @@ export async function POST(
 
   if (flowPath === 'chat') {
     try {
-      const textStream = await chatbot(json);
+      const { stream } = await chatbot(json);
       const responseStream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
-          for await (const chunk of (textStream as any)) {
-            controller.enqueue(encoder.encode(chunk));
+          for await (const chunk of stream) {
+            if (chunk.text) {
+              controller.enqueue(encoder.encode(chunk.text));
+            }
           }
           controller.close();
         },
@@ -39,12 +41,14 @@ export async function POST(
 
   if (flowPath === 'generate') {
     try {
-      const textStream = await generatePageContent(json);
+      const { stream } = await generatePageContent(json);
       const responseStream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
-          for await (const chunk of (textStream as any)) {
-            controller.enqueue(encoder.encode(chunk));
+          for await (const chunk of stream) {
+            if (chunk.text) {
+              controller.enqueue(encoder.encode(chunk.text));
+            }
           }
           controller.close();
         },
