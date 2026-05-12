@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, MailCheck } from 'lucide-react';
 import { useAuth } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from '@/components/ui/loader';
 import { Logo } from '@/components/icons';
@@ -53,9 +53,16 @@ function SignupContent() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
-      toast({ title: "Account created", description: "Taking you to your new workspace..." });
-      router.push('/onboarding');
+      // Create account and trigger verification
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await sendEmailVerification(userCredential.user);
+      
+      toast({ 
+        title: "Account created", 
+        description: "A verification email has been sent. Please check your inbox before activating your profile." 
+      });
+      
+      router.push('/verify-email');
     } catch (error: any) {
         let title = 'Sign up failed';
         let description = 'Could not create your account. Please try again.';
