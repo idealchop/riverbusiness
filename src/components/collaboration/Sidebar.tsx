@@ -19,7 +19,11 @@ import {
     History,
     FilePlus,
     X,
-    Share2
+    Share2,
+    Sparkles,
+    Zap,
+    Info,
+    ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +48,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+    DialogClose
+} from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -60,6 +75,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [pageToTrash, setPageToTrash] = useState<string | null>(null);
+  const [isAiUsageOpen, setIsAiUsageOpen] = useState(false);
 
   const toggleExpand = (e: React.MouseEvent, pageId: string) => {
     e.preventDefault();
@@ -287,18 +303,114 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         </div>
       </ScrollArea>
 
-      {/* Sidebar Footer */}
+      {/* Sidebar Footer - AI Usage */}
       <div className="p-4 mt-auto border-t bg-slate-50/50">
-        <div className="p-4 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-primary font-bold text-sm">
-                {user?.businessName?.charAt(0) || 'W'}
+        <button 
+            onClick={() => setIsAiUsageOpen(true)}
+            className="w-full p-4 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center gap-4 hover:border-primary/20 hover:shadow-md transition-all group text-left"
+        >
+            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                <Sparkles className="h-5 w-5" />
             </div>
-            <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900 truncate uppercase tracking-tighter">{user?.businessName}</p>
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-none mt-1">Enterprise workspace</p>
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AI Capacity</p>
+                    <span className="text-[9px] font-black text-primary">34%</span>
+                </div>
+                <Progress value={34} className="h-1 bg-slate-100" />
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-1.5 leading-none">
+                    34 / 100 Monthly Credits
+                </p>
             </div>
-        </div>
+        </button>
       </div>
+
+      <Dialog open={isAiUsageOpen} onOpenChange={setIsAiUsageOpen}>
+        <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
+            <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <Sparkles className="h-24 w-24" />
+                </div>
+                <DialogHeader className="relative z-10">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
+                            <Zap className="h-6 w-6 text-primary-light" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black tracking-tight uppercase">AI Engine Status</DialogTitle>
+                    </div>
+                    <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
+                        Enterprise Computational Resources
+                    </DialogDescription>
+                </DialogHeader>
+            </div>
+
+            <div className="p-8 space-y-8">
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Usage quota</Label>
+                            <Badge variant="outline" className="bg-blue-50 text-primary border-blue-100 font-black text-[10px] uppercase">Active</Badge>
+                        </div>
+                        <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 space-y-4 shadow-inner">
+                            <div className="flex items-baseline justify-between">
+                                <p className="text-4xl font-black text-slate-900 tabular-nums">34 <span className="text-lg text-slate-400">/ 100</span></p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Credits Used</p>
+                            </div>
+                            <Progress value={34} className="h-2 bg-white" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">System Limitations</h4>
+                        <div className="grid gap-3">
+                            <div className="flex items-start gap-4 group">
+                                <div className="p-2 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-primary transition-colors">
+                                    <History className="h-4 w-4" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-bold text-slate-900">Monthly Reset</p>
+                                    <p className="text-[10px] font-medium text-slate-400 leading-relaxed">Computational tokens reset on the 1st of every month at 00:00 UTC.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4 group">
+                                <div className="p-2 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-primary transition-colors">
+                                    <ShieldAlert className="h-4 w-4" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-bold text-slate-900">Safe Output Filter</p>
+                                    <p className="text-[10px] font-medium text-slate-400 leading-relaxed">AI drafting is strictly audited for corporate compliance and professional safety standards.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4 group">
+                                <div className="p-2 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-primary transition-colors">
+                                    <LayoutGrid className="h-4 w-4" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-bold text-slate-900">Batch Processing</p>
+                                    <p className="text-[10px] font-medium text-slate-400 leading-relaxed">Complex drafting requests may consume multiple credits based on the generated block count.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3 animate-pulse">
+                    <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-[10px] font-bold uppercase tracking-tight text-amber-800/80 leading-relaxed">
+                        Notice: You are currently on the base enterprise tier. Higher throughput tiers are available via the RiverPH sales portal.
+                    </p>
+                </div>
+            </div>
+
+            <DialogFooter className="p-8 pt-0 flex justify-center border-t border-slate-50 bg-slate-50/30">
+                <DialogClose asChild>
+                    <Button variant="ghost" className="rounded-xl h-12 px-10 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900">
+                        Dismiss Detail
+                    </Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!pageToTrash} onOpenChange={() => setPageToTrash(null)}>
         <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
