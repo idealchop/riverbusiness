@@ -55,19 +55,23 @@ export default function WorkspaceLandingPage() {
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50/30">
         <div className="max-w-4xl w-full space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="text-center space-y-8">
-                <div className="flex justify-center mb-4">
+            <div className="text-center space-y-4">
+                <div className="flex justify-center mb-8">
                     <LogoBlack className="h-20 w-20" />
                 </div>
                 
-                <h1 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
-                    Collaborative <span className="text-primary">Intelligence</span>
+                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none">
+                    Collaborative <span className="text-primary font-normal">Intelligence</span>
                 </h1>
+                
+                <p className="text-slate-400 font-medium text-lg">
+                  Ready, when you are. What do you need?
+                </p>
 
-                <div className="relative w-full max-w-3xl mx-auto pt-4">
+                <div className="relative w-full max-w-2xl mx-auto pt-8">
                     <div className={cn(
-                      "relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
-                      "focus-within:border-primary/40 focus-within:bg-white shadow-sm"
+                      "relative bg-white rounded-full border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
+                      "shadow-sm ring-0 outline-none"
                     )}>
                         <div className="flex items-end">
                             <textarea 
@@ -80,11 +84,11 @@ export default function WorkspaceLandingPage() {
                                         handleAskAi();
                                     }
                                 }}
-                                className="flex-1 bg-transparent border-none focus:ring-0 px-6 py-4 text-slate-600 font-normal text-base placeholder:text-slate-300 resize-none min-h-[56px] max-h-[200px]"
+                                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none px-6 py-4 text-slate-600 font-normal text-base placeholder:text-slate-300 resize-none min-h-[56px] max-h-[200px]"
                                 placeholder={SUGGESTIONS[placeholderIndex]}
                                 rows={1}
                             />
-                            <div className="pb-1.5 pr-2">
+                            <div className="pb-2 pr-2">
                                 <Button 
                                     onClick={handleAskAi}
                                     disabled={!prompt.trim() || isProcessing}
@@ -100,15 +104,10 @@ export default function WorkspaceLandingPage() {
                             </div>
                         </div>
                     </div>
-                    {!prompt && (
-                        <p className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 pointer-events-none">
-                            Powered by Genkit
-                        </p>
-                    )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-12">
                 <Card 
                     onClick={handleNewDoc}
                     className="border border-slate-100 shadow-none rounded-[2.5rem] bg-white group hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
