@@ -5,9 +5,10 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
-import { FullScreenLoader } from '@/components/ui/loader';
+import { FullScreenLoader, Loader2 } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ChevronRight, 
   Star, 
@@ -117,6 +118,37 @@ const EMOJI_LIST = [
   { char: '🚚', keywords: 'delivery truck' }
 ];
 
+function PageSkeleton() {
+  return (
+    <div className="min-h-full flex flex-col bg-white">
+      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-4 w-24 rounded" />
+          <Skeleton className="h-4 w-32 rounded" />
+        </div>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-8 w-8 rounded-lg" />
+        </div>
+      </div>
+      <div className="h-[30vh] w-full bg-slate-50 animate-pulse" />
+      <div className="max-w-4xl mx-auto px-8 pt-10 space-y-6 w-full">
+        <Skeleton className="h-12 w-12 rounded-2xl" />
+        <Skeleton className="h-12 w-3/4 rounded-xl" />
+        <div className="space-y-4 pt-4">
+          <Skeleton className="h-4 w-full rounded" />
+          <Skeleton className="h-4 w-full rounded" />
+          <Skeleton className="h-4 w-2/3 rounded" />
+          <Skeleton className="h-4 w-full rounded" />
+          <Skeleton className="h-4 w-5/6 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PageEditorContent() {
   const { pageId } = useParams();
   const router = useRouter();
@@ -214,7 +246,8 @@ function PageEditorContent() {
     if (!firestore || !pageId || !user || !userProfile) return;
 
     setLoading(true);
-    setPage(null);
+    // Don't clear page immediately to prevent flicker if switching pages
+    // setPage(null); 
     setParentPage(null);
     setIsSaving(false);
 
@@ -383,8 +416,8 @@ function PageEditorContent() {
       window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
   };
 
-  if (loading && !page) return <FullScreenLoader text="Opening document" />;
-  if (!page) return null;
+  if (loading && !page) return <PageSkeleton />;
+  if (!page) return <PageSkeleton />;
 
   return (
     <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700 relative">
@@ -688,7 +721,7 @@ function PageEditorContent() {
 
 export default function PageEditor() {
   return (
-    <Suspense fallback={<FullScreenLoader text="Opening document" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <PageEditorContent />
     </Suspense>
   );
