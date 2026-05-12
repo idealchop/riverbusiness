@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Sparkles, Loader2, ArrowUp } from 'lucide-react';
@@ -21,6 +21,7 @@ export default function WorkspaceLandingPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const { toast } = useToast();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Rotate suggestions
   useEffect(() => {
@@ -29,6 +30,14 @@ export default function WorkspaceLandingPage() {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  // Auto-expand textarea height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [prompt]);
 
   const handleNewDoc = () => {
     window.dispatchEvent(new CustomEvent('request-new-collab-page'));
@@ -70,11 +79,12 @@ export default function WorkspaceLandingPage() {
 
                 <div className="relative w-full max-w-2xl mx-auto pt-8">
                     <div className={cn(
-                      "relative bg-white rounded-full border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
+                      "relative bg-white rounded-3xl border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
                       "shadow-sm ring-0 outline-none"
                     )}>
                         <div className="flex items-end">
                             <textarea 
+                                ref={textareaRef}
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                                 disabled={isProcessing}
@@ -84,7 +94,7 @@ export default function WorkspaceLandingPage() {
                                         handleAskAi();
                                     }
                                 }}
-                                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none px-6 py-4 text-slate-600 font-normal text-base placeholder:text-slate-300 resize-none min-h-[56px] max-h-[200px]"
+                                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none px-6 py-4 text-slate-600 font-normal text-base placeholder:text-slate-300 resize-none min-h-[56px] overflow-hidden"
                                 placeholder={SUGGESTIONS[placeholderIndex]}
                                 rows={1}
                             />
