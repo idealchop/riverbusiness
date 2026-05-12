@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
@@ -53,7 +52,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
