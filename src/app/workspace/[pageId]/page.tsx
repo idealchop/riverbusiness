@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc, deleteField, Timestamp } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
@@ -32,14 +32,18 @@ import {
   XCircle,
   MousePointer2,
   Loader2,
-  Sparkles
+  Sparkles,
+  Lock,
+  Clock,
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, addHours, addDays } from 'date-fns';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -66,6 +70,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const EMOJI_LIST = [
   { char: '📄', keywords: 'document page file' },
@@ -289,10 +296,8 @@ function PageEditorContent() {
             }
         }
       } else {
-        // DOCUMENT DELETED OR REMOVED
         setIsDeleting(true); 
         setPage(null);
-        // Wait for React to unmount the complex Editor before pushing navigation
         setTimeout(() => {
             if (window.location.pathname.includes(pageId as string)) {
               router.push('/workspace');
@@ -421,11 +426,6 @@ function PageEditorContent() {
       if (!page) return;
       window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }));
   }
-
-  const handleShare = () => {
-      if (!page) return;
-      window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
-  };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
@@ -582,12 +582,10 @@ function PageEditorContent() {
                     <Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} />
                 </button>
                 
-                <button 
-                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"
-                    onClick={handleShare}
-                >
-                    <Share2 className="h-4 w-4" />
-                </button>
+                <SharePopover 
+                    page={page} 
+                    onUpdate={handleUpdateMeta} 
+                />
 
                 <button 
                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
@@ -746,6 +744,160 @@ function PageEditorContent() {
       </AlertDialog>
     </div>
   );
+}
+
+function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: Partial<CollabPage>) => Promise<void> }) {
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [hasCopied, setHasCopied] = useState(false);
+    const [isPasswordEnabled, setIsPasswordEnabled] = useState(!!page.sharePassword);
+    const [password, setPassword] = useState(page.sharePassword || '');
+    const { toast } = useToast();
+
+    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/${page.shareToken || page.id}` : '';
+
+    const handleTogglePublic = async (enabled: boolean) => {
+        setIsUpdating(true);
+        const shareToken = page.shareToken || Math.random().toString(36).substring(2, 15);
+        const updates: any = { isPublic: enabled };
+        if (enabled) updates.shareToken = shareToken;
+        else updates.shareToken = deleteField();
+        
+        await onUpdate(updates);
+        setIsUpdating(false);
+    };
+
+    const handleExpiryChange = async (value: string) => {
+        let expiresAt: any = deleteField();
+        const now = new Date();
+        if (value === '24h') expiresAt = Timestamp.fromDate(addHours(now, 24));
+        if (value === '7d') expiresAt = Timestamp.fromDate(addDays(now, 7));
+        await onUpdate({ expiresAt });
+    };
+
+    const togglePassword = async (enabled: boolean) => {
+        setIsPasswordEnabled(enabled);
+        if (!enabled) {
+            setPassword('');
+            await onUpdate({ sharePassword: deleteField() });
+        }
+    };
+
+    const savePassword = async () => {
+        if (!password.trim()) return;
+        await onUpdate({ sharePassword: password });
+        toast({ title: 'Security Key Set' });
+    };
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        setHasCopied(true);
+        setTimeout(() => setHasCopied(false), 2000);
+        toast({ title: 'Link copied' });
+    };
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors">
+                    <Share2 className="h-4 w-4" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white">
+                <div className="p-6 space-y-6">
+                    <div className="space-y-1">
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Share Document</h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Collaborative Access Protocol</p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-slate-900">Public Access</p>
+                            <p className="text-[9px] text-slate-400 font-medium">Allow anyone with link</p>
+                        </div>
+                        <Switch 
+                            checked={page.isPublic || false} 
+                            onCheckedChange={handleTogglePublic}
+                            disabled={isUpdating}
+                        />
+                    </div>
+
+                    {page.isPublic && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="space-y-2">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Live shareable link</Label>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        readOnly 
+                                        value={shareUrl} 
+                                        className="h-9 rounded-lg bg-slate-50 border-slate-100 font-mono text-[10px] shadow-inner truncate"
+                                    />
+                                    <Button 
+                                        onClick={copyLink} 
+                                        variant="outline"
+                                        className={cn(
+                                            "h-9 px-3 rounded-lg border-slate-100 shadow-sm font-bold text-xs shrink-0 transition-all",
+                                            hasCopied ? "bg-green-50 text-green-600 border-green-100" : "bg-white"
+                                        )}
+                                    >
+                                        {hasCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-slate-50">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                        <p className="text-[11px] font-bold text-slate-600">Link Expiry</p>
+                                    </div>
+                                    <Select onValueChange={handleExpiryChange} defaultValue={page.expiresAt ? "active" : "never"}>
+                                        <SelectTrigger className="w-[100px] h-8 rounded-lg text-[9px] font-bold uppercase tracking-widest border-slate-100 shadow-none">
+                                            <SelectValue placeholder="Expires" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            <SelectItem value="never" className="text-[9px] font-bold uppercase">Never</SelectItem>
+                                            <SelectItem value="24h" className="text-[9px] font-bold uppercase">24 Hours</SelectItem>
+                                            <SelectItem value="7d" className="text-[9px] font-bold uppercase">7 Days</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Lock className="h-3.5 w-3.5 text-slate-400" />
+                                            <p className="text-[11px] font-bold text-slate-600">Encryption</p>
+                                        </div>
+                                        <Switch checked={isPasswordEnabled} onCheckedChange={togglePassword} disabled={isUpdating} />
+                                    </div>
+                                    
+                                    {isPasswordEnabled && (
+                                        <div className="flex gap-2 animate-in slide-in-from-right-2 duration-300">
+                                            <Input 
+                                                placeholder="Enter access key..." 
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="h-9 rounded-lg bg-slate-50 border-slate-100 text-[11px] font-bold px-3"
+                                                disabled={isUpdating}
+                                            />
+                                            <Button 
+                                                size="sm" 
+                                                onClick={savePassword} 
+                                                className="h-9 rounded-lg px-3 font-bold text-[9px] uppercase tracking-widest"
+                                                disabled={isUpdating}
+                                            >
+                                                Set
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
 }
 
 export default function PageEditor() {

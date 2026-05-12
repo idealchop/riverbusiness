@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -16,6 +15,11 @@ service cloud.firestore {
         request.auth.token.admin == true
       );
     }
+    
+    function isPublicPage(pageData) {
+      return pageData.isPublic == true && 
+             (pageData.expiresAt == null || pageData.expiresAt > request.time);
+    }
 
     // --- GLOBAL RULES ---
 
@@ -30,13 +34,15 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
     
-    // --- INVITATIONS & ONBOARDING ---
+    // --- CLOUD STORAGE APP (SHARED DRIVE) ---
 
-    match /unclaimedProfiles/{document=**} {
+    match /cloud_files/{document=**} {
+      // Unrestricted organizational access: any signed-in user can manage files
       allow read, write: if isAuthenticated();
     }
 
-    match /unclaimedEmployees/{document=**} {
+    match /cloud_folders/{document=**} {
+      // Unrestricted organizational access: any signed-in user can manage folders
       allow read, write: if isAuthenticated();
     }
 
@@ -48,9 +54,22 @@ service cloud.firestore {
 
     // --- COLLABORATION PLATFORM ---
 
-    match /collaboration_pages/{document=**} {
-      // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, organize or delete any page
+    match /collaboration_pages/{pageId} {
+      // INTERNAL ACCESS: Any signed-in user can manage any page
       allow read, write: if isAuthenticated();
+      
+      // PUBLIC ACCESS: Limited read for unauthenticated users if page is public and not expired
+      // This is used for search by shareToken and direct get by ID
+      allow get: if isPublicPage(resource.data);
+    }
+    
+    // Allow collection group query for public pages by shareToken
+    match /{path=**}/collaboration_pages/{pageId} {
+        allow list: if isPublicPage(resource.data);
+    }
+    
+    match /collaboration_pages/{pageId}/presence/{userId} {
+        allow read, write: if isAuthenticated();
     }
     
     match /collaboration_workspaces/{document=**} {
