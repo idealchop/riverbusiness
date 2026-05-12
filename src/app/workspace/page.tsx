@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Sparkles, Loader2, ArrowUp } from 'lucide-react';
+import { 
+    Plus, 
+    Sparkles, 
+    Loader2, 
+    ArrowUp, 
+    Image as ImageIcon, 
+    Pencil, 
+    Globe 
+} from 'lucide-react';
 import { LogoBlack } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -43,6 +50,14 @@ export default function WorkspaceLandingPage() {
     window.dispatchEvent(new CustomEvent('request-new-collab-page'));
   };
 
+  const handleKnowledgeBase = () => {
+    toast({ title: "Opening Knowledge Base", description: "Accessing shared organizational libraries." });
+  };
+
+  const handleCreateImage = () => {
+    toast({ title: "Visual Studio", description: "AI image generation tools are being initialized." });
+  };
+
   const handleAskAi = async () => {
     if (!prompt.trim()) return;
     setIsProcessing(true);
@@ -63,7 +78,7 @@ export default function WorkspaceLandingPage() {
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50/30">
-        <div className="max-w-4xl w-full space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="max-w-4xl w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="text-center space-y-4">
                 <div className="flex justify-center mb-8">
                     <LogoBlack className="h-20 w-20" />
@@ -113,39 +128,40 @@ export default function WorkspaceLandingPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
-                <Card 
+            <div className="flex flex-wrap items-center justify-center gap-3 w-full">
+                <QuickActionButton 
+                    onClick={handleCreateImage}
+                    icon={<ImageIcon className="h-4 w-4" />}
+                    label="Create an image"
+                />
+                <QuickActionButton 
                     onClick={handleNewDoc}
-                    className="border border-slate-100 shadow-none rounded-[2rem] bg-white group hover:border-slate-200 transition-all duration-300 cursor-pointer active:scale-[0.98]"
-                >
-                    <CardContent className="p-6 flex flex-col items-start gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-900 flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <Plus className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-0.5">
-                            <h3 className="text-sm font-bold text-slate-900">New document</h3>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none">
-                                Start from a clean canvas
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border border-slate-100 shadow-none rounded-[2rem] bg-white group hover:border-slate-200 transition-all duration-300 cursor-pointer active:scale-[0.98]">
-                    <CardContent className="p-6 flex flex-col items-start gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-900 flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <Sparkles className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-0.5">
-                            <h3 className="text-sm font-bold text-slate-900">Knowledge base</h3>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none">
-                                Browse shared libraries
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+                    icon={<Pencil className="h-4 w-4" />}
+                    label="Write or edit"
+                />
+                <QuickActionButton 
+                    onClick={handleKnowledgeBase}
+                    icon={<Globe className="h-4 w-4" />}
+                    label="Look something up"
+                />
             </div>
         </div>
     </div>
   );
+}
+
+function QuickActionButton({ onClick, icon, label }: { onClick: () => void, icon: React.ReactNode, label: string }) {
+    return (
+        <button 
+            onClick={onClick}
+            className="flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all duration-200 active:scale-[0.97] group"
+        >
+            <span className="text-slate-900 transition-transform group-hover:scale-110 duration-300">
+                {icon}
+            </span>
+            <span className="text-sm font-medium text-slate-600">
+                {label}
+            </span>
+        </button>
+    );
 }
