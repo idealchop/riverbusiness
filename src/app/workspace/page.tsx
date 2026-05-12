@@ -56,14 +56,6 @@ export default function WorkspaceLandingPage() {
                     </CardContent>
                 </Card>
             </div>
-
-            <div className="pt-8 border-t border-slate-200 flex flex-col items-center gap-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">Recently Modified</p>
-                <div className="flex gap-4 opacity-40 grayscale pointer-events-none">
-                    <Clock className="h-5 w-5" />
-                    <Star className="h-5 w-5" />
-                </div>
-            </div>
         </div>
     </div>
   );
