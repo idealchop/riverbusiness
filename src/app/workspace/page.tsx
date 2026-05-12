@@ -78,13 +78,13 @@ export default function WorkspaceLandingPage() {
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50/30">
-        <div className="max-w-4xl w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="max-w-4xl w-full space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="text-center space-y-4">
                 <div className="flex justify-center mb-8">
                     <LogoBlack className="h-20 w-20" />
                 </div>
                 
-                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-10">
+                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-16">
                     Ready, when you are.
                 </h1>
 
@@ -130,14 +130,14 @@ export default function WorkspaceLandingPage() {
 
             <div className="flex flex-wrap items-center justify-center gap-3 w-full">
                 <QuickActionButton 
-                    onClick={handleCreateImage}
-                    icon={<ImageIcon className="h-4 w-4" />}
-                    label="Create an image"
-                />
-                <QuickActionButton 
                     onClick={handleNewDoc}
                     icon={<Pencil className="h-4 w-4" />}
                     label="Write or edit"
+                />
+                <QuickActionButton 
+                    onClick={handleCreateImage}
+                    icon={<ImageIcon className="h-4 w-4" />}
+                    label="Create an image"
                 />
                 <QuickActionButton 
                     onClick={handleKnowledgeBase}
