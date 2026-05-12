@@ -1,61 +1,71 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, where, limit, Timestamp } from 'firebase/firestore';
-import { Editor } from '@/components/collaboration/Editor';
-import { FullScreenLoader } from '@/components/ui/loader';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { LogoBlack } from '@/components/icons';
-import { 
-    Globe, 
-    Lock, 
-    AlertTriangle, 
-    Calendar, 
-    Clock, 
-    ArrowRight,
-    FileX,
-    CheckCircle2
-} from 'lucide-react';
-import { format, isAfter } from 'date-fns';
-import type { CollabPage } from '@/lib/types';
-import Image from 'next/image';
+import { Lock, FileText, ChevronRight, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { format } from 'date-fns';
+import { FullScreenLoader } from '@/components/ui/loader';
+import { Editor } from '@/components/collaboration/Editor';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
-export default function PublicDocumentViewer() {
+export default function PublicPage() {
     const { token } = useParams();
     const firestore = useFirestore();
     
+    const [page, setPage] = useState<any | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [authError, setAuthError] = useState(false);
-    
-    const pagesQuery = useMemoFirebase(() => {
+
+    // Query for public page by token
+    const publicQuery = useMemoFirebase(() => {
         if (!firestore || !token) return null;
         return query(
             collection(firestore, 'collaboration_pages'),
+            where('isPublic', '==', true),
             where('shareToken', '==', token),
             limit(1)
         );
     }, [firestore, token]);
 
-    const { data: results, isLoading } = useCollection<CollabPage>(pagesQuery);
-    const page = results?.[0];
+    const { data: pages, isLoading: queryLoading } = useCollection(publicQuery);
 
-    const isExpired = useMemo(() => {
-        if (!page?.expiresAt) return false;
-        const expiryDate = (page.expiresAt as Timestamp).toDate();
-        return isAfter(new Date(), expiryDate);
-    }, [page]);
+    useEffect(() => {
+        if (queryLoading) return;
 
-    const needsPassword = !!page?.sharePassword;
+        if (pages && pages.length > 0) {
+            const p = pages[0];
+            const expiresAt = p.expiresAt ? (p.expiresAt instanceof Timestamp ? p.expiresAt.toDate() : new Date(p.expiresAt)) : null;
+            
+            if (expiresAt && expiresAt < new Date()) {
+                setError("This document link has expired.");
+                setLoading(false);
+            } else {
+                setPage(p);
+                if (!p.sharePassword) {
+                    setIsAuthenticated(true);
+                }
+                setLoading(false);
+            }
+        } else {
+            setError("Document not found or is no longer public.");
+            setLoading(false);
+        }
+    }, [pages, queryLoading]);
 
-    const handlePasswordSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === page?.sharePassword) {
+    const handleAuthenticate = () => {
+        if (page && page.sharePassword === password) {
             setIsAuthenticated(true);
             setAuthError(false);
         } else {
@@ -63,147 +73,108 @@ export default function PublicDocumentViewer() {
         }
     };
 
-    if (isLoading) return <FullScreenLoader text="Verifying Access Token" />;
+    if (loading) return <FullScreenLoader text="Verifying Link..." />;
 
-    if (!page || !page.isPublic) {
+    if (error) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
-                <Card className="w-full max-w-md border-none shadow-2xl rounded-[2.5rem] p-4">
-                    <CardHeader className="text-center">
-                        <div className="p-4 rounded-full bg-slate-100 w-fit mx-auto mb-6">
-                            <FileX className="h-10 w-10 text-slate-400" />
+            <main className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+                <Card className="max-w-md w-full border-none shadow-2xl rounded-[2.5rem] p-4 text-center">
+                    <CardHeader className="pt-10">
+                        <div className="flex justify-center mb-6">
+                            <div className="p-4 rounded-full bg-red-50 text-red-500">
+                                <AlertTriangle className="h-10 w-10" />
+                            </div>
                         </div>
-                        <CardTitle className="text-2xl font-black tracking-tight">Access Denied</CardTitle>
-                        <CardDescription className="text-slate-500 font-medium pt-2 leading-relaxed">
-                            This document is private or the sharing link has been deactivated by the owner.
-                        </CardDescription>
+                        <CardTitle className="text-2xl font-black tracking-tight text-slate-900">Access Restricted</CardTitle>
+                        <CardDescription className="text-sm font-medium pt-2">{error}</CardDescription>
                     </CardHeader>
-                    <div className="p-6 pt-0">
-                        <Button asChild className="w-full rounded-xl h-12 font-bold uppercase tracking-widest text-[10px]" variant="outline">
-                            <a href="/">Go to River Dashboard</a>
+                    <CardFooter className="pb-10 justify-center">
+                        <Button asChild variant="outline" className="rounded-xl px-10 h-11 font-bold border-slate-200">
+                            <a href="/">Go to Home</a>
                         </Button>
-                    </div>
+                    </CardFooter>
                 </Card>
-            </div>
+            </main>
         );
     }
 
-    if (isExpired) {
+    if (!isAuthenticated) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
-                <Card className="w-full max-w-md border-none shadow-2xl rounded-[2.5rem] p-4">
-                    <CardHeader className="text-center">
-                        <div className="p-4 rounded-full bg-amber-50 w-fit mx-auto mb-6">
-                            <Clock className="h-10 w-10 text-amber-500" />
-                        </div>
-                        <CardTitle className="text-2xl font-black tracking-tight">Link Expired</CardTitle>
-                        <CardDescription className="text-slate-500 font-medium pt-2 leading-relaxed">
-                            The temporary access window for this document has closed. Please request a new link from the sender.
-                        </CardDescription>
-                    </CardHeader>
-                    <div className="p-6 pt-0">
-                        <Button asChild className="w-full rounded-xl h-12 font-bold uppercase tracking-widest text-[10px]" variant="outline">
-                            <a href="/">Return Home</a>
-                        </Button>
+            <main className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+                <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                    <div className="text-center">
+                        <LogoBlack className="h-12 w-12 mx-auto mb-6" />
+                        <h2 className="text-3xl font-black tracking-tight text-slate-900">Encrypted Document</h2>
+                        <p className="text-slate-500 font-bold mt-2">This document is protected by an access key.</p>
                     </div>
-                </Card>
-            </div>
-        );
-    }
 
-    if (needsPassword && !isAuthenticated) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 p-6">
-                <Card className="w-full max-w-md border-none shadow-3xl rounded-[2.5rem] p-6 bg-white overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-2 bg-primary" />
-                    <CardHeader className="text-center space-y-4">
-                        <LogoBlack className="h-12 w-12 mx-auto" />
-                        <div className="space-y-1">
-                            <CardTitle className="text-2xl font-black tracking-tight">Encrypted Document</CardTitle>
-                            <CardDescription className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">
-                                Authorization Required
-                            </CardDescription>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                    <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
+                        <div className="p-10 space-y-6">
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Access Key</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Document Access Key</Label>
                                 <Input 
                                     type="password" 
-                                    placeholder="••••••••" 
-                                    className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 focus:ring-primary shadow-inner"
+                                    placeholder="Enter password..." 
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    className="h-14 rounded-2xl bg-slate-50 border-slate-100 font-bold px-5 focus-visible:ring-primary/20"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAuthenticate()}
                                 />
-                                {authError && (
-                                    <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-1 animate-in fade-in slide-in-from-top-1">
-                                        Incorrect security key. Please verify with the sender.
-                                    </p>
-                                )}
+                                {authError && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">Incorrect access key</p>}
                             </div>
-                            <Button type="submit" className="w-full rounded-2xl h-12 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
-                                Verify Access <ArrowRight className="ml-2 h-4 w-4" />
+                            <Button onClick={handleAuthenticate} className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/10">
+                                Verify and Open <ChevronRight className="ml-2 h-4 w-4" />
                             </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-            </div>
+                        </div>
+                    </Card>
+                </div>
+            </main>
         );
     }
 
     return (
-        <div className="min-h-screen bg-white flex flex-col animate-in fade-in duration-1000">
-            <header className="sticky top-0 z-50 h-16 bg-white/80 backdrop-blur-md border-b px-8 flex items-center justify-between">
+        <main className="min-h-screen bg-white">
+            <header className="h-16 border-b bg-white/80 backdrop-blur-md sticky top-0 z-20 px-8 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <LogoBlack className="h-10 w-10" />
                     <div className="flex flex-col">
-                        <span className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-900 leading-tight">Public</span>
-                        <span className="font-bold text-[9px] uppercase tracking-widest text-slate-400 leading-tight">Document Hub</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Public Shared Document</span>
+                        <h1 className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{page.title}</h1>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="h-6 gap-2 bg-blue-50 text-primary border-blue-100 font-bold uppercase text-[9px] tracking-widest">
-                        <Globe className="h-3 w-3" /> Shared via River
+                <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="h-7 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 border-slate-100 gap-1.5 px-3">
+                        <Lock className="h-3 w-3 text-slate-400" /> Secure Link
                     </Badge>
                 </div>
             </header>
 
-            <main className="flex-1">
+            <ScrollArea className="h-[calc(100vh-64px)]">
                 {page.coverImage && (
-                    <div className="h-[35vh] w-full relative">
-                        <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
+                    <div className="h-[30vh] w-full relative">
+                        <img src={page.coverImage} alt="Cover" className="w-full h-full object-cover" />
                     </div>
                 )}
-
-                <div className="max-w-4xl mx-auto px-8 pt-12 pb-32">
-                    {page.icon && (
-                        <div className="text-6xl mb-8 select-none animate-in zoom-in-95 duration-700">{page.icon}</div>
-                    )}
-                    <h1 className="text-5xl font-black tracking-tighter text-slate-900 mb-12 leading-tight uppercase">
-                        {page.title || 'Untitled Document'}
-                    </h1>
-
-                    <div className="prose prose-slate max-w-none">
-                        <Editor 
-                            initialContent={page.content} 
-                            onContentChange={() => {}} 
-                            editable={false} 
-                        />
+                <div className="max-w-4xl mx-auto px-8 pt-12 pb-40">
+                    <div className="flex flex-col gap-6">
+                        {page.icon && <div className="text-6xl">{page.icon}</div>}
+                        <h1 className="text-4xl font-black text-slate-900 leading-tight">{page.title}</h1>
+                        <Separator className="bg-slate-100" />
+                        <div className="prose prose-slate max-w-none">
+                            <Editor 
+                                initialContent={page.content} 
+                                onContentChange={() => {}} 
+                                editable={false}
+                            />
+                        </div>
                     </div>
                 </div>
-            </main>
-
-            <footer className="p-12 bg-slate-50 border-t flex flex-col items-center gap-6">
-                <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verified Organizational Document</p>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">
-                    River Tech Inc • Manila, Philippines
-                </p>
-            </footer>
-        </div>
+                <footer className="max-w-4xl mx-auto px-8 pb-20 border-t border-slate-50 pt-10 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">
+                        Document managed by River Philippines
+                    </p>
+                </footer>
+            </ScrollArea>
+        </main>
     );
 }
