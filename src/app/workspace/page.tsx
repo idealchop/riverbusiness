@@ -84,7 +84,7 @@ export default function WorkspaceLandingPage() {
                     <LogoBlack className="h-20 w-20" />
                 </div>
                 
-                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-16">
+                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-24">
                     Ready, when you are.
                 </h1>
 
