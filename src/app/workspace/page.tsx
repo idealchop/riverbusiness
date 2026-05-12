@@ -70,7 +70,7 @@ export default function WorkspaceLandingPage() {
                 </div>
                 
                 <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none">
-                    Ready, when you are. <span className="text-primary font-normal">What do you need?</span>
+                    Ready, when you are.
                 </h1>
 
                 <div className="relative w-full max-w-2xl mx-auto pt-8">
