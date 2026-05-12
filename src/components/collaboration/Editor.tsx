@@ -33,7 +33,17 @@ import {
     Type,
     ArrowRight,
     Palette,
-    Send
+    Send,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    AlignJustify,
+    Grid,
+    Table as TableIcon,
+    Plus,
+    Trash2,
+    Columns,
+    Rows
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +58,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from "@/components/ui/dropdown-menu";
 
 interface EditorProps {
   initialContent: any;
@@ -75,7 +93,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
   useEffect(() => {
     setIsMounted(true);
-    return () => setIsMounted(false);
+    return () => {
+        setIsMounted(false);
+    };
   }, []);
 
   const uploadAndInsertImage = useCallback(async (file: File) => {
@@ -185,7 +205,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       }
   }));
 
-  // Initial AI Generation Logic
   useEffect(() => {
     if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {
         const streamDoc = async () => {
@@ -356,8 +375,15 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   </div>
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
                   <div className="flex items-center gap-1 px-1">
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="H1" />
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="H2" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="Heading 1" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="Heading 2" />
+                  </div>
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <div className="flex items-center gap-0.5 px-1">
+                      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} icon={<AlignLeft className="h-4 w-4" />} label="Align Left" />
+                      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} icon={<AlignCenter className="h-4 w-4" />} label="Align Center" />
+                      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} icon={<AlignRight className="h-4 w-4" />} label="Align Right" />
+                      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} icon={<AlignJustify className="h-4 w-4" />} label="Align Justify" />
                   </div>
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
                   <div className="flex items-center gap-0.5 px-1">
@@ -367,13 +393,38 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   </div>
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
                   <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="List" />
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Tasks" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="Bullet List" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Task List" />
                   </div>
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
                   <div className="flex items-center gap-0.5 px-1">
-                      <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Link" />
-                      <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Image" />
+                      <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Insert Link" />
+                      <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Attach Image" />
+                      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
+                                  <Grid className="h-4 w-4" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 border-slate-100 shadow-2xl">
+                              <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Grid Control</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
+                                  <TableIcon className="h-4 w-4 text-primary" /> Insert 3x3 Table
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-slate-50" />
+                              <DropdownMenuItem onClick={() => editor.chain().focus().addRowAfter().run()} disabled={!editor.isActive('table')} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
+                                  <Rows className="h-4 w-4" /> Add Row After
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => editor.chain().focus().addColumnAfter().run()} disabled={!editor.isActive('table')} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
+                                  <Columns className="h-4 w-4" /> Add Column After
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-slate-50" />
+                              <DropdownMenuItem onClick={() => editor.chain().focus().deleteTable().run()} disabled={!editor.isActive('table')} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
+                                  <Trash2 className="h-4 w-4" /> Delete Table
+                              </DropdownMenuItem>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
                   </div>
               </div>
 
