@@ -224,7 +224,7 @@ export default function HRDashboard() {
             timeIn: serverTimestamp(),
             status: 'present',
             validation_status: 'Valid',
-            method: 'quick',
+            method: 'manual',
             office_id: office.id,
             action: 'IN'
           };

@@ -93,16 +93,20 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
         setUploadProgress(progress);
       });
-      editor.chain().focus().setImage({ src: url }).run();
-      toast({ title: 'Image attached', description: 'The visual asset has been integrated.' });
+      if (isMounted && !editor.isDestroyed) {
+          editor.chain().focus().setImage({ src: url }).run();
+          toast({ title: 'Image attached', description: 'The visual asset has been integrated.' });
+      }
     } catch (error) {
       console.error('Image upload failed:', error);
-      toast({ variant: 'destructive', title: 'Upload failed' });
+      if (isMounted) toast({ variant: 'destructive', title: 'Upload failed' });
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
+      if (isMounted) {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
     }
-  }, [storage, auth, toast]);
+  }, [storage, auth, toast, isMounted]);
 
   const editor = useEditor({
     extensions: [
@@ -173,10 +177,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   }, [uploadAndInsertImage, isMounted]);
 
   useImperativeHandle(ref, () => ({
-      focus: () => editor?.commands.focus()
+      focus: () => {
+          if (editor && !editor.isDestroyed) {
+              editor.commands.focus();
+          }
+      }
   }));
 
-  // Initial AI Generation Logic (The "Typing" effect)
+  // Initial AI Generation Logic
   useEffect(() => {
     if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {
         const streamDoc = async () => {
@@ -242,7 +250,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   };
 
   const setLink = () => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('Enter link URL', previousUrl);
 
@@ -255,7 +263,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   };
 
   const callAiAssistant = async (action: string, customInstruction?: string) => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, ' ');
@@ -269,7 +277,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
     setIsAiProcessing(true);
     setShowAiToolbar(false);
-    
     setAiStatus('Processing...');
 
     try {
@@ -309,14 +316,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   };
 
   const discardAiSuggestion = () => {
-      if (!editor || !aiPreview) return;
+      if (!editor || editor.isDestroyed || !aiPreview) return;
       const { from, to, originalText } = aiPreview;
       editor.chain().focus().setTextSelection({ from, to }).deleteSelection().insertContentAt(from, originalText).unsetMark('strike').run();
       setAiPreview(null);
   };
 
   const acceptAiSuggestion = () => {
-      if (!editor || !aiPreview) return;
+      if (!editor || editor.isDestroyed || !aiPreview) return;
       const { from, to, text } = aiPreview;
       editor.chain().focus().setTextSelection({ from, to }).deleteSelection().unsetMark('strike').insertContentAt(from, text).run();
       setAiPreview(null);
@@ -387,7 +394,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       <div className="flex items-center gap-1.5">
                         <div className="h-px flex-1 bg-slate-100" />
                         <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
-                        <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
+                        <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
                         <div className="h-px flex-1 bg-slate-100" />
                       </div>

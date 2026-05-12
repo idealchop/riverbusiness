@@ -123,11 +123,11 @@ const EMOJI_LIST = [
 
 function PageSkeleton() {
   return (
-    <div className="min-h-full flex flex-col bg-white">
+    <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-500">
       <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
-          <Skeleton className="h-4 w-24 rounded" />
+          <Skeleton className="h-3.5 w-3.5 rounded" />
           <Skeleton className="h-4 w-32 rounded" />
         </div>
         <div className="flex items-center gap-4">
@@ -136,7 +136,7 @@ function PageSkeleton() {
           <Skeleton className="h-8 w-8 rounded-lg" />
         </div>
       </div>
-      <div className="h-[30vh] w-full bg-slate-50 animate-pulse" />
+      <div className="h-[30vh] w-full bg-slate-50/50 animate-pulse" />
       <div className="max-w-4xl mx-auto px-8 pt-10 space-y-6 w-full">
         <Skeleton className="h-12 w-12 rounded-2xl" />
         <Skeleton className="h-12 w-3/4 rounded-xl" />
@@ -289,8 +289,10 @@ function PageEditorContent() {
             }
         }
       } else {
-        setIsDeleting(true);
+        // DOCUMENT DELETED OR REMOVED
+        setIsDeleting(true); 
         setPage(null);
+        // Wait for React to unmount the complex Editor before pushing navigation
         setTimeout(() => {
             if (window.location.pathname.includes(pageId as string)) {
               router.push('/workspace');
@@ -299,11 +301,13 @@ function PageEditorContent() {
       }
       setLoading(false);
     }, async (err) => {
-        const permissionError = new FirestorePermissionError({
-            path: pageRef.path,
-            operation: 'get'
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        if (err.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: pageRef.path,
+                operation: 'get'
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        }
         setLoading(false);
     });
 
