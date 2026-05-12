@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
@@ -36,7 +37,8 @@ import {
   Lock,
   Clock,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Share
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -74,6 +76,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { useMounted } from '@/hooks/use-mounted';
 
 const EMOJI_LIST = [
   { char: '📄', keywords: 'document page file' },
@@ -129,7 +132,7 @@ const EMOJI_LIST = [
   { char: '🚚', keywords: 'delivery truck' }
 ];
 
-function PageSkeleton() {
+export function PageSkeleton() {
   return (
     <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-500">
       <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
@@ -169,6 +172,7 @@ function PageEditorContent() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isMounted = useMounted();
 
   const [page, setPage] = useState<CollabPage | null>(null);
   const [parentPage, setParentPage] = useState<CollabPage | null>(null);
@@ -700,7 +704,7 @@ function PageEditorContent() {
                 readOnly={page.isTrashed}
             />
 
-            <div className="">
+            <div className="animate-in fade-in duration-1000 delay-200">
                 <Editor 
                     ref={editorRef}
                     key={page.id} 
@@ -803,7 +807,7 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
                     <Share2 className="h-4 w-4" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white">
+            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white animate-in zoom-in-95 duration-200">
                 <div className="p-6 space-y-6">
                     <div className="space-y-1">
                         <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Share Document</h4>

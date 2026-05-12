@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
@@ -14,6 +15,9 @@ import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
 import { cn } from '@/lib/utils';
 import { 
     Bold, 
@@ -43,7 +47,9 @@ import {
     Plus,
     Trash2,
     Columns,
-    Rows
+    Rows,
+    Underline as UnderlineIcon,
+    Baseline
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -66,6 +72,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
+import { useMounted } from '@/hooks/use-mounted';
 
 interface EditorProps {
   initialContent: any;
@@ -73,6 +80,19 @@ interface EditorProps {
   onContentChange: (json: any) => void;
   editable?: boolean;
 }
+
+const COLORS = [
+    { label: 'Default', value: 'inherit' },
+    { label: 'Slate', value: '#64748b' },
+    { label: 'Red', value: '#ef4444' },
+    { label: 'Orange', value: '#f97316' },
+    { label: 'Amber', value: '#f59e0b' },
+    { label: 'Green', value: '#22c55e' },
+    { label: 'Blue', value: '#3b82f6' },
+    { label: 'Indigo', value: '#6366f1' },
+    { label: 'Purple', value: '#a855f7' },
+    { label: 'Pink', value: '#ec4899' },
+];
 
 export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true }, ref) => {
   const storage = useStorage();
@@ -82,7 +102,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useMounted();
   
   // AI States
   const [showAiToolbar, setShowAiToolbar] = useState(false);
@@ -90,13 +110,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const [aiStatus, setAiStatus] = useState('');
   const [customGoal, setCustomGoal] = useState('');
   const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-    return () => {
-        setIsMounted(false);
-    };
-  }, []);
 
   const uploadAndInsertImage = useCallback(async (file: File) => {
     if (!editor || !storage || !auth?.currentUser) return;
@@ -114,7 +127,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
         setUploadProgress(progress);
       });
-      if (isMounted && !editor.isDestroyed) {
+      if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src: url }).run();
           toast({ title: 'Image attached', description: 'The visual asset has been integrated.' });
       }
@@ -134,6 +147,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       StarterKit.configure({
           heading: { levels: [1, 2, 3] }
       }),
+      TextStyle,
+      Color,
+      Underline,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -231,12 +247,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                     const chunk = decoder.decode(value, { stream: true });
                     accumulatedHtml += chunk;
                     
-                    if (isMounted && !editor.isDestroyed) {
+                    if (isMounted && editor && !editor.isDestroyed) {
                         editor.commands.setContent(accumulatedHtml, false);
                     }
                 }
 
-                if (isMounted) {
+                if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
                     toast({ title: 'Draft generated', description: 'Your AI-powered document is ready for review.' });
                 }
@@ -256,7 +272,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   }, [initialPrompt, editor, onContentChange, toast, isMounted]);
 
   useEffect(() => {
-    if (editor && initialContent && editor.isEmpty && !initialPrompt) {
+    if (editor && initialContent && editor.isEmpty && !initialPrompt && !editor.isDestroyed) {
         editor.commands.setContent(initialContent);
     }
   }, [editor, initialContent, initialPrompt]);
@@ -357,7 +373,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
       {editable && !editor.isDestroyed && (
         <TooltipProvider delayDuration={0}>
-          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
+          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4 animate-in fade-in duration-500">
               {isAiProcessing && (
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10">
                       <div className="flex items-center gap-3">
@@ -374,40 +390,81 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       </Button>
                   </div>
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  
                   <div className="flex items-center gap-1 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="Heading 1" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="Heading 2" />
                   </div>
+                  
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} icon={<AlignLeft className="h-4 w-4" />} label="Align Left" />
                       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} icon={<AlignCenter className="h-4 w-4" />} label="Align Center" />
                       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} icon={<AlignRight className="h-4 w-4" />} label="Align Right" />
-                      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} icon={<AlignJustify className="h-4 w-4" />} label="Align Justify" />
                   </div>
+
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} label="Bold" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon className="h-4 w-4" />} label="Underline" />
+                      
+                      {/* Text Color Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
+                                <Baseline className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48 p-1 rounded-2xl border-slate-100 shadow-2xl bg-white">
+                            <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Text Color</DropdownMenuLabel>
+                            <div className="grid grid-cols-5 gap-1 p-2">
+                                {COLORS.map(c => (
+                                    <button 
+                                        key={c.value} 
+                                        onClick={() => editor.chain().focus().setColor(c.value === 'inherit' ? '' : c.value).run()}
+                                        className={cn(
+                                            "h-6 w-6 rounded-full border border-slate-100 flex items-center justify-center hover:scale-110 transition-transform shadow-sm",
+                                            editor.getAttributes('textStyle').color === c.value && "ring-2 ring-primary ring-offset-1"
+                                        )}
+                                        style={{ backgroundColor: c.value === 'inherit' ? 'transparent' : c.value }}
+                                        title={c.label}
+                                    >
+                                        {c.value === 'inherit' && <X className="h-3 w-3 text-slate-400" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Palette className="h-4 w-4" />} label="Highlight" />
                   </div>
+                  
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="Bullet List" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Task List" />
                   </div>
+                  
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Insert Link" />
                       <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Attach Image" />
+                      
                       <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                      
+                      {/* Grid / Table Controls */}
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
                                   <Grid className="h-4 w-4" />
                               </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 border-slate-100 shadow-2xl">
+                          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 border-slate-100 shadow-2xl bg-white">
                               <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Grid Control</DropdownMenuLabel>
                               <DropdownMenuItem onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
                                   <TableIcon className="h-4 w-4 text-primary" /> Insert 3x3 Table
