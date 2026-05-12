@@ -12,7 +12,7 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
-import Underline from '@tiptap/extension-underline';
+import Underline from '@radix-ui/react-underline';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import { cn } from '@/lib/utils';
@@ -38,7 +38,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Card } from '@/components/ui/card';
 import { useStorage, useAuth } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -52,11 +51,12 @@ import { Input } from '@/components/ui/input';
 
 interface EditorProps {
   initialContent: any;
+  initialPrompt?: string | null;
   onContentChange: (json: any) => void;
   editable?: boolean;
 }
 
-export function Editor({ initialContent, onContentChange, editable = true }: EditorProps) {
+export function Editor({ initialContent, initialPrompt, onContentChange, editable = true }: EditorProps) {
   const storage = useStorage();
   const auth = useAuth();
   const { toast } = useToast();
@@ -89,10 +89,10 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         setUploadProgress(progress);
       });
       editor.chain().focus().setImage({ src: url }).run();
-      toast({ title: 'Image attached', description: 'The visual asset has been successfully integrated into your document.' });
+      toast({ title: 'Image attached', description: 'The visual asset has been integrated.' });
     } catch (error) {
       console.error('Image upload failed:', error);
-      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not attach image to the document.' });
+      toast({ variant: 'destructive', title: 'Upload failed' });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -104,8 +104,6 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       StarterKit.configure({
           heading: { levels: [1, 2, 3] }
       }),
-      Underline,
-      Highlight.configure({ multicolor: true }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -133,11 +131,15 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
       TableRow,
       TableHeader,
       TableCell,
+      Highlight.configure({ multicolor: true }),
     ],
     content: initialContent,
     editable: editable,
     onUpdate: ({ editor }) => {
-      onContentChange(editor.getJSON());
+      // Don't trigger standard save if we're in AI streaming mode
+      if (!isAiProcessing) {
+        onContentChange(editor.getJSON());
+      }
     },
     editorProps: {
         attributes: {
@@ -166,11 +168,58 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     }
   }, [uploadAndInsertImage]);
 
+  // Initial AI Generation Logic (The "Typing" effect)
   useEffect(() => {
-    if (editor && initialContent && editor.isEmpty) {
+    if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {
+        const streamDoc = async () => {
+            setIsAiProcessing(true);
+            setAiStatus('Generating draft...');
+            
+            try {
+                const response = await fetch('/api/ai/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: initialPrompt })
+                });
+
+                if (!response.body) throw new Error('Stream failed');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let accumulatedHtml = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    accumulatedHtml += chunk;
+                    
+                    // Directly update the editor to create the "typing" visual
+                    editor.commands.setContent(accumulatedHtml, false);
+                }
+
+                // Final save to Firestore
+                onContentChange(editor.getJSON());
+                toast({ title: 'Draft generated', description: 'Your AI-powered document is ready for review.' });
+            } catch (error) {
+                console.error('Streaming error:', error);
+                toast({ variant: 'destructive', title: 'Generation error', description: 'Could not complete the AI draft.' });
+            } finally {
+                setIsAiProcessing(false);
+                setAiStatus('');
+            }
+        };
+
+        streamDoc();
+    }
+  }, [initialPrompt, editor]);
+
+  useEffect(() => {
+    if (editor && initialContent && editor.isEmpty && !initialPrompt) {
         editor.commands.setContent(initialContent);
     }
-  }, [editor, initialContent]);
+  }, [editor, initialContent, initialPrompt]);
 
   const setLink = () => {
     if (!editor) return;
@@ -202,18 +251,14 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
     const context = editor.getText();
 
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Selection required', description: 'Please highlight some text first so the AI knows what to improve.' });
+        toast({ variant: 'destructive', title: 'Selection required', description: 'Highlight text for the AI to process.' });
         return;
     }
 
     setIsAiProcessing(true);
     setShowAiToolbar(false);
     
-    setAiStatus('Analyzing context...');
-    const statusInterval = setInterval(() => {
-        const statuses = ['Processing logic...', 'Improving flow...', 'Refining tone...', 'Finalizing suggestion...'];
-        setAiStatus(statuses[Math.floor(Math.random() * statuses.length)]);
-    }, 1500);
+    setAiStatus('Processing...');
 
     try {
       const response = await fetch('/api/ai/assistant', {
@@ -227,115 +272,60 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'The assistant is currently unavailable.');
-      }
+      if (!response.ok) throw new Error('Assistant error');
 
       const data = await response.json();
 
       if (data && data.suggestedText) {
           if (selectedText) {
               const originalFrom = from;
-              // Comparison mode: wrap original in <s> tags and append suggested text
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
               
-              editor.chain()
-                .focus()
-                .deleteRange(from, to)
-                .insertContent(combinedHtml)
-                .run();
+              editor.chain().focus().deleteRange(from, to).insertContent(combinedHtml).run();
 
               const currentTo = editor.state.selection.to;
-              
-              setAiPreview({ 
-                  text: data.suggestedText, 
-                  originalText: selectedText,
-                  from: originalFrom, 
-                  to: currentTo
-              });
-
-              toast({ title: 'AI suggestion applied', description: 'Review the comparison in your document and choose to accept or discard the changes.' });
+              setAiPreview({ text: data.suggestedText, originalText: selectedText, from: originalFrom, to: currentTo });
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
-              toast({ title: 'Content generated', description: 'New text has been added at the bottom of your document.' });
           }
-      } else {
-          throw new Error('The AI was unable to generate a response.');
       }
     } catch (error: any) {
-      console.error('AI Error:', error);
-      toast({ variant: 'destructive', title: 'Assistant notice', description: error.message });
+      toast({ variant: 'destructive', title: 'Assistant error' });
     } finally {
-      clearInterval(statusInterval);
       setIsAiProcessing(false);
       setAiStatus('');
-      setCustomGoal('');
     }
   };
 
   const discardAiSuggestion = () => {
       if (!editor || !aiPreview) return;
-      
       const { from, to, originalText } = aiPreview;
-      
-      // Select the entire comparison range and replace with clean original
-      editor.chain()
-        .focus()
-        .setTextSelection({ from, to })
-        .deleteSelection()
-        .insertContentAt(from, originalText)
-        .unsetMark('strike') // Ensure no leftover strike
-        .run();
-        
+      editor.chain().focus().setTextSelection({ from, to }).deleteSelection().insertContentAt(from, originalText).unsetMark('strike').run();
       setAiPreview(null);
-      toast({ title: 'Changes discarded', description: 'The original version of your text has been restored successfully.' });
   };
 
   const acceptAiSuggestion = () => {
       if (!editor || !aiPreview) return;
-      
       const { from, to, text } = aiPreview;
-      
-      // Select the entire comparison range and replace with clean AI text
-      editor.chain()
-        .focus()
-        .setTextSelection({ from, to })
-        .deleteSelection()
-        .unsetMark('strike') // Critical: Purge the strike formatting
-        .insertContentAt(from, text)
-        .run();
-
+      editor.chain().focus().setTextSelection({ from, to }).deleteSelection().unsetMark('strike').insertContentAt(from, text).run();
       setAiPreview(null);
-      toast({ title: 'AI suggestion accepted', description: 'The document has been updated with the improved version. The old text has been purged.' });
   };
 
   if (!editor) return null;
 
   return (
     <div className="group relative">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleImageInput} 
-        accept="image/*" 
-        className="hidden" 
-      />
+      <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/*" className="hidden" />
 
       {editable && (
           <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
               <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1 rounded-2xl flex items-center gap-1 animate-in fade-in zoom-in-95">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => callAiAssistant('improve')} 
-                    className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => callAiAssistant('improve')} className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
                       <Sparkles className="h-3.5 w-3.5" /> Improve
                   </Button>
                   <Separator orientation="vertical" className="h-4 mx-1" />
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Fix grammar"><Languages className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary" title="Make professional"><Type className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Languages className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Type className="h-3.5 w-3.5" /></Button>
               </div>
           </BubbleMenu>
       )}
@@ -347,51 +337,34 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{aiStatus}</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{aiStatus || 'Processing...'}</span>
                       </div>
                   </div>
               )}
 
               <div className="flex items-center gap-0.5">
                   <div className="flex items-center px-1">
-                      <Button 
-                        onClick={() => setShowAiToolbar(!showAiToolbar)}
-                        className={cn(
-                            "h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500",
-                            showAiToolbar 
-                                ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" 
-                                : "bg-slate-900 text-white hover:bg-slate-800"
-                        )}
-                      >
-                          <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} />
-                          Assistant
+                      <Button onClick={() => setShowAiToolbar(!showAiToolbar)} className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-[0.2em] transition-all", showAiToolbar ? "bg-primary text-white shadow-lg scale-105" : "bg-slate-900 text-white hover:bg-slate-800")}>
+                          <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} /> Assistant
                       </Button>
                   </div>
-
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
                   <div className="flex items-center gap-1 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="H1" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="H2" />
                   </div>
-                  
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} label="Bold" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Palette className="h-4 w-4" />} label="Highlight" />
                   </div>
-
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="List" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Tasks" />
                   </div>
-
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
                   <div className="flex items-center gap-0.5 px-1">
                       <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Link" />
                       <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Image" />
@@ -405,25 +378,11 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
                         <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
                         <AiAction icon={<Languages className="h-3 w-3" />} label="Fix grammar" onClick={() => callAiAssistant('fix-grammar')} />
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
-                        <AiAction icon={<ArrowRight className="h-3 w-3" />} label="Continue" onClick={() => callAiAssistant('continue')} />
                         <div className="h-px flex-1 bg-slate-100" />
                       </div>
                       <div className="flex items-center gap-2 px-2 pb-1">
-                          <Input 
-                            placeholder="Type a goal (e.g. Make this sound more persuasive)" 
-                            value={customGoal}
-                            onChange={(e) => setCustomGoal(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && customGoal.trim() && callAiAssistant('custom', customGoal)}
-                            className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] shadow-inner"
-                          />
-                          <Button 
-                            disabled={!customGoal.trim()}
-                            onClick={() => callAiAssistant('custom', customGoal)}
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl shrink-0"
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </Button>
+                          <Input placeholder="Type a custom goal..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px]" />
+                          <Button disabled={!customGoal.trim()} onClick={() => callAiAssistant('custom', customGoal)} size="icon" className="h-9 w-9 rounded-xl shrink-0"><Send className="h-3.5 w-3.5" /></Button>
                       </div>
                   </div>
               )}
@@ -433,68 +392,31 @@ export function Editor({ initialContent, onContentChange, editable = true }: Edi
 
       {aiPreview && (
           <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500">
-              <Card className="border-none shadow-[0_30px_90px_rgba(0,0,0,0.2)] rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6 border border-white/10">
+              <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6 border border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/20 text-primary">
-                        <Sparkles className="h-4 w-4" />
-                    </div>
+                    <div className="p-2 rounded-full bg-primary/20 text-primary"><Sparkles className="h-4 w-4" /></div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Review changes</p>
                 </div>
-                
                 <Separator orientation="vertical" className="h-4 bg-white/10" />
-
                 <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button 
-                                    onClick={acceptAiSuggestion}
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-9 w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white transition-all"
-                                >
-                                    <Check className="h-5 w-5" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Accept suggestion
-                            </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button 
-                                    onClick={discardAiSuggestion}
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-9 w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all"
-                                >
-                                    <X className="h-5 w-5" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-slate-800 text-white text-[10px] font-bold border-none uppercase tracking-widest px-3 py-1">
-                                Discard suggestion
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <Button onClick={acceptAiSuggestion} variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white"><Check className="h-5 w-5" /></Button>
+                    <Button onClick={discardAiSuggestion} variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"><X className="h-5 w-5" /></Button>
                 </div>
               </Card>
           </div>
       )}
 
-      <div className="relative">
-          <EditorContent editor={editor} />
-      </div>
+      <EditorContent editor={editor} />
     </div>
   );
 }
 
-function ToolbarButton({ onClick, active, disabled, icon, label }: { onClick: () => void, active?: boolean, disabled?: boolean, icon: React.ReactNode, label: string }) {
+function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
     return (
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); onClick(); }} disabled={disabled}
-                    className={cn("h-8 w-8 rounded-xl transition-all", active ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-slate-500 hover:bg-slate-100")}>
+                    className={cn("h-8 w-8 rounded-xl transition-all", active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100")}>
                     {icon}
                 </Button>
             </TooltipTrigger>
@@ -505,12 +427,10 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: { onClick: ()
     );
 }
 
-function AiAction({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick: () => void }) {
+function AiAction({ icon, label, onClick }: any) {
     return (
-        <Button variant="ghost" size="sm" onClick={onClick}
-            className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all">
-            {icon}
-            {label}
+        <Button variant="ghost" size="sm" onClick={onClick} className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all">
+            {icon} {label}
         </Button>
     );
 }

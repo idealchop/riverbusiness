@@ -62,18 +62,15 @@ export default function WorkspaceLandingPage() {
     if (!prompt.trim()) return;
     setIsProcessing(true);
     
-    // Simulate AI document drafting and opening process
-    setTimeout(() => {
-        setIsProcessing(false);
-        toast({
-            title: "Drafting document",
-            description: "A new collaborative canvas has been initialized based on your request."
-        });
-        window.dispatchEvent(new CustomEvent('request-new-collab-page', { 
-            detail: { title: prompt.substring(0, 40) } 
-        }));
-        setPrompt('');
-    }, 1500);
+    // Trigger creation via layout event with the initial prompt
+    window.dispatchEvent(new CustomEvent('request-new-collab-page', { 
+        detail: { 
+            title: prompt.trim().substring(0, 40),
+            initialPrompt: prompt.trim()
+        } 
+    }));
+    
+    // We don't reset prompt here as we expect a redirect soon
   };
 
   return (

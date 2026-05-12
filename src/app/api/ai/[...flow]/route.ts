@@ -1,5 +1,6 @@
 import { chatbot } from '@/ai/flows/chatbot-flow';
 import { writingAssistant } from '@/ai/flows/writing-assistant-flow';
+import { generatePageContent } from '@/ai/flows/generate-page-flow';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -21,6 +22,19 @@ export async function POST(
         'Content-Type': 'text/plain; charset=utf-8',
       },
     });
+  }
+
+  if (flowPath === 'generate') {
+    try {
+      const stream = await generatePageContent(json);
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+        },
+      });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
 
   if (flowPath === 'assistant') {

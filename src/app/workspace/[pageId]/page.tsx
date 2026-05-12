@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
@@ -117,9 +117,12 @@ const EMOJI_LIST = [
   { char: '🚚', keywords: 'delivery truck' }
 ];
 
-export default function PageEditor() {
+function PageEditorContent() {
   const { pageId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialPrompt = searchParams.get('prompt');
+  
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -131,7 +134,6 @@ export default function PageEditor() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
   
-  // Live typing states
   const [localIsTyping, setLocalIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -642,6 +644,7 @@ export default function PageEditor() {
                 <Editor 
                     key={page.id} 
                     initialContent={page.content} 
+                    initialPrompt={initialPrompt}
                     onContentChange={handleUpdateContent} 
                     editable={!page.isTrashed}
                 />
@@ -680,5 +683,13 @@ export default function PageEditor() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function PageEditor() {
+  return (
+    <Suspense fallback={<FullScreenLoader text="Opening document" />}>
+      <PageEditorContent />
+    </Suspense>
   );
 }

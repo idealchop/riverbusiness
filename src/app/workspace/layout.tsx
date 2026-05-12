@@ -60,7 +60,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       return rawPages.find(p => p.id === sharingPageId) || null;
   }, [sharingPageId, rawPages]);
 
-  const handleCreatePage = useCallback(async (parentId: string | null = null) => {
+  const handleCreatePage = useCallback(async (parentId: string | null = null, title: string = 'Untitled', initialPrompt?: string) => {
     if (!firestore || !authUser || !companyId) {
         toast({ title: "Initializing", description: "Please wait a moment while the workspace prepares your environment." });
         return;
@@ -71,7 +71,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       companyId,
       workspaceId: 'default',
       parentId,
-      title: 'Untitled',
+      title: title || 'Untitled',
       createdBy: authUser.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -83,8 +83,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
     addDoc(pagesCol, newPage)
       .then((docRef) => {
-        router.push(`/workspace/${docRef.id}`);
-        toast({ title: 'New document created', description: 'Your clean canvas is ready. Start capturing your organizational knowledge now.' });
+        // If there's a prompt, append it to the URL as a query param
+        const redirectUrl = `/workspace/${docRef.id}${initialPrompt ? `?prompt=${encodeURIComponent(initialPrompt)}` : ''}`;
+        router.push(redirectUrl);
+        
+        if (!initialPrompt) {
+            toast({ title: 'New document created', description: 'Your clean canvas is ready.' });
+        }
       })
       .catch(async (err) => {
         const permissionError = new FirestorePermissionError({
@@ -93,7 +98,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             requestResourceData: newPage
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        toast({ variant: 'destructive', title: 'Creation failed', description: 'Could not create the document due to a security or connection error.' });
+        toast({ variant: 'destructive', title: 'Creation failed', description: 'Could not create the document.' });
       });
   }, [firestore, authUser, companyId, router, toast]);
 
@@ -109,10 +114,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         if (pathname.includes(pageId)) {
             router.push('/workspace');
         }
-        toast({ title: 'Moved to trash', description: 'The document has been archived in the trash bin and can be restored within 30 days.' });
+        toast({ title: 'Moved to trash', description: 'The document has been archived in the trash bin.' });
     } catch (error) {
         console.error("Error moving to trash:", error);
-        toast({ variant: 'destructive', title: 'Action failed', description: 'The system encountered an error while trying to archive this document.' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, pathname, router, toast]);
 
@@ -124,10 +129,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             isTrashed: false,
             trashedAt: null
         });
-        toast({ title: 'Document restored', description: 'The document has been successfully moved back to your active workspace.' });
+        toast({ title: 'Document restored', description: 'The document has been successfully moved back.' });
     } catch (error) {
         console.error("Error restoring page:", error);
-        toast({ variant: 'destructive', title: 'Action failed', description: 'Failed to restore the document from the trash bin.' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, toast]);
 
@@ -135,10 +140,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
-        toast({ title: 'Purged permanently', description: 'The document and all associated data have been permanently erased from the system.' });
+        toast({ title: 'Purged permanently', description: 'The document has been permanently erased.' });
     } catch (error) {
         console.error("Error deleting permanently:", error);
-        toast({ variant: 'destructive', title: 'Action failed', description: 'Could not permanently delete the document at this time.' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, toast]);
 
@@ -150,18 +155,22 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         toast({ 
             title: isFavorite ? 'Added to favorites' : 'Removed from favorites', 
             description: isFavorite 
-                ? 'This document is now pinned to your favorites sidebar for quick access.' 
+                ? 'This document is now pinned to your favorites sidebar.' 
                 : 'The document has been removed from your favorites list.' 
         });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed', description: 'Your preference could not be updated due to a synchronization issue.' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, toast]);
 
   useEffect(() => {
     const handleRequestNewPage = (event: Event) => {
         const customEvent = event as CustomEvent;
-        handleCreatePage(customEvent.detail?.parentId || null);
+        handleCreatePage(
+            customEvent.detail?.parentId || null, 
+            customEvent.detail?.title || 'Untitled',
+            customEvent.detail?.initialPrompt
+        );
     };
 
     const handleRequestTrashPage = (event: Event) => {
