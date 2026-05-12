@@ -607,5 +607,3 @@ export default function HRDashboard() {
     </div>
   );
 }
-
-import { LogIn, LogOut } from 'lucide-react';
