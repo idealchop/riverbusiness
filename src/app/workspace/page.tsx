@@ -113,32 +113,32 @@ export default function WorkspaceLandingPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 max-w-xl mx-auto">
                 <Card 
                     onClick={handleNewDoc}
-                    className="border border-slate-100 shadow-none rounded-[2.5rem] bg-white group hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                    className="border border-slate-100 shadow-none rounded-2xl bg-white group hover:border-primary/20 transition-all duration-500 cursor-pointer active:scale-[0.98]"
                 >
-                    <CardContent className="p-8 space-y-6">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Plus className="h-6 w-6" />
+                    <CardContent className="p-5 space-y-4">
+                        <div className="h-10 w-10 rounded-xl bg-blue-50 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Plus className="h-5 w-5" />
                         </div>
-                        <div className="space-y-1">
-                            <h3 className="text-xl font-bold text-slate-900">New document</h3>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">
+                        <div className="space-y-0.5">
+                            <h3 className="text-base font-bold text-slate-900">New document</h3>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
                                 Start from a clean canvas
                             </p>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-none rounded-[2.5rem] bg-slate-900 text-white group hover:bg-slate-800 transition-all duration-500 cursor-pointer active:scale-[0.98]">
-                    <CardContent className="p-8 space-y-6">
-                        <div className="h-12 w-12 rounded-2xl bg-white/10 text-primary-light flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Sparkles className="h-6 w-6" />
+                <Card className="border-none shadow-none rounded-2xl bg-slate-900 text-white group hover:bg-slate-800 transition-all duration-500 cursor-pointer active:scale-[0.98]">
+                    <CardContent className="p-5 space-y-4">
+                        <div className="h-10 w-10 rounded-xl bg-white/10 text-primary-light flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Sparkles className="h-5 w-5" />
                         </div>
-                        <div className="space-y-1">
-                            <h3 className="text-xl font-bold">Knowledge base</h3>
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-tight">
+                        <div className="space-y-0.5">
+                            <h3 className="text-base font-bold">Knowledge base</h3>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
                                 Browse shared libraries
                             </p>
                         </div>
