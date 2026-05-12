@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
-import { FullScreenLoader } from '@/components/ui/loader';
+import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -198,7 +198,7 @@ function PageEditorContent() {
 
   const typingCollaborators = useMemo(() => {
     if (!collaborators || !user) return [];
-    return collaborators.filter(c => c.id !== user.uid && c.isTyping && c.isActive);
+    return collaborators.filter(c => c.userId !== user.uid && c.isTyping && c.isActive);
   }, [collaborators, user]);
 
   const filteredEmojis = useMemo(() => {
@@ -464,7 +464,7 @@ function PageEditorContent() {
       {/* Typing sidebar indicator */}
       <div className="fixed left-0 top-[20%] bottom-[20%] w-1.5 z-30 pointer-events-none flex flex-col justify-center gap-2">
           {typingCollaborators.map((c, i) => (
-              <TooltipProvider key={c.id}>
+              <TooltipProvider key={c.userId}>
                   <Tooltip delayDuration={0}>
                       <TooltipTrigger asChild>
                           <div 
@@ -506,13 +506,13 @@ function PageEditorContent() {
         <div className="flex items-center gap-4">
           <TooltipProvider delayDuration={0}>
              <div className="flex -space-x-1.5 mr-4">
-                {collaborators?.filter(c => c.id !== user?.uid).map(collab => {
+                {collaborators?.filter(c => c.userId !== user?.uid).map(collab => {
                     const lastActiveDate = collab.lastActive?.toDate?.() || new Date();
                     const isOnline = collab.isActive;
                     const isTyping = collab.isTyping;
 
                     return (
-                    <Tooltip key={collab.id}>
+                    <Tooltip key={collab.userId}>
                         <TooltipTrigger asChild>
                             <div className="relative">
                                 <Avatar className={cn(

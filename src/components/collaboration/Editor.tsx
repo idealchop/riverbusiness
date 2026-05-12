@@ -9,7 +9,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import Link from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import Table from '@tiptap/extension-table';
-import TableRow from '@radix-ui/react-table'; // Fixed to use proper row or extension
+import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Highlight from '@tiptap/extension-highlight';
@@ -133,6 +133,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       Table.configure({
           resizable: true,
       }),
+      TableRow,
       TableCell,
       TableHeader,
       Highlight.configure({ multicolor: true }),
@@ -289,13 +290,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
       if (data && data.suggestedText && isMounted && !editor.isDestroyed) {
           if (selectedText) {
-              const originalFrom = from;
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
-              
               editor.chain().focus().deleteRange(from, to).insertContent(combinedHtml).run();
-
               const currentTo = editor.state.selection.to;
-              setAiPreview({ text: data.suggestedText, originalText: selectedText, from: originalFrom, to: currentTo });
+              setAiPreview({ text: data.suggestedText, originalText: selectedText, from: from, to: currentTo });
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
           }
@@ -357,7 +355,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
               <div className="flex items-center gap-0.5">
                   <div className="flex items-center px-1">
-                      <Button onClick={() => setShowAiToolbar(!showAiToolbar)} className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-[0.2em] transition-all", showAiToolbar ? "bg-primary text-white shadow-lg scale-105" : "bg-slate-900 text-white hover:bg-slate-800")}>
+                      <Button onClick={() => setShowAiToolbar(!showAiToolbar)} className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-widest transition-all", showAiToolbar ? "bg-primary text-white shadow-lg scale-105" : "bg-slate-900 text-white hover:bg-slate-800")}>
                           <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} /> Assistant
                       </Button>
                   </div>
