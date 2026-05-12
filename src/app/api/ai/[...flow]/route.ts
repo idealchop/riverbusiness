@@ -16,24 +16,46 @@ export async function POST(
   const json = await req.json();
 
   if (flowPath === 'chat') {
-    const stream = await chatbot(json);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-      },
-    });
-  }
-
-  if (flowPath === 'generate') {
     try {
-      const stream = await generatePageContent(json);
-      return new Response(stream, {
+      const textStream = await chatbot(json);
+      const responseStream = new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          for await (const chunk of (textStream as any)) {
+            controller.enqueue(encoder.encode(chunk));
+          }
+          controller.close();
+        },
+      });
+      return new Response(responseStream, {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
         },
       });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+
+  if (flowPath === 'generate') {
+    try {
+      const textStream = await generatePageContent(json);
+      const responseStream = new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          for await (const chunk of (textStream as any)) {
+            controller.enqueue(encoder.encode(chunk));
+          }
+          controller.close();
+        },
+      });
+      return new Response(responseStream, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+        },
+      });
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
 

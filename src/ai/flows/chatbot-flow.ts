@@ -22,10 +22,10 @@ export async function chatbot(input: ChatbotInput) {
     ${input.messages.map((m) => `${m.role}: ${m.content}`).join('\n')}
     `,
     history: input.messages.map((m) => ({
-      role: m.role,
+      role: m.role === 'assistant' ? 'model' : (m.role as any),
       content: [{ text: m.content as string }],
     })),
   });
 
-  return stream.text();
+  return stream.text;
 }

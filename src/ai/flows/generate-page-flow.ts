@@ -6,11 +6,10 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 
 /**
  * Generates structured document content based on a user prompt.
- * Returns a stream of HTML-formatted text.
+ * Returns an async iterable of strings.
  */
 export async function generatePageContent(input: { prompt: string }) {
   const { stream } = ai.generateStream({
@@ -28,5 +27,5 @@ export async function generatePageContent(input: { prompt: string }) {
     <h1>Project Roadmap</h1><p>The following phases outline the execution...</p><h2>Phase 1</h2><ul><li>Requirement gathering</li></ul>`,
   });
 
-  return stream.text();
+  return stream.text;
 }
