@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, BookOpen, Clock, Star, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import { LogoBlack } from '@/components/icons';
 
 export default function WorkspaceLandingPage() {
   const handleNewDoc = () => {
@@ -15,8 +16,8 @@ export default function WorkspaceLandingPage() {
     <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50/50">
         <div className="max-w-2xl w-full space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="text-center space-y-4">
-                <div className="inline-flex h-16 w-16 items-center justify-center rounded-[2rem] bg-primary/10 text-primary mb-2 shadow-inner">
-                    <BookOpen className="h-8 w-8" />
+                <div className="flex justify-center mb-2">
+                    <LogoBlack className="h-16 w-16" />
                 </div>
                 <h1 className="text-4xl font-black tracking-tight text-slate-900 leading-none">Collaborative Intelligence</h1>
                 <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
