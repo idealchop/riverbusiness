@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
@@ -335,19 +335,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   return (
     <div className="group relative">
       <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/*" className="hidden" />
-
-      {editable && !editor.isDestroyed && (
-          <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
-              <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1 rounded-2xl flex items-center gap-1 animate-in fade-in zoom-in-95">
-                  <Button variant="ghost" size="sm" onClick={() => callAiAssistant('improve')} className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
-                      <Sparkles className="h-3.5 w-3.5" /> Improve
-                  </Button>
-                  <Separator orientation="vertical" className="h-4 mx-1" />
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('fix-grammar')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Languages className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => callAiAssistant('professional')} className="h-8 w-8 rounded-lg text-slate-500 hover:text-primary"><Type className="h-3.5 w-3.5" /></Button>
-              </div>
-          </BubbleMenu>
-      )}
 
       {editable && !editor.isDestroyed && (
         <TooltipProvider delayDuration={0}>
