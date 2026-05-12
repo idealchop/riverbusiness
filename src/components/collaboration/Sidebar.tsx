@@ -256,41 +256,21 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     New page
                 </Button>
             </div>
-
-            {/* Management Section at bottom */}
-            <div className="space-y-1 pt-4">
-                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Management</h4>
-                <Link href="/workspace/recent">
-                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <History className="h-4 w-4" /> Recently edited
-                    </Button>
-                </Link>
-                <Link href="/workspace/trash">
-                    <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                        <Trash2 className="h-4 w-4" /> Trash bin
-                    </Button>
-                </Link>
-            </div>
         </div>
       </ScrollArea>
 
-      {/* Sidebar Footer - AI Usage */}
-      <div className="p-4 mt-auto border-t bg-slate-50/50">
-        <div className="w-full p-4 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center gap-4 transition-all group">
-            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <Sparkles className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between mb-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Daily Capacity</p>
-                    <span className="text-[9px] font-black text-primary">30%</span>
-                </div>
-                <Progress value={30} className="h-1 bg-slate-100" />
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-1.5 leading-none">
-                    3 / 10 Daily Prompts
-                </p>
-            </div>
-        </div>
+      {/* Sidebar Footer - Management Section */}
+      <div className="p-4 mt-auto border-t bg-slate-50/50 space-y-1">
+        <Link href="/workspace/recent">
+            <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
+                <History className="h-4 w-4" /> Recently Edited
+            </Button>
+        </Link>
+        <Link href="/workspace/trash">
+            <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
+                <Trash2 className="h-4 w-4" /> Trash Bin
+            </Button>
+        </Link>
       </div>
 
       <AlertDialog open={!!pageToTrash} onOpenChange={() => setPageToTrash(null)}>
