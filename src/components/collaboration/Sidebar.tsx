@@ -185,7 +185,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     className="w-full justify-start h-10 rounded-xl border-slate-200 bg-white shadow-sm gap-3 font-bold text-xs"
                 >
                     <Search className="h-4 w-4 text-slate-400" />
-                    {isSearching ? '' : 'Quick find'}
+                    {isSearching ? '' : 'Quick Find'}
                 </Button>
                 {isSearching && (
                     <div className="absolute inset-0 z-50">
@@ -206,6 +206,15 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     </div>
                 )}
             </div>
+            
+            <Button 
+                variant="ghost" 
+                onClick={() => onCreatePage(null)}
+                className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900"
+            >
+                <Plus className="h-4 w-4" />
+                New Page
+            </Button>
         </div>
       </div>
 
@@ -247,14 +256,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         </div>
                     )}
                 </div>
-                <Button 
-                    variant="ghost" 
-                    onClick={() => onCreatePage(null)}
-                    className="w-full justify-start h-9 rounded-lg gap-2 text-xs font-bold text-slate-400 hover:text-primary hover:bg-primary/5 mt-2"
-                >
-                    <Plus className="h-3.5 w-3.5" />
-                    New page
-                </Button>
             </div>
         </div>
       </ScrollArea>
