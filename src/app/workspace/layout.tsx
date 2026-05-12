@@ -259,7 +259,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
              )}
              <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Collaborative workspace
+                    AI-powered Workspace
                 </span>
              </div>
           </div>
