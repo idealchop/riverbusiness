@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -9,7 +9,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import Link from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
+import TableRow from '@radix-ui/react-table'; // Fixed to use proper row or extension
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Highlight from '@tiptap/extension-highlight';
@@ -55,7 +55,7 @@ interface EditorProps {
   editable?: boolean;
 }
 
-export function Editor({ initialContent, initialPrompt, onContentChange, editable = true }: EditorProps) {
+export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true }, ref) => {
   const storage = useStorage();
   const auth = useAuth();
   const { toast } = useToast();
@@ -63,6 +63,7 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
   
   // AI States
   const [showAiToolbar, setShowAiToolbar] = useState(false);
@@ -70,6 +71,11 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
   const [aiStatus, setAiStatus] = useState('');
   const [customGoal, setCustomGoal] = useState('');
   const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   const uploadAndInsertImage = useCallback(async (file: File) => {
     if (!editor || !storage || !auth?.currentUser) return;
@@ -127,16 +133,14 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
       Table.configure({
           resizable: true,
       }),
-      TableRow,
-      TableHeader,
       TableCell,
+      TableHeader,
       Highlight.configure({ multicolor: true }),
     ],
     content: initialContent,
     editable: editable,
     onUpdate: ({ editor }) => {
-      // Don't trigger standard save if we're in AI streaming mode
-      if (!isAiProcessing) {
+      if (!isAiProcessing && isMounted) {
         onContentChange(editor.getJSON());
       }
     },
@@ -165,7 +169,11 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
             return false;
         }
     }
-  }, [uploadAndInsertImage]);
+  }, [uploadAndInsertImage, isMounted]);
+
+  useImperativeHandle(ref, () => ({
+      focus: () => editor?.commands.focus()
+  }));
 
   // Initial AI Generation Logic (The "Typing" effect)
   useEffect(() => {
@@ -194,31 +202,43 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
                     const chunk = decoder.decode(value, { stream: true });
                     accumulatedHtml += chunk;
                     
-                    // Directly update the editor to create the "typing" visual
-                    editor.commands.setContent(accumulatedHtml, false);
+                    if (isMounted && !editor.isDestroyed) {
+                        editor.commands.setContent(accumulatedHtml, false);
+                    }
                 }
 
-                // Final save to Firestore
-                onContentChange(editor.getJSON());
-                toast({ title: 'Draft generated', description: 'Your AI-powered document is ready for review.' });
+                if (isMounted) {
+                    onContentChange(editor.getJSON());
+                    toast({ title: 'Draft generated', description: 'Your AI-powered document is ready for review.' });
+                }
             } catch (error) {
                 console.error('Streaming error:', error);
-                toast({ variant: 'destructive', title: 'Generation error', description: 'Could not complete the AI draft.' });
+                if (isMounted) toast({ variant: 'destructive', title: 'Generation error' });
             } finally {
-                setIsAiProcessing(false);
-                setAiStatus('');
+                if (isMounted) {
+                    setIsAiProcessing(false);
+                    setAiStatus('');
+                }
             }
         };
 
         streamDoc();
     }
-  }, [initialPrompt, editor, onContentChange, toast]);
+  }, [initialPrompt, editor, onContentChange, toast, isMounted]);
 
   useEffect(() => {
     if (editor && initialContent && editor.isEmpty && !initialPrompt) {
         editor.commands.setContent(initialContent);
     }
   }, [editor, initialContent, initialPrompt]);
+
+  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        uploadAndInsertImage(file);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const setLink = () => {
     if (!editor) return;
@@ -231,14 +251,6 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
       return;
     }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
-
-  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        uploadAndInsertImage(file);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const callAiAssistant = async (action: string, customInstruction?: string) => {
@@ -275,7 +287,7 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
 
       const data = await response.json();
 
-      if (data && data.suggestedText) {
+      if (data && data.suggestedText && isMounted && !editor.isDestroyed) {
           if (selectedText) {
               const originalFrom = from;
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
@@ -289,10 +301,12 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
           }
       }
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Assistant error' });
+      if (isMounted) toast({ variant: 'destructive', title: 'Assistant error' });
     } finally {
-      setIsAiProcessing(false);
-      setAiStatus('');
+      if (isMounted) {
+          setIsAiProcessing(false);
+          setAiStatus('');
+      }
     }
   };
 
@@ -316,7 +330,7 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
     <div className="group relative">
       <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/*" className="hidden" />
 
-      {editable && (
+      {editable && !editor.isDestroyed && (
           <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
               <div className="bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1 rounded-2xl flex items-center gap-1 animate-in fade-in zoom-in-95">
                   <Button variant="ghost" size="sm" onClick={() => callAiAssistant('improve')} className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
@@ -329,7 +343,7 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
           </BubbleMenu>
       )}
 
-      {editable && (
+      {editable && !editor.isDestroyed && (
         <TooltipProvider delayDuration={0}>
           <div className="sticky top-14 z-30 mx-auto w-fit bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4">
               {isAiProcessing && (
@@ -405,10 +419,14 @@ export function Editor({ initialContent, initialPrompt, onContentChange, editabl
           </div>
       )}
 
-      <EditorContent editor={editor} />
+      <div className={cn("transition-opacity", (isAiProcessing && editor.isEmpty) ? "opacity-20" : "opacity-100")}>
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
-}
+});
+
+Editor.displayName = 'Editor';
 
 function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
     return (

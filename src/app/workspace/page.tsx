@@ -69,8 +69,6 @@ export default function WorkspaceLandingPage() {
             initialPrompt: prompt.trim()
         } 
     }));
-    
-    // We don't reset prompt here as we expect a redirect soon
   };
 
   return (

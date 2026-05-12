@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDoc } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
-import { FullScreenLoader, Loader2 } from '@/components/ui/loader';
+import { FullScreenLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,7 +30,9 @@ import {
   Palette,
   Search,
   XCircle,
-  MousePointer2
+  MousePointer2,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -121,7 +123,7 @@ const EMOJI_LIST = [
 function PageSkeleton() {
   return (
     <div className="min-h-full flex flex-col bg-white">
-      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b">
+      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
           <Skeleton className="h-4 w-24 rounded" />
@@ -163,6 +165,7 @@ function PageEditorContent() {
   const [parentPage, setParentPage] = useState<CollabPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
   
@@ -174,6 +177,7 @@ function PageEditorContent() {
 
   const latestContentRef = useRef<any>(null);
   const latestTitleRef = useRef<string>('');
+  const editorRef = useRef<any>(null);
 
   const contentUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -246,10 +250,7 @@ function PageEditorContent() {
     if (!firestore || !pageId || !user || !userProfile) return;
 
     setLoading(true);
-    // Don't clear page immediately to prevent flicker if switching pages
-    // setPage(null); 
-    setParentPage(null);
-    setIsSaving(false);
+    setIsDeleting(false);
 
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
     const presenceData = {
@@ -287,9 +288,13 @@ function PageEditorContent() {
             }
         }
       } else {
-        if (window.location.pathname.includes(pageId as string)) {
-          router.push('/workspace');
-        }
+        setIsDeleting(true);
+        setPage(null);
+        setTimeout(() => {
+            if (window.location.pathname.includes(pageId as string)) {
+              router.push('/workspace');
+            }
+        }, 500);
       }
       setLoading(false);
     }, async (err) => {
@@ -298,6 +303,7 @@ function PageEditorContent() {
             operation: 'get'
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
     });
 
     return () => {
@@ -415,6 +421,22 @@ function PageEditorContent() {
       if (!page) return;
       window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
   };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+          e.preventDefault();
+          editorRef.current?.focus();
+      }
+  };
+
+  if (isDeleting) {
+      return (
+          <div className="h-full flex flex-col items-center justify-center bg-white space-y-4 animate-in fade-in duration-500">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Syncing changes...</p>
+          </div>
+      );
+  }
 
   if (loading && !page) return <PageSkeleton />;
   if (!page) return <PageSkeleton />;
@@ -668,6 +690,7 @@ function PageEditorContent() {
             <input 
                 value={page.title} 
                 placeholder="Untitled"
+                onKeyDown={handleTitleKeyDown}
                 onChange={(e) => handleUpdateTitle(e.target.value)}
                 className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block"
                 readOnly={page.isTrashed}
@@ -675,6 +698,7 @@ function PageEditorContent() {
 
             <div className="">
                 <Editor 
+                    ref={editorRef}
                     key={page.id} 
                     initialContent={page.content} 
                     initialPrompt={initialPrompt}

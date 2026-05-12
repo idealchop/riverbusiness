@@ -4,7 +4,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { 
   Users, 
   Clock, 
-  CalendarDays, 
   Activity,
   LogOut,
   LogIn,
@@ -19,13 +18,12 @@ import {
   Info,
   Calendar as CalendarIcon,
   Search,
-  Bell,
   Send,
   UserCircle,
   QrCode,
   MapPin,
-  BookOpen,
-  ArrowRight
+  Fingerprint,
+  Loader2
 } from 'lucide-react';
 import { 
     Card, 
@@ -39,12 +37,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc, limit } from 'firebase/firestore';
-import { format, isSameDay, addMonths, subMonths, startOfMonth, addDays, subDays } from 'date-fns';
+import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc, limit, getDocs } from 'firebase/firestore';
+import { format, isSameDay, addMonths, subMonths, startOfMonth, addDays, differenceInMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { HRAttendanceLog, AppUser } from '@/lib/types';
+import type { HRAttendanceLog, AppUser, HRCompanyLocation } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -65,7 +63,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AttendanceScanner } from '@/components/hr/AttendanceScanner';
 import { Progress } from '@/components/ui/progress';
-import Link from 'next/link';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -104,6 +101,20 @@ const getMockLeaves = () => {
 
 const MOCK_LEAVES_DATA = getMockLeaves();
 
+// Helper for GPS distance
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
 export default function HRDashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -114,6 +125,7 @@ export default function HRDashboard() {
   const [liveDuration, setLiveDuration] = useState('00:00:00');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -160,6 +172,86 @@ export default function HRDashboard() {
     }
     return () => clearInterval(interval);
   }, [currentAction, latestLogToday]);
+
+  const handleQuickAttendance = async () => {
+    if (!firestore || !companyId || !user?.id) return;
+    
+    setIsProcessingQuick(true);
+    try {
+      // 1. Capture current position
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // 2. Fetch office location for radius check
+      const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
+      const locationSnap = await getDocs(locationsCol);
+      
+      if (locationSnap.empty) {
+        toast({ variant: 'destructive', title: 'Action Denied', description: 'Office location anchor not set.' });
+        setIsProcessingQuick(false);
+        return;
+      }
+
+      const office = locationSnap.docs[0].data() as HRCompanyLocation;
+      const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
+      const radius = office.radius_meters || 100;
+
+      if (distance > radius) {
+        toast({ 
+            variant: 'destructive', 
+            title: 'Out of Range', 
+            description: `You are ${Math.round(distance)}m away from the office anchor.` 
+        });
+        setIsProcessingQuick(false);
+        return;
+      }
+
+      // 3. Toggle attendance status
+      if (currentAction === 'OUT') {
+          // Clock In
+          const logData: Omit<HRAttendanceLog, 'id'> = {
+            companyId,
+            employeeId: user.id,
+            employeeName: user.name,
+            date: todayStr,
+            timeIn: serverTimestamp(),
+            status: 'present',
+            validation_status: 'Valid',
+            method: 'quick',
+            office_id: office.id,
+            action: 'IN'
+          };
+          await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
+          toast({ title: 'Clocked In', description: 'Quick verification successful.' });
+      } else if (latestLogToday?.[0]) {
+          // Clock Out
+          const log = latestLogToday[0];
+          const timeOut = Timestamp.now();
+          const timeIn = log.timeIn instanceof Timestamp ? log.timeIn : Timestamp.now();
+          const minutes = differenceInMinutes(timeOut.toDate(), timeIn.toDate());
+          
+          await updateDoc(doc(firestore, 'hr_companies', companyId, 'attendance', log.id), {
+              timeOut: serverTimestamp(),
+              totalMinutes: minutes,
+              action: 'OUT'
+          });
+          toast({ title: 'Clocked Out', description: 'Session ended and synchronized.' });
+      }
+
+    } catch (err: any) {
+        console.error("Quick attendance error:", err);
+        toast({ variant: 'destructive', title: 'Handshake Error', description: 'Ensure location services are active.' });
+    } finally {
+        setIsProcessingQuick(false);
+    }
+  };
 
   const employeesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
@@ -209,10 +301,6 @@ export default function HRDashboard() {
     pendingLeave: { color: 'white', backgroundColor: '#f59e0b' },
   };
 
-  const handleOpenOfficeSettings = () => {
-    window.dispatchEvent(new CustomEvent('open-office-settings'));
-  };
-
   const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
 
   return (
@@ -232,8 +320,18 @@ export default function HRDashboard() {
 
             <div className="hidden sm:flex items-center gap-3">
                 <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleQuickAttendance}
+                    disabled={isProcessingQuick}
+                    className="rounded-xl h-11 w-11 border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-all"
+                    title="Quick Attendance Check"
+                >
+                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-5 w-5 text-primary" />}
+                </Button>
+                <Button 
                   onClick={() => setIsScannerOpen(true)}
-                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2"
+                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2 shadow-md shadow-primary/10"
                 >
                     <QrCode className="h-4 w-4" /> Attendance Terminal
                 </Button>
@@ -509,3 +607,5 @@ export default function HRDashboard() {
     </div>
   );
 }
+
+import { LogIn, LogOut } from 'lucide-react';
