@@ -178,7 +178,6 @@ function PageEditorContent() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
   
   const [localIsTyping, setLocalIsTyping] = useState(false);
@@ -463,9 +462,7 @@ function PageEditorContent() {
                   <Button variant="outline" size="sm" onClick={handleRestore} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50">
                       <RotateCcw className="h-3 w-3" /> Restore Document
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-xl text-red-400 font-bold text-[10px]" onClick={() => setIsDeleteDialogOpen(true)}>
-                      Delete Permanently
-                  </Button>
+                  <DeletePopover page={page} onTrash={handleTrash} />
               </div>
           </div>
       )}
@@ -591,24 +588,8 @@ function PageEditorContent() {
                     onUpdate={handleUpdateMeta} 
                 />
 
-                <button 
-                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    title="Move To Trash"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </button>
+                <DeletePopover page={page} onTrash={handleTrash} />
             </>
-          )}
-
-          {page.isTrashed && (
-              <button 
-                  className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  title="Delete Permanently"
-              >
-                  <Trash2 className="h-4 w-4" />
-              </button>
           )}
         </div>
       </div>
@@ -639,7 +620,7 @@ function PageEditorContent() {
                         {page.icon}
                     </div>
                     {!page.isTrashed && (
-                        <div className="absolute -top-2 -right-6 opacity-0 group-hover/icon:opacity-100 transition-opacity">
+                        <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100 transition-opacity">
                              <Button variant="secondary" size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg border-none text-red-500">
                                 <X className="h-3 w-3" />
                             </Button>
@@ -657,7 +638,7 @@ function PageEditorContent() {
                                     <Smile className="mr-1.5 h-3.5 w-3.5" /> Add Icon
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl">
+                            <PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white">
                                 <div className="space-y-3">
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -715,37 +696,6 @@ function PageEditorContent() {
             </div>
         </div>
       </ScrollArea>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
-                {page.isTrashed ? 'Purge Permanently?' : 'Delete Document?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-              {page.isTrashed 
-                ? 'This action is irreversible. The document and its full block history will be erased from the secure cloud infrastructure.'
-                : 'This action will move the document to the trash. You can restore it later if needed.'
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-                onClick={() => {
-                    if (page.isTrashed) {
-                        window.dispatchEvent(new CustomEvent('request-permanent-delete-page', { detail: { pageId: page.id } }));
-                    } else {
-                        handleTrash();
-                    }
-                }}
-                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
-            >
-                {page.isTrashed ? 'Confirm Purge' : 'Move To Trash'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
@@ -898,6 +848,61 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
                             </div>
                         </div>
                     )}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+function DeletePopover({ page, onTrash }: { page: CollabPage, onTrash: () => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                <button 
+                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
+                    title={page.isTrashed ? "Delete Permanently" : "Move To Trash"}
+                >
+                    <Trash2 className="h-4 w-4" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white animate-in zoom-in-95 duration-200">
+                <div className="p-6 space-y-6">
+                    <div className="space-y-1">
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                            {page.isTrashed ? 'Purge Permanently?' : 'Delete Document?'}
+                        </h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Destructive Action Protocol</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-50 border border-red-100">
+                        <p className="text-xs font-medium text-red-800 leading-relaxed">
+                            {page.isTrashed 
+                                ? 'This action is irreversible. The document and its full block history will be erased from the secure cloud infrastructure.'
+                                : 'This action will move the document to the trash. You can restore it later if needed.'
+                            }
+                        </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1 rounded-xl h-10 font-bold text-xs uppercase tracking-widest" onClick={() => setIsOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setIsOpen(false);
+                                if (page.isTrashed) {
+                                    window.dispatchEvent(new CustomEvent('request-permanent-delete-page', { detail: { pageId: page.id } }));
+                                } else {
+                                    onTrash();
+                                }
+                            }}
+                            className="flex-1 bg-destructive text-white hover:bg-destructive/90 rounded-xl h-10 font-bold text-xs uppercase tracking-widest shadow-lg shadow-red-500/20"
+                        >
+                            {page.isTrashed ? 'Purge' : 'Confirm'}
+                        </Button>
+                    </div>
                 </div>
             </PopoverContent>
         </Popover>
