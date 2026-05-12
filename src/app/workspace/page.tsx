@@ -70,12 +70,8 @@ export default function WorkspaceLandingPage() {
                 </div>
                 
                 <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none">
-                    Collaborative <span className="text-primary font-normal">Intelligence</span>
+                    Ready, when you are. <span className="text-primary font-normal">What do you need?</span>
                 </h1>
-                
-                <p className="text-slate-400 font-medium text-lg">
-                  Ready, when you are. What do you need?
-                </p>
 
                 <div className="relative w-full max-w-2xl mx-auto pt-8">
                     <div className={cn(
