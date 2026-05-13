@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy, where } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LogoBlack } from '@/components/icons';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
@@ -90,7 +90,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
   }
 
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+  // IDENTIFIER: Workspace Owner is defined as the user with a "Current active plan"
+  const isWorkspaceOwner = !!user?.plan;
+  const isManagement = isWorkspaceOwner || user?.hrRole === 'admin';
   const companyId = user?.companyId || user?.clientId || 'default';
 
   // Dynamic Navigation based on Role
@@ -163,7 +165,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                 </Link>
             </Card>
 
-            {user?.hrRole === 'owner' && (
+            {isWorkspaceOwner && (
                 <Card 
                     onClick={() => {
                         window.dispatchEvent(new CustomEvent('open-office-settings'));
@@ -244,7 +246,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
               user={user} 
               onOpenSettings={() => setIsAccountDialogOpen(true)} 
               onLogout={handleLogout} 
-              showOfficeSetup={true}
+              showOfficeSetup={isWorkspaceOwner}
             />
           </div>
         </header>

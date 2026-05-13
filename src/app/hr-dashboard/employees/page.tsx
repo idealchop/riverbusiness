@@ -72,7 +72,9 @@ export default function EmployeesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const companyId = user?.companyId || user?.clientId || 'default';
-  const isWorkspaceOwner = user?.hrRole === 'owner';
+  
+  // IDENTIFIER: Workspace Owner is defined as the user with a "Current active plan"
+  const isWorkspaceOwner = !!user?.plan;
 
   const employeesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
@@ -204,7 +206,10 @@ export default function EmployeesPage() {
                   <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</TableCell></TableRow>
               ) : paginatedEmployees.map((emp) => {
                 const nameInitials = emp.name?.split(' ').map(n => n[0]).join('') || '?';
-                const isOwner = emp.hrRole === 'owner';
+                
+                // IDENTIFIER: Any user with a plan is considered the Owner
+                const isOwner = !!emp.plan;
+
                 return (
                   <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                     <TableCell className="pl-6 py-5">
@@ -220,7 +225,7 @@ export default function EmployeesPage() {
                              <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
                              {isOwner && (
                                 <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-[0.2em] h-4 px-1.5">
-                                    Owner
+                                    Workspace Owner
                                 </Badge>
                              )}
                           </div>
