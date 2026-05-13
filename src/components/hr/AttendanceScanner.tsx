@@ -121,7 +121,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
       };
       checkState();
 
-      // Delay start to allow dialog animation to complete
       const mountTimeout = setTimeout(() => {
         startCameraFlow();
         manualTimeout = setTimeout(() => {
@@ -149,7 +148,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     const Δλ = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
-              // eslint-disable-next-line no-mixed-operators
               Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
@@ -197,7 +195,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
           const radius = office.radius_meters || 100;
 
           if (distance > radius) {
-            setErrorMsg(`Location error: You are ${Math.round(distance)}m away. Authorized radius is ${radius}m.`);
+            setErrorMsg(`Location error: You are ${Math.round(distance)}m away.`);
             setStep('error');
             return;
           }
@@ -232,7 +230,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
             action: 'IN'
           };
           await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
-          toast({ title: 'Verified: Clock In Successful', description: 'Your shift session has been logged.' });
+          toast({ title: 'Verified: Clock In Successful' });
       } else if (latestLog) {
           const timeOut = Timestamp.now();
           const timeIn = toSafeDate(latestLog.timeIn) ? Timestamp.fromDate(toSafeDate(latestLog.timeIn)!) : Timestamp.now();
@@ -243,15 +241,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
               totalMinutes: minutes,
               action: 'OUT'
           });
-          toast({ title: 'Verified: Clock Out Successful', description: 'Shift duration has been recorded.' });
+          toast({ title: 'Verified: Clock Out Successful' });
       }
 
-      // Close the dialog immediately on success
       onOpenChange(false);
       resetTerminal();
 
     } catch (err: any) {
-      setErrorMsg(err.message || "Protocol failure. Ensure permissions are granted.");
+      setErrorMsg(err.message || "Protocol failure.");
       setStep('error');
     }
   };
@@ -285,23 +282,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
         `}} />
         <div className="p-8">
             <DialogHeader className="mb-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-xl bg-primary/10">
-                            <Fingerprint className="h-5 w-5 text-primary" />
-                        </div>
-                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Attendance Terminal</DialogTitle>
+                <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                        <Fingerprint className="h-5 w-5 text-primary" />
                     </div>
-                    {isCurrentlyIn && step === 'scan' && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
-                             <Clock className="h-3 w-3 text-primary animate-pulse" />
-                             <span className="text-[10px] font-black text-primary tabular-nums tracking-widest">{liveDuration}</span>
-                        </div>
-                    )}
+                    <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Attendance Terminal</DialogTitle>
                 </div>
-                <DialogDescription className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-                    Organizational Presence Verification
-                </DialogDescription>
             </DialogHeader>
             
             <div className="aspect-square w-full max-w-[320px] mx-auto flex flex-col items-center justify-center bg-black rounded-[2.5rem] border-4 border-slate-50 overflow-hidden relative shadow-inner">
@@ -313,7 +299,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 text-white gap-6">
                               {cameraLoading && <Loader2 className="h-10 w-10 animate-spin text-primary" />}
                               <div className="text-center space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Activating camera...</p>
                                 {showManualStart && (
                                     <Button 
                                         variant="outline" 
@@ -321,7 +306,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                                         onClick={startCameraFlow}
                                         className="rounded-xl border-white/20 text-white h-9 font-bold text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900 px-6 mt-4"
                                     >
-                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start Manual Scan
+                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start Scanner
                                     </Button>
                                 )}
                               </div>
@@ -336,12 +321,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                             <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
                             <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-bounce" />
                         </div>
-                        <div className="text-center space-y-3">
-                            <p className="text-lg font-black uppercase tracking-[0.2em] text-white">Validating</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed text-center">
-                                Processing protocol handshake...
-                            </p>
-                        </div>
+                        <p className="text-lg font-black uppercase tracking-[0.2em] text-white">Validating</p>
                     </div>
                 )}
 
@@ -352,25 +332,30 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                         </div>
                         <div className="space-y-4">
                             <p className="text-xl font-black text-white uppercase">Access Denied</p>
-                            <div className="bg-red-500/10 px-6 py-4 rounded-2xl border border-red-500/20 max-w-[280px]">
-                                <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">{errorMsg}</p>
-                            </div>
+                            <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">{errorMsg}</p>
                         </div>
                         <Button 
                             variant="outline" 
                             onClick={resetTerminal} 
                             className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 border-white/10 text-white hover:bg-white hover:text-slate-900"
                         >
-                            Retry handshake
+                            Retry
                         </Button>
                     </div>
                 )}
             </div>
 
-            <DialogFooter className="pt-8">
-                <div className="w-full flex flex-col gap-4">
-                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Cancel</Button>
+            {isCurrentlyIn && step === 'scan' && (
+                <div className="mt-6 flex flex-col items-center animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-2xl shadow-sm">
+                         <Clock className="h-4 w-4 text-primary animate-pulse" />
+                         <span className="text-sm font-black text-primary tabular-nums tracking-widest">{liveDuration}</span>
+                    </div>
                 </div>
+            )}
+
+            <DialogFooter className="pt-8">
+                <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Cancel</Button>
             </DialogFooter>
         </div>
       </DialogContent>
