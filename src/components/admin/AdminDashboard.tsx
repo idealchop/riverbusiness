@@ -110,7 +110,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const employees = (allUsers || []).filter(u => u.hrRole === 'employee');
         
         const totalClients = clients.length + (unclaimedProfiles?.length || 0);
-        const activeRefills = refillRequests?.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length || 0;
 
         return [
             { 
@@ -140,15 +139,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 description: salesMetrics.trend === 'increase' ? 'Up vs last month' : 'Growth tracking'
             },
             { 
-                title: 'Refill Queue', 
-                value: activeRefills, 
-                icon: Droplets, 
-                color: 'text-amber-500', 
-                bg: 'bg-amber-50',
-                description: 'Active requests'
+                title: 'Lifetime Sales', 
+                value: `₱${salesMetrics.lifetimeSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
+                icon: TrendingUp, 
+                color: 'text-emerald-500', 
+                bg: 'bg-emerald-50',
+                description: 'All-time volume'
             },
         ];
-    }, [allUsers, unclaimedProfiles, unclaimedEmployees, refillRequests, salesMetrics]);
+    }, [allUsers, unclaimedProfiles, unclaimedEmployees, salesMetrics]);
 
     React.useEffect(() => {
         const openAccountDialog = () => setIsAccountDialogOpen(true);
@@ -301,4 +300,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
