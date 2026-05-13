@@ -219,15 +219,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                 <LogoBlack className="h-8 w-8" />
                 <span className="font-black text-[10px] uppercase tracking-widest text-slate-900">HR Management</span>
              </div>
-             <div className="hidden sm:flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-400">Environment:</span>
-                <Badge variant="outline" className="text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200">
-                    {user?.businessName || 'Standard'}
-                </Badge>
-                <Badge className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[9px] tracking-widest h-6 px-3">
-                    ID: {companyId}
-                </Badge>
-             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
