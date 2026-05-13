@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock, LogIn, LogOut } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock, LogIn, LogOut, Fingerprint } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -118,12 +118,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
           const logsQuery = query(
             collection(firestore!, 'hr_companies', companyId, 'attendance'),
             where('employeeId', '==', user.id),
-            where('date', '==', todayStr),
-            orderBy('timeIn', 'desc'),
-            limit(1)
+            where('date', '==', todayStr)
           );
           const snap = await getDocs(logsQuery);
-          const isCurrentlyClockedIn = !snap.empty && !snap.docs[0].data().timeOut;
+          const latest = snap.docs
+            .map(d => d.data() as HRAttendanceLog)
+            .sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0))[0];
+            
+          const isCurrentlyClockedIn = !!(latest && !latest.timeOut);
           setIsCurrentlyIn(isCurrentlyClockedIn);
       };
       checkState();
@@ -212,13 +214,13 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
       const logsQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
-        where('date', '==', todayStr),
-        orderBy('timeIn', 'desc'),
-        limit(1)
+        where('date', '==', todayStr)
       );
       
       const logsSnap = await getDocs(logsQuery);
-      const latestLog = logsSnap.empty ? null : { id: logsSnap.docs[0].id, ...(logsSnap.docs[0].data() as HRAttendanceLog) };
+      const latestLog = logsSnap.empty ? null : logsSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as HRAttendanceLog))
+        .sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0))[0];
       
       const nextAction = (latestLog && !latestLog.timeOut) ? 'OUT' : 'IN';
       setActionType(nextAction);
@@ -292,7 +294,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="p-2 rounded-xl bg-primary/10">
-                            <QrCode className="h-5 w-5 text-primary" />
+                            <Fingerprint className="h-5 w-5 text-primary" />
                         </div>
                         <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Terminal</DialogTitle>
                     </div>

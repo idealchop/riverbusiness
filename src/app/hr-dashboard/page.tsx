@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -152,26 +151,33 @@ export default function HRDashboard() {
   const companyId = user?.companyId || user?.clientId || 'default';
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  // Unified Attendance Queries
+  // Unified Attendance Queries - Optimized for Indexless Search
   const todayLogQuery = useMemoFirebase(
     () => (firestore && user?.id && companyId !== 'default') ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
-        where('date', '==', todayStr),
-        orderBy('timeIn', 'desc'),
-        limit(1)
+        where('date', '==', todayStr)
     ) : null,
     [firestore, companyId, user?.id, todayStr]
   );
-  const { data: latestLogToday } = useCollection<HRAttendanceLog>(todayLogQuery);
-  const isOnDuty = !!(latestLogToday && latestLogToday.length > 0 && !latestLogToday[0].timeOut);
+  const { data: logsToday } = useCollection<HRAttendanceLog>(todayLogQuery);
+
+  const latestLogToday = useMemo(() => {
+    if (!logsToday || logsToday.length === 0) return null;
+    return [...logsToday].sort((a, b) => {
+        const timeA = toSafeDate(a.timeIn)?.getTime() || 0;
+        const timeB = toSafeDate(b.timeIn)?.getTime() || 0;
+        return timeB - timeA;
+    })[0];
+  }, [logsToday]);
+
+  const isOnDuty = !!(latestLogToday && !latestLogToday.timeOut);
 
   // Full Personal Attendance for performance metrics (if employee)
   const personalAttendanceQuery = useMemoFirebase(
       () => (firestore && user?.id && companyId !== 'default' && !isManagement) ? query(
           collection(firestore, 'hr_companies', companyId, 'attendance'),
-          where('employeeId', '==', user.id),
-          orderBy('date', 'desc')
+          where('employeeId', '==', user.id)
       ) : null,
       [firestore, companyId, user?.id, isManagement]
   );
@@ -179,8 +185,8 @@ export default function HRDashboard() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isOnDuty && latestLogToday?.[0]?.timeIn) {
-      const startTime = toSafeDate(latestLogToday[0].timeIn);
+    if (isOnDuty && latestLogToday?.timeIn) {
+      const startTime = toSafeDate(latestLogToday.timeIn);
       if (startTime) {
         const updateDuration = () => {
           const now = new Date();
@@ -257,8 +263,8 @@ export default function HRDashboard() {
           };
           await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
           toast({ title: 'Clocked In', description: `${isGpsRequired ? 'GPS Locked' : 'Flexible'} protocol active.` });
-      } else if (latestLogToday?.[0]) {
-          const log = latestLogToday[0];
+      } else if (latestLogToday) {
+          const log = latestLogToday;
           const timeOut = Timestamp.now();
           const timeIn = toSafeDate(log.timeIn) ? Timestamp.fromDate(toSafeDate(log.timeIn)!) : Timestamp.now();
           const minutes = differenceInMinutes(timeOut.toDate(), timeIn.toDate());
@@ -379,7 +385,7 @@ export default function HRDashboard() {
                     )}
                     title={isOnDuty ? "Quick Clock Out" : "Quick Clock In"}
                 >
-                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : isOnDuty ? <LogOut className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
+                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : isOnDuty ? <Fingerprint className="h-5 w-5" /> : <Fingerprint className="h-5 w-5" />}
                 </Button>
                 <Button 
                   onClick={() => setIsScannerOpen(true)}
@@ -388,7 +394,7 @@ export default function HRDashboard() {
                     isOnDuty ? "bg-destructive text-white hover:bg-destructive/90" : "bg-primary text-white hover:bg-primary/90"
                   )}
                 >
-                    <QrCode className="h-4 w-4" /> 
+                    <Fingerprint className="h-4 w-4" /> 
                     {isOnDuty ? 'End Session' : 'Attendance Terminal'}
                 </Button>
             </div>
@@ -611,7 +617,7 @@ export default function HRDashboard() {
                 isOnDuty ? "bg-destructive text-white hover:bg-destructive/90" : "bg-primary text-white hover:bg-primary/90"
               )}
           >
-              <QrCode className="h-7 w-7 text-white" />
+              <Fingerprint className="h-7 w-7 text-white" />
           </Button>
           <span className={cn(
             "text-[9px] font-black uppercase tracking-[0.3em] bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border",
