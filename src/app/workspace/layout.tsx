@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, getDocs, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -36,10 +36,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
 
-  const companyId = user?.companyId || 'default';
+  const companyId = user?.companyId || null;
 
-  // Fetch all organizational pages (trashed or not) - NO RESTRICTION
-  const pagesQuery = useMemoFirebase(() => (firestore) ? collection(firestore, 'collaboration_pages') : null, [firestore]);
+  // Fetch only organizational pages (trashed or not) - SCOPED BY companyId
+  const pagesQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(collection(firestore, 'collaboration_pages'), where('companyId', '==', companyId)) : null, 
+    [firestore, companyId]
+  );
 
   const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
@@ -49,8 +52,8 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       return [...rawPages]
         .filter(p => !p.isTrashed)
         .sort((a, b) => {
-          const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
-          const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0;
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0;
           return timeB - timeA;
       });
   }, [rawPages]);
@@ -75,6 +78,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       createdBy: authUser.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      isTrashed: false,
       content: {
           type: "doc",
           content: [{ type: "paragraph" }]
@@ -83,22 +87,19 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
     addDoc(pagesCol, newPage)
       .then((docRef) => {
-        // If there's a prompt, append it to the URL as a query param
         const redirectUrl = `/workspace/${docRef.id}${initialPrompt ? `?prompt=${encodeURIComponent(initialPrompt)}` : ''}`;
         router.push(redirectUrl);
         
         if (!initialPrompt) {
-            toast({ title: 'New document created', description: 'Your clean canvas is ready.' });
+            toast({ title: 'New document created' });
         }
       })
       .catch(async (err) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: pagesCol.path,
             operation: 'create',
             requestResourceData: newPage
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-        toast({ variant: 'destructive', title: 'Creation failed', description: 'Could not create the document.' });
+        } satisfies SecurityRuleContext));
       });
   }, [firestore, authUser, companyId, router, toast]);
 
@@ -114,10 +115,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         if (pathname.includes(pageId)) {
             router.push('/workspace');
         }
-        toast({ title: 'Moved to trash', description: 'The document has been archived in the trash bin.' });
+        toast({ title: 'Moved to trash' });
     } catch (error) {
         console.error("Error moving to trash:", error);
-        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, pathname, router, toast]);
 
@@ -129,10 +129,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             isTrashed: false,
             trashedAt: null
         });
-        toast({ title: 'Document restored', description: 'The document has been successfully moved back.' });
+        toast({ title: 'Document restored' });
     } catch (error) {
         console.error("Error restoring page:", error);
-        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, toast]);
 
@@ -140,10 +139,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
-        toast({ title: 'Purged permanently', description: 'The document has been permanently erased.' });
+        toast({ title: 'Purged permanently' });
     } catch (error) {
         console.error("Error deleting permanently:", error);
-        toast({ variant: 'destructive', title: 'Action failed' });
     }
   }, [firestore, toast]);
 
@@ -153,13 +151,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isFavorite });
         toast({ 
-            title: isFavorite ? 'Added to favorites' : 'Removed from favorites', 
-            description: isFavorite 
-                ? 'This document is now pinned to your favorites sidebar.' 
-                : 'The document has been removed from your favorites list.' 
+            title: isFavorite ? 'Added to favorites' : 'Removed from favorites'
         });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed' });
+        console.error("Error toggling favorite:", error);
     }
   }, [firestore, toast]);
 

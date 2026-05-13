@@ -17,29 +17,34 @@ import {
     AlertDialogFooter, 
     AlertDialogHeader, 
     AlertDialogTitle, 
-    AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
 
 export default function TrashPages() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  // Fetch all trashed pages globally - NO RESTRICTION
-  const pagesQuery = useMemoFirebase(() => (firestore) ? collection(firestore, 'collaboration_pages') : null, [firestore]);
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: user } = useDoc<AppUser>(userDocRef);
+  const companyId = user?.companyId || null;
 
-  const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
+  // Fetch trashed pages SCOPED by companyId
+  const pagesQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(collection(firestore, 'collaboration_pages'), where('companyId', '==', companyId), where('isTrashed', '==', true)) : null, 
+    [firestore, companyId]
+  );
 
-  // Filter for trashed pages and sort locally
+  const { data: trashedPagesRaw, isLoading } = useCollection<CollabPage>(pagesQuery);
+
+  // Sort locally
   const trashedPages = useMemo(() => {
-    if (!allPages) return [];
-    return [...allPages]
-      .filter(p => p.isTrashed === true)
+    if (!trashedPagesRaw) return [];
+    return [...trashedPagesRaw]
       .sort((a, b) => {
         const timeA = a.trashedAt instanceof Timestamp ? a.trashedAt.toMillis() : (a.trashedAt?.seconds ? a.trashedAt.seconds * 1000 : 0);
         const timeB = b.trashedAt instanceof Timestamp ? b.trashedAt.toMillis() : (b.trashedAt?.seconds ? b.trashedAt.seconds * 1000 : 0);
         return timeB - timeA;
       });
-  }, [allPages]);
+  }, [trashedPagesRaw]);
 
   const handleRestore = (pageId: string) => {
     window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId } }));
@@ -59,7 +64,7 @@ export default function TrashPages() {
                 </div>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Trash bin</h1>
-                    <p className="text-sm font-medium text-slate-500">Restore discarded documents or delete them forever.</p>
+                    <p className="text-sm font-medium text-slate-500">Restore discarded documents for your organization or delete them forever.</p>
                 </div>
             </div>
             
@@ -104,11 +109,9 @@ export default function TrashPages() {
                                 </Button>
 
                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
-                                            <XCircle className="h-5 w-5" />
-                                        </Button>
-                                    </AlertDialogTrigger>
+                                    <Button asChild variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
+                                        <XCircle className="h-5 w-5" />
+                                    </Button>
                                     <AlertDialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10">
                                         <AlertDialogHeader>
                                             <AlertDialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Purge permanently?</AlertDialogTitle>

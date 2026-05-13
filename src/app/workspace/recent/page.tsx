@@ -14,8 +14,15 @@ export default function RecentPages() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  // Fetch all pages globally to track recent activity across all teams - NO RESTRICTION
-  const pagesQuery = useMemoFirebase(() => (firestore) ? collection(firestore, 'collaboration_pages') : null, [firestore]);
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: user } = useDoc<AppUser>(userDocRef);
+  const companyId = user?.companyId || null;
+
+  // Fetch pages SCOPED by companyId
+  const pagesQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(collection(firestore, 'collaboration_pages'), where('companyId', '==', companyId)) : null, 
+    [firestore, companyId]
+  );
 
   const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
 
@@ -46,7 +53,7 @@ export default function RecentPages() {
                 </div>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Recently edited</h1>
-                    <p className="text-sm font-medium text-slate-500">Jump back into the most active documents across the platform.</p>
+                    <p className="text-sm font-medium text-slate-500">Jump back into the most active documents within your organization.</p>
                 </div>
             </div>
         </div>
