@@ -24,7 +24,10 @@ import {
     AlignRight,
     Zap,
     CornerRightUp,
-    Share2
+    Share2,
+    Layout,
+    Bold,
+    Link as LinkIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -53,6 +56,14 @@ const COLORS = [
     { name: 'Slate', value: '#f1f5f9' },
     { name: 'White', value: '#ffffff' },
     { name: 'Black', value: '#0f172a' }
+];
+
+const TEXT_COLORS = [
+    { name: 'Dark', value: '#0f172a' },
+    { name: 'Slate', value: '#64748b' },
+    { name: 'Blue', value: '#3b82f6' },
+    { name: 'Red', value: '#ef4444' },
+    { name: 'White', value: '#ffffff' }
 ];
 
 const FONT_SIZES = [12, 14, 16, 20, 24, 32, 48];
@@ -115,6 +126,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           height: type === 'text' ? 40 : 150,
           fontSize: 14,
           fontColor: '#0f172a',
+          bold: true,
           textAlign: 'center'
       };
       sync([...elements, newEl], connections);
@@ -280,6 +292,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             <div className="flex flex-col gap-2">
                 <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
+                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
             </div>
         </aside>
 
@@ -372,7 +385,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                             fontSize: `${el.fontSize || 14}px`, 
                                             color: el.fontColor || '#0f172a',
                                             textAlign: el.textAlign || 'center',
-                                            fontWeight: 'bold'
+                                            fontWeight: el.bold ? 'bold' : 'normal'
                                         }}
                                         placeholder="..."
                                     />
@@ -397,6 +410,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </div>
                     );
                 })}
+                
+                {/* Empty State */}
+                {elements.length === 0 && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-6 animate-in fade-in duration-1000">
+                        <div className="p-10 rounded-[3rem] bg-white border border-slate-100 shadow-inner opacity-40">
+                            <Layout className="h-16 w-16 text-slate-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-slate-400">Empty Flow Canvas</h3>
+                            <p className="text-xs font-semibold text-slate-300 uppercase tracking-widest">Drag components from the sidebar to begin</p>
+                        </div>
+                        <Button onClick={() => addElement('note')} className="rounded-full h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
+                            Initialize Logic Canvas
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Contextual Style Bar */}
@@ -430,6 +459,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        
+                        <ToolbarButton onClick={() => updateElement(selectedElement.id, { bold: !selectedElement.bold })} active={selectedElement.bold} icon={<Bold className="h-4 w-4" />} />
+                        
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl"><Palette className="h-4 w-4 opacity-50" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="grid grid-cols-5 p-2 rounded-xl">
+                                {TEXT_COLORS.map(c => (
+                                    <button key={c.value} onClick={() => updateElement(selectedElement.id, { fontColor: c.value })}
+                                        className={cn("h-5 w-5 rounded-full border m-1", selectedElement.fontColor === c.value && "ring-2 ring-primary")}
+                                        style={{ backgroundColor: c.value }} />
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'left' })} active={selectedElement.textAlign === 'left'} icon={<AlignLeft className="h-4 w-4" />} />
                         <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'center' })} active={selectedElement.textAlign === 'center'} icon={<AlignCenter className="h-4 w-4" />} />
                         <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'right' })} active={selectedElement.textAlign === 'right'} icon={<AlignRight className="h-4 w-4" />} />

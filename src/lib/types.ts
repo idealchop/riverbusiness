@@ -117,6 +117,7 @@ export interface BoardElement {
     height: number;
     fontSize?: number;
     fontColor?: string;
+    bold?: boolean;
     textAlign?: 'left' | 'center' | 'right';
     url?: string; // For images
 }
