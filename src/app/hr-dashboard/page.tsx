@@ -385,7 +385,7 @@ export default function HRDashboard() {
                     )}
                     title={isOnDuty ? "Quick Clock Out" : "Quick Clock In"}
                 >
-                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : isOnDuty ? <Fingerprint className="h-5 w-5" /> : <Fingerprint className="h-5 w-5" />}
+                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-5 w-5" />}
                 </Button>
                 <Button 
                   onClick={() => setIsScannerOpen(true)}
@@ -619,12 +619,6 @@ export default function HRDashboard() {
           >
               <Fingerprint className="h-7 w-7 text-white" />
           </Button>
-          <span className={cn(
-            "text-[9px] font-black uppercase tracking-[0.3em] bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border",
-            isOnDuty ? "text-red-500 border-red-50" : "text-primary border-slate-100"
-          )}>
-            Clock {isOnDuty ? 'Out' : 'In'}
-          </span>
       </div>
 
       {/* Dialogs */}
