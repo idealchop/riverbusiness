@@ -8,6 +8,12 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 import type { AppUser } from '@/lib/types';
 
+/**
+ * Onboarding Orchestrator
+ * Analyzes the authentication state and Firestore profile to determine the 
+ * correct routing for Type 1 (Admin Provisioned), Type 2 (Self-Registered), 
+ * or Type 3 (Invited Employee) users.
+ */
 export default function OnboardingPage() {
   const router = useRouter();
   const { user: authUser, isUserLoading } = useUser();
@@ -30,23 +36,26 @@ export default function OnboardingPage() {
         return;
     }
 
-    const checkUserDoc = async () => {
+    const analyzeIdentityAndRoute = async () => {
       const userDocRef = doc(firestore, 'users', authUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
+      // Check if Profile Already Exists (Type 1 setup complete, Type 2 complete, or Type 3 complete)
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data() as AppUser;
-        // Direct users based on their HR role
+        
+        // Direct users based on their resolved infrastructure role
         if (userData.hrRole === 'employee') {
           router.push('/hr-dashboard/attendance');
+        } else if (userData.role === 'Admin') {
+          router.push('/admin');
         } else {
           router.push('/dashboard');
         }
         return;
       }
 
-      // Check if user is an employee being invited (Magic Claim)
-      // This is the highest priority claim for invited staff
+      // IDENTITY TYPE 3: Check for pending employee invitation (Magic Claim)
       const employeeInviteQuery = query(
         collection(firestore, 'unclaimedEmployees'),
         where('email', '==', authUser.email?.toLowerCase().trim())
@@ -70,6 +79,7 @@ export default function OnboardingPage() {
             createdAt: new Date().toISOString(),
             role: 'User',
             hrRole: 'employee',
+            // companyId is inherited from the inviteData
           } as AppUser;
           
           batch.set(newUserRef, newUserData);
@@ -81,18 +91,18 @@ export default function OnboardingPage() {
           router.push('/hr-dashboard/attendance');
           return;
         } catch (error) {
-          console.error("Error claiming employee profile:", error);
-          toast({ variant: 'destructive', title: 'Onboarding failed', description: 'Could not activate your profile.' });
+          console.error("Identity resolution error:", error);
+          toast({ variant: 'destructive', title: 'Activation failed', description: 'Could not sync your profile.' });
         }
       }
 
-      // If no invitation found, proceed to standard client claim
+      // IDENTITY TYPE 1 or 2: No profile or employee invite found, move to Workspace Ownership choice
       router.push('/claim-account');
     };
     
-    checkUserDoc();
+    analyzeIdentityAndRoute();
 
   }, [authUser, isUserLoading, firestore, router, toast]);
 
-  return <FullScreenLoader text="Initializing workspace" />;
+  return <FullScreenLoader text="Synchronizing secure workspace..." />;
 }
