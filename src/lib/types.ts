@@ -109,7 +109,7 @@ export type CollabPageType = 'doc' | 'sheet' | 'board';
 
 export interface BoardElement {
     id: string;
-    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'arrow' | 'image';
+    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image';
     x: number;
     y: number;
     text: string;
@@ -117,8 +117,15 @@ export interface BoardElement {
     width: number;
     height: number;
     url?: string; // For images
-    fromId?: string; // For arrows
-    toId?: string; // For arrows
+}
+
+export interface BoardConnection {
+    id: string;
+    fromId: string;
+    toId: string;
+    type: 'straight' | 'curved' | 'step';
+    color?: string;
+    label?: string;
 }
 
 export interface CollabPage {
@@ -130,7 +137,11 @@ export interface CollabPage {
     title: string;
     icon?: string;
     coverImage?: string;
-    content?: any; 
+    content?: {
+        elements?: BoardElement[];
+        connections?: BoardConnection[];
+        [key: string]: any;
+    }; 
     createdBy: string;
     createdAt: any;
     updatedAt?: any;

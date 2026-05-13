@@ -22,10 +22,11 @@ import {
     ImageIcon,
     Presentation,
     Search,
+    BezierCurve,
     ChevronDown,
-    PanelRight,
-    MessageSquare,
-    Save
+    Zap,
+    CornerRightUp,
+    MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -36,7 +37,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useMounted } from '@/hooks/use-mounted';
-import type { BoardElement } from '@/lib/types';
+import type { BoardElement, BoardConnection } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, setDoc, collection } from 'firebase/firestore';
 
@@ -64,6 +65,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
   const { user } = useUser();
   
   const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
+  const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   
   // Navigation State
@@ -73,33 +75,32 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
   // Interaction State
   const [isPanning, setIsPanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   
+  // Connection state
+  const [pendingConnection, setPendingConnection] = useState<string | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync with Firestore Presence for Cursors
+  // Sync with Firestore Presence
   const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId, 'presence') : null, [firestore, pageId]);
   const { data: presence } = useCollection(presenceQuery);
 
   useEffect(() => {
-      if (initialData?.elements) {
-          setElements(initialData.elements);
-      }
+      if (initialData?.elements) setElements(initialData.elements);
+      if (initialData?.connections) setConnections(initialData.connections);
   }, [initialData]);
 
-  const updateCursor = useCallback((x: number, y: number) => {
-    if (!firestore || !pageId || !user) return;
-    const presenceRef = doc(firestore, 'collaboration_pages', pageId, 'presence', user.uid);
-    updateDoc(presenceRef, { cursor: { x, y }, lastActive: serverTimestamp() }).catch(() => {});
-  }, [firestore, pageId, user]);
-
-  const sync = (newElements: BoardElement[]) => {
+  const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
       setElements(newElements);
-      onContentChange({ elements: newElements });
-  };
+      setConnections(newConnections);
+      onContentChange({ elements: newElements, connections: newConnections });
+  }, [onContentChange]);
 
+  // Viewport mapping logic
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
       const rect = containerRef.current.getBoundingClientRect();
@@ -108,26 +109,59 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       return { x, y };
   };
 
+  // Keyboard Shortcuts Engine
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (!editable) return;
+          
+          if (e.code === 'Space' && !isPanning) {
+              setTool('hand');
+              setIsPanning(true);
+          }
+
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+              if (selectedId && !document.activeElement?.tagName.includes('TEXTAREA')) {
+                  deleteElement(selectedId);
+              }
+          }
+
+          if (e.ctrlKey || e.metaKey) {
+              if (e.key === '=') { e.preventDefault(); setViewport(v => ({ ...v, scale: Math.min(v.scale + 0.1, 5) })); }
+              if (e.key === '-') { e.preventDefault(); setViewport(v => ({ ...v, scale: Math.max(v.scale - 0.1, 0.1) })); }
+              if (e.key === '0') { e.preventDefault(); setViewport(v => ({ ...v, x: 0, y: 0, scale: 1 })); }
+          }
+      };
+
+      const handleKeyUp = (e: KeyboardEvent) => {
+          if (e.code === 'Space') {
+              setTool('select');
+              setIsPanning(false);
+          }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+      return () => {
+          window.removeEventListener('keydown', handleKeyDown);
+          window.removeEventListener('keyup', handleKeyUp);
+      };
+  }, [editable, selectedId, isPanning]);
+
   const addElement = (type: BoardElement['type'], x?: number, y?: number) => {
       if (!editable) return;
-      
       const id = `el-${Date.now()}`;
-      const spawnPos = x !== undefined && y !== undefined ? { x, y } : { x: 100 - viewport.x/viewport.scale, y: 100 - viewport.y/viewport.scale };
-
       const newEl: BoardElement = {
-          id,
-          type,
-          x: spawnPos.x,
-          y: spawnPos.y,
-          text: type === 'note' ? 'Idea' : (type === 'text' ? 'Double click to edit' : 'Process'),
+          id, type,
+          x: x || (100 - viewport.x) / viewport.scale,
+          y: y || (100 - viewport.y) / viewport.scale,
+          text: type === 'note' ? 'New Idea' : 'Process',
           color: type === 'note' ? '#fef08a' : '#ffffff',
-          width: type === 'rect' ? 180 : type === 'circle' ? 120 : (type === 'text' ? 200 : 150),
-          height: type === 'rect' ? 100 : type === 'circle' ? 120 : (type === 'text' ? 40 : 150),
+          width: type === 'text' ? 200 : 150,
+          height: type === 'text' ? 40 : 150,
       };
-      
-      sync([...elements, newEl]);
+      sync([...elements, newEl], connections);
       setSelectedId(id);
-      if (type !== 'rect' && type !== 'circle' && type !== 'diamond') setTool('select');
+      setTool('select');
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -139,30 +173,42 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
           return;
       }
 
-      if (tool !== 'select') {
-          addElement(tool as any, x, y);
+      if (tool === 'arrow') {
+          const hit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
+          if (hit) {
+              if (!pendingConnection) {
+                  setPendingConnection(hit.id);
+                  toast({ title: 'Connection started', description: 'Click another block to link.' });
+              } else if (pendingConnection !== hit.id) {
+                  const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnection, toId: hit.id, type: 'curved' };
+                  sync(elements, [...connections, newConn]);
+                  setPendingConnection(null);
+                  setTool('select');
+              }
+          }
           return;
       }
 
-      // Check for element hit
-      const clickedEl = [...elements].reverse().find(el => (
-          x >= el.x && x <= el.x + el.width &&
-          y >= el.y && y <= el.y + el.height
-      ));
-
-      if (clickedEl) {
-          setSelectedId(clickedEl.id);
-          setIsDragging(true);
-          setDragId(clickedEl.id);
-          setDragOffset({ x: x - clickedEl.x, y: y - clickedEl.y });
+      const hit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
+      if (hit) {
+          // Check for resize handles
+          const handleSize = 10 / viewport.scale;
+          if (x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize) {
+              setIsResizing(true);
+              setDragId(hit.id);
+          } else {
+              setSelectedId(hit.id);
+              setIsDragging(true);
+              setDragId(hit.id);
+              setDragOffset({ x: x - hit.x, y: y - hit.y });
+          }
       } else {
           setSelectedId(null);
+          setPendingConnection(null);
       }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-      updateCursor(e.clientX, e.clientY);
-
       if (isPanning) {
           const dx = e.clientX - lastMousePos.x;
           const dy = e.clientY - lastMousePos.y;
@@ -171,27 +217,31 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
           return;
       }
 
-      if (isDragging && dragId) {
-          const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-          const newX = x - dragOffset.x;
-          const newY = y - dragOffset.y;
-          
-          setElements(prev => prev.map(el => 
-              el.id === dragId ? { ...el, x: newX, y: newY } : el
-          ));
+      const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+
+      if (isResizing && dragId) {
+          setElements(prev => prev.map(el => el.id === dragId ? { 
+              ...el, 
+              width: Math.max(50, x - el.x), 
+              height: Math.max(40, y - el.y) 
+          } : el));
+      } else if (isDragging && dragId) {
+          setElements(prev => prev.map(el => el.id === dragId ? { ...el, x: x - dragOffset.x, y: y - dragOffset.y } : el));
       }
   };
 
   const handleMouseUp = () => {
-      if (isDragging) sync(elements);
+      if (isDragging || isResizing) sync(elements, connections);
       setIsPanning(false);
       setIsDragging(false);
+      setIsResizing(false);
       setDragId(null);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
-          const delta = e.deltaY * -0.001;
+          e.preventDefault();
+          const delta = e.deltaY * -0.01;
           const newScale = Math.min(Math.max(0.1, viewport.scale + delta), 5);
           setViewport(prev => ({ ...prev, scale: newScale }));
       } else {
@@ -200,17 +250,36 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
   };
 
   const updateElement = (id: string, data: Partial<BoardElement>) => {
-      sync(elements.map(el => el.id === id ? { ...el, ...data } : el));
+      const next = elements.map(el => el.id === id ? { ...el, ...data } : el);
+      sync(next, connections);
   };
 
   const deleteElement = (id: string) => {
-      sync(elements.filter(el => el.id !== id));
+      sync(elements.filter(el => el.id !== id), connections.filter(c => c.fromId !== id && c.toId !== id));
       if (selectedId === id) setSelectedId(null);
   };
 
-  const selectedElement = elements.find(el => el.id === selectedId);
+  const getConnectorPath = (conn: BoardConnection) => {
+      const from = elements.find(e => e.id === conn.fromId);
+      const to = elements.find(e => e.id === conn.toId);
+      if (!from || !to) return '';
 
-  if (!isMounted) return <div className="flex-1 flex items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-slate-200" /></div>;
+      const x1 = from.x + from.width / 2;
+      const y1 = from.y + from.height / 2;
+      const x2 = to.x + to.width / 2;
+      const y2 = to.y + to.height / 2;
+
+      if (conn.type === 'straight') return `M ${x1} ${y1} L ${x2} ${y2}`;
+      if (conn.type === 'step') return `M ${x1} ${y1} H ${(x1 + x2) / 2} V ${y2} H ${x2}`;
+      
+      const cp1x = x1 + (x2 - x1) / 2;
+      const cp1y = y1;
+      const cp2x = x1 + (x2 - x1) / 2;
+      const cp2y = y2;
+      return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+  };
+
+  if (!isMounted) return null;
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative select-none" 
@@ -220,53 +289,63 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
          onWheel={handleWheel}
          ref={containerRef}>
         
-        {/* Infinite Grid Protocol */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
+        {/* Professional Infinite Grid */}
+        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
              style={{ 
-                 backgroundImage: `radial-gradient(circle, #538ec2 1.2px, transparent 1.2px)`, 
+                 backgroundImage: `radial-gradient(circle, #538ec2 1px, transparent 1px)`, 
                  backgroundSize: `${40 * viewport.scale}px ${40 * viewport.scale}px`,
                  backgroundPosition: `${viewport.x}px ${viewport.y}px`
              }} 
         />
 
-        {/* Floating Miro-Style Toolbars */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-1.5 p-2 bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl animate-in slide-in-from-left-6 duration-700">
-            <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} label="Select" active={tool === 'select'} onClick={() => setTool('select')} />
-            <ToolbarItem icon={<Grab className="h-4 w-4" />} label="Pan Canvas" active={tool === 'hand'} onClick={() => setTool('hand')} />
-            <Separator className="my-1 bg-slate-100" />
-            <ToolbarItem icon={<StickyNote className="h-4 w-4 text-amber-500" />} label="Sticky Note" active={tool === 'note'} onClick={() => setTool('note')} />
-            <ToolbarItem icon={<Square className="h-4 w-4 text-blue-500" />} label="Rectangle" active={tool === 'rect'} onClick={() => setTool('rect')} />
-            <ToolbarItem icon={<Circle className="h-4 w-4 text-green-500" />} label="Circle" active={tool === 'circle'} onClick={() => setTool('circle')} />
-            <ToolbarItem icon={<div className="h-3.5 w-3.5 border-2 border-purple-500 rotate-45 rounded-sm" />} label="Diamond" active={tool === 'diamond'} onClick={() => setTool('diamond')} />
-            <Separator className="my-1 bg-slate-100" />
-            <ToolbarItem icon={<Type className="h-4 w-4" />} label="Text Label" active={tool === 'text'} onClick={() => setTool('text')} />
-            <ToolbarItem icon={<ArrowRight className="h-4 w-4" />} label="Connector" active={tool === 'arrow'} onClick={() => setTool('arrow')} />
-            <ToolbarItem icon={<ImageIcon className="h-4 w-4 text-slate-400" />} label="Place Image" onClick={() => toast({ title: 'Upload Active', description: 'Drop an image anywhere to insert.' })} />
+        {/* Miro-Style Floating Toolbar */}
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1.5 p-2 bg-white border border-slate-200 shadow-2xl rounded-2xl animate-in slide-in-from-left-6 duration-700">
+            <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} label="Select (V)" active={tool === 'select'} onClick={() => setTool('select')} />
+            <ToolbarItem icon={<Grab className="h-4 w-4" />} label="Pan (Space)" active={tool === 'hand'} onClick={() => setTool('hand')} />
+            <Separator className="my-1" />
+            <ToolbarItem icon={<StickyNote className="h-4 w-4 text-amber-500" />} label="Sticky (N)" active={tool === 'note'} onClick={() => setTool('note')} />
+            <ToolbarItem icon={<Square className="h-4 w-4 text-blue-500" />} label="Block" active={tool === 'rect'} onClick={() => setTool('rect')} />
+            <ToolbarItem icon={<Circle className="h-4 w-4 text-green-500" />} label="Action" active={tool === 'circle'} onClick={() => setTool('circle')} />
+            <ToolbarItem icon={<ArrowRight className="h-4 w-4 text-slate-400" />} label="Link (L)" active={tool === 'arrow'} onClick={() => setTool('arrow')} />
+            <Separator className="my-1" />
+            <ToolbarItem icon={<Type className="h-4 w-4" />} label="Label (T)" active={tool === 'text'} onClick={() => setTool('text')} />
         </div>
 
-        {/* Top Intelligence Bar */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 p-2.5 bg-white/80 backdrop-blur-md border border-slate-100 shadow-xl rounded-2xl">
-             <div className="flex items-center gap-3 px-3">
-                <div className="p-2 rounded-xl bg-primary/10"><Presentation className="h-4 w-4 text-primary" /></div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Live Presentation Mode</p>
+        {/* Global HUD */}
+        <div className="absolute bottom-8 right-8 z-40 flex items-center gap-3">
+             <div className="flex items-center gap-1 p-1 bg-white border rounded-xl shadow-lg">
+                <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.max(0.1, v.scale - 0.1) }))} className="h-8 w-8"><Minus className="h-4 w-4" /></Button>
+                <span className="text-[10px] font-black w-10 text-center">{Math.round(viewport.scale * 100)}%</span>
+                <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.min(5, v.scale + 0.1) }))} className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
              </div>
-             <Separator orientation="vertical" className="h-6" />
-             <div className="flex -space-x-1.5 mr-2">
-                {presence?.filter(p => p.isActive && p.userId !== user?.uid).map(p => (
-                    <Avatar key={p.userId} className="h-6 w-6 border-2 border-white shadow-sm ring-1 ring-slate-100">
-                        <AvatarImage src={p.photoURL} /><AvatarFallback className="text-[8px] font-bold bg-primary text-white">{p.name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                ))}
-             </div>
+             <Button variant="outline" size="icon" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })} className="h-10 w-10 rounded-xl bg-white shadow-lg"><Zap className="h-4 w-4" /></Button>
         </div>
 
-        {/* Dynamic Element Rendering */}
+        {/* Canvas Render Surface */}
         <div className="flex-1 relative overflow-hidden z-10">
-             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
+            <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
+                {/* SVG Layer for Connections */}
+                <svg className="absolute inset-0 overflow-visible w-full h-full">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1" />
+                        </marker>
+                    </defs>
+                    {connections.map(conn => (
+                        <path 
+                            key={conn.id} 
+                            d={getConnectorPath(conn)} 
+                            fill="none" 
+                            stroke="#cbd5e1" 
+                            strokeWidth="2" 
+                            markerEnd="url(#arrowhead)"
+                            className="transition-all"
+                        />
+                    ))}
+                </svg>
+
                 {elements.map((el) => {
                     const isSelected = selectedId === el.id;
-                    const isDraggingThis = dragId === el.id;
-
                     return (
                         <div 
                             key={el.id}
@@ -278,11 +357,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                         >
                             <div 
                                 className={cn(
-                                    "w-full h-full p-4 flex flex-col relative transition-all duration-300",
+                                    "w-full h-full p-4 flex flex-col relative transition-all",
                                     el.type === 'note' && "bg-white border-t-8 border-t-amber-400 shadow-xl rounded-b-lg",
                                     el.type === 'rect' && "bg-white border-2 border-slate-900 rounded-xl shadow-lg",
                                     el.type === 'circle' && "bg-white border-2 border-slate-900 rounded-full shadow-lg items-center justify-center text-center",
-                                    el.type === 'diamond' && "bg-white border-2 border-slate-900 rotate-45 shadow-lg flex items-center justify-center overflow-hidden",
                                     el.type === 'text' && "bg-transparent border-none p-0"
                                 )}
                                 style={{ backgroundColor: el.color }}
@@ -290,66 +368,52 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                                 <textarea 
                                     value={el.text}
                                     onChange={(e) => updateElement(el.id, { text: e.target.value })}
-                                    className={cn(
-                                        "bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-sm font-bold text-slate-800 h-full w-full placeholder:text-slate-300",
-                                        el.type === 'circle' && "text-center flex items-center justify-center pt-8",
-                                        el.type === 'diamond' && "-rotate-45 text-center flex items-center justify-center pt-8",
-                                        el.type === 'text' && "text-lg font-black"
-                                    )}
-                                    placeholder="Type data..."
+                                    className="bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-sm font-bold h-full w-full"
+                                    placeholder="..."
                                 />
+                                
+                                {/* Resize Handle */}
+                                {isSelected && (
+                                    <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white">
+                                        <CornerRightUp className="h-2 w-2 rotate-90" />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
                 })}
+            </div>
 
-                {/* Collaborative Cursors */}
-                {presence?.filter(p => p.isActive && p.userId !== user?.uid && p.cursor).map(p => (
-                    <div key={p.userId} className="absolute pointer-events-none transition-all duration-75 z-[100]" style={{ left: (p.cursor.x - viewport.x) / viewport.scale, top: (p.cursor.y - viewport.y) / viewport.scale }}>
-                         <MousePointer2 className="h-4 w-4 text-primary fill-current" />
-                         <div className="bg-primary text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full ml-3 shadow-lg whitespace-nowrap">{p.name}</div>
-                    </div>
-                ))}
-             </div>
-
-             {elements.length === 0 && (
-                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-10 animate-in fade-in duration-1000">
+            {elements.length === 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-10 animate-in fade-in duration-1000">
                     <div className="p-16 rounded-[4.5rem] bg-white border border-slate-200 shadow-2xl opacity-30 relative group">
-                        <Layout className="h-24 w-24 text-slate-400 group-hover:scale-110 transition-transform duration-700" />
+                        <Layout className="h-24 w-24 text-slate-400" />
                     </div>
                     <div className="space-y-4">
-                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Initialize Logic</h3>
+                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Logic Drafting</h3>
                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8">Deploy primary workflow block</p>
-                        <Button onClick={() => addElement('note')} className="rounded-2xl h-14 px-12 font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20 transition-all active:scale-95">
+                        <Button onClick={() => addElement('note')} className="rounded-2xl h-14 px-12 font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20">
                             Create First Node
                         </Button>
                     </div>
-                 </div>
-             )}
+                </div>
+            )}
         </div>
 
-        {/* Contextual Toolbar for Selection */}
+        {/* Contextual Controller */}
         {selectedElement && (
             <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2.5 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl hover:bg-white/10 text-white font-bold text-[10px] uppercase tracking-widest">
+                        <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl text-white font-bold text-[10px] uppercase">
                             <Palette className="h-4 w-4" /> Color
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl border-none shadow-3xl bg-white">
+                    <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white">
                         {COLORS.map(c => (
-                            <button 
-                                key={c.value} 
-                                onClick={() => updateElement(selectedElement.id, { color: c.value })}
-                                className={cn(
-                                    "h-6 w-6 rounded-lg border border-slate-100 flex items-center justify-center hover:scale-110 transition-transform",
-                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-1"
-                                )}
-                                style={{ backgroundColor: c.value }}
-                            >
-                                {c.value === 'inherit' && <X className="h-3 w-3 text-slate-400" />}
-                            </button>
+                            <button key={c.value} onClick={() => updateElement(selectedElement.id, { color: c.value })}
+                                className={cn("h-6 w-6 rounded-lg border", selectedElement.color === c.value && "ring-2 ring-primary ring-offset-1")}
+                                style={{ backgroundColor: c.value }} />
                         ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -359,47 +423,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                 </Button>
             </div>
         )}
-
-        {/* View Controls & HUD */}
-        <div className="absolute bottom-10 right-10 z-40 flex items-center gap-4 animate-in fade-in duration-1000">
-            <div className="flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl">
-                 <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.max(0.1, v.scale - 0.1) }))} className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100"><Minus className="h-4 w-4" /></Button>
-                 <div className="px-3 py-1 text-[10px] font-black text-slate-900 uppercase tracking-tighter w-12 text-center tabular-nums">{Math.round(viewport.scale * 100)}%</div>
-                 <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.min(5, v.scale + 0.1) }))} className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100"><Plus className="h-4 w-4" /></Button>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-                 <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl bg-white border-slate-200 shadow-lg text-slate-400 hover:text-primary transition-all"><Search className="h-4 w-4" /></Button>
-                 <Button variant="outline" size="icon" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })} className="h-10 w-10 rounded-2xl bg-white border-slate-200 shadow-lg text-slate-400 hover:text-primary transition-all"><X className="h-4 w-4" /></Button>
-            </div>
-        </div>
-
-        {/* Mini HUD - Bottom Left */}
-        <div className="absolute bottom-10 left-10 z-40 flex items-center gap-4">
-             <div className="px-4 py-2 bg-slate-900/90 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                    <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Logic Hub v1.4</p>
-                </div>
-                <Separator orientation="vertical" className="h-3 bg-white/10" />
-                <p className="text-[9px] font-black text-white uppercase tracking-widest">Client: {user?.companyId || 'PRO-25'}</p>
-             </div>
-        </div>
     </div>
   );
 }
 
+const selectedElement = (elements: BoardElement[], id: string | null) => elements.find(e => e.id === id);
+
 function ToolbarItem({ icon, label, active = false, onClick }: any) {
     return (
-        <button 
-            onClick={onClick}
-            className={cn(
-                "h-12 w-12 flex items-center justify-center rounded-xl transition-all group relative",
-                active ? "bg-primary text-white shadow-lg scale-105" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            )}
-        >
+        <button onClick={onClick} className={cn("h-12 w-12 flex items-center justify-center rounded-xl transition-all group relative", active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100")}>
             {icon}
-            <div className="absolute left-16 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-all shadow-2xl border border-white/10 z-[60] -translate-x-1 group-hover:translate-x-0">
+            <div className="absolute left-16 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap shadow-2xl z-[60]">
                 {label}
             </div>
         </button>
