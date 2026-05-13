@@ -35,7 +35,9 @@ import {
     DropdownMenu, 
     DropdownMenuContent, 
     DropdownMenuItem, 
-    DropdownMenuTrigger 
+    DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
@@ -451,22 +453,28 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     <div className="flex items-center gap-0.5">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl"><CaseSensitive className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white"><CaseSensitive className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="p-1 rounded-xl">
+                            <DropdownMenuContent className="p-1 rounded-xl bg-white border-slate-100">
                                 {FONT_SIZES.map(s => (
-                                    <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { fontSize: s })} className="text-xs font-bold">{s}px</DropdownMenuItem>
+                                    <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { fontSize: s })} className="text-xs font-bold cursor-pointer">
+                                        {s}px
+                                    </DropdownMenuItem>
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
                         
-                        <ToolbarButton onClick={() => updateElement(selectedElement.id, { bold: !selectedElement.bold })} active={selectedElement.bold} icon={<Bold className="h-4 w-4" />} />
+                        <ToolbarButton 
+                            onClick={() => updateElement(selectedElement.id, { bold: !selectedElement.bold })} 
+                            active={!!selectedElement.bold} 
+                            icon={<Bold className="h-4 w-4" />} 
+                        />
                         
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl"><Palette className="h-4 w-4 opacity-50" /></Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white"><Palette className="h-4 w-4 opacity-50" /></Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="grid grid-cols-5 p-2 rounded-xl">
+                            <DropdownMenuContent className="grid grid-cols-5 p-2 rounded-xl bg-white border-slate-100">
                                 {TEXT_COLORS.map(c => (
                                     <button key={c.value} onClick={() => updateElement(selectedElement.id, { fontColor: c.value })}
                                         className={cn("h-5 w-5 rounded-full border m-1", selectedElement.fontColor === c.value && "ring-2 ring-primary")}
