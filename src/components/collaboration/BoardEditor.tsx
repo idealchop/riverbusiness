@@ -23,7 +23,8 @@ import {
     AlignCenter,
     AlignRight,
     Zap,
-    CornerRightUp
+    CornerRightUp,
+    Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -75,7 +76,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   
-  const [pendingConnection, setPendingConnection] = useState<string | null>(null);
+  // Connection Dragging State
+  const [pendingConnFrom, setPendingConnFrom] = useState<string | null>(null);
+  const [currentMouseCoords, setCurrentMouseCoords] = useState<{ x: number, y: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -85,10 +88,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   }, [initialData]);
 
   const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
+      if (!editable) return;
       setElements(newElements);
       setConnections(newConnections);
       onContentChange({ elements: newElements, connections: newConnections });
-  }, [onContentChange]);
+  }, [onContentChange, editable]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -105,7 +109,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           id, type,
           x: x || (100 - viewport.x) / viewport.scale,
           y: y || (100 - viewport.y) / viewport.scale,
-          text: type === 'note' ? 'New Idea' : (type === 'text' ? 'Double click to edit' : 'Process'),
+          text: type === 'note' ? 'New Idea' : (type === 'text' ? 'Double click to edit' : 'Process Step'),
           color: type === 'note' ? '#fef08a' : '#ffffff',
           width: type === 'text' ? 200 : 150,
           height: type === 'text' ? 40 : 150,
@@ -126,6 +130,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
+      // Check if we hit a port
+      const target = e.target as HTMLElement;
+      const portId = target.closest('[data-port-id]')?.getAttribute('data-port-id');
+      if (portId) {
+          setPendingConnFrom(portId);
+          setCurrentMouseCoords({ x, y });
+          return;
+      }
+
       const hit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
       
       if (hit) {
@@ -141,11 +154,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           }
       } else {
           setSelectedId(null);
-          setPendingConnection(null);
+          setPendingConnFrom(null);
       }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+      const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+
       if (isPanning) {
           const dx = e.clientX - lastMousePos.x;
           const dy = e.clientY - lastMousePos.y;
@@ -154,7 +169,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
-      const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+      if (pendingConnFrom) {
+          setCurrentMouseCoords({ x, y });
+      }
+
       const hoverHit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
       setHoveredId(hoverHit?.id || null);
 
@@ -169,8 +187,29 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
   };
 
-  const handleMouseUp = () => {
-      if (isDragging || isResizing) sync(elements, connections);
+  const handleMouseUp = (e: React.MouseEvent) => {
+      if (pendingConnFrom) {
+          const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+          const targetHit = elements.find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
+          
+          if (targetHit && targetHit.id !== pendingConnFrom) {
+              const newConn: BoardConnection = { 
+                  id: `conn-${Date.now()}`, 
+                  fromId: pendingConnFrom, 
+                  toId: targetHit.id, 
+                  type: 'curved' 
+              };
+              sync(elements, [...connections, newConn]);
+              toast({ title: 'Logic Linked' });
+          }
+          setPendingConnFrom(null);
+          setCurrentMouseCoords(null);
+      }
+
+      if (isDragging || isResizing) {
+          sync(elements, connections);
+      }
+
       setIsPanning(false);
       setIsDragging(false);
       setIsResizing(false);
@@ -198,35 +237,29 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (selectedId === id) setSelectedId(null);
   };
 
-  const getConnectorPath = (conn: BoardConnection) => {
-      const from = elements.find(e => e.id === conn.fromId);
-      const to = elements.find(e => e.id === conn.toId);
-      if (!from || !to) return '';
+  const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string) => {
+      const from = elements.find(e => e.id === fromId);
+      if (!from) return '';
 
       const x1 = from.x + from.width / 2;
       const y1 = from.y + from.height / 2;
-      const x2 = to.x + to.width / 2;
-      const y2 = to.y + to.height / 2;
+      
+      let x2 = toX;
+      let y2 = toY;
+
+      if (toId) {
+          const to = elements.find(e => e.id === toId);
+          if (to) {
+              x2 = to.x + to.width / 2;
+              y2 = to.y + to.height / 2;
+          }
+      }
 
       const cp1x = x1 + (x2 - x1) / 2;
       const cp1y = y1;
       const cp2x = x1 + (x2 - x1) / 2;
       const cp2y = y2;
       return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
-  };
-
-  const startConnection = (fromId: string) => {
-      setPendingConnection(fromId);
-      toast({ title: 'Connection started', description: 'Select another shape to link.' });
-  };
-
-  const completeConnection = (toId: string) => {
-      if (pendingConnection && pendingConnection !== toId) {
-          const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnection, toId: toId, type: 'curved' };
-          sync(elements, [...connections, newConn]);
-          setPendingConnection(null);
-          toast({ title: 'Logic established' });
-      }
   };
 
   if (!isMounted) return null;
@@ -267,7 +300,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
              ref={containerRef}>
             
             {/* Design Grid */}
-            <div className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none" 
+            <div className="absolute inset-0 z-0 opacity-[0.1] pointer-events-none" 
                  style={{ 
                      backgroundImage: `radial-gradient(circle, #538ec2 1.5px, transparent 1px)`, 
                      backgroundSize: `${40 * viewport.scale}px ${40 * viewport.scale}px`,
@@ -283,16 +316,28 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1" />
                         </marker>
                     </defs>
+                    {/* Existing Connections */}
                     {connections.map(conn => (
                         <path 
                             key={conn.id} 
-                            d={getConnectorPath(conn)} 
+                            d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} 
                             fill="none" 
                             stroke="#cbd5e1" 
                             strokeWidth="2" 
                             markerEnd="url(#arrowhead)"
                         />
                     ))}
+                    {/* Drag Preview Line */}
+                    {pendingConnFrom && currentMouseCoords && (
+                        <path 
+                            d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y)} 
+                            fill="none" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth="2" 
+                            strokeDasharray="4 4"
+                            markerEnd="url(#arrowhead)"
+                        />
+                    )}
                 </svg>
 
                 {elements.map((el) => {
@@ -343,10 +388,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             {/* External Connect Buttons */}
                             {(isHovered || isSelected) && !isDragging && (
                                 <div className="absolute inset-0 pointer-events-none">
-                                    <Port side="top" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
-                                    <Port side="right" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
-                                    <Port side="bottom" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
-                                    <Port side="left" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
+                                    <Port side="top" id={el.id} />
+                                    <Port side="right" id={el.id} />
+                                    <Port side="bottom" id={el.id} />
+                                    <Port side="left" id={el.id} />
                                 </div>
                             )}
                         </div>
@@ -448,7 +493,7 @@ function ToolbarButton({ onClick, active, icon }: any) {
     );
 }
 
-function Port({ side, onClick }: { side: 'top' | 'right' | 'bottom' | 'left', onClick: () => void }) {
+function Port({ side, id }: { side: 'top' | 'right' | 'bottom' | 'left', id: string }) {
     const positions = {
         top: 'top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-2',
         right: 'right-0 top-1/2 translate-x-full -translate-y-1/2 ml-2',
@@ -457,14 +502,14 @@ function Port({ side, onClick }: { side: 'top' | 'right' | 'bottom' | 'left', on
     };
 
     return (
-        <button 
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
+        <div 
+            data-port-id={id}
             className={cn(
-                "absolute h-6 w-6 bg-white border-2 border-primary rounded-full shadow-lg pointer-events-auto flex items-center justify-center hover:scale-125 transition-transform group/port z-40",
+                "absolute h-6 w-6 bg-white border-2 border-primary rounded-full shadow-lg pointer-events-auto flex items-center justify-center hover:scale-125 transition-transform cursor-crosshair group/port z-40",
                 positions[side]
             )}
         >
             <PlusCircle className="h-3.5 w-3.5 text-primary opacity-40 group-hover/port:opacity-100 transition-opacity" />
-        </button>
+        </div>
     );
 }
