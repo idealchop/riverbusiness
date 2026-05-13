@@ -17,7 +17,8 @@ import {
   ArrowRight,
   Menu,
   GraduationCap,
-  MapPin
+  MapPin,
+  Fingerprint
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,14 +38,6 @@ import type { Notification as NotificationType, AppUser } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useMounted } from '@/hooks/use-mounted';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-
-const navItems = [
-  { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
-  { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database },
-  { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign },
-  { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays },
-];
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -97,11 +90,22 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
   }
 
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
   const companyId = user?.companyId || user?.clientId || 'default';
+
+  // Dynamic Navigation based on Role
+  const navItems = [
+    { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard, condition: isManagement },
+    { href: '/hr-dashboard/employees', label: 'Employees', icon: Users, condition: isManagement },
+    { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database, condition: true },
+    { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign, condition: isManagement },
+    { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays, condition: isManagement },
+    // Employee only items
+    { href: '/hr-dashboard/my-leave', label: 'My Leave', icon: CalendarDays, condition: !isManagement },
+  ].filter(item => item.condition);
 
   const SidebarContentArea = () => (
     <div className="flex flex-col h-full overflow-hidden">
-        {/* Top Navigation area */}
         <div className="p-6 flex-1 overflow-y-auto">
             <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
                 <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
@@ -135,9 +139,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             </nav>
         </div>
 
-        {/* Sidebar Bottom Actions */}
         <div className="mt-auto space-y-3 p-6">
-            {/* Learning Hub Card (1x1 Compact Premium Version) */}
             <Card asChild className="border-none shadow-2xl rounded-[2rem] bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white overflow-hidden relative cursor-pointer group hover:shadow-primary/20 transition-all duration-500 aspect-square flex flex-col items-center justify-center text-center p-0">
                 <Link href="/hr-dashboard/modules" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform duration-700">
@@ -161,7 +163,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                 </Link>
             </Card>
 
-            {/* Office Setup Card (0.5x1 Compact Version) */}
             {user?.hrRole === 'owner' && (
                 <Card 
                     onClick={() => {
@@ -191,16 +192,13 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-72 flex-col border-r bg-white shrink-0">
         <SidebarContentArea />
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-4">
-             {/* Mobile Menu Trigger */}
              <div className="md:hidden">
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                     <SheetTrigger asChild>
@@ -225,6 +223,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                 <span className="text-xs font-medium text-slate-400">Environment:</span>
                 <Badge variant="outline" className="text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200">
                     {user?.businessName || 'Standard'}
+                </Badge>
+                <Badge className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[9px] tracking-widest h-6 px-3">
+                    ID: {companyId}
                 </Badge>
              </div>
           </div>

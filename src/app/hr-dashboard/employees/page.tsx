@@ -11,7 +11,8 @@ import {
   UserCog,
   Activity,
   Fingerprint,
-  Building
+  Building,
+  ShieldCheck
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ export default function EmployeesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const companyId = user?.companyId || user?.clientId || 'default';
+  const isWorkspaceOwner = user?.hrRole === 'owner';
 
   const employeesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
@@ -135,12 +137,14 @@ export default function EmployeesPage() {
           </div>
           <p className="text-slate-500 font-medium text-sm">Unified view of all employee profiles and performance intelligence for {user?.businessName}.</p>
         </div>
-        <Button 
-            onClick={() => { setEmployeeToEdit(null); setIsAddDialogOpen(true); }}
-            className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Team Member
-        </Button>
+        {isWorkspaceOwner && (
+            <Button 
+                onClick={() => { setEmployeeToEdit(null); setIsAddDialogOpen(true); }}
+                className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
+            >
+            <Plus className="mr-2 h-4 w-4" /> Add Team Member
+            </Button>
+        )}
       </div>
 
       <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
@@ -200,6 +204,7 @@ export default function EmployeesPage() {
                   <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</TableCell></TableRow>
               ) : paginatedEmployees.map((emp) => {
                 const nameInitials = emp.name?.split(' ').map(n => n[0]).join('') || '?';
+                const isOwner = emp.hrRole === 'owner';
                 return (
                   <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                     <TableCell className="pl-6 py-5">
@@ -211,7 +216,14 @@ export default function EmployeesPage() {
                             </AvatarFallback>
                         </Avatar>
                         <div className="space-y-0.5">
-                          <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
+                          <div className="flex items-center gap-2">
+                             <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
+                             {isOwner && (
+                                <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-[0.2em] h-4 px-1.5">
+                                    Owner
+                                </Badge>
+                             )}
+                          </div>
                           <p className="text-[9px] font-black text-primary uppercase tracking-tighter">{emp.hrProfile?.employeeNumber || 'ID PENDING'}</p>
                         </div>
                       </div>
@@ -247,29 +259,31 @@ export default function EmployeesPage() {
                           <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest gap-2 bg-white border-slate-200" onClick={() => handleOpenDetails(emp as AppUser)}>
                               Profile <ArrowRight className="h-3 w-3" />
                           </Button>
-                          <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 rounded-xl border-slate-200 p-1 shadow-2xl">
-                              <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2.5 px-3">Management</DropdownMenuLabel>
-                              <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'performance')}>
-                                  <Activity className="h-4 w-4 opacity-50" /> Performance Analysis
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'attendance')}>
-                                  <Fingerprint className="h-4 w-4 opacity-50" /> Attendance Record
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => { setEmployeeToEdit(emp as AppUser); setIsAddDialogOpen(true); }}>
-                                  <UserCog className="h-4 w-4 opacity-50" /> Edit Credentials
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-slate-50" />
-                              <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer" onClick={() => setEmployeeToDelete(emp as AppUser)}>
-                                  <Trash2 className="h-4 w-4 opacity-50" /> Terminate Access
-                              </DropdownMenuItem>
-                          </DropdownMenuContent>
-                          </DropdownMenu>
+                          {isWorkspaceOwner && (
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 rounded-xl border-slate-200 p-1 shadow-2xl">
+                                <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2.5 px-3">Management</DropdownMenuLabel>
+                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'performance')}>
+                                    <Activity className="h-4 w-4 opacity-50" /> Performance Analysis
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'attendance')}>
+                                    <Fingerprint className="h-4 w-4 opacity-50" /> Attendance Record
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => { setEmployeeToEdit(emp as AppUser); setIsAddDialogOpen(true); }}>
+                                    <UserCog className="h-4 w-4 opacity-50" /> Edit Credentials
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-slate-50" />
+                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer" onClick={() => setEmployeeToDelete(emp as AppUser)}>
+                                    <Trash2 className="h-4 w-4 opacity-50" /> Terminate Access
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -291,12 +305,12 @@ export default function EmployeesPage() {
       <HREmployeeDialog 
         isOpen={isAddDialogOpen} 
         onOpenChange={setIsAddDialogOpen} 
-        companyId={companyId}
+        companyId={companyId} 
         inviterBusinessName={user?.businessName}
         employeeToEdit={employeeToEdit}
       />
 
-      <EmployeeDetailsDialog
+      <EmployeeDetailsDialog 
         employee={selectedEmployee}
         isOpen={!!selectedEmployee}
         onOpenChange={(open) => !open && setSelectedEmployee(null)}
