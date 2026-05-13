@@ -261,12 +261,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
                     <Menu className="h-5 w-5" />
                 </Button>
              )}
-             <div className="flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                    {user?.businessName || 'Organizational'} Hub
-                </span>
-             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
