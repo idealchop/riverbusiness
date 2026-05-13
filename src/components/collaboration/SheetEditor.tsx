@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
@@ -83,28 +82,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
-      
-      <div className="h-10 border-t bg-slate-50 px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cell: {activeCell || '--'}</span>
-              <Separator orientation="vertical" className="h-4" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Ledger Protocol</span>
-          </div>
-          <div className="flex items-center gap-2">
-               <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cloud Synced</span>
-          </div>
-      </div>
     </div>
   );
-}
-
-function Separator({ className, orientation = 'horizontal' }: { className?: string, orientation?: 'horizontal' | 'vertical' }) {
-    return (
-        <div className={cn(
-            "bg-slate-200 shrink-0",
-            orientation === 'horizontal' ? "h-px w-full" : "w-px h-full",
-            className
-        )} />
-    );
 }

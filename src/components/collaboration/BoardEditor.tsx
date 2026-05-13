@@ -3,14 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { 
-    Plus, 
     MousePointer2, 
-    Hand, 
     Square, 
     StickyNote, 
     Trash2, 
-    Type,
-    ArrowRight,
     Grab,
     Layout
 } from 'lucide-react';
@@ -148,7 +144,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </button>
                         
                         <div className="absolute bottom-2 right-2 opacity-20 group-hover:opacity-100 transition-opacity">
-                            <Grab className="h-3 w-3 text-slate-400" />
+                            <Grab className="h-3 3 text-slate-400" />
                         </div>
                     </div>
                  </div>
@@ -165,19 +161,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     </div>
                  </div>
              )}
-        </div>
-
-        {/* Footer Info */}
-        <div className="h-10 bg-white border-t px-8 flex items-center justify-between shrink-0 z-30">
-            <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Board Live System</span>
-                </div>
-                <Separator orientation="vertical" className="h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{elements.length} Organizational Nodes</span>
-            </div>
-            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Whiteboard Handshake Protocol v1.0</p>
         </div>
     </div>
   );

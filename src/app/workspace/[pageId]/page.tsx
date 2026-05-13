@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
@@ -507,28 +506,12 @@ function PageEditorContent() {
 
             {pageType === 'sheet' && (
                 <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
-                    <div className="px-8 py-6 border-b bg-slate-50/50">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2.5 rounded-xl bg-blue-50 text-primary shadow-sm border border-blue-100">
-                                <Grid className="h-5 w-5" />
-                            </div>
-                            <input value={page.title} placeholder="Untitled Sheet" onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-2xl bg-transparent placeholder:text-slate-300 text-slate-900" readOnly={page.isTrashed} />
-                        </div>
-                    </div>
                     <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
                 </div>
             )}
 
             {pageType === 'board' && (
                 <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
-                    <div className="px-8 py-6 border-b bg-slate-50/50">
-                         <div className="flex items-center gap-4">
-                            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 shadow-sm border border-purple-100">
-                                <Layout className="h-5 w-5" />
-                            </div>
-                            <input value={page.title} placeholder="Untitled Board" onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-2xl bg-transparent placeholder:text-slate-300 text-slate-900" readOnly={page.isTrashed} />
-                        </div>
-                    </div>
                     <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
                 </div>
             )}
