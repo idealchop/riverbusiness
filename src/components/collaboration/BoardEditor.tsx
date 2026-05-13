@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -12,7 +11,8 @@ import {
     Trash2, 
     Type,
     ArrowRight,
-    Grab
+    Grab,
+    Layout
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -198,8 +198,4 @@ function ToolbarItem({ icon, label, active = false, onClick }: any) {
             </div>
         </button>
     );
-}
-
-function ToolbarSeparator() {
-    return <div className="w-6 h-px bg-slate-100 mx-auto" />;
 }
