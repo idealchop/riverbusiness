@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -37,6 +36,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useMounted } from '@/hooks/use-mounted';
+import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, setDoc, collection } from 'firebase/firestore';
@@ -61,6 +61,7 @@ const COLORS = [
 
 export function BoardEditor({ initialData, onContentChange, editable = true, pageId }: BoardEditorProps) {
   const isMounted = useMounted();
+  const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
   
@@ -281,6 +282,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
 
   if (!isMounted) return null;
 
+  const selectedElement = elements.find(e => e.id === selectedId);
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative select-none" 
          onMouseDown={handleMouseDown}
@@ -426,8 +429,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
     </div>
   );
 }
-
-const selectedElement = (elements: BoardElement[], id: string | null) => elements.find(e => e.id === id);
 
 function ToolbarItem({ icon, label, active = false, onClick }: any) {
     return (
