@@ -8,7 +8,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { Menu, Building2 } from 'lucide-react';
 import type { CollabPage, AppUser, SecurityRuleContext } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -262,8 +262,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
                 </Button>
              )}
              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    AI-powered Workspace
+                <Building2 className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                    {user?.businessName || 'Organizational'} Hub
                 </span>
              </div>
           </div>

@@ -133,7 +133,7 @@ export default function EmployeesPage() {
                 Client ID: {companyId}
              </Badge>
           </div>
-          <p className="text-slate-500 font-medium text-sm">Unified view of all employee profiles and performance intelligence.</p>
+          <p className="text-slate-500 font-medium text-sm">Unified view of all employee profiles and performance intelligence for {user?.businessName}.</p>
         </div>
         <Button 
             onClick={() => { setEmployeeToEdit(null); setIsAddDialogOpen(true); }}
@@ -355,4 +355,3 @@ function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItem
         </CardFooter>
     );
 }
-
