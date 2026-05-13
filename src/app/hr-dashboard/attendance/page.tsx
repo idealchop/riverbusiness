@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -37,8 +36,7 @@ import {
   Table, 
   TableBody, 
   TableCell, 
-  TableHead, 
-  TableHeader, 
+  TableHead, TableHeader, 
   TableRow 
 } from '@/components/ui/table';
 import { 
@@ -105,7 +103,7 @@ const DEMO_ATTENDANCE: HRAttendanceLog[] = [
 
 const DEMO_LEAVES: HRLeaveRequest[] = [
     { id: 'l1', companyId: 'demo', employeeId: 'e4', employeeName: 'Elena Cruz', type: 'Vacation', startDate: format(addDays(new Date(), 5), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'), reason: 'Family Reunion', status: 'pending', appliedAt: Timestamp.now() },
-    { id: 'l2', companyId: 'demo', employeeId: 'e2', employeeName: Sarah Jenkins, type: 'Sick', startDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), endDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), reason: 'Fever', status: 'approved', appliedAt: Timestamp.now() },
+    { id: 'l2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', type: 'Sick', startDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), endDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), reason: 'Fever', status: 'approved', appliedAt: Timestamp.now() },
 ];
 
 const DEMO_PAYROLL: HRPayrollRun[] = [
