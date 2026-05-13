@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -16,6 +17,13 @@ service cloud.firestore {
       );
     }
     
+    function isSameCompany(companyId) {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId ||
+        isAdmin()
+      );
+    }
+    
     function isPublicPage(pageData) {
       return pageData.isPublic == true && 
              (pageData.expiresAt == null || pageData.expiresAt > request.time);
@@ -29,37 +37,51 @@ service cloud.firestore {
 
     // --- USER PROFILES & DIRECTORY ---
 
-    match /users/{document=**} {
-      // Unrestricted access for all signed-in members to facilitate collaboration and presence
-      allow read, write: if isAuthenticated();
+    match /users/{userId} {
+      // Users can see their own profile or profiles of people in their same company
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == resource.data.companyId ||
+        isAdmin()
+      );
+      // Users can only edit their own profile
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // Allow collection queries for users within the same company
+      match /{allSubcollections=**} {
+         allow read, write: if isAuthenticated() && (
+            request.auth.uid == userId || 
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == get(/databases/$(database)/documents/users/$(userId)).data.companyId ||
+            isAdmin()
+         );
+      }
     }
     
     // --- CLOUD STORAGE APP (SHARED DRIVE) ---
 
-    match /cloud_files/{document=**} {
-      // Unrestricted organizational access: any signed-in user can manage files
-      allow read, write: if isAuthenticated();
+    match /cloud_files/{fileId} {
+      allow read, write: if isAuthenticated() && isSameCompany(resource.data.companyId);
+      allow create: if isAuthenticated() && isSameCompany(request.resource.data.companyId);
     }
 
-    match /cloud_folders/{document=**} {
-      // Unrestricted organizational access: any signed-in user can manage folders
-      allow read, write: if isAuthenticated();
+    match /cloud_folders/{folderId} {
+      allow read, write: if isAuthenticated() && isSameCompany(resource.data.companyId);
+      allow create: if isAuthenticated() && isSameCompany(request.resource.data.companyId);
     }
 
     // --- HR MULTI-TENANT DATA ---
 
-    match /hr_companies/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /hr_companies/{companyId}/{document=**} {
+      allow read, write: if isAuthenticated() && isSameCompany(companyId);
     }
 
     // --- COLLABORATION PLATFORM ---
 
     match /collaboration_pages/{pageId} {
-      // INTERNAL ACCESS: Any signed-in user can manage any page
-      allow read, write: if isAuthenticated();
+      // INTERNAL ACCESS: Filtered by companyId on the resource
+      allow read, write: if isAuthenticated() && (isSameCompany(resource.data.companyId) || isSameCompany(request.resource.data.companyId));
       
       // PUBLIC ACCESS: Limited read for unauthenticated users if page is public and not expired
-      // This is used for search by shareToken and direct get by ID
       allow get: if isPublicPage(resource.data);
     }
     
@@ -86,6 +108,15 @@ service cloud.firestore {
     match /publicSanitationLinks/{linkId} {
       allow read: if true;
       allow write: if isAuthenticated();
+    }
+    
+    // --- INVITATIONS & UNCLAIMED ---
+    match /unclaimedEmployees/{inviteId} {
+        allow read, write: if isAuthenticated();
+    }
+    
+    match /unclaimedProfiles/{clientId} {
+        allow read, write: if isAuthenticated();
     }
   }
 }

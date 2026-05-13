@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -40,7 +41,7 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, UserCog, HeartPulse, CalendarIcon } from 'lucide-react';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, HREmployeeProfile } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -156,7 +157,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
     if (!firestore || !companyId) return;
     setIsSubmitting(true);
     
-    const hrProfileData = {
+    const hrProfileData: HREmployeeProfile = {
         firstName: values.name?.split(' ')[0] ?? '',
         lastName: values.name?.split(' ').slice(1).join(' ') || '',
         employeeNumber: employeeToEdit?.hrProfile?.employeeNumber || generateEmployeeNumber(),
@@ -182,7 +183,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
           name: values.name,
           email: values.email?.toLowerCase().trim(),
           contactNumber: values.contactNumber ?? '',
-          hrProfile: hrProfileData
+          hrProfile: hrProfileData,
+          companyId: companyId // Ensure companyId is always set
       };
       
       updateDoc(userRef, updateData)

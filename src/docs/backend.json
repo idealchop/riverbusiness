@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "AppUser": {
@@ -18,7 +19,7 @@
         "lastLogin": { "type": "string", "format": "date-time" },
         "role": { "type": "string", "enum": ["Admin", "User"] },
         "hrRole": { "type": "string", "enum": ["owner", "admin", "employee"], "description": "Role within the HR module." },
-        "companyId": { "type": "string", "description": "Tenant ID for multi-tenant isolation." },
+        "companyId": { "type": "string", "description": "Tenant ID for multi-tenant isolation (matches Company Client ID)." },
         "assignedWaterStationId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "onboardingComplete": { "type": "boolean" },
@@ -29,15 +30,18 @@
             "properties": {
                 "firstName": { "type": "string" },
                 "lastName": { "type": "string" },
-                "salaryType": { "type": "string", "enum": ["daily", "monthly"] },
+                "employeeNumber": { "type": "string", "description": "Unique identifier for the employee within the company." },
+                "salaryType": { "type": "string", "enum": ["daily", "weekly", "monthly", "bimonthly"] },
                 "rate": { "type": "number" },
                 "startDate": { "type": "string", "format": "date" },
                 "position": { "type": "string" },
-                "department": { "type": "string" }
-            }
+                "department": { "type": "string" },
+                "status": { "type": "string", "enum": ["Active", "Terminated", "On Leave"] }
+            },
+            "required": ["employeeNumber", "firstName", "lastName", "position", "department"]
         }
       },
-      "required": ["id", "name", "email", "role", "createdAt"]
+      "required": ["id", "name", "email", "role", "createdAt", "companyId"]
     },
     "HRAttendanceLog": {
         "title": "HRAttendanceLog",

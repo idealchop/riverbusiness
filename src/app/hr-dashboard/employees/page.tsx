@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -9,7 +10,8 @@ import {
   ArrowRight,
   Trash2,
   UserCog,
-  Activity
+  Activity,
+  Fingerprint
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,14 +56,6 @@ import { useToast } from '@/hooks/use-toast';
 const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin', 'Compliance', 'Operations'];
 const ITEMS_PER_PAGE = 10;
 
-const DEMO_EMPLOYEES: Partial<AppUser>[] = [
-    { id: 'e1', name: 'Marcus Rivera', email: 'marcus@riverph.com', hrProfile: { position: 'Operations Lead', department: 'Logistics', status: 'Active', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15', firstName: 'Marcus', lastName: 'Rivera', employeeNumber: 'EMP-2024-0001' } },
-    { id: 'e2', name: 'Sarah Jenkins', email: 'sarah.j@riverph.com', hrProfile: { position: 'Customer Success', department: 'Support', status: 'Active', salaryType: 'monthly', rate: 38000, startDate: '2024-02-01', firstName: 'Sarah', lastName: 'Jenkins', employeeNumber: 'EMP-2024-0002' } },
-    { id: 'e3', name: 'Leo Castelo', email: 'leo.c@riverph.com', hrProfile: { position: 'Delivery Officer', department: 'Fleet', status: 'Active', salaryType: 'daily', rate: 850, startDate: '2024-03-10', firstName: 'Leo', lastName: 'Castelo', employeeNumber: 'EMP-2024-0003' } },
-    { id: 'e4', name: 'Elena Cruz', email: 'elena@riverph.com', hrProfile: { position: 'Admin Assistant', department: 'Admin', status: 'Active', salaryType: 'monthly', rate: 30000, startDate: '2023-11-20', firstName: 'Elena', lastName: 'Cruz', employeeNumber: 'EMP-2023-0004' } },
-    { id: 'e5', name: 'David Sy', email: 'david.sy@riverph.com', hrProfile: { position: 'Quality Inspector', department: 'Compliance', status: 'Active', salaryType: 'monthly', rate: 42000, startDate: '2024-01-05', firstName: 'David', lastName: 'Sy', employeeNumber: 'EMP-2024-0005' } },
-];
-
 export default function EmployeesPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -85,13 +79,14 @@ export default function EmployeesPage() {
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
   const filteredEmployees = useMemo(() => {
-    const list = employees && employees.length > 0 ? employees : (DEMO_EMPLOYEES as AppUser[]);
+    const list = employees || [];
     const search = searchTerm.toLowerCase().trim();
     
     return list.filter(emp => {
       const matchesSearch = !search || 
         emp.name?.toLowerCase().includes(search) ||
         emp.hrProfile?.position?.toLowerCase().includes(search) ||
+        emp.hrProfile?.employeeNumber?.toLowerCase().includes(search) ||
         emp.email?.toLowerCase().includes(search);
         
       const matchesDept = selectedDept === 'All Departments' || emp.hrProfile?.department === selectedDept;
@@ -132,7 +127,12 @@ export default function EmployeesPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Workforce Directory</h1>
+          <div className="flex items-center gap-3">
+             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Workforce Directory</h1>
+             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] h-6 px-3">
+                Client ID: {companyId}
+             </Badge>
+          </div>
           <p className="text-slate-500 font-medium text-sm">Unified view of all employee profiles and performance intelligence.</p>
         </div>
         <Button 
@@ -149,7 +149,7 @@ export default function EmployeesPage() {
             <div className="relative w-full md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
-                placeholder="Search By Name, Email, Or Position..." 
+                placeholder="Search By Name, ID, Or Position..." 
                 className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                 value={searchTerm}
                 onChange={(e) => {
@@ -191,7 +191,7 @@ export default function EmployeesPage() {
                 <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400 py-4">Employee</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary Configuration</TableHead>
+                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary Config</TableHead>
                 <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Management</TableHead>
               </TableRow>
             </TableHeader>
@@ -204,7 +204,7 @@ export default function EmployeesPage() {
                   <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                     <TableCell className="pl-6 py-5">
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10 rounded-xl shadow-inner">
+                        <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
                             <AvatarImage src={emp.photoURL} alt={emp.name} />
                             <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
                                 {nameInitials}
@@ -212,7 +212,7 @@ export default function EmployeesPage() {
                         </Avatar>
                         <div className="space-y-0.5">
                           <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
-                          <p className="text-[10px] font-bold text-slate-400 lowercase">{emp.email || 'No Email'}</p>
+                          <p className="text-[9px] font-black text-primary uppercase tracking-tighter">{emp.hrProfile?.employeeNumber || 'ID PENDING'}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -251,7 +251,7 @@ export default function EmployeesPage() {
                                   <Activity className="h-4 w-4 opacity-50" /> Performance Analysis
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'attendance')}>
-                                  <Activity className="h-4 w-4 opacity-50" /> Attendance Record
+                                  <Fingerprint className="h-4 w-4 opacity-50" /> Attendance Record
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => { setEmployeeToEdit(emp as AppUser); setIsAddDialogOpen(true); }}>
                                   <UserCog className="h-4 w-4 opacity-50" /> Edit Credentials

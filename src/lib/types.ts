@@ -17,7 +17,7 @@ export interface AppUser {
     lastLogin: string;
     role: 'Admin' | 'User';
     hrRole?: 'owner' | 'admin' | 'employee';
-    companyId?: string;
+    companyId: string; // Mandatory for multi-tenancy
     assignedWaterStationId?: string;
     createdAt: any;
     lastBilledDate?: any;
@@ -39,6 +39,9 @@ export interface AppUser {
     supportDisplayName?: string;
     supportDescription?: string;
     supportPhotoURL?: string;
+    currentContractUrl?: string;
+    contractUploadedDate?: any;
+    contractStatus?: string;
 }
 
 export interface CloudFile {
@@ -77,7 +80,7 @@ export interface CloudFolder {
 export interface HREmployeeProfile {
     firstName: string;
     lastName: string;
-    employeeNumber: string; 
+    employeeNumber: string; // Unique within company
     salaryType: 'daily' | 'weekly' | 'monthly' | 'bimonthly';
     rate: number;
     startDate: string;
@@ -276,4 +279,39 @@ export interface HRPayrollBreakdownItem {
     type: 'daily' | 'weekly' | 'monthly' | 'bimonthly';
     adjustment?: number;
     adjustmentRemarks?: string;
+}
+
+export interface ManualCharge {
+  id: string;
+  description: string;
+  amount: number;
+  dateAdded: FieldValue | Timestamp;
+}
+
+export interface TopUpRequest {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
+  requestedAt: FieldValue | Timestamp;
+  proofOfPaymentUrl?: string;
+  rejectionReason?: string;
+}
+
+export interface StatusHistoryEntry {
+    status: string;
+    timestamp: FieldValue | Timestamp;
+}
+
+export interface RefillRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  businessName: string;
+  clientId: string;
+  requestedAt: FieldValue | Timestamp;
+  status: 'Requested' | 'In Production' | 'Out for Delivery' | 'Completed' | 'Cancelled';
+  statusHistory?: StatusHistoryEntry[];
+  volumeContainers?: number;
+  requestedDate?: string;
 }
