@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
@@ -40,7 +40,6 @@ import {
     AlignLeft,
     AlignCenter,
     AlignRight,
-    AlignJustify,
     Grid,
     Table as TableIcon,
     Plus,
@@ -48,7 +47,10 @@ import {
     Columns,
     Rows,
     Underline as UnderlineIcon,
-    Baseline
+    Baseline,
+    Maximize2,
+    Minimize2,
+    FileUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -114,7 +116,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     if (!editor || !storage || !auth?.currentUser) return;
 
     if (!file.type.startsWith('image/')) {
-        toast({ variant: 'destructive', title: 'Invalid file', description: 'Please drop or paste an image file.' });
+        toast({ variant: 'destructive', title: 'Invalid format', description: 'Please provide an image file.' });
         return;
     }
 
@@ -126,13 +128,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
         setUploadProgress(progress);
       });
+      
       if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src: url }).run();
-          toast({ title: 'Image attached', description: 'The visual asset has been integrated.' });
+          toast({ title: 'Visual asset integrated' });
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      if (isMounted) toast({ variant: 'destructive', title: 'Upload failed' });
+      if (isMounted) toast({ variant: 'destructive', title: 'Synchronization failed' });
     } finally {
       if (isMounted) {
         setIsUploading(false);
@@ -140,6 +143,28 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       }
     }
   }, [storage, auth, toast, isMounted]);
+
+  const CustomImage = ImageExtension.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        width: {
+          default: null,
+          renderHTML: attributes => {
+            if (!attributes.width) return {};
+            return { style: `width: ${attributes.width}` };
+          },
+        },
+        height: {
+          default: null,
+          renderHTML: attributes => {
+            if (!attributes.height) return {};
+            return { style: `height: ${attributes.height}` };
+          },
+        },
+      };
+    },
+  });
 
   const editor = useEditor({
     extensions: [
@@ -165,9 +190,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           class: 'text-primary underline cursor-pointer hover:text-primary-light transition-colors font-bold',
         },
       }),
-      ImageExtension.configure({
+      CustomImage.configure({
         HTMLAttributes: {
-          class: 'rounded-[2rem] border-4 border-white shadow-2xl max-w-full h-auto my-6 mx-auto block',
+          class: 'rounded-[2rem] border-4 border-white shadow-2xl max-w-full h-auto my-6 mx-auto block transition-all',
         },
       }),
       Table.configure({
@@ -187,12 +212,13 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal'
+            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40'
         },
         handleDrop: (view, event, slice, moved) => {
             if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
                 const file = event.dataTransfer.files[0];
                 if (file.type.startsWith('image/')) {
+                    event.preventDefault();
                     uploadAndInsertImage(file);
                     return true;
                 }
@@ -203,6 +229,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
             if (event.clipboardData && event.clipboardData.files && event.clipboardData.files[0]) {
                 const file = event.clipboardData.files[0];
                 if (file.type.startsWith('image/')) {
+                    event.preventDefault();
                     uploadAndInsertImage(file);
                     return true;
                 }
@@ -224,7 +251,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {
         const streamDoc = async () => {
             setIsAiProcessing(true);
-            setAiStatus('Generating draft...');
+            setAiStatus('Architecting content...');
             
             try {
                 const response = await fetch('/api/ai/generate', {
@@ -253,11 +280,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
                 if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
-                    toast({ title: 'Draft generated', description: 'Your AI-powered document is ready for review.' });
+                    toast({ title: 'Draft finalized' });
                 }
             } catch (error) {
                 console.error('Streaming error:', error);
-                if (isMounted) toast({ variant: 'destructive', title: 'Generation error' });
+                if (isMounted) toast({ variant: 'destructive', title: 'Architecture error' });
             } finally {
                 if (isMounted) {
                     setIsAiProcessing(false);
@@ -269,12 +296,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         streamDoc();
     }
   }, [initialPrompt, editor, onContentChange, toast, isMounted]);
-
-  useEffect(() => {
-    if (editor && initialContent && editor.isEmpty && !initialPrompt && !editor.isDestroyed) {
-        editor.commands.setContent(initialContent);
-    }
-  }, [editor, initialContent, initialPrompt]);
 
   const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -306,13 +327,13 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     const context = editor.getText();
 
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Selection required', description: 'Highlight text for the AI to process.' });
+        toast({ variant: 'destructive', title: 'Selection required', description: 'Highlight text for processing.' });
         return;
     }
 
     setIsAiProcessing(true);
     setShowAiToolbar(false);
-    setAiStatus('Processing...');
+    setAiStatus('Intelligence protocol active...');
 
     try {
       const response = await fetch('/api/ai/assistant', {
@@ -364,6 +385,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       setAiPreview(null);
   };
 
+  const updateImageSize = (width: string) => {
+    if (!editor || editor.isDestroyed) return;
+    editor.chain().focus().updateAttributes('image', { width, height: 'auto' }).run();
+  };
+
   if (!editor) return null;
 
   return (
@@ -373,12 +399,13 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       {editable && !editor.isDestroyed && (
         <TooltipProvider delayDuration={0}>
           <div className="sticky top-14 z-30 mx-auto w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4 animate-in fade-in duration-500">
-              {isAiProcessing && (
+              {(isAiProcessing || isUploading) && (
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{aiStatus || 'Processing...'}</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
                       </div>
+                      {isUploading && <div className="mt-2 h-0.5 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} /></div>}
                   </div>
               )}
 
@@ -410,7 +437,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon className="h-4 w-4" />} label="Underline" />
                       
-                      {/* Text Color Dropdown */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
@@ -456,7 +482,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       
                       <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
                       
-                      {/* Grid / Table Controls */}
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
@@ -501,6 +526,20 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
               )}
           </div>
         </TooltipProvider>
+      )}
+
+      {/* Image Bubble Menu for Resizing */}
+      {editor && (
+          <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('image')}>
+            <Card className="flex items-center gap-1 p-1 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl rounded-2xl animate-in zoom-in-95 duration-200">
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('25%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">XS</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('50%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">MD</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('75%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">LG</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('100%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">Full</Button>
+                <Separator orientation="vertical" className="h-4 mx-1" />
+                <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().deleteSelection().run()} className="h-8 w-8 text-red-500 rounded-lg hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+            </Card>
+          </BubbleMenu>
       )}
 
       {aiPreview && (
