@@ -10,11 +10,11 @@ import {
     Grab,
     Layout,
     Circle,
-    Hexagon,
-    Type,
     Palette,
     Plus,
-    X
+    X,
+    Maximize2,
+    Minus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -129,28 +129,28 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const selectedElement = elements.find(el => el.id === selectedId);
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative select-none" 
+    <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative select-none min-h-0" 
          onMouseMove={handleMouseMove} 
          onMouseUp={handleMouseUp}
          onClick={() => setSelectedId(null)}
          ref={containerRef}>
         
-        {/* Dot Grid Background */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
+        {/* Dot Grid Background - High Fidelity */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-20" 
              style={{ 
-                 backgroundImage: `radial-gradient(#cbd5e1 1.2px, transparent 1.2px)`, 
-                 backgroundSize: '32px 32px' 
+                 backgroundImage: `radial-gradient(circle, #538ec2 1.5px, transparent 1.5px)`, 
+                 backgroundSize: '40px 40px' 
              }} 
         />
 
-        {/* Floating Creation Toolbar */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-2 bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl animate-in slide-in-from-top-4 duration-700" onClick={(e) => e.stopPropagation()}>
+        {/* Floating Creation Toolbar - Glassmorphism */}
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-2 bg-white/80 backdrop-blur-2xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-3xl animate-in slide-in-from-top-6 duration-1000" onClick={(e) => e.stopPropagation()}>
             <ToolbarItem 
                 icon={<MousePointer2 className="h-4 w-4" />} 
                 label="Select" 
                 active={!selectedId} 
             />
-            <Separator orientation="vertical" className="h-6 mx-1" />
+            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
             <ToolbarItem 
                 icon={<StickyNote className="h-4 w-4 text-amber-500" />} 
                 label="Sticky Note" 
@@ -171,7 +171,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 label="Decision Diamond" 
                 onClick={() => addElement('diamond')} 
             />
-            <Separator orientation="vertical" className="h-6 mx-1" />
+            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
             <ToolbarItem icon={<Grab className="h-4 w-4" />} label="Hand Tool" />
         </div>
 
@@ -184,14 +184,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             <Palette className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl">
+                    <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl border-none shadow-3xl bg-white">
                         {COLORS.map(c => (
                             <button 
                                 key={c.value} 
                                 onClick={() => updateColor(selectedElement.id, c.value)}
                                 className={cn(
                                     "h-6 w-6 rounded-full border border-slate-100 flex items-center justify-center hover:scale-110 transition-transform",
-                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2 ring-offset-slate-900"
+                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2"
                                 )}
                                 style={{ backgroundColor: c.value }}
                             />
@@ -210,7 +210,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
         )}
 
-        {/* Canvas Elements */}
+        {/* Canvas Elements Container */}
         <div className="flex-1 relative overflow-hidden z-10">
              {elements.map((el) => {
                  const isSelected = selectedId === el.id;
@@ -262,8 +262,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     placeholder="Type here..."
                                 />
                             </div>
-                            
-                            {/* Tiny Indicator for Draggability */}
                             <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-20 transition-opacity">
                                 <Grab className="h-3 3 text-slate-400" />
                             </div>
@@ -273,28 +271,36 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
              })}
 
              {elements.length === 0 && (
-                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-8 animate-in fade-in duration-1000">
-                    <div className="p-14 rounded-[4rem] bg-white border border-slate-100 shadow-[inset_0_2px_20px_rgba(0,0,0,0.05)] opacity-50 relative group">
-                        <Layout className="h-20 w-20 text-slate-300 group-hover:scale-110 transition-transform duration-700" />
-                        <div className="absolute -top-4 -right-4 h-12 w-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-2xl animate-bounce">
-                            <Plus className="h-6 w-6" />
+                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-10 animate-in fade-in duration-1000">
+                    <div className="p-16 rounded-[4.5rem] bg-white border border-slate-100 shadow-[inset_0_2px_40px_rgba(0,0,0,0.03)] opacity-50 relative group">
+                        <Layout className="h-24 w-24 text-slate-300 group-hover:scale-110 transition-transform duration-700" />
+                        <div className="absolute -top-4 -right-4 h-14 w-14 rounded-[1.5rem] bg-primary text-white flex items-center justify-center shadow-2xl animate-bounce">
+                            <Plus className="h-8 w-8" />
                         </div>
                     </div>
-                    <div className="space-y-3">
-                        <h3 className="text-2xl font-black text-slate-400 tracking-tight uppercase">Empty Blueprint</h3>
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Initialize logic via the top toolbar</p>
+                    <div className="space-y-4">
+                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Initialize Blueprint</h3>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8">Deploy components via the dashboard toolbar</p>
+                        <Button 
+                            onClick={() => addElement('note')}
+                            className="rounded-2xl h-12 px-10 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20"
+                        >
+                            Deploy Primary Logic
+                        </Button>
                     </div>
                  </div>
              )}
         </div>
 
-        {/* Sidebar Mini-Nav for Miro Feel */}
-        <div className="absolute bottom-10 right-10 z-40 flex flex-col gap-2 p-1.5 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl">
-             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-slate-900"><Plus className="h-4 w-4" /></Button>
-             <div className="h-px bg-slate-100 mx-1.5" />
-             <div className="px-2 py-1 text-[10px] font-black text-slate-400">100%</div>
-             <div className="h-px bg-slate-100 mx-1.5" />
-             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:text-slate-900"><X className="h-4 w-4" /></Button>
+        {/* Mini-Map / Zoom Controls Mockup */}
+        <div className="absolute bottom-10 right-10 z-40 flex flex-col gap-2 p-1.5 bg-white/90 backdrop-blur-md border border-slate-200 rounded-3xl shadow-xl">
+             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><Plus className="h-4 w-4" /></Button>
+             <div className="h-px bg-slate-100 mx-2" />
+             <div className="px-2 py-1 text-[10px] font-black text-slate-400 text-center">100%</div>
+             <div className="h-px bg-slate-100 mx-2" />
+             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><Minus className="h-4 w-4" /></Button>
+             <Separator className="my-1 bg-slate-100" />
+             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><Maximize2 className="h-4 w-4" /></Button>
         </div>
     </div>
   );
@@ -305,12 +311,12 @@ function ToolbarItem({ icon, label, active = false, onClick }: any) {
         <button 
             onClick={onClick}
             className={cn(
-                "h-11 w-11 flex items-center justify-center rounded-xl transition-all group relative",
-                active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                "h-12 w-12 flex items-center justify-center rounded-2xl transition-all group relative",
+                active ? "bg-primary text-white shadow-lg scale-105" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             )}
         >
             {icon}
-            <div className="absolute top-14 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity shadow-2xl border border-white/10 z-[60]">
+            <div className="absolute top-16 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-all shadow-2xl border border-white/10 z-[60] -translate-y-1 group-hover:translate-y-0">
                 {label}
             </div>
         </button>

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, getDoc, deleteField, Timestamp } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteField, collection, getDoc, Timestamp } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
 import { SheetEditor } from '@/components/collaboration/SheetEditor';
 import { BoardEditor } from '@/components/collaboration/BoardEditor';
@@ -14,43 +14,30 @@ import {
   ChevronRight, 
   Star, 
   Share2, 
-  Smile,
-  ImageIcon,
-  Trash2,
-  CheckCircle,
-  Globe,
-  AlertTriangle,
-  RotateCcw,
-  FilePlus,
-  FileText,
-  Home,
-  X,
-  Palette,
-  Search,
-  Loader2,
-  Sparkles,
-  Lock,
-  Clock,
-  Copy,
-  CheckCircle2,
-  Grid,
-  Layout
+  Trash2, 
+  CheckCircle, 
+  Globe, 
+  AlertTriangle, 
+  RotateCcw, 
+  FilePlus, 
+  Home, 
+  X, 
+  Search, 
+  Loader2, 
+  Sparkles, 
+  Lock, 
+  Clock, 
+  Copy, 
+  CheckCircle2
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow, addHours, addDays } from 'date-fns';
+import { addHours, addDays } from 'date-fns';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
@@ -442,6 +429,34 @@ function PageEditorContent() {
 
   const pageType = page.type || 'doc';
 
+  const editorContainer = (
+    <div className={cn(
+        "max-w-4xl mx-auto px-8 pt-10 pb-32",
+        pageType !== 'doc' && "max-w-none px-0 pt-0 pb-0 flex flex-col h-full overflow-hidden"
+    )}>
+        {pageType === 'doc' && (
+            <>
+                {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
+                {!page.isTrashed && <div className="flex gap-4 opacity-0 hover:opacity-100 mb-4">{!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}{!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}</div>}
+                <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
+                <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
+            </>
+        )}
+
+        {pageType === 'sheet' && (
+            <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500 overflow-hidden">
+                <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
+            </div>
+        )}
+
+        {pageType === 'board' && (
+            <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500 overflow-hidden">
+                <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
+            </div>
+        )}
+    </div>
+  );
+
   return (
     <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700 relative">
       {page.isTrashed && (
@@ -484,39 +499,21 @@ function PageEditorContent() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        {pageType === 'doc' && page.coverImage && (
-            <div className="h-[30vh] w-full relative group">
-                <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
-                {!page.isTrashed && <div className="absolute bottom-6 right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest">Change Cover</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
-            </div>
-        )}
-        <div className={cn(
-            "max-w-4xl mx-auto px-8 pt-10 pb-32",
-            pageType !== 'doc' && "max-w-none px-0 pt-0 pb-0 flex flex-col h-full"
-        )}>
-            {pageType === 'doc' && (
-                <>
-                    {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
-                    {!page.isTrashed && <div className="flex gap-4 opacity-0 hover:opacity-100 mb-4">{!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}{!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}</div>}
-                    <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
-                    <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
-                </>
-            )}
-
-            {pageType === 'sheet' && (
-                <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
-                    <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
-                </div>
-            )}
-
-            {pageType === 'board' && (
-                <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
-                    <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
-                </div>
-            )}
-        </div>
-      </ScrollArea>
+      {pageType === 'doc' ? (
+          <ScrollArea className="flex-1">
+              {page.coverImage && (
+                  <div className="h-[30vh] w-full relative group">
+                      <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
+                      {!page.isTrashed && <div className="absolute bottom-6 right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest">Change Cover</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
+                  </div>
+              )}
+              {editorContainer}
+          </ScrollArea>
+      ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+              {editorContainer}
+          </div>
+      )}
     </div>
   );
 }
