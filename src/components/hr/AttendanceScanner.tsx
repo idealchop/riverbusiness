@@ -149,6 +149,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     const Δλ = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
+              // eslint-disable-next-line no-mixed-operators
               Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
@@ -366,26 +367,8 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                 )}
             </div>
 
-            {step === 'scan' && (
-                <div className="mt-8 flex flex-col items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-700">
-                    <Badge className={cn(
-                        "h-7 px-4 border-none font-black uppercase tracking-widest shadow-sm",
-                        isCurrentlyIn ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
-                    )}>
-                        Target Action: {isCurrentlyIn ? 'Finalize Session' : 'Begin Session'}
-                    </Badge>
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
-                        Align with organizational tag
-                    </p>
-                </div>
-            )}
-
             <DialogFooter className="pt-8">
                 <div className="w-full flex flex-col gap-4">
-                    <div className="flex items-center gap-3 justify-center">
-                        <Lock className="h-4 w-4 text-slate-400" />
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Secure Terminal active</p>
-                    </div>
                     <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Cancel</Button>
                 </div>
             </DialogFooter>
