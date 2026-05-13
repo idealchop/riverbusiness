@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -22,7 +23,8 @@ import {
   Mail,
   Loader2,
   Send,
-  Calendar
+  Calendar,
+  Plus
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,6 +77,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
+import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 import { useToast } from '@/hooks/use-toast';
 
 const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin', 'Compliance', 'Operations'];
@@ -102,7 +105,7 @@ const DEMO_ATTENDANCE: HRAttendanceLog[] = [
 
 const DEMO_LEAVES: HRLeaveRequest[] = [
     { id: 'l1', companyId: 'demo', employeeId: 'e4', employeeName: 'Elena Cruz', type: 'Vacation', startDate: format(addDays(new Date(), 5), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'), reason: 'Family Reunion', status: 'pending', appliedAt: Timestamp.now() },
-    { id: 'l2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', type: 'Sick', startDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), endDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), reason: 'Fever', status: 'approved', appliedAt: Timestamp.now() },
+    { id: 'l2', companyId: 'demo', employeeId: 'e2', employeeName: Sarah Jenkins, type: 'Sick', startDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), endDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), reason: 'Fever', status: 'approved', appliedAt: Timestamp.now() },
 ];
 
 const DEMO_PAYROLL: HRPayrollRun[] = [
@@ -143,6 +146,7 @@ export default function AttendancePage() {
   const [selectedCycle, setSelectedCycle] = useState('All Cycles');
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [confirmItem, setConfirmItem] = useState<any | null>(null);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
 
   const isManagement = !!user?.plan || user?.hrRole === 'admin';
   const companyId = user?.companyId || user?.clientId || 'default';
@@ -241,11 +245,9 @@ export default function AttendancePage() {
     });
   }, [leaveRequests, searchTerm, selectedDept, allUsers, isManagement, user?.id]);
 
-  // Flattened Payroll - Management only
+  // Flattened Payroll
   const displayPayrollItems = useMemo(() => {
-    if (!isManagement) return [];
-    
-    const runs = payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
+    const runs = payrollRuns && payrollRuns.length > 0 ? payrollRuns : (isManagement ? DEMO_PAYROLL : []);
     const search = searchTerm.toLowerCase().trim();
     
     const flattened = runs.flatMap(run => 
@@ -260,6 +262,10 @@ export default function AttendancePage() {
     );
 
     return flattened.filter(item => {
+        // ROLE ISOLATION for Payroll
+        const isOwnRecord = !isManagement ? item.employeeId === user?.id : true;
+        if (!isOwnRecord) return false;
+
         const matchesSearch = !search || 
             item.employeeName.toLowerCase().includes(search) || 
             item.runId.toLowerCase().includes(search);
@@ -272,7 +278,7 @@ export default function AttendancePage() {
         
         return matchesSearch && matchesDept && matchesCycle;
     });
-  }, [payrollRuns, searchTerm, selectedDept, allUsers, selectedCycle, isManagement]);
+  }, [payrollRuns, searchTerm, selectedDept, allUsers, selectedCycle, isManagement, user?.id]);
 
   // --- Pagination Logic ---
   const paginatedAttendance = useMemo(() => {
@@ -390,6 +396,14 @@ export default function AttendancePage() {
                 : 'Access your verified work logs, leave applications, and individual disbursement records.'}
           </p>
         </div>
+        {!isManagement && (
+          <Button 
+            onClick={() => setIsLeaveDialogOpen(true)}
+            className="rounded-xl h-11 px-8 font-bold shadow-lg shadow-primary/20"
+          >
+            <Plus className="mr-2 h-4 w-4" /> File Leave Request
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeCategory} onValueChange={setActiveTab} className="space-y-6">
@@ -400,11 +414,9 @@ export default function AttendancePage() {
           <TabsTrigger value="leaves" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
             Leave logs
           </TabsTrigger>
-          {isManagement && (
-            <TabsTrigger value="payroll" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                Payroll
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="payroll" className="rounded-xl px-6 font-bold text-xs tracking-tight data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {isManagement ? 'Team Payroll' : 'My Payroll'}
+          </TabsTrigger>
         </TabsList>
 
         <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
@@ -425,7 +437,7 @@ export default function AttendancePage() {
                 />
               </div>
               <div className="flex items-center gap-3">
-                {activeCategory === 'payroll' && isManagement && (
+                {activeCategory === 'payroll' && (
                   <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" className="rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white h-11 px-4 shadow-sm">
@@ -508,7 +520,7 @@ export default function AttendancePage() {
                         </TableCell>
                         <TableCell>
                           <button onClick={() => handleEmployeeClick(log.employeeId)} className="flex items-center gap-3 hover:text-primary transition-colors text-left outline-none group/name" disabled={!isManagement && log.employeeId !== user?.id}>
-                            <Avatar className="h-8 w-8 rounded-lg shadow-inner group-hover/name:ring-2 group-hover/name:ring-primary/20 transition-all">
+                            <Avatar className="h-8 w-8 rounded-lg shadow-inner border border-slate-100 group-hover/name:ring-2 group-hover/name:ring-primary/20 transition-all">
                                 <AvatarImage src={employee?.photoURL} alt={log.employeeName} />
                                 <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 font-bold text-[10px] uppercase">
                                     {log.employeeName?.charAt(0) || 'E'}
@@ -566,7 +578,7 @@ export default function AttendancePage() {
                       </TableCell>
                       <TableCell>
                         <button onClick={() => handleEmployeeClick(req.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors underline-offset-4 hover:underline" disabled={!isManagement && req.employeeId !== user?.id}>
-                            <Avatar className="h-7 w-7 rounded-lg">
+                            <Avatar className="h-7 w-7 rounded-lg shadow-inner border border-slate-100">
                                 <AvatarImage src={employee?.photoURL} alt={req.employeeName} />
                                 <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
                                     {req.employeeName?.charAt(0)}
@@ -600,57 +612,57 @@ export default function AttendancePage() {
               />
             </TabsContent>
 
-            {isManagement && (
-                <TabsContent value="payroll" className="m-0 focus-visible:ring-0">
-                <Table>
-                    <TableHeader className="bg-slate-50/50">
-                    <TableRow className="border-none hover:bg-transparent">
-                        <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement Cycle</TableHead>
-                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Basis</TableHead>
-                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Net Disbursement</TableHead>
-                        <TableHead className="text-right pr-6">Action</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {loadingPayroll ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
-                    ) : paginatedPayroll.map((item, idx) => {
-                        const isSending = sendingEmailId === `${item.runId}-${item.employeeId}`;
-                        const employee = allUsers?.find(u => u.id === item.employeeId);
-                        return (
-                        <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
-                        <TableCell className="pl-6 py-4">
-                            <button onClick={() => handleEmployeeClick(item.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors">
-                                <Avatar className="h-8 w-8 rounded-lg">
-                                    <AvatarImage src={employee?.photoURL} alt={item.employeeName} />
-                                    <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
-                                        {item.employeeName?.charAt(0)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="text-left">
-                                    <p>{item.employeeName}</p>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
-                                </div>
-                            </button>
-                        </TableCell>
-                        <TableCell>
-                            <p className="text-xs font-semibold text-slate-600">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, yyyy')}</p>
-                        </TableCell>
-                        <TableCell>
-                            <p className="text-xs font-medium text-slate-500">
-                                {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : (item.type === 'bimonthly' ? 'Bimonthly Fixed' : 'Monthly Fixed'))}
-                            </p>
-                        </TableCell>
-                        <TableCell>
-                            <span className="text-sm font-bold text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</span>
-                        </TableCell>
-                        <TableCell className="text-right pr-6">
-                            <div className="flex items-center justify-end gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
-                                    <FileText className="h-3.5 w-3.5" />
-                                    Statement
-                                </Button>
+            <TabsContent value="payroll" className="m-0 focus-visible:ring-0">
+              <Table>
+                  <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none hover:bg-transparent">
+                      <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Recipient</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement Cycle</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Basis</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Net Disbursement</TableHead>
+                      <TableHead className="text-right pr-6">Action</TableHead>
+                  </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {loadingPayroll ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
+                  ) : paginatedPayroll.map((item, idx) => {
+                      const isSending = sendingEmailId === `${item.runId}-${item.employeeId}`;
+                      const employee = allUsers?.find(u => u.id === item.employeeId);
+                      return (
+                      <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                      <TableCell className="pl-6 py-4">
+                          <button onClick={() => handleEmployeeClick(item.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors" disabled={!isManagement && item.employeeId !== user?.id}>
+                              <Avatar className="h-8 w-8 rounded-lg shadow-inner border border-slate-100">
+                                  <AvatarImage src={employee?.photoURL} alt={item.employeeName} />
+                                  <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
+                                      {item.employeeName?.charAt(0)}
+                                  </AvatarFallback>
+                              </Avatar>
+                              <div className="text-left">
+                                  <p>{item.employeeName}</p>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
+                              </div>
+                          </button>
+                      </TableCell>
+                      <TableCell>
+                          <p className="text-xs font-semibold text-slate-600">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, yyyy')}</p>
+                      </TableCell>
+                      <TableCell>
+                          <p className="text-xs font-medium text-slate-500">
+                              {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : (item.type === 'bimonthly' ? 'Bimonthly Fixed' : 'Monthly Fixed'))}
+                          </p>
+                      </TableCell>
+                      <TableCell>
+                          <span className="text-sm font-bold text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</span>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                          <div className="flex items-center justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                                  <FileText className="h-3.5 w-3.5" />
+                                  Statement
+                              </Button>
+                              {isManagement && (
                                 <Button 
                                     size="icon" 
                                     variant="ghost" 
@@ -663,22 +675,22 @@ export default function AttendancePage() {
                                 >
                                     {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                 </Button>
-                            </div>
-                        </TableCell>
-                        </TableRow>
-                    )})}
-                    {!loadingPayroll && paginatedPayroll.length === 0 && (
-                        <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No individual disbursement logs found.</TableCell></TableRow>
-                    )}
-                    </TableBody>
-                </Table>
-                <PaginationFooter 
-                    totalItems={displayPayrollItems.length}
-                    currentPage={payrollPage}
-                    onPageChange={setPayrollPage}
-                />
-                </TabsContent>
-            )}
+                              )}
+                          </div>
+                      </TableCell>
+                      </TableRow>
+                  )})}
+                  {!loadingPayroll && paginatedPayroll.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No disbursement logs found.</TableCell></TableRow>
+                  )}
+                  </TableBody>
+              </Table>
+              <PaginationFooter 
+                  totalItems={displayPayrollItems.length}
+                  currentPage={payrollPage}
+                  onPageChange={setPayrollPage}
+              />
+            </TabsContent>
           </CardContent>
         </Card>
       </Tabs>
@@ -777,6 +789,12 @@ export default function AttendancePage() {
         employee={selectedEmployee}
         isOpen={!!selectedEmployee}
         onOpenChange={(open) => !open && setSelectedEmployee(null)}
+      />
+
+      <FileLeaveDialog
+        isOpen={isLeaveDialogOpen}
+        onOpenChange={setIsLeaveDialogOpen}
+        user={user}
       />
 
       <AlertDialog open={!!confirmItem} onOpenChange={(open) => !open && setConfirmItem(null)}>
