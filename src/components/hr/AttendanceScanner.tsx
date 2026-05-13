@@ -12,7 +12,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock, LogIn, LogOut } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +42,14 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const companyId = user?.companyId || user?.clientId;
+
+  const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  };
 
   const stopScanner = async () => {
     if (scannerRef.current) {
@@ -105,7 +113,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     let manualTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
-      // Check current action state to show correct prompt
       const checkState = async () => {
           const todayStr = format(new Date(), 'yyyy-MM-dd');
           const logsQuery = query(
@@ -233,7 +240,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
           await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
       } else if (latestLog) {
           const timeOut = Timestamp.now();
-          const timeIn = latestLog.timeIn instanceof Timestamp ? latestLog.timeIn : Timestamp.now();
+          const timeIn = toSafeDate(latestLog.timeIn) ? Timestamp.fromDate(toSafeDate(latestLog.timeIn)!) : Timestamp.now();
           const minutes = differenceInMinutes(timeOut.toDate(), timeIn.toDate());
           
           await updateDoc(doc(firestore, 'hr_companies', companyId, 'attendance', latestLog.id), {
@@ -333,7 +340,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                                 <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
                                 <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-xl" />
                             </div>
-                            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align with office tag</p>
+                            <div className="mt-8 flex flex-col items-center gap-2">
+                                <Badge className={cn("bg-white/10 text-white border-white/20 text-[10px] font-black uppercase tracking-widest", isCurrentlyIn ? "text-red-400" : "text-green-400")}>
+                                    Target Action: {isCurrentlyIn ? 'Clock Out' : 'Clock In'}
+                                </Badge>
+                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align with office tag</p>
+                            </div>
                         </div>
                     </>
                 )}
@@ -355,14 +367,19 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
 
                 {step === 'success' && (
                     <div className="flex flex-col items-center gap-8 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
-                        <div className="h-24 w-24 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
-                            <CheckCircle2 className="h-12 w-12 text-white" />
+                        <div className={cn(
+                            "h-24 w-24 rounded-full flex items-center justify-center shadow-lg transition-all",
+                            actionType === 'IN' ? "bg-green-500 shadow-green-500/20" : "bg-blue-600 shadow-blue-600/20"
+                        )}>
+                            {actionType === 'IN' ? <LogIn className="h-10 w-10 text-white" /> : <LogOut className="h-10 w-10 text-white" />}
                         </div>
                         <div className="space-y-4">
-                            <p className="text-3xl font-black tracking-tight text-white uppercase">Authorized!</p>
+                            <p className="text-3xl font-black tracking-tight text-white uppercase">
+                                {actionType === 'IN' ? 'Clocked In' : 'Clocked Out'}
+                            </p>
                             <div className="bg-white/10 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
-                                <p className="text-sm font-bold text-white flex items-center justify-center gap-2 text-primary">
-                                    {protocol === 'verified' ? <Lock className="h-4 w-4" /> : <Zap className="h-4 w-4 text-amber-400" />}
+                                <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
+                                    {protocol === 'verified' ? <Lock className="h-4 w-4 text-primary" /> : <Zap className="h-4 w-4 text-amber-400" />}
                                     {protocol === 'verified' ? 'Precision Verified' : 'Flexible Handshake'}
                                 </p>
                                 <div className="flex items-center justify-center gap-1.5 text-white">
@@ -370,6 +387,11 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                                     <span className="text-xs font-black tabular-nums">{lastActionTime}</span>
                                 </div>
                             </div>
+                            {actionType === 'OUT' && (
+                                <p className="text-[10px] font-black text-primary uppercase tracking-widest">
+                                    Session Recorded: {liveDuration}
+                                </p>
+                            )}
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
                                 Log saved to organizational ledger.
                             </p>

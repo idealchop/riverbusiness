@@ -164,7 +164,7 @@ export default function HRDashboard() {
     [firestore, companyId, user?.id, todayStr]
   );
   const { data: latestLogToday } = useCollection<HRAttendanceLog>(todayLogQuery);
-  const currentAction = (latestLogToday && latestLogToday.length > 0 && !latestLogToday[0].timeOut) ? 'IN' : 'OUT';
+  const isOnDuty = !!(latestLogToday && latestLogToday.length > 0 && !latestLogToday[0].timeOut);
 
   // Full Personal Attendance for performance metrics (if employee)
   const personalAttendanceQuery = useMemoFirebase(
@@ -179,7 +179,7 @@ export default function HRDashboard() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (currentAction === 'IN' && latestLogToday?.[0]?.timeIn) {
+    if (isOnDuty && latestLogToday?.[0]?.timeIn) {
       const startTime = toSafeDate(latestLogToday[0].timeIn);
       if (startTime) {
         const updateDuration = () => {
@@ -197,7 +197,7 @@ export default function HRDashboard() {
         setLiveDuration('00:00:00');
     }
     return () => clearInterval(interval);
-  }, [currentAction, latestLogToday]);
+  }, [isOnDuty, latestLogToday]);
 
   const handleQuickAttendance = async () => {
     if (!firestore || companyId === 'default' || !user?.id) return;
@@ -242,7 +242,7 @@ export default function HRDashboard() {
           validationStatus = 'Valid';
       }
 
-      if (currentAction === 'OUT') {
+      if (!isOnDuty) {
           const logData: Omit<HRAttendanceLog, 'id'> = {
             companyId,
             employeeId: user.id,
@@ -260,7 +260,7 @@ export default function HRDashboard() {
       } else if (latestLogToday?.[0]) {
           const log = latestLogToday[0];
           const timeOut = Timestamp.now();
-          const timeIn = log.timeIn instanceof Timestamp ? log.timeIn : Timestamp.now();
+          const timeIn = toSafeDate(log.timeIn) ? Timestamp.fromDate(toSafeDate(log.timeIn)!) : Timestamp.now();
           const minutes = differenceInMinutes(timeOut.toDate(), timeIn.toDate());
           
           await updateDoc(doc(firestore, 'hr_companies', companyId, 'attendance', log.id), {
@@ -359,7 +359,7 @@ export default function HRDashboard() {
         <div className="flex flex-wrap items-center gap-3">
             <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end min-w-[110px] shadow-inner group transition-all">
                 <p className="text-sm font-black tabular-nums leading-none text-slate-900">{currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}</p>
-                {currentAction === 'IN' && (
+                {isOnDuty && (
                     <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-500">
                         <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
                         <p className="text-[9px] font-black text-primary uppercase tracking-[0.1em] tabular-nums">Shift: {liveDuration}</p>
@@ -373,16 +373,23 @@ export default function HRDashboard() {
                     size="icon" 
                     onClick={handleQuickAttendance}
                     disabled={isProcessingQuick}
-                    className="rounded-xl h-11 w-11 border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-all"
-                    title="Quick Attendance Protocol"
+                    className={cn(
+                        "rounded-xl h-11 w-11 border-slate-200 bg-white shadow-sm transition-all",
+                        isOnDuty ? "text-red-500 hover:bg-red-50" : "text-green-600 hover:bg-green-50"
+                    )}
+                    title={isOnDuty ? "Quick Clock Out" : "Quick Clock In"}
                 >
-                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-5 w-5 text-primary" />}
+                    {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : isOnDuty ? <LogOut className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
                 </Button>
                 <Button 
                   onClick={() => setIsScannerOpen(true)}
-                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2 shadow-md shadow-primary/10"
+                  className={cn(
+                    "transition-all rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest flex items-center gap-2 shadow-md shadow-primary/10",
+                    isOnDuty ? "bg-destructive text-white hover:bg-destructive/90" : "bg-primary text-white hover:bg-primary/90"
+                  )}
                 >
-                    <QrCode className="h-4 w-4" /> Attendance Terminal
+                    <QrCode className="h-4 w-4" /> 
+                    {isOnDuty ? 'End Session' : 'Attendance Terminal'}
                 </Button>
             </div>
 
@@ -591,7 +598,7 @@ export default function HRDashboard() {
 
       {/* Mobile Floating Action Button (FAB) */}
       <div className="sm:hidden fixed bottom-8 right-6 z-50 flex flex-col gap-3 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {currentAction === 'IN' && (
+          {isOnDuty && (
              <div className="mb-1 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-blue-100 shadow-sm flex items-center gap-2 animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
                 <span className="text-[10px] font-black text-blue-600 tabular-nums">{liveDuration}</span>
@@ -601,16 +608,16 @@ export default function HRDashboard() {
               onClick={() => setIsScannerOpen(true)}
               className={cn(
                 "w-16 h-16 rounded-full shadow-2xl transition-all p-0 flex items-center justify-center border-[4px] border-white active:scale-95",
-                currentAction === 'IN' ? "bg-destructive" : "bg-primary"
+                isOnDuty ? "bg-destructive text-white hover:bg-destructive/90" : "bg-primary text-white hover:bg-primary/90"
               )}
           >
               <QrCode className="h-7 w-7 text-white" />
           </Button>
           <span className={cn(
             "text-[9px] font-black uppercase tracking-[0.3em] bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border",
-            currentAction === 'IN' ? "text-red-500 border-red-50" : "text-primary border-slate-100"
+            isOnDuty ? "text-red-500 border-red-50" : "text-primary border-slate-100"
           )}>
-            Clock {currentAction === 'IN' ? 'Out' : 'In'}
+            Clock {isOnDuty ? 'Out' : 'In'}
           </span>
       </div>
 
