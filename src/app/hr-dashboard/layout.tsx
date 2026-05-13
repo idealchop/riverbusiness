@@ -214,11 +214,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                     </SheetContent>
                 </Sheet>
              </div>
-             
-             <div className="md:hidden flex items-center gap-2">
-                <LogoBlack className="h-8 w-8" />
-                <span className="font-black text-[10px] uppercase tracking-widest text-slate-900">HR Management</span>
-             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
