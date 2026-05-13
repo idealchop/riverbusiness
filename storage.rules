@@ -31,8 +31,15 @@ service firebase.storage {
     match /chats/{allPaths=**} {
       allow read, write: if isAuthenticated();
     }
-    match /collab_images/{allPaths=**} {
+    
+    // Aligned with Client ID and Organization
+    match /collab_images/{companyId}/{allPaths=**} {
       allow read, write: if isAuthenticated();
+    }
+    
+    // Legacy support for user-based paths if they still exist
+    match /collab_images/{userId}/{allPaths=**} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // --- SECURE ADMINISTRATIVE ASSETS ---

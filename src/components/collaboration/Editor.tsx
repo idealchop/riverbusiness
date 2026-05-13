@@ -80,6 +80,7 @@ interface EditorProps {
   initialPrompt?: string | null;
   onContentChange: (json: any) => void;
   editable?: boolean;
+  companyId?: string;
 }
 
 const COLORS = [
@@ -95,7 +96,7 @@ const COLORS = [
     { label: 'Pink', value: '#ec4899' },
 ];
 
-export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true }, ref) => {
+export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true, companyId }, ref) => {
   const storage = useStorage();
   const auth = useAuth();
   const { toast } = useToast();
@@ -122,7 +123,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
     setIsUploading(true);
     setUploadProgress(0);
-    const path = `collab_images/${auth.currentUser.uid}/${Date.now()}-${file.name}`;
+    
+    // Align with Client ID and Organization
+    const targetPath = companyId || 'unassigned';
+    const path = `collab_images/${targetPath}/${Date.now()}-${file.name}`;
 
     try {
       const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
@@ -135,14 +139,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      if (isMounted) toast({ variant: 'destructive', title: 'Synchronization failed' });
+      if (isMounted) toast({ variant: 'destructive', title: 'Synchronization failed', description: 'Unauthorized or network error.' });
     } finally {
       if (isMounted) {
         setIsUploading(false);
         setUploadProgress(0);
       }
     }
-  }, [storage, auth, toast, isMounted]);
+  }, [storage, auth, toast, isMounted, companyId]);
 
   const CustomImage = ImageExtension.extend({
     addAttributes() {

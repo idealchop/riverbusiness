@@ -7,6 +7,10 @@ service firebase.storage {
       // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
     // --- ADMIN-SPECIFIC WRITE RULES ---
 
@@ -52,7 +56,12 @@ service firebase.storage {
         allow write: if request.auth.uid == userId || isAdmin();
     }
 
-    // Rule for collab document images
+    // Aligned with Client ID and Organization
+    match /collab_images/{companyId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Legacy support for user-based paths
     match /collab_images/{userId}/{fileName} {
       allow write: if request.auth.uid == userId;
     }
