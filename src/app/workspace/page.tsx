@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -9,11 +10,17 @@ import {
     ArrowUp, 
     Image as ImageIcon, 
     Pencil, 
-    Globe 
+    Globe,
+    Grid,
+    Layout,
+    FileText,
+    ChevronRight,
+    ArrowRight
 } from 'lucide-react';
 import { LogoBlack } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 
 const SUGGESTIONS = [
   "Draft a project proposal...",
@@ -46,16 +53,14 @@ export default function WorkspaceLandingPage() {
     }
   }, [prompt]);
 
-  const handleNewDoc = () => {
-    window.dispatchEvent(new CustomEvent('request-new-collab-page'));
+  const handleCreate = (type: 'doc' | 'sheet' | 'board') => {
+    window.dispatchEvent(new CustomEvent('request-new-collab-page', {
+        detail: { type }
+    }));
   };
 
   const handleKnowledgeBase = () => {
     toast({ title: "Opening Knowledge Base", description: "Accessing shared organizational libraries." });
-  };
-
-  const handleCreateImage = () => {
-    toast({ title: "Visual Studio", description: "AI image generation tools are being initialized." });
   };
 
   const handleAskAi = async () => {
@@ -66,27 +71,28 @@ export default function WorkspaceLandingPage() {
     window.dispatchEvent(new CustomEvent('request-new-collab-page', { 
         detail: { 
             title: prompt.trim().substring(0, 40),
-            initialPrompt: prompt.trim()
+            initialPrompt: prompt.trim(),
+            type: 'doc'
         } 
     }));
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/30">
-        <div className="max-w-4xl w-full px-8 flex flex-col items-center justify-center space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-24">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/30 overflow-hidden">
+        <div className="max-w-5xl w-full px-8 flex flex-col items-center justify-center space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-12">
             <div className="w-full text-center space-y-4">
                 <div className="flex justify-center mb-8">
                     <LogoBlack className="h-20 w-20" />
                 </div>
                 
-                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-32">
+                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-16">
                     Ready, when you are.
                 </h1>
 
-                <div className="relative w-full max-w-2xl mx-auto">
+                <div className="relative w-full max-w-2xl mx-auto mb-12">
                     <div className={cn(
                       "relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
-                      "shadow-none ring-0 outline-none"
+                      "shadow-xl shadow-slate-200/50 ring-0 outline-none"
                     )}>
                         <div className="flex items-end">
                             <textarea 
@@ -123,21 +129,32 @@ export default function WorkspaceLandingPage() {
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 w-full">
-                <QuickActionButton 
-                    onClick={handleNewDoc}
-                    icon={<Pencil className="h-4 w-4" />}
-                    label="Write or edit"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+                <QuickCard 
+                    onClick={() => handleCreate('doc')}
+                    icon={<FileText className="h-6 w-6 text-blue-500" />}
+                    title="Write Document"
+                    description="Rich text editor with AI assistant."
                 />
-                <QuickActionButton 
-                    onClick={handleCreateImage}
-                    icon={<ImageIcon className="h-4 w-4" />}
-                    label="Create an image"
+                <QuickCard 
+                    onClick={() => handleCreate('sheet')}
+                    icon={<Grid className="h-6 w-6 text-green-600" />}
+                    title="Operational Sheet"
+                    description="Grid-based data and supply tracking."
                 />
+                <QuickCard 
+                    onClick={() => handleCreate('board')}
+                    icon={<Layout className="h-6 w-6 text-purple-600" />}
+                    title="Flow Canvas"
+                    description="Visual whiteboards for team logic."
+                />
+            </div>
+
+            <div className="flex items-center gap-3 pt-4">
                 <QuickActionButton 
                     onClick={handleKnowledgeBase}
                     icon={<Globe className="h-4 w-4" />}
-                    label="Look something up"
+                    label="Knowledge Library"
                 />
             </div>
         </div>
@@ -145,16 +162,37 @@ export default function WorkspaceLandingPage() {
   );
 }
 
+function QuickCard({ onClick, icon, title, description }: { onClick: () => void, icon: React.ReactNode, title: string, description: string }) {
+    return (
+        <Card className="border-none shadow-sm bg-white cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group rounded-[2rem] overflow-hidden" onClick={onClick}>
+            <CardContent className="p-8 space-y-4">
+                <div className="p-4 rounded-2xl bg-slate-50 w-fit group-hover:bg-primary/5 transition-colors">
+                    {icon}
+                </div>
+                <div className="space-y-1.5">
+                    <h3 className="font-bold text-slate-900 flex items-center justify-between">
+                        {title}
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-all group-hover:translate-x-1" />
+                    </h3>
+                    <p className="text-xs font-medium text-slate-400 leading-relaxed">
+                        {description}
+                    </p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 function QuickActionButton({ onClick, icon, label }: { onClick: () => void, icon: React.ReactNode, label: string }) {
     return (
         <button 
             onClick={onClick}
-            className="flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all duration-200 active:scale-[0.97] group"
+            className="flex items-center gap-2.5 px-6 py-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all duration-200 active:scale-[0.97] group shadow-sm"
         >
             <span className="text-slate-900 transition-transform group-hover:scale-110 duration-300">
                 {icon}
             </span>
-            <span className="text-sm font-medium text-slate-600">
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
                 {label}
             </span>
         </button>

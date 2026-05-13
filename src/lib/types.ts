@@ -105,11 +105,14 @@ export interface CollabWorkspace {
     createdAt: any;
 }
 
+export type CollabPageType = 'doc' | 'sheet' | 'board';
+
 export interface CollabPage {
     id: string;
     companyId: string;
     workspaceId: string;
     parentId: string | null;
+    type: CollabPageType;
     title: string;
     icon?: string;
     coverImage?: string;
@@ -221,6 +224,8 @@ export interface ChatMessage {
   text?: string;
   role: 'user' | 'admin';
   timestamp: FieldValue | Timestamp;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }
 
 export interface WaterStation {
@@ -315,4 +320,10 @@ export interface RefillRequest {
   statusHistory?: StatusHistoryEntry[];
   volumeContainers?: number;
   requestedDate?: string;
+}
+
+export interface SecurityRuleContext {
+    path: string;
+    operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
+    requestResourceData?: any;
 }

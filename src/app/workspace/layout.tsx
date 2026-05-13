@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Menu, Building2 } from 'lucide-react';
-import type { CollabPage, AppUser, SecurityRuleContext } from '@/lib/types';
+import type { CollabPage, AppUser, SecurityRuleContext, CollabPageType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
@@ -63,26 +64,30 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       return rawPages.find(p => p.id === sharingPageId) || null;
   }, [sharingPageId, rawPages]);
 
-  const handleCreatePage = useCallback(async (parentId: string | null = null, title: string = 'Untitled', initialPrompt?: string) => {
+  const handleCreatePage = useCallback(async (parentId: string | null = null, title: string = 'Untitled', type: CollabPageType = 'doc', initialPrompt?: string) => {
     if (!firestore || !authUser || !companyId) {
         toast({ title: "Initializing", description: "Please wait a moment while the workspace prepares your environment." });
         return;
     }
 
     const pagesCol = collection(firestore, 'collaboration_pages');
+    
+    // Initialize content based on type
+    let initialContent: any = { type: "doc", content: [{ type: "paragraph" }] };
+    if (type === 'sheet') initialContent = { rows: 20, cols: 10, data: {} };
+    if (type === 'board') initialContent = { elements: [] };
+
     const newPage = {
       companyId,
       workspaceId: 'default',
       parentId,
+      type,
       title: title || 'Untitled',
       createdBy: authUser.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isTrashed: false,
-      content: {
-          type: "doc",
-          content: [{ type: "paragraph" }]
-      },
+      content: initialContent,
     };
 
     addDoc(pagesCol, newPage)
@@ -91,7 +96,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         router.push(redirectUrl);
         
         if (!initialPrompt) {
-            toast({ title: 'New document created' });
+            toast({ title: `New ${type} created` });
         }
       })
       .catch(async (err) => {
@@ -164,6 +169,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         handleCreatePage(
             customEvent.detail?.parentId || null, 
             customEvent.detail?.title || 'Untitled',
+            customEvent.detail?.type || 'doc',
             customEvent.detail?.initialPrompt
         );
     };

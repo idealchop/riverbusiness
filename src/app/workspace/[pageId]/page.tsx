@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
@@ -5,6 +6,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteDoc, collection, getDoc, deleteField, Timestamp } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
+import { SheetEditor } from '@/components/collaboration/SheetEditor';
+import { BoardEditor } from '@/components/collaboration/BoardEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,7 +33,9 @@ import {
   Lock,
   Clock,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Grid,
+  Layout
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -436,6 +441,8 @@ function PageEditorContent() {
   if (isDeleting || (loading && !page)) return isDeleting ? <div className="h-full flex flex-col items-center justify-center bg-white space-y-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Syncing Changes...</p></div> : <PageSkeleton />;
   if (!page) return <PageSkeleton />;
 
+  const pageType = page.type || 'doc';
+
   return (
     <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700 relative">
       {page.isTrashed && (
@@ -474,22 +481,57 @@ function PageEditorContent() {
               ))}
           </div>
           <div className="w-20 flex justify-center">{isSaving ? <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95"><div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /><span className="text-[9px] font-black text-primary">Syncing</span></div> : <div className="flex items-center gap-1.5 opacity-40"><CheckCircle className="h-3 w-3 text-slate-400" /><span className="text-[9px] font-black text-slate-400">Saved</span></div>}</div>
-          {!page.isTrashed && <><button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button><button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button><SharePopover page={page} onUpdate={handleUpdateMeta} /><DeletePopover page={page} onTrash={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} /></>}
+          {!page.isTrashed && <><button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button><button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button><SharePopover page={page} onUpdate={handleUpdateMeta} /><DeletePopover page={page} onTrash={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} /></>}
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        {page.coverImage && (
+        {pageType === 'doc' && page.coverImage && (
             <div className="h-[30vh] w-full relative group">
                 <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
                 {!page.isTrashed && <div className="absolute bottom-6 right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest">Change Cover</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
             </div>
         )}
-        <div className="max-w-4xl mx-auto px-8 pt-10 pb-32">
-            {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
-            {!page.isTrashed && <div className="flex gap-4 opacity-0 hover:opacity-100 mb-4">{!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}{!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}</div>}
-            <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
-            <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
+        <div className={cn(
+            "max-w-4xl mx-auto px-8 pt-10 pb-32",
+            pageType !== 'doc' && "max-w-none px-0 pt-0 pb-0 flex flex-col h-full"
+        )}>
+            {pageType === 'doc' && (
+                <>
+                    {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
+                    {!page.isTrashed && <div className="flex gap-4 opacity-0 hover:opacity-100 mb-4">{!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}{!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}</div>}
+                    <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
+                    <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
+                </>
+            )}
+
+            {pageType === 'sheet' && (
+                <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
+                    <div className="px-8 py-6 border-b bg-slate-50/50">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2.5 rounded-xl bg-blue-50 text-primary shadow-sm border border-blue-100">
+                                <Grid className="h-5 w-5" />
+                            </div>
+                            <input value={page.title} placeholder="Untitled Sheet" onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-2xl bg-transparent placeholder:text-slate-300 text-slate-900" readOnly={page.isTrashed} />
+                        </div>
+                    </div>
+                    <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
+                </div>
+            )}
+
+            {pageType === 'board' && (
+                <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
+                    <div className="px-8 py-6 border-b bg-slate-50/50">
+                         <div className="flex items-center gap-4">
+                            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 shadow-sm border border-purple-100">
+                                <Layout className="h-5 w-5" />
+                            </div>
+                            <input value={page.title} placeholder="Untitled Board" onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-2xl bg-transparent placeholder:text-slate-300 text-slate-900" readOnly={page.isTrashed} />
+                        </div>
+                    </div>
+                    <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
+                </div>
+            )}
         </div>
       </ScrollArea>
     </div>

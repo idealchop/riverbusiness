@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -16,18 +17,23 @@ import {
     PanelLeftClose,
     History,
     X,
-    Sparkles
+    Sparkles,
+    Grid,
+    Layout,
+    StickyNote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import type { CollabPage, AppUser } from '@/lib/types';
+import type { CollabPage, AppUser, CollabPageType } from '@/lib/types';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
     DropdownMenuItem, 
-    DropdownMenuTrigger 
+    DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { LogoBlack } from '@/components/icons';
@@ -41,14 +47,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Progress } from '@/components/ui/progress';
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   pages: CollabPage[];
   activePageId: string | null;
-  onCreatePage: (parentId: string | null) => void;
+  onCreatePage: (parentId: string | null, title: string, type: CollabPageType) => void;
   user: AppUser | null;
 }
 
@@ -72,6 +77,17 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
   const favorites = pages.filter(p => p.isFavorite);
   const rootPages = filteredPages.filter(p => !p.parentId);
+
+  const getPageIcon = (page: CollabPage, isActive: boolean) => {
+    if (page.icon) return <span className="text-xs leading-none select-none">{page.icon}</span>;
+    
+    const type = page.type || 'doc';
+    switch (type) {
+        case 'sheet': return <Grid className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400")} />;
+        case 'board': return <Layout className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400")} />;
+        default: return <FileText className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400")} />;
+    }
+  };
 
   const NavItem = ({ page, level = 0 }: { page: CollabPage, level?: number }) => {
     const isExpanded = expandedPages[page.id];
@@ -99,23 +115,32 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="w-4 h-4 shrink-0 flex items-center justify-center">
-                    {page.icon ? (
-                        <span className="text-xs leading-none select-none">{page.icon}</span>
-                    ) : (
-                        <FileText className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-600")} />
-                    )}
+                    {getPageIcon(page, isActive)}
                 </div>
                 <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
             </div>
 
             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-                <button 
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id); }}
-                    className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
-                    title="Add subpage"
-                >
-                    <Plus className="h-3.5 w-3.5" />
-                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
+                            <Plus className="h-3.5 w-3.5" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-2 py-1.5 tracking-widest">New Sub-Item</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id, 'New Doc', 'doc'); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                            <FileText className="h-3.5 w-3.5 text-blue-500" /> New Doc
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id, 'New Sheet', 'sheet'); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                            <Grid className="h-3.5 w-3.5 text-green-500" /> New Sheet
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id, 'New Board', 'board'); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                            <Layout className="h-3.5 w-3.5 text-purple-500" /> New Board
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
                 <button 
                     onClick={(e) => { 
                         e.preventDefault(); 
@@ -137,9 +162,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); onCreatePage(page.id); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
-                            <Plus className="h-3.5 w-3.5" /> Add subpage
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" /> Move to trash
                         </DropdownMenuItem>
@@ -207,14 +229,32 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 )}
             </div>
             
-            <Button 
-                variant="ghost" 
-                onClick={() => onCreatePage(null)}
-                className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900"
-            >
-                <Plus className="h-4 w-4" />
-                New Page
-            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New workspace item
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100">
+                    <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">Asset Creator</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
+                        Rich Text Document
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Sheet', 'sheet')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                        <div className="p-1.5 rounded-lg bg-green-50 text-green-500"><Grid className="h-4 w-4" /></div>
+                        Operational Sheet
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Board', 'board')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                        <div className="p-1.5 rounded-lg bg-purple-50 text-purple-500"><Layout className="h-4 w-4" /></div>
+                        Visual Whiteboard
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
 
@@ -232,11 +272,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                     activePageId === p.id ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                                 )}>
                                     <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
-                                        {p.icon ? (
-                                            <span className="text-[10px] leading-none">{p.icon}</span>
-                                        ) : (
-                                            <Star className="h-3.5 w-3.5 text-amber-500 fill-current" />
-                                        )}
+                                        {getPageIcon(p, activePageId === p.id)}
                                     </div>
                                     <span className="truncate">{p.title || 'Untitled'}</span>
                                 </div>
