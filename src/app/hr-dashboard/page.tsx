@@ -144,9 +144,11 @@ export default function HRDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  const isManagement = !!user?.plan || user?.hrRole === 'admin';
   const companyId = user?.companyId || user?.clientId || 'default';
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
+  // Unified Attendance Queries
   const todayLogQuery = useMemoFirebase(
     () => (firestore && user?.id && companyId !== 'default') ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
@@ -159,6 +161,17 @@ export default function HRDashboard() {
   );
   const { data: latestLogToday } = useCollection<HRAttendanceLog>(todayLogQuery);
   const currentAction = (latestLogToday && latestLogToday.length > 0 && !latestLogToday[0].timeOut) ? 'IN' : 'OUT';
+
+  // Full Personal Attendance for performance metrics (if employee)
+  const personalAttendanceQuery = useMemoFirebase(
+      () => (firestore && user?.id && companyId !== 'default' && !isManagement) ? query(
+          collection(firestore, 'hr_companies', companyId, 'attendance'),
+          where('employeeId', '==', user.id),
+          orderBy('date', 'desc')
+      ) : null,
+      [firestore, companyId, user?.id, isManagement]
+  );
+  const { data: personalAttendanceLogs } = useCollection<HRAttendanceLog>(personalAttendanceQuery);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -273,20 +286,40 @@ export default function HRDashboard() {
   const { data: todayAttendance } = useCollection<HRAttendanceLog>(companyAttendanceQuery);
 
   const feedItems = useMemo(() => {
-    if (!todayAttendance || todayAttendance.length === 0) return [];
-    return [...todayAttendance].sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0));
-  }, [todayAttendance]);
+    let list = todayAttendance || [];
+    // Filter for personal feed if employee
+    if (!isManagement && user?.id) {
+        list = list.filter(item => item.employeeId === user.id);
+    }
+    return [...list].sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0));
+  }, [todayAttendance, isManagement, user?.id]);
 
   const stats = useMemo(() => {
-    const empCount = employees?.length || 0;
-    const attCount = todayAttendance?.length || 0;
-    return [
-        { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
-        { label: 'Present Today', value: attCount, icon: Clock, trend: 'Verified Entry', trendType: 'up' },
-        { label: 'Operational', value: '100%', icon: Activity, trend: 'Live Sync', trendType: 'up' },
-        { label: 'GPS Radius', value: '50m', icon: MapPin, trend: 'Validation Active', trendType: 'up' },
-    ];
-  }, [employees, todayAttendance]);
+    if (isManagement) {
+        const empCount = employees?.length || 0;
+        const attCount = todayAttendance?.length || 0;
+        return [
+            { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
+            { label: 'Present Today', value: attCount, icon: Clock, trend: 'Verified Entry', trendType: 'up' },
+            { label: 'Operational', value: '100%', icon: Activity, trend: 'Live Sync', trendType: 'up' },
+            { label: 'GPS Radius', value: '50m', icon: MapPin, trend: 'Validation Active', trendType: 'up' },
+        ];
+    } else {
+        // Employee Personal Stats
+        const logs = personalAttendanceLogs || [];
+        const totalShifts = logs.length;
+        const onTime = logs.filter(l => l.status === 'present').length;
+        const punctuality = totalShifts > 0 ? (onTime / totalShifts) * 100 : 100;
+        const totalHours = logs.reduce((sum, l) => sum + (l.totalMinutes || 0), 0) / 60;
+
+        return [
+            { label: 'Punctuality', value: `${punctuality.toFixed(0)}%`, icon: CheckCircle2, trend: 'Attendance rate', trendType: 'up' },
+            { label: 'Hours Logged', value: `${totalHours.toFixed(1)}h`, icon: Clock, trend: 'Total work time', trendType: 'up' },
+            { label: 'Total Shifts', value: totalShifts, icon: Users, trend: 'Career history', trendType: 'up' },
+            { label: 'GPS Radius', value: 'Authorized', icon: MapPin, trend: 'Verified Location', trendType: 'up' },
+        ];
+    }
+  }, [employees, todayAttendance, isManagement, personalAttendanceLogs]);
 
   const selectedDateInfo = useMemo(() => {
       if (!selectedDate) return null;
@@ -346,9 +379,11 @@ export default function HRDashboard() {
                 </Button>
             </div>
 
-            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="sm:hidden rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
-                Payroll
-            </Button>
+            {isManagement && (
+                <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="sm:hidden rounded-xl h-11 px-6 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">
+                    Payroll
+                </Button>
+            )}
         </div>
       </div>
 
@@ -362,8 +397,12 @@ export default function HRDashboard() {
                             )}
                         </div>
                         <div className="relative p-8 pt-0 lg:p-0 lg:absolute lg:bottom-10 lg:left-10 text-slate-900 z-10 space-y-2 lg:max-w-[80%]">
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">Team Workforce</h2>
-                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 tracking-widest leading-relaxed">Unified workforce and operational monitoring for modern teams.</p>
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-tight">
+                                {isManagement ? 'Team Workforce' : 'My Career Hub'}
+                            </h2>
+                            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 tracking-widest leading-relaxed">
+                                {isManagement ? 'Unified workforce and operational monitoring for modern teams.' : 'Track your personal growth, attendance, and organizational status.'}
+                            </p>
                         </div>
                     </div>
                     <div className="lg:col-span-4 p-6 md:p-8 flex flex-col justify-center bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-slate-100">
@@ -484,8 +523,12 @@ export default function HRDashboard() {
                 <CardHeader className="bg-slate-50/30 p-8 border-b">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="text-xl font-bold tracking-tight text-slate-900">Recent Activity Feed</CardTitle>
-                            <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Real-Time Verification Summary</CardDescription>
+                            <CardTitle className="text-xl font-bold tracking-tight text-slate-900">
+                                {isManagement ? 'Recent Activity Feed' : 'My Personal Activity Log'}
+                            </CardTitle>
+                            <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">
+                                {isManagement ? 'Real-Time Verification Summary' : 'Your Verified Attendance Sessions'}
+                            </CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -564,13 +607,15 @@ export default function HRDashboard() {
                             <div className="p-2 rounded-xl bg-white/10"><Megaphone className="h-5 w-5 text-primary-light" /></div>
                             <h3 className="text-lg font-black tracking-tight">Command Center</h3>
                         </div>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">New Announcement</Label>
-                                <Textarea placeholder="Type important updates here..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] focus:ring-primary text-sm font-medium resize-none shadow-inner" />
+                        {isManagement && (
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">New Announcement</Label>
+                                    <Textarea placeholder="Type important updates here..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] focus:ring-primary text-sm font-medium resize-none shadow-inner" />
+                                </div>
+                                <Button onClick={() => { toast({ title: 'Broadcast Sent' }); setAnnouncementText(''); }} disabled={!announcementText.trim()} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"><Send className="mr-2 h-3.5 w-3.5" /> Broadcast to Team</Button>
                             </div>
-                            <Button onClick={() => { toast({ title: 'Broadcast Sent' }); setAnnouncementText(''); }} disabled={!announcementText.trim()} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"><Send className="mr-2 h-3.5 w-3.5" /> Broadcast to Team</Button>
-                        </div>
+                        )}
                     </div>
                     <Separator className="bg-white/10" />
                     <div className="space-y-6">

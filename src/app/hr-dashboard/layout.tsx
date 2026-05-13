@@ -97,7 +97,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
 
   // Dynamic Navigation based on Role
   const navItems = [
-    { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard, condition: isManagement },
+    { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard, condition: true },
     { href: '/hr-dashboard/employees', label: 'Employees', icon: Users, condition: isManagement },
     { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database, condition: true },
     { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign, condition: isManagement },
