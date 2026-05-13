@@ -107,6 +107,20 @@ export interface CollabWorkspace {
 
 export type CollabPageType = 'doc' | 'sheet' | 'board';
 
+export interface BoardElement {
+    id: string;
+    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'arrow' | 'image';
+    x: number;
+    y: number;
+    text: string;
+    color: string;
+    width: number;
+    height: number;
+    url?: string; // For images
+    fromId?: string; // For arrows
+    toId?: string; // For arrows
+}
+
 export interface CollabPage {
     id: string;
     companyId: string;
