@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -9,30 +8,22 @@ import {
     StickyNote, 
     Trash2, 
     Grab,
-    Layout,
     Circle,
     Palette,
     Plus,
     X,
     Maximize2,
     Minus,
-    Loader2,
     Type,
     ArrowRight,
-    ImageIcon,
-    Presentation,
-    Search,
-    BezierCurve,
-    ChevronDown,
-    Zap,
-    CornerRightUp,
-    MoreHorizontal,
+    CaseSensitive,
+    PlusCircle,
+    Hexagon,
     AlignLeft,
     AlignCenter,
     AlignRight,
-    CaseSensitive,
-    PlusCircle,
-    Hexagon
+    Zap,
+    CornerRightUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -45,14 +36,11 @@ import {
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 
 interface BoardEditorProps {
   initialData: any;
   onContentChange: (json: any) => void;
   editable?: boolean;
-  pageId: string;
 }
 
 const COLORS = [
@@ -68,22 +56,18 @@ const COLORS = [
 
 const FONT_SIZES = [12, 14, 16, 20, 24, 32, 48];
 
-export function BoardEditor({ initialData, onContentChange, editable = true, pageId }: BoardEditorProps) {
+export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const { user } = useUser();
   
   const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
-  // Navigation State
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
-  const [tool, setTool] = useState<'select' | 'hand' | 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'arrow'>('select');
+  const [tool, setTool] = useState<'select' | 'hand' | 'arrow'>('select');
   
-  // Interaction State
   const [isPanning, setIsPanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -91,14 +75,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   
-  // Connection state
   const [pendingConnection, setPendingConnection] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Sync with Firestore Presence
-  const presenceQuery = useMemoFirebase(() => (firestore && pageId) ? collection(firestore, 'collaboration_pages', pageId, 'presence') : null, [firestore, pageId]);
-  const { data: presence } = useCollection(presenceQuery);
 
   useEffect(() => {
       if (initialData?.elements) setElements(initialData.elements);
@@ -111,7 +90,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       onContentChange({ elements: newElements, connections: newConnections });
   }, [onContentChange]);
 
-  // Viewport mapping logic
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
       const rect = containerRef.current.getBoundingClientRect();
@@ -119,44 +97,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       const y = (clientY - rect.top - viewport.y) / viewport.scale;
       return { x, y };
   };
-
-  // Keyboard Shortcuts Engine
-  useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-          if (!editable) return;
-          
-          if (e.code === 'Space' && !isPanning) {
-              setTool('hand');
-              setIsPanning(true);
-          }
-
-          if (e.key === 'Delete' || e.key === 'Backspace') {
-              if (selectedId && !document.activeElement?.tagName.includes('TEXTAREA') && !document.activeElement?.tagName.includes('INPUT')) {
-                  deleteElement(selectedId);
-              }
-          }
-
-          if (e.ctrlKey || e.metaKey) {
-              if (e.key === '=') { e.preventDefault(); setViewport(v => ({ ...v, scale: Math.min(v.scale + 0.1, 5) })); }
-              if (e.key === '-') { e.preventDefault(); setViewport(v => ({ ...v, scale: Math.max(v.scale - 0.1, 0.1) })); }
-              if (e.key === '0') { e.preventDefault(); setViewport(v => ({ ...v, x: 0, y: 0, scale: 1 })); }
-          }
-      };
-
-      const handleKeyUp = (e: KeyboardEvent) => {
-          if (e.code === 'Space') {
-              setTool('select');
-              setIsPanning(false);
-          }
-      };
-
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
-      return () => {
-          window.removeEventListener('keydown', handleKeyDown);
-          window.removeEventListener('keyup', handleKeyUp);
-      };
-  }, [editable, selectedId, isPanning]);
 
   const addElement = (type: BoardElement['type'], x?: number, y?: number) => {
       if (!editable) return;
@@ -175,7 +115,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       };
       sync([...elements, newEl], connections);
       setSelectedId(id);
-      setTool('select');
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -189,22 +128,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
 
       const hit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
       
-      if (tool === 'arrow') {
-          if (hit) {
-              if (!pendingConnection) {
-                  setPendingConnection(hit.id);
-                  toast({ title: 'Linking Source Set', description: 'Select target logic block.' });
-              } else if (pendingConnection !== hit.id) {
-                  const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnection, toId: hit.id, type: 'curved' };
-                  sync(elements, [...connections, newConn]);
-                  setPendingConnection(null);
-                  setTool('select');
-                  toast({ title: 'Logic established' });
-              }
-          }
-          return;
-      }
-
       if (hit) {
           const handleSize = 12 / viewport.scale;
           if (x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize) {
@@ -232,8 +155,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       }
 
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-
-      // Port hover detection logic
       const hoverHit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
       setHoveredId(hoverHit?.id || null);
 
@@ -287,9 +208,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       const x2 = to.x + to.width / 2;
       const y2 = to.y + to.height / 2;
 
-      if (conn.type === 'straight') return `M ${x1} ${y1} L ${x2} ${y2}`;
-      if (conn.type === 'step') return `M ${x1} ${y1} H ${(x1 + x2) / 2} V ${y2} H ${x2}`;
-      
       const cp1x = x1 + (x2 - x1) / 2;
       const cp1y = y1;
       const cp2x = x1 + (x2 - x1) / 2;
@@ -297,16 +215,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
       return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
   };
 
-  const onDragStart = (e: React.DragEvent, type: BoardElement['type']) => {
-      e.dataTransfer.setData('elType', type);
+  const startConnection = (fromId: string) => {
+      setPendingConnection(fromId);
+      toast({ title: 'Connection started', description: 'Select another shape to link.' });
   };
 
-  const onDrop = (e: React.DragEvent) => {
-      e.preventDefault();
-      const type = e.dataTransfer.getData('elType') as BoardElement['type'];
-      if (type) {
-          const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-          addElement(type, x - 75, y - 75);
+  const completeConnection = (toId: string) => {
+      if (pendingConnection && pendingConnection !== toId) {
+          const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnection, toId: toId, type: 'curved' };
+          sync(elements, [...connections, newConn]);
+          setPendingConnection(null);
+          toast({ title: 'Logic established' });
       }
   };
 
@@ -319,17 +238,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
         {/* Component Library Sidebar */}
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
             <div className="flex flex-col gap-5">
-                <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={onDragStart} label="Sticky" />
-                <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={onDragStart} label="Process" />
-                <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={onDragStart} label="Start/End" />
-                <DraggableTool icon={<Hexagon className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={onDragStart} label="Decision" />
-                <DraggableTool icon={<Type className="h-5 w-5 text-slate-900" />} type="text" onDragStart={onDragStart} label="Label" />
+                <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} label="Sticky" />
+                <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} label="Process" />
+                <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} label="Event" />
+                <DraggableTool icon={<Hexagon className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
             </div>
             <Separator className="w-8" />
             <div className="flex flex-col gap-2">
-                <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} label="Select (V)" active={tool === 'select'} onClick={() => setTool('select')} />
-                <ToolbarItem icon={<Grab className="h-4 w-4" />} label="Pan (Space)" active={tool === 'hand'} onClick={() => setTool('hand')} />
-                <ToolbarItem icon={<ArrowRight className="h-4 w-4" />} label="Connect (L)" active={tool === 'arrow'} onClick={() => setTool('arrow')} />
+                <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
+                <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
             </div>
         </aside>
 
@@ -339,10 +256,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
              onMouseUp={handleMouseUp}
              onWheel={handleWheel}
              onDragOver={(e) => e.preventDefault()}
-             onDrop={onDrop}
+             onDrop={(e) => {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('elType') as BoardElement['type'];
+                if (type) {
+                    const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+                    addElement(type, x - 75, y - 75);
+                }
+             }}
              ref={containerRef}>
             
-            {/* Professional Grid */}
+            {/* Design Grid */}
             <div className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none" 
                  style={{ 
                      backgroundImage: `radial-gradient(circle, #538ec2 1.5px, transparent 1px)`, 
@@ -351,7 +275,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                  }} 
             />
 
-            {/* Canvas Layers */}
+            {/* Canvas Rendering */}
             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
                 <svg className="absolute inset-0 overflow-visible w-full h-full">
                     <defs>
@@ -385,11 +309,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                         >
                             <div 
                                 className={cn(
-                                    "w-full h-full p-4 flex flex-col relative transition-all overflow-hidden",
-                                    el.type === 'note' && "bg-white border-t-8 border-t-amber-400 shadow-xl rounded-b-lg",
-                                    el.type === 'rect' && "bg-white border-2 border-slate-900 rounded-xl shadow-lg",
-                                    el.type === 'circle' && "bg-white border-2 border-slate-900 rounded-full shadow-lg items-center justify-center text-center",
-                                    el.type === 'diamond' && "bg-white border-2 border-slate-900 shadow-lg flex items-center justify-center text-center rotate-45",
+                                    "w-full h-full p-4 flex flex-col relative transition-all overflow-hidden shadow-lg",
+                                    el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg",
+                                    el.type === 'rect' && "border-2 border-slate-900 rounded-xl",
+                                    el.type === 'circle' && "border-2 border-slate-900 rounded-full items-center justify-center text-center",
+                                    el.type === 'diamond' && "border-2 border-slate-900 flex items-center justify-center text-center rotate-45",
                                     el.type === 'text' && "bg-transparent border-none p-0"
                                 )}
                                 style={{ backgroundColor: el.color }}
@@ -409,7 +333,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                                     />
                                 </div>
                                 
-                                {/* Resize Handle */}
                                 {isSelected && (
                                     <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white">
                                         <CornerRightUp className="h-2 w-2 rotate-90" />
@@ -417,13 +340,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                                 )}
                             </div>
 
-                            {/* Quick Connect Ports (On Hover) */}
+                            {/* External Connect Buttons */}
                             {(isHovered || isSelected) && !isDragging && (
                                 <div className="absolute inset-0 pointer-events-none">
-                                    <Port side="top" onClick={() => { setTool('arrow'); setPendingConnection(el.id); }} />
-                                    <Port side="right" onClick={() => { setTool('arrow'); setPendingConnection(el.id); }} />
-                                    <Port side="bottom" onClick={() => { setTool('arrow'); setPendingConnection(el.id); }} />
-                                    <Port side="left" onClick={() => { setTool('arrow'); setPendingConnection(el.id); }} />
+                                    <Port side="top" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
+                                    <Port side="right" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
+                                    <Port side="bottom" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
+                                    <Port side="left" onClick={() => pendingConnection ? completeConnection(el.id) : startConnection(el.id)} />
                                 </div>
                             )}
                         </div>
@@ -431,7 +354,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                 })}
             </div>
 
-            {/* Floating Contextual Toolbar */}
+            {/* Contextual Style Bar */}
             {selectedElement && (
                 <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10">
                     <DropdownMenu>
@@ -440,7 +363,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                                 <Palette className="h-4 w-4" /> Color
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white">
+                        <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white border-slate-100">
                             {COLORS.map(c => (
                                 <button key={c.value} onClick={() => updateElement(selectedElement.id, { color: c.value })}
                                     className={cn("h-6 w-6 rounded-lg border", selectedElement.color === c.value && "ring-2 ring-primary ring-offset-1")}
@@ -475,7 +398,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
                 </div>
             )}
 
-            {/* Global Controllers */}
+            {/* Controls */}
             <div className="absolute bottom-8 right-8 z-40 flex items-center gap-3">
                  <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shadow-lg">
                     <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.max(0.1, v.scale - 0.1) }))} className="h-8 w-8"><Minus className="h-4 w-4 text-slate-500" /></Button>
@@ -489,13 +412,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true, pag
   );
 }
 
-function ToolbarItem({ icon, label, active = false, onClick }: any) {
+function ToolbarItem({ icon, active = false, onClick }: any) {
     return (
-        <button onClick={onClick} className={cn("h-10 w-10 flex items-center justify-center rounded-xl transition-all group relative", active ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-900")}>
+        <button onClick={onClick} className={cn("h-10 w-10 flex items-center justify-center rounded-xl transition-all group relative", active ? "bg-primary text-white shadow-lg" : "text-slate-400 hover:bg-slate-50")}>
             {icon}
-            <div className="absolute left-14 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap shadow-2xl z-[60] transition-opacity">
-                {label}
-            </div>
         </button>
     );
 }
@@ -504,7 +424,7 @@ function DraggableTool({ icon, type, onDragStart, label }: any) {
     return (
         <div 
             draggable 
-            onDragStart={(e) => onDragStart(e, type)}
+            onDragStart={onDragStart}
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-105 transition-all group relative"
         >
             {icon}
@@ -530,21 +450,21 @@ function ToolbarButton({ onClick, active, icon }: any) {
 
 function Port({ side, onClick }: { side: 'top' | 'right' | 'bottom' | 'left', onClick: () => void }) {
     const positions = {
-        top: 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2',
-        right: 'right-0 top-1/2 translate-x-1/2 -translate-y-1/2',
-        bottom: 'bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2',
-        left: 'left-0 top-1/2 -translate-x-1/2 -translate-y-1/2'
+        top: 'top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-2',
+        right: 'right-0 top-1/2 translate-x-full -translate-y-1/2 ml-2',
+        bottom: 'bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2',
+        left: 'left-0 top-1/2 -translate-x-full -translate-y-1/2 mr-2'
     };
 
     return (
         <button 
             onClick={(e) => { e.stopPropagation(); onClick(); }}
             className={cn(
-                "absolute h-5 w-5 bg-white border-2 border-primary rounded-full shadow-lg pointer-events-auto flex items-center justify-center hover:scale-125 transition-transform group/port z-40",
+                "absolute h-6 w-6 bg-white border-2 border-primary rounded-full shadow-lg pointer-events-auto flex items-center justify-center hover:scale-125 transition-transform group/port z-40",
                 positions[side]
             )}
         >
-            <PlusCircle className="h-3 w-3 text-primary opacity-0 group-hover/port:opacity-100 transition-opacity" />
+            <PlusCircle className="h-3.5 w-3.5 text-primary opacity-40 group-hover/port:opacity-100 transition-opacity" />
         </button>
     );
 }
