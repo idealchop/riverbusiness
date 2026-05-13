@@ -182,14 +182,16 @@ export default function HRDashboard() {
     if (currentAction === 'IN' && latestLogToday?.[0]?.timeIn) {
       const startTime = toSafeDate(latestLogToday[0].timeIn);
       if (startTime) {
-        interval = setInterval(() => {
+        const updateDuration = () => {
           const now = new Date();
           const diffMs = now.getTime() - startTime.getTime();
           const diffHrs = Math.floor(diffMs / 3600000);
           const diffMins = Math.floor((diffMs % 3600000) / 60000);
           const diffSecs = Math.floor((diffMs % 60000) / 1000);
           setLiveDuration(`${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`);
-        }, 1000);
+        };
+        updateDuration();
+        interval = setInterval(updateDuration, 1000);
       }
     } else {
         setLiveDuration('00:00:00');
@@ -355,10 +357,13 @@ export default function HRDashboard() {
           <p className="text-slate-500 font-medium text-sm">Hello, {user?.name?.split(' ')[0] || 'Employee'} • Universal Access Active</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-            <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end min-w-[100px]">
+            <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end min-w-[110px] shadow-inner group transition-all">
                 <p className="text-sm font-black tabular-nums leading-none text-slate-900">{currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}</p>
                 {currentAction === 'IN' && (
-                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">Active: {liveDuration}</p>
+                    <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-500">
+                        <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.1em] tabular-nums">Shift: {liveDuration}</p>
+                    </div>
                 )}
             </div>
 
@@ -610,7 +615,7 @@ export default function HRDashboard() {
       </div>
 
       {/* Dialogs */}
-      <AttendanceScanner isOpen={isScannerOpen} onOpenChange={setIsScannerOpen} user={user} />
+      <AttendanceScanner isOpen={isScannerOpen} onOpenChange={setIsScannerOpen} user={user} liveDuration={liveDuration} />
       
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
         <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">

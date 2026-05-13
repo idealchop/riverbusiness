@@ -24,9 +24,10 @@ interface AttendanceScannerProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   user: any;
+  liveDuration?: string;
 }
 
-export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScannerProps) {
+export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '00:00:00' }: AttendanceScannerProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [step, setFormStep] = useState<'scan' | 'validate' | 'success' | 'error'>('scan');
@@ -37,6 +38,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const [cameraLoading, setCameraLoading] = useState(false);
   const [showManualStart, setShowManualStart] = useState(false);
   const [protocol, setProtocol] = useState<'verified' | 'flexible'>('verified');
+  const [isCurrentlyIn, setIsCurrentlyIn] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const companyId = user?.companyId || user?.clientId;
@@ -103,6 +105,22 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     let manualTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
+      // Check current action state to show correct prompt
+      const checkState = async () => {
+          const todayStr = format(new Date(), 'yyyy-MM-dd');
+          const logsQuery = query(
+            collection(firestore!, 'hr_companies', companyId, 'attendance'),
+            where('employeeId', '==', user.id),
+            where('date', '==', todayStr),
+            orderBy('timeIn', 'desc'),
+            limit(1)
+          );
+          const snap = await getDocs(logsQuery);
+          const isCurrentlyClockedIn = !snap.empty && !snap.docs[0].data().timeOut;
+          setIsCurrentlyIn(isCurrentlyClockedIn);
+      };
+      checkState();
+
       mountTimeout = setTimeout(() => {
         startCameraFlow();
         manualTimeout = setTimeout(() => {
@@ -116,7 +134,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       clearTimeout(manualTimeout);
       stopScanner();
     };
-  }, [isOpen, step, companyId]);
+  }, [isOpen, step, companyId, firestore, user.id]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; 
@@ -264,11 +282,19 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
         `}} />
         <div className="p-8">
             <DialogHeader className="mb-6">
-                <div className="flex items-center gap-4 mb-2">
-                    <div className="p-2 rounded-xl bg-primary/10">
-                        <QrCode className="h-5 w-5 text-primary" />
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-2 rounded-xl bg-primary/10">
+                            <QrCode className="h-5 w-5 text-primary" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Terminal</DialogTitle>
                     </div>
-                    <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Attendance</DialogTitle>
+                    {isCurrentlyIn && step === 'scan' && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full animate-in fade-in zoom-in-95 duration-500">
+                             <Clock className="h-3 w-3 text-primary animate-pulse" />
+                             <span className="text-[10px] font-black text-primary tabular-nums tracking-widest">{liveDuration}</span>
+                        </div>
+                    )}
                 </div>
                 <DialogDescription className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
                     Verified presence protocol
@@ -395,5 +421,3 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     </Dialog>
   );
 }
-
-import { LogIn, LogOut } from 'lucide-react';
