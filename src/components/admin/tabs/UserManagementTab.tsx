@@ -1,10 +1,9 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserPlus, BellRing, Search, AlertTriangle, Filter, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { UserPlus, BellRing, Search, AlertTriangle, Filter, MoreHorizontal, ChevronRight, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -64,7 +63,6 @@ export function UserManagementTab({
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
     const [selectedUserForPayment, setSelectedUserForPayment] = useState<AppUser | null>(null);
 
-
     const paymentStatusesByUser = useMemo(() => {
         if (!allPayments) return {};
         return allPayments.reduce((acc, payment) => {
@@ -97,7 +95,6 @@ export function UserManagementTab({
                 statusHistory: arrayUnion({ status: newStatus, timestamp: Timestamp.now() })
             });
 
-            // User Notification
             await createClientNotification(firestore, request.userId, {
                 type: 'delivery',
                 title: `Refill Status: ${newStatus}`,
@@ -105,7 +102,6 @@ export function UserManagementTab({
                 data: { requestId: request.id },
             });
 
-            // Admin Notification
             await createClientNotification(firestore, adminId, {
                 type: 'delivery',
                 title: 'Refill Status Updated',
@@ -113,10 +109,9 @@ export function UserManagementTab({
                 data: { userId: request.userId, requestId: request.id },
             });
 
-            toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}" and the user has been notified.` });
+            toast({ title: 'Request Updated' });
         } catch (error) {
-            console.error("Error updating refill request:", error);
-            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the request status.' });
+            toast({ variant: 'destructive', title: 'Update Failed' });
         }
     };
 
@@ -125,8 +120,8 @@ export function UserManagementTab({
     }, [refillRequests]);
 
     const filteredUsers = useMemo(() => {
-        // Exclude system super admin from client view
-        const allUsers = (appUsers || []).filter(u => u.email !== 'admin@riverph.com');
+        // Filter for Clients (Not employees and not system admin)
+        const allUsers = (appUsers || []).filter(u => u.email !== 'admin@riverph.com' && u.hrRole !== 'employee');
         
         if (!localSearchTerm) return allUsers;
         return allUsers.filter(user =>
@@ -143,7 +138,7 @@ export function UserManagementTab({
 
     const handleOpenPaymentReview = (e: React.MouseEvent, user: AppUser, payment: Payment | null) => {
         if (!payment) return;
-        e.stopPropagation(); // Prevent row click
+        e.stopPropagation();
         setSelectedUserForPayment(user);
         setPaymentToReview(payment);
         setIsPaymentReviewOpen(true);
@@ -152,7 +147,6 @@ export function UserManagementTab({
     return (
         <>
             <div className="space-y-8">
-                {/* Refill Queue Section */}
                 {activeRefillRequests.length > 0 && (
                     <Card className="border-none shadow-sm bg-gradient-to-br from-amber-50 to-white overflow-hidden">
                         <CardHeader className="pb-4">
@@ -163,10 +157,10 @@ export function UserManagementTab({
                                     </div>
                                     <div>
                                         <CardTitle className="text-lg">Refill Priority Queue</CardTitle>
-                                        <CardDescription>Immediate action required for these production and delivery requests.</CardDescription>
+                                        <CardDescription>Immediate action required for client requests.</CardDescription>
                                     </div>
                                 </div>
-                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 font-bold px-3">
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 font-bold px-3">
                                     {activeRefillRequests.length} Pending
                                 </Badge>
                             </div>
@@ -252,7 +246,7 @@ export function UserManagementTab({
                                 <div className="relative flex-1 w-full">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Search by name or ID..."
+                                        placeholder="Search by client name or ID..."
                                         value={localSearchTerm}
                                         onChange={(e) => {
                                             setLocalSearchTerm(e.target.value);
@@ -262,16 +256,15 @@ export function UserManagementTab({
                                     />
                                 </div>
                                 
-                                {/* Desktop Table View */}
                                 <div className="overflow-x-auto hidden md:block rounded-lg border">
                                     <Table>
                                         <TableHeader className="bg-muted/30">
                                             <TableRow>
-                                                <TableHead className="pl-6">ID</TableHead>
-                                                <TableHead>Business Name</TableHead>
-                                                <TableHead>Account Type</TableHead>
-                                                <TableHead>Current Plan</TableHead>
-                                                <TableHead className="text-right pr-6">Status</TableHead>
+                                                <TableHead className="pl-6">Client ID</TableHead>
+                                                <TableHead>Business Entity</TableHead>
+                                                <TableHead>Tier</TableHead>
+                                                <TableHead>Fulfillment Status</TableHead>
+                                                <TableHead className="text-right pr-6">Management</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -279,18 +272,18 @@ export function UserManagementTab({
                                                 const paymentStatus = paymentStatusesByUser[user.id];
                                                 return (
                                                     <TableRow key={user.id} onClick={() => onUserClick(user)} className="group cursor-pointer hover:bg-muted/30 transition-colors">
-                                                        <TableCell className="pl-6 font-mono text-[10px] text-muted-foreground">{user.clientId}</TableCell>
-                                                        <TableCell className="font-semibold text-sm">{user.businessName}</TableCell>
+                                                        <TableCell className="pl-6 font-mono text-[10px] text-muted-foreground uppercase">{user.clientId}</TableCell>
+                                                        <TableCell className="font-bold text-sm text-slate-900">{user.businessName}</TableCell>
                                                         <TableCell>
                                                             <Badge variant="outline" className={cn(
-                                                                "text-[10px] uppercase tracking-wide px-2",
-                                                                user.accountType === 'Parent' ? 'border-primary text-primary' :
-                                                                user.accountType === 'Branch' ? 'border-purple-300 text-purple-700' : 'text-muted-foreground'
+                                                                "text-[10px] uppercase tracking-wide px-2 h-5",
+                                                                user.accountType === 'Parent' ? 'border-primary text-primary bg-primary/5' :
+                                                                user.accountType === 'Branch' ? 'border-purple-300 text-purple-700 bg-purple-50' : 'text-muted-foreground'
                                                             )}>
                                                                 {user.accountType || 'Single'}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground">{user.plan?.name || 'No Plan'}</TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground font-medium">{user.plan?.name || 'No Plan'}</TableCell>
                                                         <TableCell className="text-right pr-6">
                                                             <div className="flex items-center justify-end gap-2">
                                                                 {paymentStatus?.overdue > 0 ? (
@@ -298,7 +291,7 @@ export function UserManagementTab({
                                                                 ) : paymentStatus?.pending > 0 ? (
                                                                     <Badge className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white shadow-sm" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstPending)}>Review Payment</Badge>
                                                                 ) : (
-                                                                    <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 cursor-pointer" onClick={(e) => { e.stopPropagation(); onUserClick(user, 'billing'); }}>Up to date</Badge>
+                                                                    <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 cursor-pointer" onClick={(e) => { e.stopPropagation(); onUserClick(user, 'billing'); }}>Active Ledger</Badge>
                                                                 )}
                                                                 <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
                                                             </div>
@@ -310,8 +303,8 @@ export function UserManagementTab({
                                                 <TableRow>
                                                     <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
                                                         <div className="flex flex-col items-center gap-2">
-                                                            <Search className="h-8 w-8 opacity-20" />
-                                                            <p>No clients match your search criteria.</p>
+                                                            <Building className="h-8 w-8 opacity-20" />
+                                                            <p>No business clients match your search criteria.</p>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -320,7 +313,6 @@ export function UserManagementTab({
                                     </Table>
                                 </div>
                                 
-                                {/* Mobile Card View */}
                                 <div className="space-y-4 md:hidden">
                                     {paginatedUsers.map(user => {
                                         const paymentStatus = paymentStatusesByUser[user.id];
@@ -334,18 +326,14 @@ export function UserManagementTab({
                                                         </div>
                                                         <Badge variant="outline" className="text-[10px] uppercase">{user.accountType || 'Single'}</Badge>
                                                     </div>
-                                                    <div className="flex justify-between items-center text-xs">
-                                                        <span className="text-muted-foreground">Plan:</span>
-                                                        <span className="font-medium text-foreground">{user.plan?.name || 'N/A'}</span>
-                                                    </div>
                                                     <div className="flex justify-between items-center text-xs pt-2 border-t mt-1">
-                                                        <span className="text-muted-foreground">Billing:</span>
+                                                        <span className="text-muted-foreground">Status:</span>
                                                         {paymentStatus?.overdue > 0 ? (
                                                             <Badge variant="destructive" className="text-[10px]">{paymentStatus.overdue} Overdue</Badge>
                                                         ) : paymentStatus?.pending > 0 ? (
                                                             <Badge className="bg-blue-500 text-white text-[10px]">Review Payment</Badge>
                                                         ) : (
-                                                            <Badge variant="secondary" className="bg-green-50 text-green-700 text-[10px]">Up to date</Badge>
+                                                            <Badge variant="secondary" className="bg-green-50 text-green-700 text-[10px]">Active</Badge>
                                                         )}
                                                     </div>
                                                 </CardContent>
@@ -356,7 +344,7 @@ export function UserManagementTab({
                                 
                                 <div className="flex items-center justify-end space-x-2 py-4">
                                     <div className="flex items-center gap-2 mr-auto">
-                                        <Label htmlFor="items-per-page" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Rows per page:</Label>
+                                        <Label htmlFor="items-per-page" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Page Size:</Label>
                                         <Select value={String(itemsPerPage)} onValueChange={(value) => { setItemsPerPage(Number(value)); setCurrentPage(1); }}>
                                             <SelectTrigger id="items-per-page" className="w-16 h-8 text-xs"><SelectValue /></SelectTrigger>
                                             <SelectContent>
@@ -366,9 +354,9 @@ export function UserManagementTab({
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                                    <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages || 1}</span>
                                     <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</Button>
+                                    <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
                                 </div>
                             </CardContent>
                         </TabsContent>
@@ -399,7 +387,7 @@ export function UserManagementTab({
                                                 <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
                                                     <div className="flex flex-col items-center gap-2">
                                                         <UserPlus className="h-8 w-8 opacity-20" />
-                                                        <p>No unclaimed profiles waiting setup.</p>
+                                                        <p>No unclaimed client profiles waiting setup.</p>
                                                     </div>
                                                 </TableCell></TableRow>
                                             )}
@@ -424,3 +412,4 @@ export function UserManagementTab({
         </>
     );
 }
+

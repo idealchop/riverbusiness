@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -11,7 +10,8 @@ import {
   Trash2,
   UserCog,
   Activity,
-  Fingerprint
+  Fingerprint,
+  Building
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -189,7 +189,7 @@ export default function EmployeesPage() {
             <TableHeader className="bg-slate-50/50">
               <TableRow className="border-none">
                 <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400 py-4">Employee</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position</TableHead>
+                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position & Org</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary Config</TableHead>
                 <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Management</TableHead>
@@ -217,8 +217,16 @@ export default function EmployeesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                       <p className="text-sm font-bold text-slate-700">{emp.hrProfile?.position || 'N/A'}</p>
-                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter mt-0.5">{emp.hrProfile?.department || 'General'}</p>
+                       <div className="space-y-1">
+                          <p className="text-sm font-bold text-slate-700">{emp.hrProfile?.position || 'N/A'}</p>
+                          <div className="flex items-center gap-2">
+                             <span className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{emp.hrProfile?.department || 'General'}</span>
+                             <div className="h-1 w-1 rounded-full bg-slate-200" />
+                             <Badge variant="secondary" className="bg-slate-50 text-[8px] font-black uppercase tracking-widest text-slate-400 border-none h-4 px-1.5">
+                                <Building className="h-2 w-2 mr-1" /> {emp.companyId}
+                             </Badge>
+                          </div>
+                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn(
@@ -347,3 +355,4 @@ function PaginationFooter({ totalItems, currentPage, onPageChange }: { totalItem
         </CardFooter>
     );
 }
+

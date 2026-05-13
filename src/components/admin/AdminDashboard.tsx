@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus, Contact } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, WaterStation, RefillRequest, Payment, Delivery } from '@/lib/types';
@@ -14,6 +13,7 @@ import { AdminDashboardSkeleton } from './AdminDashboardSkeleton';
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 
 import { UserManagementTab } from './tabs/UserManagementTab';
+import { EmployeeManagementTab } from './tabs/EmployeeManagementTab';
 import { StationManagementTab } from './tabs/StationManagementTab';
 import { CreateUserDialog } from './dialogs/CreateUserDialog';
 import { StationProfileDialog } from './dialogs/StationProfileDialog';
@@ -35,12 +35,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
 
-    // REMOVED: where('role', '==', 'User') filter to ensure all clients (User/Admin) show up
     const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'users')) : null, [firestore, isAdmin]);
-    const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
+    const { data: allUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
     const unclaimedProfilesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'unclaimedProfiles') : null, [firestore, isAdmin]);
     const { data: unclaimedProfiles, isLoading: unclaimedProfilesLoading } = useCollection<any>(unclaimedProfilesQuery);
+
+    const unclaimedEmployeesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'unclaimedEmployees') : null, [firestore, isAdmin]);
+    const { data: unclaimedEmployees } = useCollection<any>(unclaimedEmployeesQuery);
 
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
@@ -104,48 +106,49 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [allDeliveries]);
 
     const stats = useMemo(() => {
-        // Exclude system admin from client count for accuracy
-        const activeClients = appUsers?.filter(u => u.email !== 'admin@riverph.com').length || 0;
-        const totalClients = activeClients + (unclaimedProfiles?.length || 0);
+        const clients = (allUsers || []).filter(u => u.email !== 'admin@riverph.com' && u.hrRole !== 'employee');
+        const employees = (allUsers || []).filter(u => u.hrRole === 'employee');
+        
+        const totalClients = clients.length + (unclaimedProfiles?.length || 0);
         const activeRefills = refillRequests?.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length || 0;
 
         return [
             { 
                 title: 'Total Clients', 
                 value: totalClients.toLocaleString(), 
-                icon: Users, 
+                icon: Building, 
                 color: 'text-blue-500', 
                 bg: 'bg-blue-50',
-                description: 'Total active and pending profiles'
+                description: 'Business accounts'
             },
             { 
-                title: 'Active Refills', 
-                value: activeRefills, 
-                icon: Droplets, 
-                color: 'text-amber-500', 
-                bg: 'bg-amber-50',
-                description: 'Requests in production or transit'
+                title: 'Managed Employees', 
+                value: (employees.length + (unclaimedEmployees?.length || 0)).toLocaleString(), 
+                icon: Users, 
+                color: 'text-indigo-500', 
+                bg: 'bg-indigo-50',
+                description: 'Verified staff members'
             },
             { 
-                title: 'Current Total Sales', 
+                title: 'Sales (MTD)', 
                 value: `₱${salesMetrics.currentMonthSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
                 icon: DollarSign, 
                 color: 'text-purple-500', 
                 bg: 'bg-purple-50',
                 trend: salesMetrics.trend,
                 diff: salesMetrics.diff,
-                description: salesMetrics.trend === 'increase' ? 'Performance is up vs last month' : salesMetrics.trend === 'decrease' ? 'Performance is down vs last month' : 'No change vs last month'
+                description: salesMetrics.trend === 'increase' ? 'Up vs last month' : 'Growth tracking'
             },
             { 
-                title: 'Lifetime Sales', 
-                value: `₱${salesMetrics.lifetimeSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
-                icon: Activity, 
-                color: 'text-green-500', 
-                bg: 'bg-green-50',
-                description: 'Total revenue since inception'
+                title: 'Refill Queue', 
+                value: activeRefills, 
+                icon: Droplets, 
+                color: 'text-amber-500', 
+                bg: 'bg-amber-50',
+                description: 'Active requests'
             },
         ];
-    }, [appUsers, unclaimedProfiles, refillRequests, salesMetrics]);
+    }, [allUsers, unclaimedProfiles, unclaimedEmployees, refillRequests, salesMetrics]);
 
     React.useEffect(() => {
         const openAccountDialog = () => setIsAccountDialogOpen(true);
@@ -153,7 +156,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const customEvent = event as CustomEvent;
             const userId = customEvent.detail.userId;
             if(userId) {
-                const userToOpen = appUsers?.find(u => u.id === userId);
+                const userToOpen = allUsers?.find(u => u.id === userId);
                 if (userToOpen) {
                     setSelectedUser(userToOpen);
                     setIsUserDetailOpen(true);
@@ -168,7 +171,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           window.removeEventListener('admin-open-my-account', openAccountDialog);
           window.removeEventListener('admin-open-user-detail', openUserDetail);
         };
-    }, [appUsers]);
+    }, [allUsers]);
     
     const handleOpenUserDetails = (user: AppUser, tab?: string) => {
         setSelectedUser(user);
@@ -176,20 +179,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsUserDetailOpen(true);
     };
 
-    const handleOpenStationProfile = (station: WaterStation | null) => {
-        setStationToUpdate(station);
-        setIsStationProfileOpen(true);
-    };
-
-
-    if (usersLoading || stationsLoading || unclaimedProfilesLoading || allDeliveriesLoading) {
-        return <AdminDashboardSkeleton />;
-    }
-
-  return (
+    return (
     <>
         <div className="space-y-8">
-            {/* Stats Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, idx) => (
                     <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
@@ -228,11 +220,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <div className="flex items-center justify-between">
                     <TabsList className="bg-muted/50 p-1">
                         <TabsTrigger value="user-management" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                            <Users className="mr-2 h-4 w-4"/>
+                            <Building className="mr-2 h-4 w-4"/>
                             Clients
                         </TabsTrigger>
+                        <TabsTrigger value="employee-management" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                            <Users className="mr-2 h-4 w-4"/>
+                            Employees
+                        </TabsTrigger>
                         <TabsTrigger value="station-management" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                            <Building className="mr-2 h-4 w-4" />
+                            <Droplets className="mr-2 h-4 w-4" />
                             Stations
                         </TabsTrigger>
                     </TabsList>
@@ -240,7 +236,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 
                 <TabsContent value="user-management" className="mt-0">
                     <UserManagementTab 
-                        appUsers={appUsers}
+                        appUsers={allUsers}
                         unclaimedProfiles={unclaimedProfiles}
                         refillRequests={refillRequests}
                         refillRequestsLoading={refillRequestsLoading}
@@ -249,11 +245,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         onAddNewClientClick={() => setIsCreateUserOpen(true)}
                     />
                 </TabsContent>
+
+                <TabsContent value="employee-management" className="mt-0">
+                    <EmployeeManagementTab 
+                        allUsers={allUsers}
+                        unclaimedEmployees={unclaimedEmployees}
+                        onUserClick={handleOpenUserDetails}
+                    />
+                </TabsContent>
+
                 <TabsContent value="station-management" className="mt-0">
                    <StationManagementTab 
                         waterStations={waterStations}
                         isAdmin={isAdmin}
-                        onStationClick={handleOpenStationProfile}
+                        onStationClick={(s) => { setStationToUpdate(s); setIsStationProfileOpen(true); }}
                    />
                 </TabsContent>
             </Tabs>
@@ -269,7 +274,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 user={selectedUser}
                 setSelectedUser={setSelectedUser}
                 isAdmin={isAdmin}
-                allUsers={appUsers || []}
+                allUsers={allUsers || []}
                 waterStations={waterStations || []}
                 initialTab={initialUserDetailTab}
             />
@@ -278,7 +283,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <CreateUserDialog
             isOpen={isCreateUserOpen}
             onOpenChange={setIsCreateUserOpen}
-            parentUsers={appUsers?.filter(u => u.accountType === 'Parent') || []}
+            parentUsers={allUsers?.filter(u => u.accountType === 'Parent') || []}
         />
        
         <StationProfileDialog
@@ -296,3 +301,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
