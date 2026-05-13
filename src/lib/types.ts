@@ -138,7 +138,7 @@ export interface HRAttendanceLog {
     action?: 'IN' | 'OUT'; 
     gps_lat?: number;
     gps_long?: number;
-    validation_status: 'Valid' | 'Invalid';
+    validation_status: 'Valid' | 'Invalid' | 'Skipped';
     method: 'QR' | 'manual';
     status: 'present' | 'late' | 'absent' | 'leave';
     office_id?: string;
@@ -151,6 +151,7 @@ export interface HRCompanyLocation {
     latitude: number;
     longitude: number;
     radius_meters: number;
+    gps_verification_enabled: boolean;
 }
 
 export interface HRLeaveRequest {

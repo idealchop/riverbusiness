@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -23,7 +24,10 @@ import {
   QrCode,
   MapPin,
   Fingerprint,
-  Loader2
+  Loader2,
+  ShieldCheck,
+  Zap,
+  Lock
 } from 'lucide-react';
 import { 
     Card, 
@@ -198,18 +202,6 @@ export default function HRDashboard() {
     
     setIsProcessingQuick(true);
     try {
-      // 1. Capture current position
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-
-      const { latitude, longitude } = position.coords;
-
-      // 2. Fetch office location for radius check
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
       const locationSnap = await getDocs(locationsCol);
       
@@ -220,22 +212,35 @@ export default function HRDashboard() {
       }
 
       const office = locationSnap.docs[0].data() as HRCompanyLocation;
-      const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
-      const radius = office.radius_meters || 100;
+      const isGpsRequired = office.gps_verification_enabled ?? true;
+      let validationStatus: 'Valid' | 'Invalid' | 'Skipped' = 'Skipped';
 
-      if (distance > radius) {
-        toast({ 
-            variant: 'destructive', 
-            title: 'Out of Range', 
-            description: `You are ${Math.round(distance)}m away from the office anchor.` 
-        });
-        setIsProcessingQuick(false);
-        return;
+      if (isGpsRequired) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            });
+          });
+
+          const { latitude, longitude } = position.coords;
+          const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
+          const radius = office.radius_meters || 100;
+
+          if (distance > radius) {
+            toast({ 
+                variant: 'destructive', 
+                title: 'Out of Range', 
+                description: `You are ${Math.round(distance)}m away from the office anchor.` 
+            });
+            setIsProcessingQuick(false);
+            return;
+          }
+          validationStatus = 'Valid';
       }
 
-      // 3. Toggle attendance status
       if (currentAction === 'OUT') {
-          // Clock In
           const logData: Omit<HRAttendanceLog, 'id'> = {
             companyId,
             employeeId: user.id,
@@ -243,15 +248,14 @@ export default function HRDashboard() {
             date: todayStr,
             timeIn: serverTimestamp(),
             status: 'present',
-            validation_status: 'Valid',
+            validation_status: validationStatus,
             method: 'manual',
             office_id: office.id,
             action: 'IN'
           };
           await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
-          toast({ title: 'Clocked In', description: 'Quick verification successful.' });
+          toast({ title: 'Clocked In', description: `${isGpsRequired ? 'GPS Locked' : 'Flexible'} protocol active.` });
       } else if (latestLogToday?.[0]) {
-          // Clock Out
           const log = latestLogToday[0];
           const timeOut = Timestamp.now();
           const timeIn = log.timeIn instanceof Timestamp ? log.timeIn : Timestamp.now();
@@ -267,7 +271,7 @@ export default function HRDashboard() {
 
     } catch (err: any) {
         console.error("Quick attendance error:", err);
-        toast({ variant: 'destructive', title: 'Handshake Error', description: 'Ensure location services are active.' });
+        toast({ variant: 'destructive', title: 'Handshake Error', description: 'Check location settings and protocol permissions.' });
     } finally {
         setIsProcessingQuick(false);
     }
@@ -287,7 +291,6 @@ export default function HRDashboard() {
 
   const feedItems = useMemo(() => {
     let list = todayAttendance || [];
-    // Filter for personal feed if employee
     if (!isManagement && user?.id) {
         list = list.filter(item => item.employeeId === user.id);
     }
@@ -301,11 +304,10 @@ export default function HRDashboard() {
         return [
             { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
             { label: 'Present Today', value: attCount, icon: Clock, trend: 'Verified Entry', trendType: 'up' },
-            { label: 'Operational', value: '100%', icon: Activity, trend: 'Live Sync', trendType: 'up' },
-            { label: 'GPS Radius', value: '50m', icon: MapPin, trend: 'Validation Active', trendType: 'up' },
+            { label: 'Operational', value: '100%', icon: Activity, trend: 'System Status', trendType: 'up' },
+            { label: 'Environment', value: 'Verified', icon: ShieldCheck, trend: 'Secure Hub', trendType: 'up' },
         ];
     } else {
-        // Employee Personal Stats
         const logs = personalAttendanceLogs || [];
         const totalShifts = logs.length;
         const onTime = logs.filter(l => l.status === 'present').length;
@@ -316,7 +318,7 @@ export default function HRDashboard() {
             { label: 'Punctuality', value: `${punctuality.toFixed(0)}%`, icon: CheckCircle2, trend: 'Attendance rate', trendType: 'up' },
             { label: 'Hours Logged', value: `${totalHours.toFixed(1)}h`, icon: Clock, trend: 'Total work time', trendType: 'up' },
             { label: 'Total Shifts', value: totalShifts, icon: Users, trend: 'Career history', trendType: 'up' },
-            { label: 'GPS Radius', value: 'Authorized', icon: MapPin, trend: 'Verified Location', trendType: 'up' },
+            { label: 'Environment', value: 'Verified', icon: ShieldCheck, trend: 'Secure Hub', trendType: 'up' },
         ];
     }
   }, [employees, todayAttendance, isManagement, personalAttendanceLogs]);
@@ -367,7 +369,7 @@ export default function HRDashboard() {
                     onClick={handleQuickAttendance}
                     disabled={isProcessingQuick}
                     className="rounded-xl h-11 w-11 border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-all"
-                    title="Quick Attendance Check"
+                    title="Quick Attendance Protocol"
                 >
                     {isProcessingQuick ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-5 w-5 text-primary" />}
                 </Button>
@@ -511,7 +513,7 @@ export default function HRDashboard() {
                                 "Physical presence is the anchor of accountability and team alignment."
                             </p>
                             <div className="pt-6 border-t border-white/10 flex items-center justify-between">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">QR & GPS Terminal Active</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Secure Terminal Active</p>
                                 <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
                             </div>
                         </CardContent>
@@ -547,9 +549,21 @@ export default function HRDashboard() {
                                     </Avatar>
                                     <div>
                                         <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
-                                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                                          CLOCKED {item.action || 'SESS'} • {item.validation_status === 'Valid' ? 'GPS VERIFIED' : 'INVALID LOCATION'}
-                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                                                CLOCKED {item.action || 'SESS'} • {item.method === 'QR' ? 'QR SCAN' : 'MANUAL'}
+                                            </p>
+                                            <div className="h-1 w-1 rounded-full bg-slate-300" />
+                                            {item.validation_status === 'Skipped' ? (
+                                                <Badge variant="ghost" className="h-4 px-1.5 text-[8px] font-black uppercase bg-amber-50 text-amber-500 flex items-center gap-1">
+                                                    <Zap className="h-2 w-2" /> Flexible
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="ghost" className="h-4 px-1.5 text-[8px] font-black uppercase bg-green-50 text-green-600 flex items-center gap-1">
+                                                    <Lock className="h-2 w-2" /> GPS Locked
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="text-right space-y-1">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -11,7 +12,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +36,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const [lastActionTime, setLastActionTime] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [showManualStart, setShowManualStart] = useState(false);
+  const [protocol, setProtocol] = useState<'verified' | 'flexible'>('verified');
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const companyId = user?.companyId || user?.clientId;
@@ -56,7 +58,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   const startCameraFlow = async () => {
     if (!companyId) return;
     
-    // Check for hardware support
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setErrorMsg("Your browser doesn't support camera access. Please try a modern mobile browser.");
         setFormStep('error');
@@ -67,7 +68,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setCameraLoading(true);
     setShowManualStart(false);
 
-    // Ensure clean state before starting
     await stopScanner();
 
     const element = document.getElementById("qr-reader");
@@ -87,7 +87,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
         (decodedText) => {
           handleScanSuccess(decodedText);
         },
-        () => {} // Silent scan attempts
+        () => {} 
       );
       setCameraLoading(false);
     } catch (err) {
@@ -103,10 +103,8 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     let manualTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
-      // Increased delay to allow dialog opening animation and DOM stabilization
       mountTimeout = setTimeout(() => {
         startCameraFlow();
-        // Manual override backup if hardware takes too long
         manualTimeout = setTimeout(() => {
             setShowManualStart(true);
         }, 5000);
@@ -121,7 +119,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
   }, [isOpen, step, companyId]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371e3; // Earth radius in meters
+    const R = 6371e3; 
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
     const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -149,33 +147,40 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
     setIsProcessing(true);
 
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-
-      const { latitude, longitude } = position.coords;
-
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
       const locationSnap = await getDocs(locationsCol);
       
       if (locationSnap.empty) {
-        setErrorMsg("Error: Office coordinates not anchored by administrator.");
+        setErrorMsg("Error: Office credentials not anchored by administrator.");
         setFormStep('error');
         return;
       }
 
       const office = locationSnap.docs[0].data() as HRCompanyLocation;
-      const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
-      const radius = office.radius_meters || 100;
+      const isGpsRequired = office.gps_verification_enabled ?? true;
+      setProtocol(isGpsRequired ? 'verified' : 'flexible');
 
-      if (distance > radius) {
-        setErrorMsg(`Location error: You are ${Math.round(distance)}m away. Authorized radius is ${radius}m.`);
-        setFormStep('error');
-        return;
+      let validationStatus: 'Valid' | 'Invalid' | 'Skipped' = 'Skipped';
+
+      if (isGpsRequired) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            });
+          });
+
+          const { latitude, longitude } = position.coords;
+          const distance = calculateDistance(latitude, longitude, office.latitude, office.longitude);
+          const radius = office.radius_meters || 100;
+
+          if (distance > radius) {
+            setErrorMsg(`Location error: You are ${Math.round(distance)}m away. Authorized radius is ${radius}m.`);
+            setFormStep('error');
+            return;
+          }
+          validationStatus = 'Valid';
       }
 
       const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -202,7 +207,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
             date: todayStr,
             timeIn: serverTimestamp(),
             status: 'present',
-            validation_status: 'Valid',
+            validation_status: validationStatus,
             method: 'QR',
             office_id: office.id,
             action: 'IN'
@@ -224,7 +229,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
       toast({ title: `Verified: ${nextAction === 'IN' ? 'Clock in' : 'Clock out'} successful` });
 
     } catch (err: any) {
-      setErrorMsg(err.message || "GPS failure. Please enable location services.");
+      setErrorMsg(err.message || "Protocol failure. Ensure permissions are granted.");
       setFormStep('error');
     } finally {
       setIsProcessing(false);
@@ -316,7 +321,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         <div className="text-center space-y-3">
                             <p className="text-lg font-black uppercase tracking-[0.2em] text-white">Validating</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed text-center">
-                                Capturing GPS proof...<br/>Checking boundary radius.
+                                Processing protocol handshake...
                             </p>
                         </div>
                     </div>
@@ -330,17 +335,17 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                         <div className="space-y-4">
                             <p className="text-3xl font-black tracking-tight text-white uppercase">Authorized!</p>
                             <div className="bg-white/10 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
-                                <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
-                                    {actionType === 'IN' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-                                    Successfully clocked {actionType === 'IN' ? 'in' : 'out'}
+                                <p className="text-sm font-bold text-white flex items-center justify-center gap-2 text-primary">
+                                    {protocol === 'verified' ? <Lock className="h-4 w-4" /> : <Zap className="h-4 w-4 text-amber-400" />}
+                                    {protocol === 'verified' ? 'Precision Verified' : 'Flexible Handshake'}
                                 </p>
-                                <div className="flex items-center justify-center gap-1.5 text-blue-300">
-                                    <Clock className="h-3 w-3" />
+                                <div className="flex items-center justify-center gap-1.5 text-white">
+                                    <Clock className="h-3 w-3 opacity-50" />
                                     <span className="text-xs font-black tabular-nums">{lastActionTime}</span>
                                 </div>
                             </div>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                Location verified. Log saved.
+                                Log saved to organizational ledger.
                             </p>
                         </div>
                         <Button 
@@ -378,7 +383,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user }: AttendanceScan
                 <div className="w-full flex flex-col gap-4">
                     <div className="flex items-center gap-3 justify-center">
                         <ShieldCheck className="h-4 w-4 text-slate-400" />
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">GPS proof verification active</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Secure Terminal Logic Active</p>
                     </div>
                     {step !== 'success' && (
                         <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close terminal</Button>
