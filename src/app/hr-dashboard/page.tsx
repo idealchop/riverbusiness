@@ -368,7 +368,7 @@ export default function HRDashboard() {
                 {isOnDuty && (
                     <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-500">
                         <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.1em] tabular-nums">Shift: {liveDuration}</p>
+                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.1em] tabular-nums">{liveDuration}</p>
                     </div>
                 )}
             </div>
