@@ -18,7 +18,7 @@ import {
     ArrowRight,
     CaseSensitive,
     PlusCircle,
-    Hexagon,
+    Diamond,
     AlignLeft,
     AlignCenter,
     AlignRight,
@@ -68,7 +68,7 @@ const TEXT_COLORS = [
     { name: 'White', value: '#ffffff' }
 ];
 
-const FONT_SIZES = [12, 14, 16, 20, 24, 32, 48];
+const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 48];
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
@@ -288,7 +288,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} label="Sticky" />
                 <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} label="Process" />
                 <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} label="Event" />
-                <DraggableTool icon={<Hexagon className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
+                <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
             </div>
             <Separator className="w-8" />
             <div className="flex flex-col gap-2">
@@ -430,9 +430,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 )}
             </div>
 
-            {/* Contextual Style Bar */}
+            {/* Contextual Style Bar - Integrated Event Stop */}
             {selectedElement && (
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10">
+                <div 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10"
+                >
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl text-white font-bold text-[10px] uppercase">
@@ -538,7 +541,7 @@ function ToolbarButton({ onClick, active, icon }: any) {
         <Button 
             variant="ghost" 
             size="icon" 
-            onClick={(e) => { e.preventDefault(); onClick(); }} 
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick(); }} 
             className={cn("h-8 w-8 rounded-lg", active ? "bg-white/20 text-primary" : "text-slate-400 hover:text-white")}
         >
             {icon}
