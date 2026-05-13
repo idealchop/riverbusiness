@@ -102,8 +102,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database, condition: true },
     { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign, condition: isManagement },
     { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays, condition: isManagement },
-    // Employee only items
-    { href: '/hr-dashboard/my-leave', label: 'My Leave', icon: CalendarDays, condition: !isManagement },
   ].filter(item => item.condition);
 
   const SidebarContentArea = () => (
