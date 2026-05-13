@@ -77,7 +77,7 @@ const EMOJI_LIST = [
  */
 export function PageSkeleton() {
   return (
-    <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-500">
+    <div className="h-full flex flex-col bg-white animate-in fade-in duration-500">
       <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
@@ -90,14 +90,16 @@ export function PageSkeleton() {
           <Skeleton className="h-8 w-8 rounded-lg" />
         </div>
       </div>
-      <div className="h-[30vh] w-full bg-slate-50/50 animate-pulse" />
-      <div className="max-w-4xl mx-auto px-8 pt-10 space-y-6 w-full">
-        <Skeleton className="h-12 w-12 rounded-2xl" />
-        <Skeleton className="h-12 w-3/4 rounded-xl" />
-        <div className="space-y-4 pt-4">
-          <Skeleton className="h-4 w-full rounded" />
-          <Skeleton className="h-4 w-full rounded" />
-          <Skeleton className="h-4 w-2/3 rounded" />
+      <div className="flex-1 flex flex-col">
+        <div className="h-[30vh] w-full bg-slate-50/50 animate-pulse" />
+        <div className="max-w-4xl mx-auto px-8 pt-10 space-y-6 w-full flex-1">
+          <Skeleton className="h-12 w-12 rounded-2xl" />
+          <Skeleton className="h-12 w-3/4 rounded-xl" />
+          <div className="space-y-4 pt-4">
+            <Skeleton className="h-4 w-full rounded" />
+            <Skeleton className="h-4 w-full rounded" />
+            <Skeleton className="h-4 w-2/3 rounded" />
+          </div>
         </div>
       </div>
     </div>
@@ -431,8 +433,8 @@ function PageEditorContent() {
 
   const editorContainer = (
     <div className={cn(
-        "max-w-4xl mx-auto px-8 pt-10 pb-32",
-        pageType !== 'doc' && "max-w-none px-0 pt-0 pb-0 flex flex-col h-full overflow-hidden"
+        "flex-1 flex flex-col min-h-0",
+        pageType === 'doc' && "max-w-4xl mx-auto px-8 pt-10 pb-32 w-full"
     )}>
         {pageType === 'doc' && (
             <>
@@ -444,23 +446,19 @@ function PageEditorContent() {
         )}
 
         {pageType === 'sheet' && (
-            <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500 overflow-hidden">
-                <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
-            </div>
+            <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
         )}
 
         {pageType === 'board' && (
-            <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500 overflow-hidden">
-                <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
-            </div>
+            <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
         )}
     </div>
   );
 
   return (
-    <div className="min-h-full flex flex-col bg-white animate-in fade-in duration-700 relative">
+    <div className="h-full flex flex-col bg-white animate-in fade-in duration-700 relative overflow-hidden">
       {page.isTrashed && (
-          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500">
+          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500 shrink-0">
               <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 text-red-600" /><p className="text-xs font-bold text-red-900 leading-none">This Document Is In The Trash Bin</p></div>
               <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }))} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50"><RotateCcw className="h-3 w-3" /> Restore Document</Button>
@@ -469,7 +467,7 @@ function PageEditorContent() {
           </div>
       )}
 
-      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm">
+      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Link href="/workspace"><div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"><Home className="h-4 w-4" /></div></Link>
           {parentPage && <><ChevronRight className="h-3.5 w-3.5 text-slate-300" /><Link href={`/workspace/${parentPage.id}`}><span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[120px] truncate block">{parentPage.title || 'Untitled'}</span></Link></>}
@@ -499,21 +497,21 @@ function PageEditorContent() {
         </div>
       </div>
 
-      {pageType === 'doc' ? (
-          <ScrollArea className="flex-1">
-              {page.coverImage && (
-                  <div className="h-[30vh] w-full relative group">
-                      <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
-                      {!page.isTrashed && <div className="absolute bottom-6 right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest">Change Cover</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
-                  </div>
-              )}
-              {editorContainer}
-          </ScrollArea>
-      ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
-              {editorContainer}
-          </div>
-      )}
+      <div className="flex-1 overflow-hidden flex flex-col relative">
+          {pageType === 'doc' ? (
+              <ScrollArea className="flex-1">
+                  {page.coverImage && (
+                      <div className="h-[30vh] w-full relative group">
+                          <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
+                          {!page.isTrashed && <div className="absolute bottom-6 right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest">Change Cover</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
+                      </div>
+                  )}
+                  {editorContainer}
+              </ScrollArea>
+          ) : (
+              editorContainer
+          )}
+      </div>
     </div>
   );
 }

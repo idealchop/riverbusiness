@@ -14,7 +14,8 @@ import {
     Plus,
     X,
     Maximize2,
-    Minus
+    Minus,
+    Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -24,6 +25,7 @@ import {
     DropdownMenuItem, 
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { useMounted } from '@/hooks/use-mounted';
 
 interface BoardElement {
     id: string;
@@ -53,6 +55,7 @@ const COLORS = [
 ];
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
+  const isMounted = useMounted();
   const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -128,23 +131,25 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const selectedElement = elements.find(el => el.id === selectedId);
 
+  if (!isMounted) return <div className="flex-1 flex items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-slate-200" /></div>;
+
   return (
-    <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative select-none min-h-0" 
+    <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative select-none" 
          onMouseMove={handleMouseMove} 
          onMouseUp={handleMouseUp}
          onClick={() => setSelectedId(null)}
          ref={containerRef}>
         
-        {/* Dot Grid Background - High Fidelity */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-20" 
+        {/* Infinite Grid - Verified Visible */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-30" 
              style={{ 
                  backgroundImage: `radial-gradient(circle, #538ec2 1.5px, transparent 1.5px)`, 
                  backgroundSize: '40px 40px' 
              }} 
         />
 
-        {/* Floating Creation Toolbar - Glassmorphism */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-2 bg-white/80 backdrop-blur-2xl border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-3xl animate-in slide-in-from-top-6 duration-1000" onClick={(e) => e.stopPropagation()}>
+        {/* Floating Creative Toolbar */}
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-2 bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[2rem] animate-in slide-in-from-top-6 duration-700" onClick={(e) => e.stopPropagation()}>
             <ToolbarItem 
                 icon={<MousePointer2 className="h-4 w-4" />} 
                 label="Select" 
@@ -172,15 +177,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 onClick={() => addElement('diamond')} 
             />
             <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-            <ToolbarItem icon={<Grab className="h-4 w-4" />} label="Hand Tool" />
+            <ToolbarItem icon={<Grab className="h-4 w-4" />} label="Pan Tool" />
         </div>
 
-        {/* Selected Element Contextual Menu */}
+        {/* Selected Element Controls */}
         {selectedElement && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl hover:bg-white/10">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl hover:bg-white/10 text-white">
                             <Palette className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -191,7 +196,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 onClick={() => updateColor(selectedElement.id, c.value)}
                                 className={cn(
                                     "h-6 w-6 rounded-full border border-slate-100 flex items-center justify-center hover:scale-110 transition-transform",
-                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2"
+                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-1"
                                 )}
                                 style={{ backgroundColor: c.value }}
                             />
@@ -203,14 +208,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     variant="ghost" 
                     size="sm" 
                     onClick={() => deleteElement(selectedElement.id)}
-                    className="h-8 w-8 p-0 rounded-xl hover:bg-red-500/20 text-red-400 hover:text-red-400"
+                    className="h-8 w-8 p-0 rounded-xl hover:bg-red-500/20 text-red-400"
                 >
                     <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
         )}
 
-        {/* Canvas Elements Container */}
+        {/* Dynamic Canvas Elements */}
         <div className="flex-1 relative overflow-hidden z-10">
              {elements.map((el) => {
                  const isSelected = selectedId === el.id;
@@ -229,7 +234,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         className={cn(
                             "absolute group transition-shadow cursor-pointer",
                             isDragging && "scale-[1.02] shadow-2xl",
-                            !isDragging && isSelected && "ring-2 ring-primary ring-offset-4 ring-offset-slate-100 rounded-lg"
+                            !isDragging && isSelected && "ring-4 ring-primary/30 rounded-xl"
                         )}
                         onMouseDown={(e) => handleDragStart(e, el)}
                         onClick={(e) => {
@@ -240,7 +245,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         <div 
                             className={cn(
                                 "w-full h-full p-4 flex flex-col relative transition-all duration-300",
-                                el.type === 'note' && "bg-white border-t-8 border-t-amber-400 shadow-xl",
+                                el.type === 'note' && "bg-white border-t-8 border-t-amber-400 shadow-xl rounded-b-lg",
                                 el.type === 'rect' && "bg-white border-2 border-slate-900 rounded-xl shadow-lg",
                                 el.type === 'circle' && "bg-white border-2 border-slate-900 rounded-full shadow-lg items-center justify-center text-center",
                                 el.type === 'diamond' && "bg-white border-2 border-slate-900 rotate-45 shadow-lg flex items-center justify-center overflow-hidden"
@@ -259,11 +264,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         "bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-sm font-black text-slate-800 h-full w-full placeholder:text-slate-300",
                                         el.type === 'circle' && "text-center"
                                     )}
-                                    placeholder="Type here..."
+                                    placeholder="Type protocol..."
                                 />
-                            </div>
-                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-20 transition-opacity">
-                                <Grab className="h-3 3 text-slate-400" />
                             </div>
                         </div>
                      </div>
@@ -272,35 +274,30 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
              {elements.length === 0 && (
                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-10 animate-in fade-in duration-1000">
-                    <div className="p-16 rounded-[4.5rem] bg-white border border-slate-100 shadow-[inset_0_2px_40px_rgba(0,0,0,0.03)] opacity-50 relative group">
-                        <Layout className="h-24 w-24 text-slate-300 group-hover:scale-110 transition-transform duration-700" />
-                        <div className="absolute -top-4 -right-4 h-14 w-14 rounded-[1.5rem] bg-primary text-white flex items-center justify-center shadow-2xl animate-bounce">
-                            <Plus className="h-8 w-8" />
-                        </div>
+                    <div className="p-16 rounded-[4.5rem] bg-white border border-slate-200 shadow-2xl opacity-40 relative group">
+                        <Layout className="h-24 w-24 text-slate-400" />
                     </div>
                     <div className="space-y-4">
-                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Initialize Blueprint</h3>
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8">Deploy components via the dashboard toolbar</p>
+                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Logic Canvas</h3>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8">Ready to architect your workflow</p>
                         <Button 
-                            onClick={() => addElement('note')}
+                            onClick={() => addElement('rect')}
                             className="rounded-2xl h-12 px-10 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20"
                         >
-                            Deploy Primary Logic
+                            Initialize Logic
                         </Button>
                     </div>
                  </div>
              )}
         </div>
 
-        {/* Mini-Map / Zoom Controls Mockup */}
+        {/* View Controls Overlay */}
         <div className="absolute bottom-10 right-10 z-40 flex flex-col gap-2 p-1.5 bg-white/90 backdrop-blur-md border border-slate-200 rounded-3xl shadow-xl">
              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><Plus className="h-4 w-4" /></Button>
              <div className="h-px bg-slate-100 mx-2" />
              <div className="px-2 py-1 text-[10px] font-black text-slate-400 text-center">100%</div>
              <div className="h-px bg-slate-100 mx-2" />
              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><Minus className="h-4 w-4" /></Button>
-             <Separator className="my-1 bg-slate-100" />
-             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><Maximize2 className="h-4 w-4" /></Button>
         </div>
     </div>
   );
