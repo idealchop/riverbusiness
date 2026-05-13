@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock, LogIn, LogOut, Fingerprint } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -310,7 +310,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                 </DialogDescription>
             </DialogHeader>
             
-            <div className="min-h-[350px] flex flex-col items-center justify-center bg-black rounded-[2.5rem] border-4 border-slate-50 overflow-hidden relative shadow-inner">
+            <div className="aspect-square w-full max-w-[320px] mx-auto flex flex-col items-center justify-center bg-black rounded-[2.5rem] border-4 border-slate-50 overflow-hidden relative shadow-inner">
                 {step === 'scan' && (
                     <>
                         <div id="qr-reader" className="absolute inset-0 w-full h-full z-10" />
@@ -333,22 +333,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                               </div>
                            </div>
                         )}
-
-                        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center">
-                            <div className="w-64 h-64 border-2 border-white/20 rounded-3xl relative">
-                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/50 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-slide-down" />
-                                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-xl" />
-                                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-xl" />
-                                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
-                                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-xl" />
-                            </div>
-                            <div className="mt-8 flex flex-col items-center gap-2">
-                                <Badge className={cn("bg-white/10 text-white border-white/20 text-[10px] font-black uppercase tracking-widest", isCurrentlyIn ? "text-red-400" : "text-green-400")}>
-                                    Target Action: {isCurrentlyIn ? 'Clock Out' : 'Clock In'}
-                                </Badge>
-                                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40">Align with office tag</p>
-                            </div>
-                        </div>
                     </>
                 )}
 
@@ -428,6 +412,20 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                     </div>
                 )}
             </div>
+
+            {step === 'scan' && (
+                <div className="mt-8 flex flex-col items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-700">
+                    <Badge className={cn(
+                        "h-7 px-4 border-none font-black uppercase tracking-widest shadow-sm",
+                        isCurrentlyIn ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+                    )}>
+                        Target Action: {isCurrentlyIn ? 'End Session' : 'Begin Session'}
+                    </Badge>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
+                        Align with organizational tag
+                    </p>
+                </div>
+            )}
 
             <DialogFooter className="pt-8">
                 <div className="w-full flex flex-col gap-4">
