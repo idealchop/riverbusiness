@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BookOpen, 
   Plus, 
@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LearningModuleDialog } from '@/components/hr/LearningModuleDialog';
@@ -37,7 +37,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import type { HRLearningModule } from '@/lib/types';
+import type { HRLearningModule, AppUser } from '@/lib/types';
 
 const DEMO_MODULES: Partial<HRLearningModule>[] = [
     { id: 'm1', title: 'Daily Sanitation Flow', description: 'Step-by-step guide for equipment maintenance.', category: 'Safety', contentType: 'video', contentUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
@@ -46,9 +46,15 @@ const DEMO_MODULES: Partial<HRLearningModule>[] = [
 ];
 
 export default function LearningHubPage() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -59,7 +65,7 @@ export default function LearningHubPage() {
   const companyId = user?.companyId || user?.clientId || 'default';
 
   const modulesQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(
+    () => (firestore && companyId !== 'default') ? query(
         collection(firestore, 'hr_companies', companyId, 'learningModules'),
         orderBy('createdAt', 'desc')
     ) : null,
@@ -78,7 +84,7 @@ export default function LearningHubPage() {
   }, [modules, searchTerm]);
 
   const handleDeleteModule = async (moduleId: string) => {
-    if (!firestore || !companyId) return;
+    if (!firestore || companyId === 'default') return;
     try {
         await deleteDoc(doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId));
         toast({ title: 'Module removed', description: 'The training material has been deleted.' });
@@ -102,7 +108,7 @@ export default function LearningHubPage() {
       toast({ title: 'Link Copied', description: 'Training link copied to clipboard for sharing.' });
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
+  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">

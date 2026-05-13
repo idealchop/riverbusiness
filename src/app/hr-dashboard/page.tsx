@@ -36,7 +36,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, addDoc, serverTimestamp, doc, updateDoc, limit, getDocs } from 'firebase/firestore';
 import { format, isSameDay, addMonths, subMonths, startOfMonth, addDays, differenceInMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -63,6 +63,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AttendanceScanner } from '@/components/hr/AttendanceScanner';
 import { Progress } from '@/components/ui/progress';
+import { FullScreenLoader } from '@/components/ui/loader';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -116,10 +117,16 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 export default function HRDashboard() {
-  const { user } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState('00:00:00');
@@ -141,7 +148,7 @@ export default function HRDashboard() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   const todayLogQuery = useMemoFirebase(
-    () => (firestore && user?.id && companyId) ? query(
+    () => (firestore && user?.id && companyId !== 'default') ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', user.id),
         where('date', '==', todayStr),
@@ -174,7 +181,7 @@ export default function HRDashboard() {
   }, [currentAction, latestLogToday]);
 
   const handleQuickAttendance = async () => {
-    if (!firestore || !companyId || !user?.id) return;
+    if (!firestore || companyId === 'default' || !user?.id) return;
     
     setIsProcessingQuick(true);
     try {
@@ -254,13 +261,13 @@ export default function HRDashboard() {
   };
 
   const employeesQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
   );
   const { data: employees } = useCollection<AppUser>(employeesQuery);
 
   const companyAttendanceQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', todayStr)) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', todayStr)) : null,
     [firestore, companyId, todayStr]
   );
   const { data: todayAttendance } = useCollection<HRAttendanceLog>(companyAttendanceQuery);
@@ -271,8 +278,8 @@ export default function HRDashboard() {
   }, [todayAttendance]);
 
   const stats = useMemo(() => {
-    const empCount = employees?.length || 12;
-    const attCount = todayAttendance?.length || 8;
+    const empCount = employees?.length || 0;
+    const attCount = todayAttendance?.length || 0;
     return [
         { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
         { label: 'Present Today', value: attCount, icon: Clock, trend: 'Verified Entry', trendType: 'up' },
@@ -302,6 +309,8 @@ export default function HRDashboard() {
   };
 
   const heroImage = PlaceHolderImages.find(p => p.id === 'hr-hero-banner');
+
+  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader />;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 pb-20">

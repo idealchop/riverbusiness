@@ -65,8 +65,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, Timestamp, where, limit, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { format, subDays, startOfMonth, endOfMonth, subMonths, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
@@ -138,9 +138,16 @@ const DEMO_PAYROLL: HRPayrollRun[] = [
 const ITEMS_PER_PAGE = 10;
 
 export default function AttendancePage() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveTab] = useState('attendance');
   const [selectedDisbursement, setSelectedDisbursement] = useState<any | null>(null);
@@ -159,31 +166,31 @@ export default function AttendancePage() {
 
   // --- Data Queries ---
   const attendanceQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), orderBy('date', 'desc')) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), orderBy('date', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
 
   const payrollQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: payrollRuns, isLoading: loadingPayroll } = useCollection<HRPayrollRun>(payrollQuery);
 
   const usersQuery = useMemoFirebase(
-      () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+      () => (firestore && companyId !== 'default') ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
       [firestore, companyId]
   );
   const { data: allUsers } = useCollection<AppUser>(usersQuery);
 
   const ownerQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId), where('hrRole', '==', 'owner'), limit(1)) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'users'), where('companyId', '==', companyId), where('hrRole', '==', 'owner'), limit(1)) : null,
     [firestore, companyId]
   );
   const { data: owners } = useCollection<AppUser>(ownerQuery);
@@ -365,7 +372,7 @@ export default function AttendancePage() {
     doc.save(`Payslip_${item.employeeName.replace(/\s/g, '_')}_${item.runId}.pdf`);
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
+  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Loading Records..." />;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -661,7 +668,7 @@ export default function AttendancePage() {
 
       {/* Individual Disbursement View Dialog */}
       <Dialog open={!!selectedDisbursement} onOpenChange={(open) => { if (!open) setSelectedDisbursement(null); }}>
-        <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl p-0 overflow-hidden bg-white">
+        <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
             <div className="bg-slate-900 text-white p-8">
                 <DialogHeader>
                     <div className="flex items-center justify-between mb-2">

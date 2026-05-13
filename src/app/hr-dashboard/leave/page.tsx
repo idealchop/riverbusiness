@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CalendarDays, 
   Search, 
@@ -37,14 +37,14 @@ import {
     DialogFooter,
     DialogClose
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { format, addDays, isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 import { Calendar } from '@/components/ui/calendar';
-import type { HRLeaveRequest } from '@/lib/types';
+import type { HRLeaveRequest, AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -65,9 +65,15 @@ const DEMO_LEAVES: Partial<HRLeaveRequest>[] = [
 ];
 
 export default function LeavePage() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -79,7 +85,7 @@ export default function LeavePage() {
 
   const leaveQuery = useMemoFirebase(
     () => {
-        if (!firestore || !companyId) return null;
+        if (!firestore || companyId === 'default') return null;
         return query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc'));
     },
     [firestore, companyId]
@@ -139,7 +145,7 @@ export default function LeavePage() {
   }, [selectedCalendarDate, displayLeaves]);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
-    if (!firestore || !companyId || !requestId || requestId.startsWith('l')) {
+    if (!firestore || companyId === 'default' || !requestId || requestId.startsWith('l')) {
         toast({ title: 'Demo mode', description: 'Status updates are simulated for demo records.' });
         return;
     }
@@ -152,7 +158,7 @@ export default function LeavePage() {
     }
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Syncing applications..." />;
+  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Syncing applications..." />;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">

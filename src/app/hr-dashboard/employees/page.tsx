@@ -45,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
@@ -58,10 +58,16 @@ const DEPARTMENTS = ['All Departments', 'Logistics', 'Support', 'Fleet', 'Admin'
 const ITEMS_PER_PAGE = 10;
 
 export default function EmployeesPage() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
+  const userDocRef = useMemoFirebase(
+    () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('All Departments');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -77,7 +83,7 @@ export default function EmployeesPage() {
   const isWorkspaceOwner = !!user?.plan;
 
   const employeesQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
   );
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
@@ -123,7 +129,7 @@ export default function EmployeesPage() {
       setInitialDialogTab(tab);
   };
 
-  if (isUserLoading) {
+  if (isAuthLoading || isUserDocLoading) {
     return <FullScreenLoader text="Syncing Directory..." />;
   }
 

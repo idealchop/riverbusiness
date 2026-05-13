@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   DollarSign, 
   PlayCircle,
@@ -37,7 +36,7 @@ import {
     DialogFooter,
     DialogClose
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
@@ -90,8 +89,15 @@ const DEMO_PAYROLL: HRPayrollRun[] = [
 ];
 
 export default function PayrollPage() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   const [viewingRun, setViewingRun] = useState<HRPayrollRun | null>(null);
   
@@ -103,14 +109,14 @@ export default function PayrollPage() {
 
   // --- Data Fetching ---
   const payrollQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: payrollRuns, isLoading } = useCollection<HRPayrollRun>(payrollQuery);
 
   // Fetch the owner's profile to get official branding (Business Name and Address)
   const ownerQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId), where('hrRole', '==', 'owner'), limit(1)) : null,
+    () => (firestore && companyId !== 'default') ? query(collection(firestore, 'users'), where('companyId', '==', companyId), where('hrRole', '==', 'owner'), limit(1)) : null,
     [firestore, companyId]
   );
   const { data: owners } = useCollection<AppUser>(ownerQuery);
@@ -222,7 +228,7 @@ export default function PayrollPage() {
     doc.save(`Payroll_Statement_${run.id}.pdf`);
   };
 
-  if (isUserLoading) {
+  if (isAuthLoading || isUserDocLoading) {
     return <FullScreenLoader text="Synchronizing Ledger..." />;
   }
 
