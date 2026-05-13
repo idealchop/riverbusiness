@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MapPin, CheckCircle2, XCircle, ShieldCheck, QrCode, Camera, Clock, Zap, Lock, LogIn, LogOut, Fingerprint } from 'lucide-react';
+import { Loader2, MapPin, XCircle, QrCode, Camera, Clock, Zap, Lock, Fingerprint } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -30,14 +30,10 @@ interface AttendanceScannerProps {
 export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '00:00:00' }: AttendanceScannerProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [step, setFormStep] = useState<'scan' | 'validate' | 'success' | 'error'>('scan');
+  const [step, setStep] = useState<'scan' | 'validate' | 'error'>('scan');
   const [errorMsg, setErrorMsg] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [actionType, setActionType] = useState<'IN' | 'OUT' | null>(null);
-  const [lastActionTime, setLastActionTime] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [showManualStart, setShowManualStart] = useState(false);
-  const [protocol, setProtocol] = useState<'verified' | 'flexible'>('verified');
   const [isCurrentlyIn, setIsCurrentlyIn] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
@@ -69,8 +65,8 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     if (!companyId) return;
     
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setErrorMsg("Your browser doesn't support camera access. Please try a modern mobile browser.");
-        setFormStep('error');
+        setErrorMsg("Your browser doesn't support camera access.");
+        setStep('error');
         return;
     }
 
@@ -79,9 +75,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     setShowManualStart(false);
 
     await stopScanner();
-
-    const element = document.getElementById("qr-reader");
-    if (!element) return;
 
     try {
       const scanner = new Html5Qrcode("qr-reader");
@@ -103,13 +96,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     } catch (err) {
       console.error("Camera start failed:", err);
       setErrorMsg("Hardware access blocked. Ensure camera permissions are enabled.");
-      setFormStep('error');
+      setStep('error');
       setCameraLoading(false);
     }
   };
 
   useEffect(() => {
-    let mountTimeout: NodeJS.Timeout;
     let manualTimeout: NodeJS.Timeout;
 
     if (isOpen && step === 'scan' && companyId) {
@@ -125,21 +117,25 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
             .map(d => d.data() as HRAttendanceLog)
             .sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0))[0];
             
-          const isCurrentlyClockedIn = !!(latest && !latest.timeOut);
-          setIsCurrentlyIn(isCurrentlyClockedIn);
+          setIsCurrentlyIn(!!(latest && !latest.timeOut));
       };
       checkState();
 
-      mountTimeout = setTimeout(() => {
+      // Delay start to allow dialog animation to complete
+      const mountTimeout = setTimeout(() => {
         startCameraFlow();
         manualTimeout = setTimeout(() => {
             setShowManualStart(true);
         }, 5000);
-      }, 1200);
+      }, 500);
+
+      return () => {
+          clearTimeout(mountTimeout);
+          clearTimeout(manualTimeout);
+      };
     }
 
     return () => {
-      clearTimeout(mountTimeout);
       clearTimeout(manualTimeout);
       stopScanner();
     };
@@ -164,14 +160,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
     const expectedHandshake = `RIVER_OFFICE_QR:${companyId}`;
     if (decodedText.trim() !== expectedHandshake) {
       setErrorMsg("Security error: Invalid organizational QR detected.");
-      setFormStep('error');
+      setStep('error');
       return;
     }
 
     await stopScanner();
-
-    setFormStep('validate');
-    setIsProcessing(true);
+    setStep('validate');
 
     try {
       const locationsCol = collection(firestore, 'hr_companies', companyId, 'locations');
@@ -179,13 +173,12 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
       
       if (locationSnap.empty) {
         setErrorMsg("Error: Office credentials not anchored by administrator.");
-        setFormStep('error');
+        setStep('error');
         return;
       }
 
       const office = locationSnap.docs[0].data() as HRCompanyLocation;
       const isGpsRequired = office.gps_verification_enabled ?? true;
-      setProtocol(isGpsRequired ? 'verified' : 'flexible');
 
       let validationStatus: 'Valid' | 'Invalid' | 'Skipped' = 'Skipped';
 
@@ -204,7 +197,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
 
           if (distance > radius) {
             setErrorMsg(`Location error: You are ${Math.round(distance)}m away. Authorized radius is ${radius}m.`);
-            setFormStep('error');
+            setStep('error');
             return;
           }
           validationStatus = 'Valid';
@@ -223,8 +216,6 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
         .sort((a, b) => (toSafeDate(b.timeIn)?.getTime() || 0) - (toSafeDate(a.timeIn)?.getTime() || 0))[0];
       
       const nextAction = (latestLog && !latestLog.timeOut) ? 'OUT' : 'IN';
-      setActionType(nextAction);
-      setLastActionTime(format(new Date(), 'hh:mm a'));
 
       if (nextAction === 'IN') {
           const logData: Omit<HRAttendanceLog, 'id'> = {
@@ -240,6 +231,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
             action: 'IN'
           };
           await addDoc(collection(firestore, 'hr_companies', companyId, 'attendance'), logData);
+          toast({ title: 'Verified: Clock In Successful', description: 'Your shift session has been logged.' });
       } else if (latestLog) {
           const timeOut = Timestamp.now();
           const timeIn = toSafeDate(latestLog.timeIn) ? Timestamp.fromDate(toSafeDate(latestLog.timeIn)!) : Timestamp.now();
@@ -250,25 +242,23 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
               totalMinutes: minutes,
               action: 'OUT'
           });
+          toast({ title: 'Verified: Clock Out Successful', description: 'Shift duration has been recorded.' });
       }
 
-      setFormStep('success');
-      toast({ title: `Verified: ${nextAction === 'IN' ? 'Clock in' : 'Clock out'} successful` });
+      // Close the dialog immediately on success
+      onOpenChange(false);
+      resetTerminal();
 
     } catch (err: any) {
       setErrorMsg(err.message || "Protocol failure. Ensure permissions are granted.");
-      setFormStep('error');
-    } finally {
-      setIsProcessing(false);
+      setStep('error');
     }
   };
 
   const resetTerminal = () => {
     stopScanner();
-    setFormStep('scan');
+    setStep('scan');
     setErrorMsg('');
-    setActionType(null);
-    setLastActionTime(null);
     setCameraLoading(false);
     setShowManualStart(false);
   };
@@ -288,25 +278,28 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
           #qr-reader {
             border: none !important;
           }
+          #qr-reader__scan_region {
+            border: none !important;
+          }
         `}} />
         <div className="p-8">
             <DialogHeader className="mb-6">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 mb-2">
+                    <div className="flex items-center gap-4">
                         <div className="p-2 rounded-xl bg-primary/10">
                             <Fingerprint className="h-5 w-5 text-primary" />
                         </div>
-                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Terminal</DialogTitle>
+                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">Attendance Terminal</DialogTitle>
                     </div>
                     {isCurrentlyIn && step === 'scan' && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full animate-in fade-in zoom-in-95 duration-500">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
                              <Clock className="h-3 w-3 text-primary animate-pulse" />
                              <span className="text-[10px] font-black text-primary tabular-nums tracking-widest">{liveDuration}</span>
                         </div>
                     )}
                 </div>
                 <DialogDescription className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-                    Verified presence protocol
+                    Organizational Presence Verification
                 </DialogDescription>
             </DialogHeader>
             
@@ -319,7 +312,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 text-white gap-6">
                               {cameraLoading && <Loader2 className="h-10 w-10 animate-spin text-primary" />}
                               <div className="text-center space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Activating terminal...</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Activating camera...</p>
                                 {showManualStart && (
                                     <Button 
                                         variant="outline" 
@@ -327,7 +320,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                                         onClick={startCameraFlow}
                                         className="rounded-xl border-white/20 text-white h-9 font-bold text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900 px-6 mt-4"
                                     >
-                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start manual scan
+                                        <Camera className="mr-2 h-3.5 w-3.5" /> Start Manual Scan
                                     </Button>
                                 )}
                               </div>
@@ -351,53 +344,13 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                     </div>
                 )}
 
-                {step === 'success' && (
-                    <div className="flex flex-col items-center gap-8 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
-                        <div className={cn(
-                            "h-24 w-24 rounded-full flex items-center justify-center shadow-lg transition-all",
-                            actionType === 'IN' ? "bg-green-500 shadow-green-500/20" : "bg-blue-600 shadow-blue-600/20"
-                        )}>
-                            {actionType === 'IN' ? <LogIn className="h-10 w-10 text-white" /> : <LogOut className="h-10 w-10 text-white" />}
-                        </div>
-                        <div className="space-y-4">
-                            <p className="text-3xl font-black tracking-tight text-white uppercase">
-                                {actionType === 'IN' ? 'Clocked In' : 'Clocked Out'}
-                            </p>
-                            <div className="bg-white/10 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
-                                <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
-                                    {protocol === 'verified' ? <Lock className="h-4 w-4 text-primary" /> : <Zap className="h-4 w-4 text-amber-400" />}
-                                    {protocol === 'verified' ? 'Precision Verified' : 'Flexible Handshake'}
-                                </p>
-                                <div className="flex items-center justify-center gap-1.5 text-white">
-                                    <Clock className="h-3 w-3 opacity-50" />
-                                    <span className="text-xs font-black tabular-nums">{lastActionTime}</span>
-                                </div>
-                            </div>
-                            {actionType === 'OUT' && (
-                                <p className="text-[10px] font-black text-primary uppercase tracking-widest">
-                                    Session Recorded: {liveDuration}
-                                </p>
-                            )}
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                Log saved to organizational ledger.
-                            </p>
-                        </div>
-                        <Button 
-                            onClick={() => onOpenChange(false)} 
-                            className="rounded-xl font-black text-[10px] uppercase tracking-widest h-11 px-10 bg-white text-slate-900 hover:bg-slate-100"
-                        >
-                            Return to hub
-                        </Button>
-                    </div>
-                )}
-
                 {step === 'error' && (
                     <div className="flex flex-col items-center gap-8 p-10 text-center animate-in fade-in zoom-in-95 duration-500">
                         <div className="h-20 w-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20">
                             <XCircle className="h-10 w-10 text-white" />
                         </div>
                         <div className="space-y-4">
-                            <p className="text-xl font-black text-white uppercase">Access denied</p>
+                            <p className="text-xl font-black text-white uppercase">Access Denied</p>
                             <div className="bg-red-500/10 px-6 py-4 rounded-2xl border border-red-500/20 max-w-[280px]">
                                 <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-relaxed">{errorMsg}</p>
                             </div>
@@ -419,7 +372,7 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
                         "h-7 px-4 border-none font-black uppercase tracking-widest shadow-sm",
                         isCurrentlyIn ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
                     )}>
-                        Target Action: {isCurrentlyIn ? 'End Session' : 'Begin Session'}
+                        Target Action: {isCurrentlyIn ? 'Finalize Session' : 'Begin Session'}
                     </Badge>
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
                         Align with organizational tag
@@ -430,12 +383,10 @@ export function AttendanceScanner({ isOpen, onOpenChange, user, liveDuration = '
             <DialogFooter className="pt-8">
                 <div className="w-full flex flex-col gap-4">
                     <div className="flex items-center gap-3 justify-center">
-                        <ShieldCheck className="h-4 w-4 text-slate-400" />
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Secure Terminal Logic Active</p>
+                        <Lock className="h-4 w-4 text-slate-400" />
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Secure Terminal active</p>
                     </div>
-                    {step !== 'success' && (
-                        <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Close terminal</Button>
-                    )}
+                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Cancel</Button>
                 </div>
             </DialogFooter>
         </div>
