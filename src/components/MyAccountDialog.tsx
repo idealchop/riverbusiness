@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, limit } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
@@ -192,127 +192,137 @@ const toSafeDate = (timestamp: any): Date | null => {
 
 
 // Refactored Tab Components
-const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveChanges, isEditingDetails, setIsEditingDetails, handleFileSelect, handleProfilePhotoDelete, isPending, copyToClipboard }) => (
-  <Card>
-    <CardContent className="pt-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="relative group cursor-pointer">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
-                <AvatarFallback className="text-3xl">{user?.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              {(isPending) && (
-                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
-                  </div>
+const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveChanges, isEditingDetails, setIsEditingDetails, handleFileSelect, handleProfilePhotoDelete, isPending, copyToClipboard, workspaceBusinessName }: any) => {
+  const isEmployee = user?.hrRole === 'employee';
+
+  return (
+    <Card>
+      <CardContent className="pt-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="relative group cursor-pointer">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
+                  <AvatarFallback className="text-3xl">{user?.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                {(isPending) && (
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Pencil className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Label htmlFor="photo-upload-input-user" className="w-full cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" /> Upload new photo
+                </Label>
+              </DropdownMenuItem>
+              {displayPhoto && (
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" /> Remove photo
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
               )}
-              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Pencil className="h-6 w-6 text-white" />
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
+          <div className="space-y-1">
+            <h4 className="font-semibold">{user?.name}</h4>
+            <p className="text-sm text-muted-foreground">Update your account details.</p>
+          </div>
+        </div>
+        <Separator />
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="font-semibold">Your Details</h4>
+            {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                  <Label htmlFor="fullName" className="text-right">Full Name</Label>
+                  <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!isEditingDetails} />
               </div>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Label htmlFor="photo-upload-input-user" className="w-full cursor-pointer">
-                <Upload className="mr-2 h-4 w-4" /> Upload new photo
-              </Label>
-            </DropdownMenuItem>
-            {displayPhoto && (
-              <AlertDialogTrigger asChild>
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Remove photo
-                </DropdownMenuItem>
-              </AlertDialogTrigger>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
-        <div className="space-y-1">
-          <h4 className="font-semibold">{user?.name}</h4>
-          <p className="text-sm text-muted-foreground">Update your account details.</p>
-        </div>
-      </div>
-      <Separator />
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h4 className="font-semibold">Your Details</h4>
-          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!isEditingDetails} />
-            </div>
-            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                <Label htmlFor="email" className="text-right">Login Email</Label>
-                <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
-            </div>
-            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
-                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!isEditingDetails} />
-            </div>
-            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                <Label htmlFor="businessName" className="text-right">Business Name</Label>
-                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} disabled={!isEditingDetails}/>
-            </div>
-            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                <Label htmlFor="address" className="text-right">Address</Label>
-                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!isEditingDetails}/>
-            </div>
-            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!isEditingDetails}/>
-            </div>
-        </div>
-        {isEditingDetails && (
-            <div className="flex justify-end gap-2 mt-4">
-                <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user || {}}) }}>Cancel</Button>
-                <Button onClick={handleSaveChanges}>Save Changes</Button>
-            </div>
-        )}
-      </div>
-      <Separator />
-      <div>
-        <h4 className="font-semibold mb-4">Security</h4>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-          <Button variant="outline" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: true })}><Mail className="mr-2 h-4 w-4" />Update Login Email</Button>
-          <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
-        </div>
-      </div>
-      <Separator />
-      <div>
-          <h4 className="font-semibold mb-4">Account Identifiers</h4>
-          <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                  <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
-                  <div className="flex items-center gap-2">
-                      <Input id="uid" value={user?.id || ''} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user?.id && copyToClipboard(user.id, 'User ID')}>
-                          <Copy className="h-4 w-4" />
-                      </Button>
-                  </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                  <Label htmlFor="email" className="text-right">Login Email</Label>
+                  <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
               </div>
-              <div className="flex items-center justify-between">
-                  <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
-                  <div className="flex items-center gap-2">
-                      <Input id="clientId" value={user?.clientId || 'N/A'} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user?.clientId && copyToClipboard(user.clientId, 'Client ID')} disabled={!user?.clientId}>
-                          <Copy className="h-4 w-4" />
-                      </Button>
-                  </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                  <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
+                  <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!isEditingDetails} />
+              </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                  <Label htmlFor="businessName" className="text-right">Business Name</Label>
+                  <Input 
+                    id="businessName" 
+                    name="businessName" 
+                    value={isEmployee ? workspaceBusinessName : (state.editableFormData.businessName || '')} 
+                    onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} 
+                    disabled={!isEditingDetails || isEmployee}
+                  />
+              </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                  <Label htmlFor="address" className="text-right">Address</Label>
+                  <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!isEditingDetails}/>
+              </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                  <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
+                  <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!isEditingDetails}/>
               </div>
           </div>
-      </div>
-    </CardContent>
-  </Card>
-);
+          {isEditingDetails && (
+              <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user || {}}) }}>Cancel</Button>
+                  <Button onClick={handleSaveChanges}>Save Changes</Button>
+              </div>
+          )}
+        </div>
+        <Separator />
+        <div>
+          <h4 className="font-semibold mb-4">Security</h4>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+            <Button variant="outline" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: true })}><Mail className="mr-2 h-4 w-4" />Update Login Email</Button>
+            <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
+          </div>
+        </div>
+        <Separator />
+        <div>
+            <h4 className="font-semibold mb-4">Account Identifiers</h4>
+            <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
+                    <div className="flex items-center gap-2">
+                        <Input id="uid" value={user?.id || ''} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user?.id && copyToClipboard(user.id, 'User ID')}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
+                    <div className="flex items-center gap-2">
+                        <Input id="clientId" value={isEmployee ? user.companyId : (user?.clientId || 'N/A')} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => (isEmployee ? user.companyId : user.clientId) && copyToClipboard(isEmployee ? user.companyId : user.clientId, 'Client ID')} disabled={isEmployee ? !user.companyId : !user?.clientId}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) => (
+const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }: any) => (
     <div className="space-y-6">
     <Card>
       <CardContent className="p-0">
@@ -445,7 +455,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
   </div>
 );
 
-const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }) => (
+const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }: any) => (
     <div className="space-y-4">
     {user?.accountType === 'Branch' && (
         <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
@@ -475,7 +485,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, sh
                         </TableRow>
                     ))
                 ) : paginatedInvoices.length > 0 ? (
-                    paginatedInvoices.map((invoice) => {
+                    paginatedInvoices.map((invoice: any) => {
                         if (!invoice) return null;
                         const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                         return (
@@ -545,7 +555,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, sh
             </Card>
             ))
         ) : paginatedInvoices.length > 0 ? (
-            paginatedInvoices.map((invoice) => {
+            paginatedInvoices.map((invoice: any) => {
                 if (!invoice) return null;
                 const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                 return (
@@ -613,7 +623,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, sh
   </div>
 );
 
-const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTransactionCurrentPage, totalTransactionPages, calculatedBalances }) => (
+const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTransactionCurrentPage, totalTransactionPages, calculatedBalances }: any) => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
@@ -646,7 +656,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
             <p className="text-center py-10 text-muted-foreground">No transactions yet.</p>
           ) : (
             <div className="space-y-3">
-              {paginatedTransactions.map(tx => (
+              {paginatedTransactions.map((tx: any) => (
                 <Card key={tx.id}>
                   <CardContent className="p-4 space-y-2">
                     <div className="flex justify-between items-start">
@@ -673,7 +683,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
               <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => setTransactionCurrentPage((p: number) => Math.max(1, p - 1))}
                   disabled={transactionCurrentPage === 1}
               >
                   Previous
@@ -684,7 +694,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
               <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
+                  onClick={() => setTransactionCurrentPage((p: number) => Math.min(totalTransactionPages, p + 1))}
                   disabled={transactionCurrentPage === totalTransactionPages || totalTransactionPages === 0}
               >
                   Next
@@ -694,7 +704,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
    </div>
 );
 
-const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
+const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }: any) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
            <div>
@@ -719,7 +729,7 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
                 </TableHeader>
                 <TableBody>
                     {topUpRequests && topUpRequests.length > 0 ? (
-                        topUpRequests.map(req => {
+                        topUpRequests.map((req: any) => {
                             const asPayment: Payment = {
                                 id: req.id,
                                 date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
@@ -821,6 +831,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const branchUsersQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', user.id)) : null, [firestore, user]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
 
+  // Lookup the Workspace Owner's Business Name if user is an employee
+  const companyOwnerQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.companyId || user?.hrRole !== 'employee') return null;
+    return query(collection(firestore, 'users'), where('clientId', '==', user.companyId), where('hrRole', '==', 'owner'), limit(1));
+  }, [firestore, user?.companyId, user?.hrRole]);
+  const { data: companyOwners } = useCollection<AppUser>(companyOwnerQuery);
+  const workspaceBusinessName = useMemo(() => companyOwners?.[0]?.businessName || user?.businessName, [companyOwners, user?.businessName]);
+
   const currentMonthInvoice = useMemo(() => {
     if (!user || deliveriesLoading) return null;
 
@@ -835,7 +853,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     let invoiceIdSuffix: string;
 
     // Rule: Cycle is 2nd of Month to 1st of Next Month
-    if (currentYear === 2026 && currentMonth === 1) {
+    if (currentYear === 2025 && currentMonth === 11 || currentYear === 2026 && currentMonth === 0) {
         cycleStart = new Date(2025, 11, 2); // Dec 2, 2025
         cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1, 2026
         monthsToBill = 2;
@@ -1513,6 +1531,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     handleProfilePhotoDelete={handleProfilePhotoDelete}
                     isPending={isPending}
                     copyToClipboard={copyToClipboard}
+                    workspaceBusinessName={workspaceBusinessName}
                   />
                 </TabsContent>
                 <TabsContent value="plan" className="py-4 space-y-6">
