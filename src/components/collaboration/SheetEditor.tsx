@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -41,7 +40,10 @@ import {
     Loader2,
     FilterX,
     PlusCircle,
-    CheckCircle2
+    CheckCircle2,
+    Palette,
+    Tag,
+    Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +73,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface SheetEditorProps {
   initialData: any;
@@ -117,6 +120,17 @@ const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
     { type: 'phone', label: 'Phone' },
 ];
 
+const OPTION_COLORS = [
+    { label: 'Gray', value: 'bg-slate-100 text-slate-700' },
+    { label: 'Blue', value: 'bg-blue-100 text-blue-700' },
+    { label: 'Green', value: 'bg-green-100 text-green-700' },
+    { label: 'Amber', value: 'bg-amber-100 text-amber-700' },
+    { label: 'Red', value: 'bg-red-100 text-red-700' },
+    { label: 'Purple', value: 'bg-purple-100 text-purple-700' },
+    { label: 'Pink', value: 'bg-pink-100 text-pink-700' },
+    { label: 'Indigo', value: 'bg-indigo-100 text-indigo-700' },
+];
+
 export function SheetEditor({ initialData, onContentChange, editable = true }: SheetEditorProps) {
   const isMounted = useMounted();
   const { toast } = useToast();
@@ -142,6 +156,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<FilterRule[]>([]);
+
+  // Option Management States
+  const [editingOptionsFieldId, setEditingOptionsFieldId] = useState<string | null>(null);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
@@ -218,6 +235,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         const next = fields.map(f => f.id === fieldId ? { ...f, name: newName.trim() } : f);
         setFields(next);
         sync(next, records, views, activeViewId);
+        toast({ title: 'Column renamed' });
     }
   };
 
@@ -233,6 +251,67 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       setFields(next);
       sync(next, records, views, activeViewId);
       toast({ title: 'Type conversion complete' });
+  };
+
+  // Option Management Handlers
+  const handleAddOption = (fieldId: string) => {
+      const field = fields.find(f => f.id === fieldId);
+      if (!field || !field.options) return;
+
+      const newLabel = window.prompt('Enter option label:');
+      if (newLabel && newLabel.trim()) {
+          const nextOptions = [...field.options, { label: newLabel.trim(), color: 'bg-slate-100 text-slate-700' }];
+          const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
+          setFields(nextFields);
+          sync(nextFields, records, views, activeViewId);
+          toast({ title: 'Option added' });
+      }
+  };
+
+  const updateOption = (fieldId: string, oldLabel: string, newLabel: string, newColor?: string) => {
+      const field = fields.find(f => f.id === fieldId);
+      if (!field || !field.options) return;
+
+      const nextOptions = field.options.map(opt => 
+          opt.label === oldLabel ? { ...opt, label: newLabel, color: newColor || opt.color } : opt
+      );
+      
+      const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
+      
+      // Migration: Update existing records that use this label
+      const nextRecords = records.map(r => {
+          if (r.values[fieldId] === oldLabel) {
+              return { ...r, values: { ...r.values, [fieldId]: newLabel } };
+          }
+          return r;
+      });
+
+      setFields(nextFields);
+      setRecords(nextRecords);
+      sync(nextFields, nextRecords, views, activeViewId);
+  };
+
+  const deleteOption = (fieldId: string, label: string) => {
+      const field = fields.find(f => f.id === fieldId);
+      if (!field || !field.options) return;
+
+      const nextOptions = field.options.filter(opt => opt.label !== label);
+      const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
+      
+      // Cleanup: Remove this value from records
+      const nextRecords = records.map(r => {
+          if (r.values[fieldId] === label) {
+              const nextValues = { ...r.values };
+              delete nextValues[fieldId];
+              return { ...r, values: nextValues };
+          }
+          return r;
+      });
+
+      setFields(nextFields);
+      setRecords(nextRecords);
+      sync(nextFields, nextRecords, views, activeViewId);
+      toast({ title: 'Option removed' });
   };
 
   const handleSwitchView = (id: string) => {
@@ -469,16 +548,17 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                                             </button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer" onClick={() => handleRenameField(field.id)}>
-                                                <Edit className="h-3.5 w-3.5" /> Rename Field
+                                        <DropdownMenuContent className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
+                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5" onClick={() => handleRenameField(field.id)}>
+                                                <Edit className="h-3.5 w-3.5" /> Rename Column
                                             </DropdownMenuItem>
                                             
                                             <DropdownMenuSub>
-                                                <DropdownMenuSubTrigger className="gap-2 text-xs font-semibold">
+                                                <DropdownMenuSubTrigger className="gap-2 text-xs font-semibold py-2.5">
                                                     <Settings2 className="h-3.5 w-3.5" /> Change Type
                                                 </DropdownMenuSubTrigger>
-                                                <DropdownMenuSubContent className="w-48 rounded-xl p-1 shadow-2xl">
+                                                <DropdownMenuSubContent className="w-56 rounded-xl p-1 shadow-2xl">
+                                                    <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 tracking-widest">Select logic</DropdownMenuLabel>
                                                     {FIELD_TYPES.map(ft => (
                                                         <DropdownMenuItem key={ft.type} onClick={() => changeFieldType(field.id, ft.type)} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
                                                             {React.createElement(FIELD_ICONS[ft.type], { className: "h-3.5 w-3.5 opacity-40" })}
@@ -488,9 +568,22 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 </DropdownMenuSubContent>
                                             </DropdownMenuSub>
 
+                                            {(field.type === 'select' || field.type === 'status') && (
+                                                <>
+                                                    <DropdownMenuSeparator className="bg-slate-50" />
+                                                    <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 tracking-widest">Options</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => handleAddOption(field.id)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
+                                                        <PlusCircle className="h-3.5 w-3.5 text-blue-500" /> Add New Option
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setEditingOptionsFieldId(field.id)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
+                                                        <Pencil className="h-3.5 w-3.5 text-slate-400" /> Manage Options
+                                                    </DropdownMenuItem>
+                                                </>
+                                            )}
+
                                             <DropdownMenuSeparator className="bg-slate-50" />
                                             {!field.isPrimary && (
-                                                <DropdownMenuItem onClick={() => deleteField(field.id)} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer focus:text-red-600">
+                                                <DropdownMenuItem onClick={() => deleteField(field.id)} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer focus:text-red-600 py-2.5">
                                                     <Trash2 className="h-3.5 w-3.5" /> Purge Column
                                                 </DropdownMenuItem>
                                             )}
@@ -624,6 +717,66 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </div>
             </div>
         )}
+
+        {/* Option Management Dialog */}
+        <Dialog open={!!editingOptionsFieldId} onOpenChange={(open) => !open && setEditingOptionsFieldId(null)}>
+            <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
+                <DialogHeader className="p-8 pb-4 bg-slate-50 border-b">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                            <Tag className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Manage Options</DialogTitle>
+                            <DialogDescription className="text-xs font-medium text-slate-500">Configure labels and color branding.</DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+                <ScrollArea className="max-h-[400px]">
+                    <div className="p-8 space-y-4">
+                        {fields.find(f => f.id === editingOptionsFieldId)?.options?.map((opt, idx) => (
+                            <div key={idx} className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className={cn("h-4 w-4 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
+                                <Input 
+                                    value={opt.label} 
+                                    onChange={(e) => updateOption(editingOptionsFieldId!, opt.label, e.target.value)}
+                                    className="h-10 rounded-xl bg-slate-50 border-none font-bold text-xs"
+                                />
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-slate-100 shrink-0">
+                                            <Palette className="h-4 w-4 text-slate-400" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="grid grid-cols-4 gap-1 p-2 rounded-xl shadow-2xl border-slate-100">
+                                        {OPTION_COLORS.map(c => (
+                                            <button 
+                                                key={c.value} 
+                                                onClick={() => updateOption(editingOptionsFieldId!, opt.label, opt.label, c.value)}
+                                                className={cn("h-6 w-6 rounded-lg border", opt.color === c.value && "ring-2 ring-primary ring-offset-1")}
+                                                style={{ backgroundColor: c.value.split(' ')[0].replace('bg-', '') }}
+                                                title={c.label}
+                                            />
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Button variant="ghost" size="icon" onClick={() => deleteOption(editingOptionsFieldId!, opt.label)} className="h-10 w-10 rounded-xl hover:bg-red-50 text-red-400 shrink-0">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        <Button onClick={() => handleAddOption(editingOptionsFieldId!)} variant="ghost" className="w-full h-11 border-dashed border border-slate-200 rounded-2xl gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-all">
+                            <Plus className="h-4 w-4" /> New Category
+                        </Button>
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="p-8 pt-4 bg-slate-50 border-t">
+                    <DialogClose asChild>
+                        <Button className="w-full rounded-xl h-11 font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/10">Finished</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
@@ -669,11 +822,19 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
                     {field.options?.map((opt: any) => (
-                        <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer">
-                            <div className={cn("h-2 w-2 rounded-full", opt.color.split(' ')[0])} />
+                        <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer py-2.5">
+                            <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", opt.color.split(' ')[0])} />
                             {opt.label}
                         </DropdownMenuItem>
                     ))}
+                    {editable && (
+                        <>
+                            <DropdownMenuSeparator className="bg-slate-50" />
+                            <DropdownMenuItem className="gap-2 text-[9px] font-black uppercase text-slate-400 tracking-widest cursor-default italic">
+                                Manage via header menu
+                            </DropdownMenuItem>
+                        </>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
         );
