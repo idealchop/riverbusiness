@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { CheckCircle, ArrowRight, ArrowLeft, Building2, Droplets, Users, Layout, ChevronRight } from 'lucide-react';
+import { CheckCircle, ArrowRight, ArrowLeft, Building2, Droplets, Users, Layout, ChevronRight, Info } from 'lucide-react';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -248,11 +248,17 @@ export default function ClaimAccountPage() {
                     <Label htmlFor="clientId" className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wide">Client ID</Label>
                     <Input 
                       id="clientId" 
-                      placeholder="e.g. RIVER-123456" 
+                      placeholder="e.g. SC25000001" 
                       className="h-12 rounded-xl bg-slate-50 border-slate-100 px-4 font-bold" 
                       {...claimForm.register('clientId')} 
                       disabled={claimForm.formState.isSubmitting} 
                     />
+                    <div className="flex items-start gap-2 mt-2 px-1">
+                        <Info className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <p className="text-[10px] font-medium text-slate-400 leading-tight">
+                            Client ID are sent for customers who availed our subscription.
+                        </p>
+                    </div>
                     {claimForm.formState.errors.clientId && <p className="text-xs text-red-500 mt-1 ml-1">{claimForm.formState.errors.clientId.message}</p>}
                   </div>
                   <Button type="submit" className="w-full h-12 rounded-xl font-bold" disabled={claimForm.formState.isSubmitting}>
