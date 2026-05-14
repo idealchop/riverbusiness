@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
@@ -96,7 +95,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         router.push(redirectUrl);
         
         if (!initialPrompt) {
-            toast({ title: `New ${type} created` });
+            toast({ 
+                title: 'Asset initialized', 
+                description: `A new ${type} workspace has been established for your organization.` 
+            });
         }
       })
       .catch(async (err) => {
@@ -120,7 +122,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         if (pathname.includes(pageId)) {
             router.push('/workspace');
         }
-        toast({ title: 'Moved to trash' });
+        toast({ 
+            title: 'Document archived', 
+            description: 'The file has been moved to the trash bin and will be retained for 30 days.' 
+        });
     } catch (error) {
         console.error("Error moving to trash:", error);
     }
@@ -134,7 +139,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             isTrashed: false,
             trashedAt: null
         });
-        toast({ title: 'Document restored' });
+        toast({ 
+            title: 'Asset restored', 
+            description: 'The document has been successfully moved back to the active directory.' 
+        });
     } catch (error) {
         console.error("Error restoring page:", error);
     }
@@ -144,7 +152,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
-        toast({ title: 'Purged permanently' });
+        toast({ 
+            title: 'Protocol: Data Purge', 
+            description: 'This document and its full block history have been permanently removed from the infrastructure.' 
+        });
     } catch (error) {
         console.error("Error deleting permanently:", error);
     }
@@ -156,7 +167,8 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isFavorite });
         toast({ 
-            title: isFavorite ? 'Added to favorites' : 'Removed from favorites'
+            title: isFavorite ? 'Added to favorites' : 'Removed from favorites',
+            description: isFavorite ? 'This document is now pinned to your priority navigation.' : 'Asset removed from your priority list.'
         });
     } catch (error) {
         console.error("Error toggling favorite:", error);

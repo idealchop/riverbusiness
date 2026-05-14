@@ -135,7 +135,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       
       if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src: url }).run();
-          toast({ title: 'Visual asset integrated' });
+          toast({ 
+              title: 'Asset synchronized', 
+              description: 'The image has been securely uploaded to the organizational cloud.' 
+          });
       }
     } catch (error) {
       console.error('Image upload failed:', error);
@@ -284,7 +287,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
                 if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
-                    toast({ title: 'Draft finalized' });
+                    toast({ 
+                        title: 'Draft finalized', 
+                        description: 'The AI-generated structural blueprint is now active.' 
+                    });
                 }
             } catch (error) {
                 console.error('Streaming error:', error);
@@ -338,6 +344,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     setIsAiProcessing(true);
     setShowAiToolbar(false);
     setAiStatus('Intelligence protocol active...');
+    
+    toast({ 
+        title: 'Intelligence active', 
+        description: 'The AI assistant is analyzing your content for high-fidelity optimization.' 
+    });
 
     try {
       const response = await fetch('/api/ai/assistant', {
@@ -364,6 +375,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
           }
+          
+          toast({ 
+              title: 'Analysis complete', 
+              description: 'The AI has provided refined suggestions for your review.' 
+          });
       }
     } catch (error: any) {
       if (isMounted) toast({ variant: 'destructive', title: 'Assistant error' });
@@ -380,6 +396,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       const { from, to, originalText } = aiPreview;
       editor.chain().focus().setTextSelection({ from, to }).deleteSelection().insertContentAt(from, originalText).unsetMark('strike').run();
       setAiPreview(null);
+      toast({ title: 'Suggestion discarded' });
   };
 
   const acceptAiSuggestion = () => {
@@ -387,6 +404,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       const { from, to, text } = aiPreview;
       editor.chain().focus().setTextSelection({ from, to }).deleteSelection().unsetMark('strike').insertContentAt(from, text).run();
       setAiPreview(null);
+      toast({ title: 'Changes accepted', description: 'Content has been successfully integrated.' });
   };
 
   const updateImageSize = (width: string) => {

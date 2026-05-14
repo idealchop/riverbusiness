@@ -214,7 +214,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                   type: 'curved' 
               };
               sync(elements, [...connections, newConn]);
-              toast({ title: 'Logic Linked' });
+              toast({ 
+                  title: 'Logical node connected', 
+                  description: 'Flow sequence has been successfully established.' 
+              });
           }
           setPendingConnFrom(null);
           setCurrentMouseCoords(null);
@@ -249,6 +252,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const deleteElement = (id: string) => {
       sync(elements.filter(el => el.id !== id), connections.filter(c => c.fromId !== id && c.toId !== id));
       if (selectedId === id) setSelectedId(null);
+      toast({ title: 'Element removed', description: 'The selected block and its connections have been deleted.' });
   };
 
   const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string) => {

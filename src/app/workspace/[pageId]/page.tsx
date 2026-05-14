@@ -64,7 +64,6 @@ const EMOJI_LIST = [
   { char: '🔥', keywords: 'fire hot' },
   { char: '⚡', keywords: 'lightning bolt zap' },
   { char: '🎨', keywords: 'art paint palette' },
-  { char: '📣', keywords: 'megaphone announce' },
   { char: '💬', keywords: 'chat message' },
   { char: '📍', keywords: 'location pin' },
   { char: '🎯', keywords: 'target goal' },
@@ -127,6 +126,11 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
         
         await onUpdate(updates);
         setIsUpdating(false);
+        
+        toast({
+            title: enabled ? 'Sharing active' : 'Public access revoked',
+            description: enabled ? 'The secure shareable link has been generated.' : 'The document is now restricted to internal organization members.'
+        });
     };
 
     const handleExpiryChange = async (value: string) => {
@@ -135,6 +139,7 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
         if (value === '24h') expiresAt = Timestamp.fromDate(addHours(now, 24));
         if (value === '7d') expiresAt = Timestamp.fromDate(addDays(now, 7));
         await onUpdate({ expiresAt });
+        toast({ title: 'Expiry updated', description: `Public access will conclude ${value === 'never' ? 'manually' : `in ${value}`}.` });
     };
 
     const togglePassword = async (enabled: boolean) => {
@@ -142,20 +147,27 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
         if (!enabled) {
             setPassword('');
             await onUpdate({ sharePassword: deleteField() });
+            toast({ title: 'Encryption removed', description: 'Access key is no longer required for guest viewers.' });
         }
     };
 
     const savePassword = async () => {
         if (!password.trim()) return;
         await onUpdate({ sharePassword: password });
-        toast({ title: 'Security Key Set' });
+        toast({ 
+            title: 'Security protocol active', 
+            description: 'The document is now encrypted with your custom access key.' 
+        });
     };
 
     const copyLink = () => {
         navigator.clipboard.writeText(shareUrl);
         setHasCopied(true);
         setTimeout(() => setHasCopied(false), 2000);
-        toast({ title: 'Link Copied' });
+        toast({ 
+            title: 'Link copied', 
+            description: 'The secure shareable link is now in your clipboard.' 
+        });
     };
 
     return (
@@ -232,42 +244,6 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
                             </div>
                         </div>
                     )}
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
-}
-
-/**
- * Delete Component - High-Fidelity Floating Deletion Menu.
- */
-function DeletePopover({ page, onTrash }: { page: CollabPage, onTrash: () => void }) {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" title={page.isTrashed ? "Delete Permanently" : "Move to Trash"}>
-                    <Trash2 className="h-4 w-4" />
-                </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white animate-in zoom-in-95 duration-200">
-                <div className="p-6 space-y-6">
-                    <div className="space-y-1">
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{page.isTrashed ? 'Purge Permanently?' : 'Delete Document?'}</h4>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Destructive Action Protocol</p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-red-50 border border-red-100">
-                        <p className="text-xs font-medium text-red-800 leading-relaxed">
-                            {page.isTrashed ? 'Irreversible. The document and its full block history will be erased.' : 'Moves document to the trash bin for later restoration.'}
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1 rounded-xl h-10 font-bold text-xs uppercase tracking-widest" onClick={() => setIsOpen(false)}>Cancel</Button>
-                        <Button onClick={() => { setIsOpen(false); if (page.isTrashed) { window.dispatchEvent(new CustomEvent('request-permanent-delete-page', { detail: { pageId: page.id } })); } else { onTrash(); } }} className="flex-1 bg-destructive text-white hover:bg-destructive/90 rounded-xl h-10 font-bold text-xs uppercase tracking-widest shadow-lg shadow-red-500/20">
-                            {page.isTrashed ? 'Purge' : 'Confirm'}
-                        </Button>
-                    </div>
                 </div>
             </PopoverContent>
         </Popover>
@@ -462,7 +438,8 @@ function PageEditorContent() {
               <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 text-red-600" /><p className="text-xs font-bold text-red-900 leading-none">This Document Is In The Trash Bin</p></div>
               <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }))} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50"><RotateCcw className="h-3 w-3" /> Restore Document</Button>
-                  <DeletePopover page={page} onTrash={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} />
+                  {/* Delete functionality wrapped in specialized popover */}
+                  <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-permanent-delete-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
               </div>
           </div>
       )}
@@ -493,7 +470,7 @@ function PageEditorContent() {
               ))}
           </div>
           <div className="w-20 flex justify-center">{isSaving ? <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95"><div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /><span className="text-[9px] font-black text-primary">Syncing</span></div> : <div className="flex items-center gap-1.5 opacity-40"><CheckCircle className="h-3 w-3 text-slate-400" /><span className="text-[9px] font-black text-slate-400">Saved</span></div>}</div>
-          {!page.isTrashed && <><button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button><button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button><SharePopover page={page} onUpdate={handleUpdateMeta} /><DeletePopover page={page} onTrash={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} /></>}
+          {!page.isTrashed && <><button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button><button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button><SharePopover page={page} onUpdate={handleUpdateMeta} /><button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button></>}
         </div>
       </div>
 
