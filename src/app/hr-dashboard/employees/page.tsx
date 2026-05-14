@@ -12,7 +12,8 @@ import {
   Activity,
   Fingerprint,
   Building,
-  ShieldCheck
+  ShieldCheck,
+  ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -197,114 +198,188 @@ export default function EmployeesPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow className="border-none">
-                <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400 py-4">Employee</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position & Org</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary Config</TableHead>
-                <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Management</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</TableCell></TableRow>
-              ) : paginatedEmployees.map((emp) => {
-                const nameInitials = emp.name?.split(' ').map(n => n[0]).join('') || '?';
-                
-                // IDENTIFIER: Any user with a plan is considered the Owner
-                const isOwner = !!emp.plan;
+          {/* Desktop View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow className="border-none">
+                  <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400 py-4">Employee</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position & Org</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary Config</TableHead>
+                  <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Management</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</TableCell></TableRow>
+                ) : paginatedEmployees.map((emp) => {
+                  const nameInitials = emp.name?.split(' ').map(n => n[0]).join('') || '?';
+                  
+                  // IDENTIFIER: Any user with a plan is considered the Owner
+                  const isOwner = !!emp.plan;
 
-                return (
-                  <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
-                    <TableCell className="pl-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
-                            <AvatarImage src={emp.photoURL} alt={emp.name} />
-                            <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
-                                {nameInitials}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                             <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
-                             {isOwner && (
-                                <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-[0.2em] h-4 px-1.5">
-                                    Workspace Owner
-                                </Badge>
-                             )}
+                  return (
+                    <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
+                      <TableCell className="pl-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
+                              <AvatarImage src={emp.photoURL} alt={emp.name} />
+                              <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
+                                  {nameInitials}
+                              </AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                               <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{emp.name || 'Untitled Profile'}</p>
+                               {isOwner && (
+                                  <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-[0.2em] h-4 px-1.5">
+                                      Workspace Owner
+                                  </Badge>
+                               )}
+                            </div>
+                            <p className="text-[9px] font-black text-primary uppercase tracking-tighter">{emp.hrProfile?.employeeNumber || 'ID PENDING'}</p>
                           </div>
-                          <p className="text-[9px] font-black text-primary uppercase tracking-tighter">{emp.hrProfile?.employeeNumber || 'ID PENDING'}</p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                       <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-700">{emp.hrProfile?.position || 'N/A'}</p>
-                          <div className="flex items-center gap-2">
-                             <span className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{emp.hrProfile?.department || 'General'}</span>
-                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                             <Badge variant="secondary" className="bg-slate-50 text-[8px] font-black uppercase tracking-widest text-slate-400 border-none h-4 px-1.5">
-                                <Building className="h-2 w-2 mr-1" /> {emp.companyId}
-                             </Badge>
-                          </div>
-                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn(
-                        "text-[9px] font-bold uppercase border-none px-3 py-1 shadow-sm",
-                        emp.hrProfile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
-                      )}>
-                        {emp.hrProfile?.status || 'Active'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
+                      </TableCell>
+                      <TableCell>
+                         <div className="space-y-1">
+                            <p className="text-sm font-bold text-slate-700">{emp.hrProfile?.position || 'N/A'}</p>
+                            <div className="flex items-center gap-2">
+                               <span className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{emp.hrProfile?.department || 'General'}</span>
+                               <div className="h-1 w-1 rounded-full bg-slate-200" />
+                               <Badge variant="secondary" className="bg-slate-50 text-[8px] font-black uppercase tracking-widest text-slate-400 border-none h-4 px-1.5">
+                                  <Building className="h-2 w-2 mr-1" /> {emp.companyId}
+                               </Badge>
+                            </div>
+                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn(
+                          "text-[9px] font-bold uppercase border-none px-3 py-1 shadow-sm",
+                          emp.hrProfile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+                        )}>
+                          {emp.hrProfile?.status || 'Active'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-900">₱{(Number(emp.hrProfile?.rate) || 0).toLocaleString()}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{emp.hrProfile?.salaryType || 'Monthly'}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest gap-2 bg-white border-slate-200" onClick={() => handleOpenDetails(emp as AppUser)}>
+                                Profile <ArrowRight className="h-3 w-3" />
+                            </Button>
+                            {isWorkspaceOwner && (
+                              <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56 rounded-xl border-slate-200 p-1 shadow-2xl">
+                                  <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2.5 px-3">Management</DropdownMenuLabel>
+                                  <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'performance')}>
+                                      <Activity className="h-4 w-4 opacity-50" /> Performance Analysis
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'attendance')}>
+                                      <Fingerprint className="h-4 w-4 opacity-50" /> Attendance Record
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => { setEmployeeToEdit(emp as AppUser); setIsAddDialogOpen(true); }}>
+                                      <UserCog className="h-4 w-4 opacity-50" /> Edit Credentials
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-50" />
+                                  <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer" onClick={() => setEmployeeToDelete(emp as AppUser)}>
+                                      <Trash2 className="h-4 w-4 opacity-50" /> Terminate Access
+                                  </DropdownMenuItem>
+                              </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {!isLoading && filteredEmployees.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 font-bold text-slate-300 italic uppercase text-[10px] tracking-[0.3em]">No Employee Profiles Found</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="md:hidden divide-y divide-slate-50">
+            {isLoading ? (
+                <div className="py-20 text-center opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</div>
+            ) : paginatedEmployees.map((emp) => {
+              const nameInitials = emp.name?.split(' ').map(n => n[0]).join('') || '?';
+              const isOwner = !!emp.plan;
+
+              return (
+                <div key={emp.id} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors" onClick={() => handleOpenDetails(emp as AppUser)}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
+                        <AvatarImage src={emp.photoURL} alt={emp.name} />
+                        <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
+                          {nameInitials}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-slate-900">₱{(Number(emp.hrProfile?.rate) || 0).toLocaleString()}</p>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{emp.hrProfile?.salaryType || 'Monthly'}</p>
+                        <div className="flex items-center gap-2">
+                           <p className="text-sm font-bold text-slate-900">{emp.name || 'Untitled Profile'}</p>
+                           {isOwner && (
+                              <Badge className="bg-primary/10 text-primary border-none text-[7px] font-black uppercase tracking-[0.1em] h-3.5 px-1 flex items-center justify-center">
+                                  Owner
+                              </Badge>
+                           )}
+                        </div>
+                        <p className="text-[9px] font-black text-primary uppercase tracking-tighter">{emp.hrProfile?.employeeNumber || 'ID PENDING'}</p>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest gap-2 bg-white border-slate-200" onClick={() => handleOpenDetails(emp as AppUser)}>
-                              Profile <ArrowRight className="h-3 w-3" />
-                          </Button>
-                          {isWorkspaceOwner && (
-                            <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 rounded-xl border-slate-200 p-1 shadow-2xl">
-                                <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2.5 px-3">Management</DropdownMenuLabel>
-                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'performance')}>
-                                    <Activity className="h-4 w-4 opacity-50" /> Performance Analysis
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'attendance')}>
-                                    <Fingerprint className="h-4 w-4 opacity-50" /> Attendance Record
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => { setEmployeeToEdit(emp as AppUser); setIsAddDialogOpen(true); }}>
-                                    <UserCog className="h-4 w-4 opacity-50" /> Edit Credentials
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-slate-50" />
-                                <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 text-red-600 focus:text-red-600 rounded-lg cursor-pointer" onClick={() => setEmployeeToDelete(emp as AppUser)}>
-                                    <Trash2 className="h-4 w-4 opacity-50" /> Terminate Access
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                    </div>
+                    <Badge variant="outline" className={cn(
+                      "text-[9px] font-bold uppercase border-none px-3 py-1 shadow-sm",
+                      emp.hrProfile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+                    )}>
+                      {emp.hrProfile?.status || 'Active'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-1">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Position & Dept</p>
+                          <p className="text-xs font-bold text-slate-700">{emp.hrProfile?.position || 'N/A'}</p>
+                          <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{emp.hrProfile?.department || 'General'}</p>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {!isLoading && filteredEmployees.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center py-20 font-bold text-slate-300 italic uppercase text-[10px] tracking-[0.3em]">No Employee Profiles Found</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+                      <div className="space-y-1 text-right">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Salary Config</p>
+                          <p className="text-sm font-bold text-slate-900">₱{(Number(emp.hrProfile?.rate) || 0).toLocaleString()}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{emp.hrProfile?.salaryType || 'Monthly'}</p>
+                      </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                     <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-slate-50 text-[8px] font-black uppercase tracking-widest text-slate-400 border-none h-4 px-1.5">
+                              <Building className="h-2 w-2 mr-1" /> {emp.companyId}
+                          </Badge>
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                            Manage <ChevronRight className="h-3 w-3" />
+                        </Button>
+                     </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!isLoading && filteredEmployees.length === 0 && (
+                <div className="py-20 text-center font-bold text-slate-300 italic uppercase text-[10px] tracking-[0.3em]">No Employee Profiles Found</div>
+            )}
+          </div>
         </CardContent>
         <PaginationFooter 
             totalItems={filteredEmployees.length}
