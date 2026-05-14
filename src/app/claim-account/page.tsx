@@ -248,7 +248,7 @@ export default function ClaimAccountPage() {
                     <Label htmlFor="clientId" className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wide">Client ID</Label>
                     <Input 
                       id="clientId" 
-                      placeholder="e.g. SC25000001" 
+                      placeholder="e.g. SC25102938" 
                       className="h-12 rounded-xl bg-slate-50 border-slate-100 px-4 font-bold" 
                       {...claimForm.register('clientId')} 
                       disabled={claimForm.formState.isSubmitting} 
@@ -318,7 +318,7 @@ export default function ClaimAccountPage() {
                                             </div>
                                             <div className="flex-1">
                                                 <p className="text-sm font-bold text-slate-900">{interest.label}</p>
-                                                <p className="text-xs text-slate-400">{interest.description}</p>
+                                                <p className="text-xs text-muted-foreground">{interest.description}</p>
                                             </div>
                                             {registerForm.watch('interests').includes(interest.label) && <CheckCircle className="h-5 w-5 text-blue-500" />}
                                         </div>
