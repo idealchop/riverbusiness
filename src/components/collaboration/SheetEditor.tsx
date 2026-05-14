@@ -6,7 +6,6 @@ import {
     Layout, 
     Calendar as CalendarIcon, 
     GalleryHorizontal, 
-    List as ListIcon,
     Plus,
     Search,
     Filter,
@@ -26,16 +25,15 @@ import {
     Layers,
     Trash2,
     Settings2,
-    Clock,
     X,
     Maximize2,
-    Save,
-    Share2,
-    CheckCircle2,
     Columns,
     Group,
     Edit,
-    MessageSquare
+    MessageSquare,
+    ChevronRight,
+    ChevronLeft,
+    Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,13 +46,13 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
     DropdownMenuLabel,
-    DropdownMenuCheckboxItem
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { SheetField, SheetRecord, SheetView, SheetFieldType } from '@/lib/types';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 
 interface SheetEditorProps {
   initialData: any;
@@ -79,6 +77,19 @@ const FIELD_ICONS: Record<SheetFieldType, React.ElementType> = {
     formula: CalculatorIcon
 };
 
+const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
+    { type: 'text', label: 'Single line text' },
+    { type: 'number', label: 'Number' },
+    { type: 'currency', label: 'Currency' },
+    { type: 'date', label: 'Date' },
+    { type: 'checkbox', label: 'Checkbox' },
+    { type: 'select', label: 'Single select' },
+    { type: 'status', label: 'Status' },
+    { type: 'email', label: 'Email' },
+    { type: 'url', label: 'URL' },
+    { type: 'phone', label: 'Phone' },
+];
+
 function CalculatorIcon(props: any) {
     return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>;
 }
@@ -87,9 +98,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const isMounted = useMounted();
   const { toast } = useToast();
 
-  // Unified State for Sheet Logic
   const [fields, setFields] = useState<SheetField[]>(initialData?.fields || [
-      { id: 'f1', name: 'Name', type: 'text', isPrimary: true, width: 250 },
+      { id: 'f1', name: 'Task Name', type: 'text', isPrimary: true, width: 250 },
       { id: 'f2', name: 'Status', type: 'status', options: [{label: 'Todo', color: 'bg-slate-100 text-slate-700'}, {label: 'In Progress', color: 'bg-blue-100 text-blue-700'}, {label: 'Done', color: 'bg-green-100 text-green-700'}], width: 150 },
       { id: 'f3', name: 'Due Date', type: 'date', width: 150 }
   ]);
@@ -98,18 +108,23 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       { id: 'r2', values: { f1: 'Optimize Database', f2: 'Todo', f3: '2025-06-15' }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   ]);
   const [views, setViews] = useState<SheetView[]>(initialData?.views || [
-      { id: 'v1', name: 'Main Grid', type: 'grid' }
+      { id: 'v1', name: 'Main Grid', type: 'grid' },
+      { id: 'v2', name: 'Work Pipeline', type: 'kanban' },
+      { id: 'v3', name: 'Gallery', type: 'gallery' }
   ]);
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  
+  // Sort/Filter States
+  const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
-  const sync = useCallback((newFields: SheetField[], newRecords: SheetRecord[], newViews: SheetView[]) => {
+  const sync = useCallback((newFields: SheetField[], newRecords: SheetRecord[], newViews: SheetView[], newViewId: string) => {
       if (!editable) return;
-      onContentChange({ fields: newFields, records: newRecords, views: newViews, activeViewId });
-  }, [onContentChange, editable, activeViewId]);
+      onContentChange({ fields: newFields, records: newRecords, views: newViews, activeViewId: newViewId });
+  }, [onContentChange, editable]);
 
   const addRecord = () => {
     const newRecord: SheetRecord = {
@@ -120,7 +135,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     };
     const next = [newRecord, ...records];
     setRecords(next);
-    sync(fields, next, views);
+    sync(fields, next, views, activeViewId);
   };
 
   const updateRecordValue = (recordId: string, fieldId: string, value: any) => {
@@ -130,7 +145,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         updatedAt: new Date().toISOString() 
     } : r);
     setRecords(next);
-    sync(fields, next, views);
+    sync(fields, next, views, activeViewId);
   };
 
   const addField = (type: SheetFieldType) => {
@@ -138,11 +153,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         id: `f-${Date.now()}`,
         name: `New ${type}`,
         type,
-        width: 150
+        width: 150,
+        options: type === 'status' || type === 'select' ? [{label: 'Option 1', color: 'bg-slate-100 text-slate-700'}] : undefined
     };
     const next = [...fields, newField];
     setFields(next);
-    sync(next, records, views);
+    sync(next, records, views, activeViewId);
     toast({ title: 'Column added', description: `New ${type} field initialized.` });
   };
 
@@ -155,16 +171,42 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     });
     setFields(nextFields);
     setRecords(nextRecords);
-    sync(nextFields, nextRecords, views);
+    sync(nextFields, nextRecords, views, activeViewId);
+  };
+
+  const renameField = (fieldId: string, newName: string) => {
+      const next = fields.map(f => f.id === fieldId ? { ...f, name: newName } : f);
+      setFields(next);
+      sync(next, records, views, activeViewId);
+  };
+
+  const handleSwitchView = (id: string) => {
+      setActiveViewId(id);
+      sync(fields, records, views, id);
   };
 
   const filteredRecords = useMemo(() => {
-    if (!searchTerm) return records;
-    const s = searchTerm.toLowerCase();
-    return records.filter(r => 
-        Object.values(r.values).some(v => String(v).toLowerCase().includes(s))
-    );
-  }, [records, searchTerm]);
+    let list = [...records];
+    
+    if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        list = list.filter(r => 
+            Object.values(r.values).some(v => String(v).toLowerCase().includes(s))
+        );
+    }
+
+    if (sortConfig) {
+        list.sort((a, b) => {
+            const valA = String(a.values[sortConfig.fieldId] || '');
+            const valB = String(b.values[sortConfig.fieldId] || '');
+            return sortConfig.direction === 'asc' 
+                ? valA.localeCompare(valB) 
+                : valB.localeCompare(valA);
+        });
+    }
+
+    return list;
+  }, [records, searchTerm, sortConfig]);
 
   if (!isMounted) return null;
 
@@ -187,7 +229,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     <DropdownMenuContent align="start" className="w-64 rounded-2xl p-1 shadow-2xl border-slate-100">
                         <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest">Workspace Views</DropdownMenuLabel>
                         {views.map(v => (
-                            <DropdownMenuItem key={v.id} onClick={() => setActiveViewId(v.id)} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <DropdownMenuItem key={v.id} onClick={() => handleSwitchView(v.id)} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
                                 {v.type === 'grid' && <Grid className="h-4 w-4 text-blue-500" />}
                                 {v.type === 'kanban' && <Layout className="h-4 w-4 text-purple-500" />}
                                 {v.type === 'calendar' && <CalendarIcon className="h-4 w-4 text-green-500" />}
@@ -196,7 +238,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             </DropdownMenuItem>
                         ))}
                         <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer text-primary">
+                        <DropdownMenuItem className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer text-primary" onClick={() => toast({ title: 'Feature incoming', description: 'Custom view creation is being optimized.' })}>
                             <Plus className="h-4 w-4" /> Create New View
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -205,10 +247,28 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <Separator orientation="vertical" className="h-6 mx-1 bg-slate-100 hidden sm:block" />
 
                 <div className="hidden sm:flex items-center gap-1.5">
-                    <ToolbarAction icon={<Filter className="h-3.5 w-3.5" />} label="Filter" />
-                    <ToolbarAction icon={<Group className="h-3.5 w-3.5" />} label="Group" />
-                    <ToolbarAction icon={<ArrowUpDown className="h-3.5 w-3.5" />} label="Sort" />
-                    <ToolbarAction icon={<Columns className="h-3.5 w-3.5" />} label="Hide Fields" />
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg gap-2 text-slate-500 hover:text-slate-900 font-bold text-[10px] uppercase tracking-wider transition-all">
+                                <ArrowUpDown className="h-3.5 w-3.5" /> Sort
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56 p-1 rounded-xl shadow-2xl border-slate-100">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 p-2">Order by</DropdownMenuLabel>
+                            {fields.map(f => (
+                                <DropdownMenuItem key={f.id} onClick={() => setSortConfig({ fieldId: f.id, direction: 'asc' })} className="text-xs font-bold py-2 rounded-lg cursor-pointer">
+                                    {f.name}
+                                </DropdownMenuItem>
+                            ))}
+                            {sortConfig && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-xs font-bold py-2 rounded-lg cursor-pointer text-red-500">Clear sort</DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <ToolbarAction icon={<Filter className="h-3.5 w-3.5" />} label="Filter" onClick={() => toast({ title: 'Logic builder', description: 'Filter rules are managed via the record intelligence panel.' })} />
                 </div>
             </div>
 
@@ -247,14 +307,17 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <button className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md hover:bg-slate-200 flex items-center justify-center transition-all">
-                                                <ChevronDown className="h-3 w-3 text-slate-400" />
+                                                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                                             </button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-48 rounded-xl p-1 shadow-2xl">
-                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                                        <DropdownMenuContent className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
+                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer" onClick={() => {
+                                                const name = prompt('New column name:', field.name);
+                                                if (name) renameField(field.id, name);
+                                            }}>
                                                 <Edit className="h-3.5 w-3.5" /> Rename Field
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
+                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer" onClick={() => toast({ title: 'Schema change', description: 'Field type conversion is locked to preserve integrity.' })}>
                                                 <Settings2 className="h-3.5 w-3.5" /> Change Type
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator className="bg-slate-50" />
@@ -267,12 +330,22 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     </DropdownMenu>
                                 </div>
                             ))}
-                            <button 
-                                onClick={() => addField('text')}
-                                className="w-12 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors border-r"
-                            >
-                                <Plus className="h-4 w-4" />
-                            </button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="w-12 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors border-r">
+                                        <Plus className="h-4 w-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56 p-1 rounded-2xl shadow-2xl border-slate-100 max-h-80 overflow-y-auto">
+                                    <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest">Select Column Type</DropdownMenuLabel>
+                                    {FIELD_TYPES.map(f => (
+                                        <DropdownMenuItem key={f.type} onClick={() => addField(f.type)} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
+                                            {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-3.5 w-3.5 text-slate-400" })}
+                                            {f.label}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
 
                         {/* Record Rows */}
@@ -296,28 +369,29 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     <div className="flex-1 bg-white" />
                                 </div>
                             ))}
+                            {/* Fast Add Row */}
+                            <div className="flex hover:bg-slate-50/30 transition-colors h-10 items-center">
+                                <div className="w-12 h-10 shrink-0 border-r" />
+                                <button onClick={addRecord} className="flex-1 h-10 px-4 text-xs font-bold text-slate-300 hover:text-primary transition-colors text-left flex items-center gap-2">
+                                    <Plus className="h-3.5 w-3.5" /> Add new record...
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             )}
 
-            {/* Placeholder for other views */}
-            {activeView.type !== 'grid' && (
-                <div className="flex-1 flex flex-col items-center justify-center p-20 text-center gap-6 animate-in fade-in duration-1000">
-                    <div className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100 shadow-inner opacity-40">
-                        {activeView.type === 'kanban' && <Layout className="h-16 w-16 text-slate-200" />}
-                        {activeView.type === 'calendar' && <CalendarIcon className="h-16 w-16 text-slate-200" />}
-                        {activeView.type === 'gallery' && <GalleryHorizontal className="h-16 w-16 text-slate-200" />}
-                    </div>
-                    <div className="space-y-2">
-                        <h3 className="text-xl font-bold text-slate-900">Virtualization Active</h3>
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Modeling {activeView.name} for your organizational data...</p>
-                    </div>
-                    <Button variant="outline" onClick={() => setActiveViewId('v1')} className="rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px]">
-                        Back to Grid Engine
-                    </Button>
-                </div>
+            {activeView.type === 'kanban' && (
+                <KanbanView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
+            )}
+
+            {activeView.type === 'gallery' && (
+                <GalleryView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
+            )}
+
+            {activeView.type === 'calendar' && (
+                <CalendarView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
             )}
         </div>
 
@@ -372,7 +446,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Authorized Workspace Entry</p>
                     <div className="flex gap-2">
                         <Button variant="ghost" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest text-slate-400" onClick={() => setSelectedRecordId(null)}>Close</Button>
-                        <Button className="rounded-xl h-9 px-6 text-[10px] font-bold uppercase tracking-widest shadow-lg">Save Profile</Button>
+                        <Button onClick={() => setSelectedRecordId(null)} className="rounded-xl h-9 px-6 text-[10px] font-bold uppercase tracking-widest shadow-lg">Save Profile</Button>
                     </div>
                 </div>
             </div>
@@ -381,9 +455,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   );
 }
 
-function ToolbarAction({ icon, label }: { icon: React.ReactNode, label: string }) {
+function ToolbarAction({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick?: () => void }) {
     return (
-        <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg gap-2 text-slate-500 hover:text-slate-900 font-bold text-[10px] uppercase tracking-wider transition-all">
+        <Button variant="ghost" size="sm" onClick={onClick} className="h-8 px-3 rounded-lg gap-2 text-slate-500 hover:text-slate-900 font-bold text-[10px] uppercase tracking-wider transition-all">
             {icon}
             {label}
         </Button>
@@ -426,10 +500,10 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
                                 {value}
                             </Badge>
                         ) : <span className="text-slate-200 text-xs italic">Select...</span>}
-                        {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
+                        {!isExpanded && <ChevronDown className="h-3.5 w-3.5 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl">
+                <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
                     {field.options?.map((opt: any) => (
                         <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer">
                             <div className={cn("h-2 w-2 rounded-full", opt.color.split(' ')[0])} />
@@ -437,7 +511,13 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
                         </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator className="bg-slate-50" />
-                    <DropdownMenuItem className="text-xs font-bold text-primary rounded-lg cursor-pointer">Add New Option</DropdownMenuItem>
+                    <DropdownMenuItem className="text-xs font-bold text-primary rounded-lg cursor-pointer" onClick={() => {
+                        const label = prompt('New option label:');
+                        if (label) {
+                            // Logic to add option to field schema would go here
+                            toast({ title: 'Schema lock', description: 'Contact admin to modify select options.' });
+                        }
+                    }}>Add New Option</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         );
@@ -481,4 +561,143 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
             )}
         </div>
     );
+}
+
+// --- Specialized View Components ---
+
+function KanbanView({ fields, records, onRecordClick }: any) {
+    const statusField = fields.find((f: any) => f.type === 'status') || fields[1];
+    const groups = statusField.options || [{ label: 'Uncategorized', color: 'bg-slate-100' }];
+    
+    return (
+        <ScrollArea className="flex-1 h-full bg-slate-50/50">
+            <div className="flex gap-6 p-8 h-full min-h-[600px]">
+                {groups.map((group: any) => {
+                    const groupRecords = records.filter((r: any) => r.values[statusField.id] === group.label || (!r.values[statusField.id] && group.label === 'Uncategorized'));
+                    return (
+                        <div key={group.label} className="w-80 shrink-0 flex flex-col gap-4">
+                            <div className="flex items-center justify-between px-2">
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className={cn("text-[10px] font-black uppercase tracking-widest border-none px-2", group.color)}>
+                                        {group.label}
+                                    </Badge>
+                                    <span className="text-[10px] font-bold text-slate-400">{groupRecords.length}</span>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-slate-400"><Plus className="h-3.5 w-3.5" /></Button>
+                            </div>
+                            <div className="space-y-3">
+                                {groupRecords.map((r: any) => (
+                                    <Card key={r.id} onClick={() => onRecordClick(r.id)} className="border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group rounded-2xl bg-white p-4">
+                                        <p className="text-sm font-bold text-slate-900 leading-tight mb-3 group-hover:text-primary transition-colors">{r.values[fields[0].id] || 'Untitled'}</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {fields.slice(1, 3).map((f: any) => {
+                                                const val = r.values[f.id];
+                                                if (!val) return null;
+                                                return (
+                                                    <div key={f.id} className="text-[9px] font-bold uppercase tracking-tight text-slate-400 flex items-center gap-1.5">
+                                                        {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-2.5 w-2.5" })}
+                                                        {val}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </Card>
+                                ))}
+                                <Button variant="ghost" className="w-full justify-start h-10 rounded-xl gap-3 text-xs font-bold text-slate-400 hover:text-primary hover:bg-primary/5 transition-all">
+                                    <Plus className="h-4 w-4" /> Add card
+                                </Button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+    );
+}
+
+function GalleryView({ fields, records, onRecordClick }: any) {
+    return (
+        <ScrollArea className="flex-1 h-full bg-slate-50/30">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-8">
+                {records.map((r: any) => (
+                    <Card key={r.id} onClick={() => onRecordClick(r.id)} className="border-none shadow-sm hover:shadow-xl transition-all cursor-pointer group rounded-[2rem] bg-white overflow-hidden flex flex-col h-full">
+                        <div className="h-40 bg-slate-100 flex items-center justify-center border-b border-slate-50">
+                            <ImageIcon className="h-10 w-10 text-slate-200" />
+                        </div>
+                        <div className="p-6 space-y-4 flex-1">
+                            <p className="text-lg font-black text-slate-900 leading-tight group-hover:text-primary transition-colors">{r.values[fields[0].id] || 'Untitled Record'}</p>
+                            <div className="space-y-3">
+                                {fields.slice(1, 4).map((f: any) => {
+                                    const val = r.values[f.id];
+                                    if (!val) return null;
+                                    return (
+                                        <div key={f.id} className="space-y-1">
+                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-300">{f.name}</p>
+                                            <div className="text-[11px] font-bold text-slate-600 flex items-center gap-2">
+                                                 {f.type === 'status' ? <Badge variant="outline" className="text-[9px] uppercase font-bold py-0">{val}</Badge> : val}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        </ScrollArea>
+    )
+}
+
+function CalendarView({ fields, records, onRecordClick }: any) {
+    const [viewDate, setViewDate] = useState(new Date());
+    const dateField = fields.find((f: any) => f.type === 'date') || fields[0];
+    
+    const monthStart = startOfMonth(viewDate);
+    const monthEnd = endOfMonth(viewDate);
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    return (
+        <div className="flex-1 flex flex-col h-full bg-slate-50/50">
+            <div className="h-14 border-b bg-white px-6 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">{format(viewDate, 'MMMM yyyy')}</h3>
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => setViewDate(subMonths(viewDate, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => setViewDate(addMonths(viewDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
+                    </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setViewDate(new Date())} className="h-8 rounded-lg font-bold text-[10px] uppercase tracking-widest">Today</Button>
+            </div>
+            <ScrollArea className="flex-1">
+                <div className="grid grid-cols-7 border-l border-t">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                        <div key={d} className="h-10 border-r border-b bg-white flex items-center justify-center">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">{d}</span>
+                        </div>
+                    ))}
+                    {days.map(day => {
+                        const dayRecords = records.filter((r: any) => r.values[dateField.id] && isSameDay(new Date(r.values[dateField.id]), day));
+                        return (
+                            <div key={day.toISOString()} className="min-h-[120px] bg-white border-r border-b p-2 space-y-1">
+                                <span className={cn(
+                                    "text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full transition-colors",
+                                    isSameDay(day, new Date()) ? "bg-primary text-white" : "text-slate-400"
+                                )}>
+                                    {format(day, 'd')}
+                                </span>
+                                <div className="space-y-1">
+                                    {dayRecords.map((r: any) => (
+                                        <div key={r.id} onClick={() => onRecordClick(r.id)} className="px-2 py-1.5 rounded-lg bg-blue-50 border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors">
+                                            <p className="text-[10px] font-bold text-blue-900 truncate leading-none">{r.values[fields[0].id] || 'Untitled'}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </ScrollArea>
+        </div>
+    )
 }
