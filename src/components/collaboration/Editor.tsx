@@ -420,9 +420,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
       {editable && !editor.isDestroyed && (
         <TooltipProvider delayDuration={0}>
-          <div className="sticky top-14 z-30 mx-auto w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4 animate-in fade-in duration-500">
+          <div className="sticky top-14 z-30 mx-auto w-full sm:w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-2xl sm:rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4 animate-in fade-in duration-500 overflow-hidden">
               {(isAiProcessing || isUploading) && (
-                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10">
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10 z-50">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
@@ -431,30 +431,30 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   </div>
               )}
 
-              <div className="flex items-center gap-0.5">
-                  <div className="flex items-center px-1">
+              <div className="flex items-center w-full overflow-x-auto scrollbar-none px-2 sm:px-0 gap-0.5">
+                  <div className="flex items-center px-1 shrink-0">
                       <Button onClick={() => setShowAiToolbar(!showAiToolbar)} className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-widest transition-all", showAiToolbar ? "bg-primary text-white shadow-lg scale-105" : "bg-slate-900 text-white hover:bg-slate-800")}>
                           <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} /> Assistant
                       </Button>
                   </div>
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  <div className="flex items-center gap-1 px-1">
+                  <div className="flex items-center gap-1 px-1 shrink-0">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="Heading 1" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="Heading 2" />
                   </div>
                   
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  <div className="flex items-center gap-0.5 px-1">
+                  <div className="flex items-center gap-0.5 px-1 shrink-0">
                       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} icon={<AlignLeft className="h-4 w-4" />} label="Align Left" />
                       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} icon={<AlignCenter className="h-4 w-4" />} label="Align Center" />
                       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} icon={<AlignRight className="h-4 w-4" />} label="Align Right" />
                   </div>
 
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  <div className="flex items-center gap-0.5 px-1">
+                  <div className="flex items-center gap-0.5 px-1 shrink-0">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} label="Bold" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon className="h-4 w-4" />} label="Underline" />
@@ -489,20 +489,20 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Palette className="h-4 w-4" />} label="Highlight" />
                   </div>
                   
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  <div className="flex items-center gap-0.5 px-1">
+                  <div className="flex items-center gap-0.5 px-1 shrink-0">
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="Bullet List" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Task List" />
                   </div>
                   
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  <div className="flex items-center gap-0.5 px-1">
+                  <div className="flex items-center gap-0.5 px-1 shrink-0">
                       <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Insert Link" />
                       <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Attach Image" />
                       
-                      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+                      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                       
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -533,15 +533,15 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
               {showAiToolbar && (
                   <div className="w-full px-2 py-1.5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-px flex-1 bg-slate-100" />
+                      <div className="flex items-center gap-1.5 w-full overflow-x-auto scrollbar-none px-2">
+                        <div className="h-px w-4 bg-slate-100 shrink-0" />
                         <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
                         <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
-                        <div className="h-px flex-1 bg-slate-100" />
+                        <div className="h-px flex-1 bg-slate-100 shrink-0 min-w-[20px]" />
                       </div>
-                      <div className="flex items-center gap-2 px-2 pb-1">
-                          <Input placeholder="Type a custom goal..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px]" />
+                      <div className="flex items-center gap-2 px-2 pb-1 w-full">
+                          <Input placeholder="Type a custom goal..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1" />
                           <Button disabled={!customGoal.trim()} onClick={() => callAiAssistant('custom', customGoal)} size="icon" className="h-9 w-9 rounded-xl shrink-0"><Send className="h-3.5 w-3.5" /></Button>
                       </div>
                   </div>
@@ -554,10 +554,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       {editor && (
           <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('image')}>
             <Card className="flex items-center gap-1 p-1 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl rounded-2xl animate-in zoom-in-95 duration-200">
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('25%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">XS</Button>
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('50%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">MD</Button>
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('75%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">LG</Button>
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('100%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight">Full</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('25%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">XS</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('50%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">MD</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('75%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">LG</Button>
+                <Button variant="ghost" size="sm" onClick={() => updateImageSize('100%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">Full</Button>
                 <Separator orientation="vertical" className="h-4 mx-1" />
                 <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().deleteSelection().run()} className="h-8 w-8 text-red-500 rounded-lg hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
             </Card>
@@ -565,16 +565,16 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       )}
 
       {aiPreview && (
-          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500">
-              <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-6 flex items-center gap-6 border border-white/10">
+          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500 w-[90%] sm:w-auto">
+              <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-4 sm:px-6 flex items-center justify-between sm:justify-start gap-3 sm:gap-6 border border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/20 text-primary"><Sparkles className="h-4 w-4" /></div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Review changes</p>
+                    <div className="p-1.5 sm:p-2 rounded-full bg-primary/20 text-primary shrink-0"><Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>
+                    <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Review changes</p>
                 </div>
-                <Separator orientation="vertical" className="h-4 bg-white/10" />
+                <Separator orientation="vertical" className="h-4 bg-white/10 hidden sm:block" />
                 <div className="flex items-center gap-2">
-                    <Button onClick={acceptAiSuggestion} variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white"><Check className="h-5 w-5" /></Button>
-                    <Button onClick={discardAiSuggestion} variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"><X className="h-5 w-5" /></Button>
+                    <Button onClick={acceptAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white"><Check className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+                    <Button onClick={discardAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"><X className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
                 </div>
               </Card>
           </div>
@@ -594,7 +594,7 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); onClick(); }} disabled={disabled}
-                    className={cn("h-8 w-8 rounded-xl transition-all", active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100")}>
+                    className={cn("h-8 w-8 rounded-xl transition-all shrink-0", active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100")}>
                     {icon}
                 </Button>
             </TooltipTrigger>
@@ -607,7 +607,7 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
 
 function AiAction({ icon, label, onClick }: any) {
     return (
-        <Button variant="ghost" size="sm" onClick={onClick} className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all">
+        <Button variant="ghost" size="sm" onClick={onClick} className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all shrink-0 whitespace-nowrap">
             {icon} {label}
         </Button>
     );
