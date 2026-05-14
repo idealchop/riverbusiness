@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -34,7 +33,9 @@ import {
     Share2,
     CheckCircle2,
     Columns,
-    Group
+    Group,
+    Edit,
+    MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
