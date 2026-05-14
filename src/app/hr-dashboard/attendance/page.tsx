@@ -23,7 +23,8 @@ import {
   Loader2,
   Send,
   Calendar,
-  Plus
+  Plus,
+  ArrowRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -491,61 +492,118 @@ export default function AttendancePage() {
           
           <CardContent className="p-0">
             <TabsContent value="attendance" className="m-0 focus-visible:ring-0">
-              <Table>
-                <TableHeader className="bg-slate-50/50">
-                  <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Date</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time In</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time Out</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Time</TableHead>
-                    <TableHead className="text-right pr-6">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingAttendance ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading ledger...</TableCell></TableRow>
-                  ) : paginatedAttendance.map((log) => {
-                    const timeIn = toSafeDate(log.timeIn);
-                    const timeOut = toSafeDate(log.timeOut);
-                    const employee = allUsers?.find(u => u.id === log.employeeId);
-                    return (
-                      <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
-                        <TableCell className="pl-6 py-4">
-                           <div className="flex flex-col">
-                              <span className="font-bold text-slate-900 text-sm">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'N/A'}</span>
-                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <button onClick={() => handleEmployeeClick(log.employeeId)} className="flex items-center gap-3 hover:text-primary transition-colors text-left outline-none group/name" disabled={!isManagement && log.employeeId !== user?.id}>
-                            <Avatar className="h-8 w-8 rounded-lg shadow-inner border border-slate-100 group-hover/name:ring-2 group-hover/name:ring-primary/20 transition-all">
-                                <AvatarImage src={employee?.photoURL} alt={log.employeeName} />
-                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 font-bold text-[10px] uppercase">
-                                    {log.employeeName?.charAt(0) || 'E'}
-                                </AvatarFallback>
-                            </Avatar>
-                            <p className="text-sm font-bold text-slate-700 group-hover/name:text-primary underline-offset-4 group-hover/name:underline">{log.employeeName}</p>
-                          </button>
-                        </TableCell>
-                        <TableCell className="text-xs font-semibold text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
-                        <TableCell className="text-xs font-semibold text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
-                        <TableCell className="text-xs font-black text-primary uppercase tracking-tighter">{formatDuration(log.totalMinutes)}</TableCell>
-                        <TableCell className="text-right pr-6">
-                          <Badge className={cn(
-                            "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
-                            log.validation_status === 'Valid' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                          )}>
-                            {log.status || 'present'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {!loadingAttendance && paginatedAttendance.length === 0 && (
-                      <TableRow><TableCell colSpan={6} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No work logs found.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              {/* Desktop Attendance Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader className="bg-slate-50/50">
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Date</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time In</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time Out</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Total Time</TableHead>
+                      <TableHead className="text-right pr-6">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingAttendance ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading ledger...</TableCell></TableRow>
+                    ) : paginatedAttendance.map((log) => {
+                      const timeIn = toSafeDate(log.timeIn);
+                      const timeOut = toSafeDate(log.timeOut);
+                      const employee = allUsers?.find(u => u.id === log.employeeId);
+                      return (
+                        <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
+                          <TableCell className="pl-6 py-4">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-slate-900 text-sm">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'N/A'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <button onClick={() => handleEmployeeClick(log.employeeId)} className="flex items-center gap-3 hover:text-primary transition-colors text-left outline-none group/name" disabled={!isManagement && log.employeeId !== user?.id}>
+                              <Avatar className="h-8 w-8 rounded-lg shadow-inner border border-slate-100 group-hover/name:ring-2 group-hover/name:ring-primary/20 transition-all">
+                                  <AvatarImage src={employee?.photoURL} alt={log.employeeName} />
+                                  <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 font-bold text-[10px] uppercase">
+                                      {log.employeeName?.charAt(0) || 'E'}
+                                  </AvatarFallback>
+                              </Avatar>
+                              <p className="text-sm font-bold text-slate-700 group-hover/name:text-primary underline-offset-4 group-hover/name:underline">{log.employeeName}</p>
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
+                          <TableCell className="text-xs font-semibold text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                          <TableCell className="text-xs font-black text-primary uppercase tracking-tighter">{formatDuration(log.totalMinutes)}</TableCell>
+                          <TableCell className="text-right pr-6">
+                            <Badge className={cn(
+                              "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
+                              log.validation_status === 'Valid' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                            )}>
+                              {log.status || 'present'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Attendance Cards */}
+              <div className="md:hidden divide-y divide-slate-50">
+                {loadingAttendance ? (
+                  <div className="py-20 text-center animate-pulse font-medium text-slate-400">Loading ledger...</div>
+                ) : paginatedAttendance.map((log) => {
+                  const timeIn = toSafeDate(log.timeIn);
+                  const timeOut = toSafeDate(log.timeOut);
+                  const employee = allUsers?.find(u => u.id === log.employeeId);
+                  return (
+                    <div key={log.id} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors" onClick={() => handleEmployeeClick(log.employeeId)}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
+                            <AvatarImage src={employee?.photoURL} alt={log.employeeName} />
+                            <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
+                              {log.employeeName?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{log.employeeName}</p>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-tighter">
+                              {log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className={cn(
+                          "text-[9px] font-bold uppercase px-3 h-6 shadow-sm",
+                          log.validation_status === 'Valid' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                        )}>
+                          {log.status || 'present'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2 pt-2 text-center">
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Time In</p>
+                          <p className="text-xs font-bold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Time Out</p>
+                          <p className="text-xs font-bold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</p>
+                        </div>
+                        <div className="space-y-1 border-l">
+                          <p className="text-[8px] font-black text-primary uppercase tracking-widest">Duration</p>
+                          <p className="text-xs font-black text-primary">{formatDuration(log.totalMinutes)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {!loadingAttendance && displayAttendance.length === 0 && (
+                  <div className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No work logs found.</div>
+              )}
+
               <PaginationFooter 
                 totalItems={displayAttendance.length}
                 currentPage={attendancePage}
@@ -554,55 +612,99 @@ export default function AttendancePage() {
             </TabsContent>
 
             <TabsContent value="leaves" className="m-0 focus-visible:ring-0">
-               <Table>
-                <TableHeader className="bg-slate-50/50">
-                  <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Period</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Category</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
-                    <TableHead className="text-right pr-6">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingLeaves ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
-                  ) : paginatedLeaves.map(req => {
+               {/* Desktop Leave Table */}
+               <div className="hidden md:block">
+                 <Table>
+                  <TableHeader className="bg-slate-50/50">
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Period</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Category</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
+                      <TableHead className="text-right pr-6">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingLeaves ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading history...</TableCell></TableRow>
+                    ) : paginatedLeaves.map(req => {
+                      const employee = allUsers?.find(u => u.id === req.employeeId);
+                      return (
+                      <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                        <TableCell className="pl-6 py-4">
+                          <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
+                        </TableCell>
+                        <TableCell>
+                          <button onClick={() => handleEmployeeClick(req.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors underline-offset-4 hover:underline" disabled={!isManagement && req.employeeId !== user?.id}>
+                              <Avatar className="h-7 w-7 rounded-lg shadow-inner border border-slate-100">
+                                  <AvatarImage src={employee?.photoURL} alt={req.employeeName} />
+                                  <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
+                                      {req.employeeName?.charAt(0)}
+                                  </AvatarFallback>
+                              </Avatar>
+                              {req.employeeName}
+                          </button>
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
+                        <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
+                        <TableCell className="text-right pr-6">
+                            <Badge className={cn(
+                                "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
+                                req.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                req.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                            )}>
+                                {req.status}
+                            </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )})}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Leave Cards */}
+              <div className="md:hidden divide-y divide-slate-50">
+                 {loadingLeaves ? (
+                   <div className="py-20 text-center animate-pulse font-medium text-slate-400">Loading history...</div>
+                 ) : paginatedLeaves.map(req => {
                     const employee = allUsers?.find(u => u.id === req.employeeId);
                     return (
-                    <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
-                      <TableCell className="pl-6 py-4">
-                        <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}</p>
-                      </TableCell>
-                      <TableCell>
-                        <button onClick={() => handleEmployeeClick(req.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors underline-offset-4 hover:underline" disabled={!isManagement && req.employeeId !== user?.id}>
-                            <Avatar className="h-7 w-7 rounded-lg shadow-inner border border-slate-100">
+                      <div key={req.id} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors" onClick={() => handleEmployeeClick(req.employeeId)}>
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
                                 <AvatarImage src={employee?.photoURL} alt={req.employeeName} />
-                                <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
-                                    {req.employeeName?.charAt(0)}
+                                <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
+                                  {req.employeeName?.charAt(0)}
                                 </AvatarFallback>
-                            </Avatar>
-                            {req.employeeName}
-                        </button>
-                      </TableCell>
-                      <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
-                      <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
-                      <TableCell className="text-right pr-6">
-                          <Badge className={cn(
-                              "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{req.employeeName}</p>
+                                <Badge variant="outline" className="text-[8px] font-black uppercase tracking-[0.1em] h-4 px-1.5 mt-0.5">{req.type}</Badge>
+                              </div>
+                           </div>
+                           <Badge className={cn(
+                              "text-[9px] font-bold uppercase px-3 h-6 shadow-sm",
                               req.status === 'approved' ? "bg-green-50 text-green-700" : 
                               req.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
-                          )}>
-                              {req.status}
-                          </Badge>
-                      </TableCell>
-                    </TableRow>
-                  )})}
-                   {!loadingLeaves && paginatedLeaves.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No applications found.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                           )}>{req.status}</Badge>
+                        </div>
+                        <div className="pt-2 border-t border-slate-50 flex items-center justify-between">
+                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Application Period</p>
+                           <p className="text-xs font-bold text-slate-700">
+                             {req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d, yyyy') : ''}
+                           </p>
+                        </div>
+                        <p className="text-xs text-slate-500 italic line-clamp-2 bg-slate-50/50 p-2 rounded-lg">"{req.reason}"</p>
+                      </div>
+                    );
+                 })}
+              </div>
+
+              {!loadingLeaves && displayLeaves.length === 0 && (
+                  <div className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No applications found.</div>
+              )}
+
               <PaginationFooter 
                 totalItems={displayLeaves.length}
                 currentPage={leavePage}
@@ -611,78 +713,138 @@ export default function AttendancePage() {
             </TabsContent>
 
             <TabsContent value="payroll" className="m-0 focus-visible:ring-0">
-              <Table>
-                  <TableHeader className="bg-slate-50/50">
-                  <TableRow className="border-none hover:bg-transparent">
-                      <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Recipient</TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement Cycle</TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Basis</TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Net Disbursement</TableHead>
-                      <TableHead className="text-right pr-6">Action</TableHead>
-                  </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                  {loadingPayroll ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
-                  ) : paginatedPayroll.map((item, idx) => {
-                      const isSending = sendingEmailId === `${item.runId}-${item.employeeId}`;
-                      const employee = allUsers?.find(u => u.id === item.employeeId);
-                      return (
-                      <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
-                      <TableCell className="pl-6 py-4">
-                          <button onClick={() => handleEmployeeClick(item.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors" disabled={!isManagement && item.employeeId !== user?.id}>
-                              <Avatar className="h-8 w-8 rounded-lg shadow-inner border border-slate-100">
-                                  <AvatarImage src={employee?.photoURL} alt={item.employeeName} />
-                                  <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
-                                      {item.employeeName?.charAt(0)}
-                                  </AvatarFallback>
-                              </Avatar>
-                              <div className="text-left">
-                                  <p>{item.employeeName}</p>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
-                              </div>
-                          </button>
-                      </TableCell>
-                      <TableCell>
-                          <p className="text-xs font-semibold text-slate-600">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, yyyy')}</p>
-                      </TableCell>
-                      <TableCell>
-                          <p className="text-xs font-medium text-slate-500">
-                              {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : (item.type === 'bimonthly' ? 'Bimonthly Fixed' : 'Monthly Fixed'))}
-                          </p>
-                      </TableCell>
-                      <TableCell>
-                          <span className="text-sm font-bold text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                              <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
-                                  <FileText className="h-3.5 w-3.5" />
-                                  Statement
-                              </Button>
-                              {isManagement && (
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    disabled={isSending}
-                                    onClick={() => setConfirmItem(item)}
-                                    className={cn(
-                                        "h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all",
-                                        isSending && "opacity-50"
-                                    )}
-                                >
-                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {/* Desktop Payroll Table */}
+              <div className="hidden md:block">
+                <Table>
+                    <TableHeader className="bg-slate-50/50">
+                    <TableRow className="border-none hover:bg-transparent">
+                        <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Recipient</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Statement Cycle</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Basis</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Net Disbursement</TableHead>
+                        <TableHead className="text-right pr-6">Action</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {loadingPayroll ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading disbursement data...</TableCell></TableRow>
+                    ) : paginatedPayroll.map((item, idx) => {
+                        const isSending = sendingEmailId === `${item.runId}-${item.employeeId}`;
+                        const employee = allUsers?.find(u => u.id === item.employeeId);
+                        return (
+                        <TableRow key={`${item.runId}-${item.employeeId}-${idx}`} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
+                        <TableCell className="pl-6 py-4">
+                            <button onClick={() => handleEmployeeClick(item.employeeId)} className="flex items-center gap-3 text-sm font-bold text-slate-700 hover:text-primary transition-colors" disabled={!isManagement && item.employeeId !== user?.id}>
+                                <Avatar className="h-8 w-8 rounded-lg shadow-inner border border-slate-100">
+                                    <AvatarImage src={employee?.photoURL} alt={item.employeeName} />
+                                    <AvatarFallback className="rounded-lg bg-slate-100 text-slate-400 text-[10px]">
+                                        {item.employeeName?.charAt(0)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="text-left">
+                                    <p>{item.employeeName}</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
+                                </div>
+                            </button>
+                        </TableCell>
+                        <TableCell>
+                            <p className="text-xs font-semibold text-slate-600">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, yyyy')}</p>
+                        </TableCell>
+                        <TableCell>
+                            <p className="text-xs font-medium text-slate-500">
+                                {item.type === 'daily' ? `${item.daysWorked} days at ₱${item.rate}` : (item.type === 'weekly' ? 'Weekly Fixed' : (item.type === 'bimonthly' ? 'Bimonthly Fixed' : 'Monthly Fixed'))}
+                            </p>
+                        </TableCell>
+                        <TableCell>
+                            <span className="text-sm font-bold text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</span>
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                            <div className="flex items-center justify-end gap-2">
+                                <Button size="sm" variant="ghost" onClick={() => handleOpenPayslip(item)} className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                                    <FileText className="h-3.5 w-3.5" />
+                                    Statement
                                 </Button>
-                              )}
+                                {isManagement && (
+                                  <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      disabled={isSending}
+                                      onClick={() => setConfirmItem(item)}
+                                      className={cn(
+                                          "h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all",
+                                          isSending && "opacity-50"
+                                      )}
+                                  >
+                                      {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                  </Button>
+                                )}
+                            </div>
+                        </TableCell>
+                        </TableRow>
+                    )})}
+                    </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Payroll Cards */}
+              <div className="md:hidden divide-y divide-slate-50">
+                {loadingPayroll ? (
+                  <div className="py-20 text-center animate-pulse font-medium text-slate-400">Loading disbursement data...</div>
+                ) : paginatedPayroll.map((item, idx) => {
+                  const employee = allUsers?.find(u => u.id === item.employeeId);
+                  return (
+                    <div key={`${item.runId}-${item.employeeId}-${idx}`} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors">
+                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 rounded-xl shadow-inner border border-slate-100">
+                                <AvatarImage src={employee?.photoURL} alt={item.employeeName} />
+                                <AvatarFallback className="rounded-xl bg-slate-100 text-slate-400 font-bold text-xs uppercase">
+                                  {item.employeeName?.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="text-sm font-bold text-slate-900">{item.employeeName}</p>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{item.runId}</p>
+                            </div>
                           </div>
-                      </TableCell>
-                      </TableRow>
-                  )})}
-                  {!loadingPayroll && paginatedPayroll.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No disbursement logs found.</TableCell></TableRow>
-                  )}
-                  </TableBody>
-              </Table>
+                          <p className="text-sm font-black text-slate-900 tabular-nums">₱{item.amount?.toLocaleString()}</p>
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+                          <div className="space-y-1">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Statement Cycle</p>
+                              <p className="text-xs font-bold text-slate-700">{format(new Date(item.periodStart), 'MMM d')} - {format(new Date(item.periodEnd), 'MMM d, y')}</p>
+                          </div>
+                          <div className="space-y-1 text-right">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Basis</p>
+                              <p className="text-xs font-bold text-slate-700 capitalize">{item.type} profile</p>
+                          </div>
+                       </div>
+
+                       <div className="flex items-center gap-2 pt-2">
+                          <Button size="sm" variant="outline" onClick={() => handleOpenPayslip(item)} className="flex-1 h-9 font-bold text-[10px] uppercase tracking-widest gap-2 bg-white border-slate-200">
+                              <FileText className="h-3.5 w-3.5" /> Statement
+                          </Button>
+                          {isManagement && (
+                             <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => setConfirmItem(item)}
+                                className="h-9 w-11 p-0 bg-white border-slate-200 text-slate-500"
+                             >
+                                <Send className="h-3.5 w-3.5" />
+                             </Button>
+                          )}
+                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {!loadingPayroll && paginatedPayroll.length === 0 && (
+                  <div className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No disbursement logs found.</div>
+              )}
+
               <PaginationFooter 
                   totalItems={displayPayrollItems.length}
                   currentPage={payrollPage}
