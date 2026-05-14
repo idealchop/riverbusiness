@@ -14,7 +14,9 @@ import {
   Info, 
   Calendar as CalendarIcon,
   X,
-  Users
+  Users,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -165,25 +167,25 @@ export default function LeavePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Leave review
+              Leave Review
           </h1>
           <p className="text-slate-500 font-medium">
               Review company-wide applications and manage team availability.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
             <Button 
                 variant="outline"
                 onClick={() => setIsCalendarOpen(true)}
-                className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm"
+                className="flex-1 sm:flex-none rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm"
             >
                 <LayoutGrid className="mr-2 h-4 w-4 text-primary" /> Calendar view
             </Button>
             <Button 
                 onClick={() => setIsLeaveDialogOpen(true)}
-                className="rounded-xl h-11 px-6 font-bold shadow-sm"
+                className="flex-1 sm:flex-none rounded-xl h-11 px-6 font-bold shadow-sm"
             >
-                <Plus className="mr-2 h-4 w-4" /> File leave
+                <Plus className="mr-2 h-4 w-4" /> File Leave
             </Button>
         </div>
       </div>
@@ -193,7 +195,7 @@ export default function LeavePage() {
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div>
                    <CardTitle className="text-lg font-bold text-slate-900">
-                       Organization queue
+                       Organization Queue
                    </CardTitle>
                    <CardDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">
                        Requests requiring verification
@@ -214,82 +216,143 @@ export default function LeavePage() {
             </div>
          </CardHeader>
          <CardContent className="p-0">
-            <Table>
-                <TableHeader className="bg-slate-50/50">
-                   <TableRow className="border-none hover:bg-transparent">
-                     <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Type & period</TableHead>
-                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
-                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
-                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Actions</TableHead>
-                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {isLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing records...</TableCell></TableRow>
-                   ) : paginatedLeaves.map(request => (
-                        <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
-                           <TableCell className="pl-6 py-5">
-                              <div className="flex items-center gap-3">
-                                 <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase shadow-inner">
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+                <Table>
+                    <TableHeader className="bg-slate-50/50">
+                    <TableRow className="border-none hover:bg-transparent">
+                        <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Type & Period</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
+                        <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing records...</TableCell></TableRow>
+                    ) : paginatedLeaves.map(request => (
+                            <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
+                            <TableCell className="pl-6 py-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase shadow-inner">
+                                        {request.employeeName?.charAt(0) || '?'}
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900">{request.employeeName || 'Untitled Employee'}</p>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <p className="text-xs font-bold text-slate-900">{request.type || 'Leave'}</p>
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">
+                                    {request.startDate ? format(new Date(request.startDate), 'MMM d') : '??'} - {request.endDate ? format(new Date(request.endDate), 'MMM d, yyyy') : '??'}
+                                </p>
+                            </TableCell>
+                            <TableCell>
+                                <p className="text-xs text-slate-500 font-medium italic max-w-[200px] truncate">"{request.reason || 'No reason provided'}"</p>
+                            </TableCell>
+                            <TableCell>
+                                <Badge className={cn(
+                                    "text-[9px] font-bold uppercase border-none px-2 h-5 shadow-sm",
+                                    request.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                    request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                                )}>
+                                    {request.status || 'Pending'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                                {(request.status === 'pending') ? (
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Button 
+                                            onClick={() => handleStatusUpdate(request.id, 'approved')}
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 rounded-lg text-green-600 border-green-100 hover:bg-green-50"
+                                            title="Approve request"
+                                        >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        </Button>
+                                        <Button 
+                                            onClick={() => handleStatusUpdate(request.id, 'rejected')}
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 rounded-lg text-red-600 border-red-100 hover:bg-red-50"
+                                            title="Reject request"
+                                        >
+                                        <XCircle className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pr-4">Resolved</p>
+                                )}
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                        {!isLoading && displayLeaves.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No leave applications found.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden divide-y divide-slate-50">
+                {isLoading ? (
+                    <div className="py-20 text-center opacity-40 font-bold uppercase text-[10px] tracking-widest">Synchronizing records...</div>
+                ) : paginatedLeaves.map(request => (
+                    <div key={request.id} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs uppercase shadow-inner">
                                     {request.employeeName?.charAt(0) || '?'}
-                                 </div>
-                                 <p className="text-sm font-semibold text-slate-900">{request.employeeName || 'Untitled Employee'}</p>
-                              </div>
-                           </TableCell>
-                           <TableCell>
-                              <p className="text-xs font-bold text-slate-900">{request.type || 'Leave'}</p>
-                              <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">
-                                  {request.startDate ? format(new Date(request.startDate), 'MMM d') : '??'} - {request.endDate ? format(new Date(request.endDate), 'MMM d, yyyy') : '??'}
-                              </p>
-                           </TableCell>
-                           <TableCell>
-                              <p className="text-xs text-slate-500 font-medium italic max-w-[200px] truncate">"{request.reason || 'No reason provided'}"</p>
-                           </TableCell>
-                           <TableCell>
-                              <Badge className={cn(
-                                 "text-[9px] font-bold uppercase border-none px-2 h-5 shadow-sm",
-                                 request.status === 'approved' ? "bg-green-50 text-green-700" : 
-                                 request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
-                              )}>
-                                 {request.status || 'Pending'}
-                              </Badge>
-                           </TableCell>
-                           <TableCell className="text-right pr-6">
-                              {(request.status === 'pending') ? (
-                                 <div className="flex items-center justify-end gap-2">
-                                    <Button 
-                                        onClick={() => handleStatusUpdate(request.id, 'approved')}
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-8 w-8 p-0 rounded-lg text-green-600 border-green-100 hover:bg-green-50"
-                                        title="Approve request"
-                                    >
-                                       <CheckCircle2 className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
-                                        onClick={() => handleStatusUpdate(request.id, 'rejected')}
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-8 w-8 p-0 rounded-lg text-red-600 border-red-100 hover:bg-red-50"
-                                        title="Reject request"
-                                    >
-                                       <XCircle className="h-4 w-4" />
-                                    </Button>
-                                 </div>
-                              ) : (
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pr-4">Resolved</p>
-                              )}
-                           </TableCell>
-                        </TableRow>
-                      ))}
-                      {!isLoading && displayLeaves.length === 0 && (
-                          <TableRow>
-                              <TableCell colSpan={5} className="text-center py-20 text-slate-300 font-bold uppercase text-[10px] tracking-widest">No leave applications found.</TableCell>
-                          </TableRow>
-                      )}
-                </TableBody>
-            </Table>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-900">{request.employeeName}</p>
+                                    <p className="text-[9px] font-black text-primary uppercase tracking-tighter">{request.type}</p>
+                                </div>
+                            </div>
+                            <Badge className={cn(
+                                "text-[9px] font-black uppercase px-3 h-5 shadow-none border-none",
+                                request.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                            )}>{request.status}</Badge>
+                        </div>
+                        <div className="pt-2 border-t border-slate-50 flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Period</span>
+                                <p className="text-xs font-bold text-slate-700">
+                                    {request.startDate ? format(new Date(request.startDate), 'MMM d') : ''} - {request.endDate ? format(new Date(request.endDate), 'MMM d, y') : ''}
+                                </p>
+                            </div>
+                            <p className="text-xs text-slate-500 italic line-clamp-2 bg-slate-50 p-3 rounded-xl border border-slate-100">"{request.reason || 'No reason'}"</p>
+                        </div>
+                        {request.status === 'pending' && (
+                            <div className="flex gap-2 pt-1">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex-1 h-9 rounded-xl text-green-600 border-green-100 hover:bg-green-50 font-bold text-[10px] uppercase tracking-widest"
+                                    onClick={() => handleStatusUpdate(request.id, 'approved')}
+                                >
+                                    Approve
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex-1 h-9 rounded-xl text-red-600 border-red-100 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest"
+                                    onClick={() => handleStatusUpdate(request.id, 'rejected')}
+                                >
+                                    Reject
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                ))}
+                {!isLoading && displayLeaves.length === 0 && (
+                    <div className="py-20 text-center font-bold text-slate-300 italic uppercase text-[10px] tracking-[0.3em]">No Leave Profiles Found</div>
+                )}
+            </div>
          </CardContent>
          <PaginationFooter 
             totalItems={displayLeaves.length}
@@ -314,9 +377,9 @@ export default function LeavePage() {
                                 <CalendarDays className="h-6 w-6" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight">Team presence</DialogTitle>
-                                <DialogDescription className="text-slate-400 font-medium text-xs mt-1">
-                                    Visualize team availability across the organizational layout.
+                                <DialogTitle className="text-2xl font-black tracking-tight">Team Presence</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-medium text-xs mt-1 uppercase tracking-widest">
+                                    Visualize team availability across the organization.
                                 </DialogDescription>
                             </div>
                         </div>
@@ -334,13 +397,13 @@ export default function LeavePage() {
                 </DialogHeader>
             </div>
 
-            <div className="flex-1 flex min-h-0 bg-slate-50/30 overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-50/30 overflow-hidden">
                 <ScrollArea className="flex-1">
-                    <div className="p-8 flex justify-center">
-                        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 w-fit">
+                    <div className="p-6 md:p-8 flex justify-center">
+                        <div className="bg-white p-4 md:p-6 rounded-[2rem] shadow-xl border border-slate-100 w-fit">
                             <Calendar
                                 mode="single"
-                                numberOfMonths={2}
+                                numberOfMonths={typeof window !== 'undefined' && window.innerWidth > 768 ? 2 : 1}
                                 selected={selectedCalendarDate}
                                 onSelect={setSelectedCalendarDate}
                                 modifiers={{
@@ -353,9 +416,9 @@ export default function LeavePage() {
                                 }}
                                 className="rounded-xl border-none"
                                 classNames={{
-                                    caption_label: "text-base font-black uppercase tracking-widest text-slate-900",
-                                    head_cell: "text-slate-300 font-black uppercase text-[10px] tracking-widest pb-6",
-                                    day: "h-10 w-10 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
+                                    caption_label: "text-sm md:text-base font-black uppercase tracking-widest text-slate-900",
+                                    head_cell: "text-slate-300 font-black uppercase text-[8px] md:text-[10px] tracking-widest pb-4 md:pb-6",
+                                    day: "h-9 w-9 md:h-10 md:w-10 p-0 font-bold text-[10px] md:text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
                                     day_selected: "ring-2 ring-primary ring-offset-2",
                                     day_today: "border-b-2 border-primary rounded-none",
                                 }}
@@ -365,10 +428,10 @@ export default function LeavePage() {
                 </ScrollArea>
 
                 {/* Minimal Side Presence Panel */}
-                <div className="w-72 bg-white border-l border-slate-100 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+                <div className="w-full md:w-72 bg-white border-t md:border-t-0 md:border-l border-slate-100 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
                     <div className="p-6 border-b border-slate-50 bg-slate-50/30">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
-                            <Users className="h-3 w-3" /> Scheduled absences
+                            <Users className="h-3 w-3" /> Scheduled Absences
                         </h4>
                         <p className="text-xs font-bold text-slate-900 mt-2">
                             {selectedCalendarDate ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'No date selected'}
@@ -423,7 +486,7 @@ export default function LeavePage() {
                             ) : (
                                 <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
                                     <CheckCircle2 className="h-8 w-8 text-slate-300" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[120px] mx-auto">Full operational presence</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[120px] mx-auto">Full Operational Presence</p>
                                 </div>
                             )}
                         </div>
@@ -434,7 +497,7 @@ export default function LeavePage() {
             <DialogFooter className="p-6 pt-4 bg-white border-t shrink-0">
                 <DialogClose asChild>
                     <Button variant="ghost" className="rounded-xl h-10 px-10 font-bold uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">
-                        Close calendar
+                        Close Calendar
                     </Button>
                 </DialogClose>
             </DialogFooter>
