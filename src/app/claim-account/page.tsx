@@ -17,6 +17,7 @@ import type { AppUser } from '@/lib/types';
 import { CheckCircle, ArrowRight, Building2, UserCircle } from 'lucide-react';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const claimSchema = z.object({
