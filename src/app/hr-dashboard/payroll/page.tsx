@@ -37,7 +37,7 @@ import {
     DialogClose
 } from '@/components/ui/dialog';
 import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp, limit, doc } from 'firebase/firestore';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
 import { cn } from '@/lib/utils';
@@ -147,7 +147,7 @@ export default function PayrollPage() {
     const margin = 40;
 
     // Header Background
-    doc.setFillColor(83, 142, 194);
+    doc.setFillColor(83, 142, 194); // #538ec2
     doc.rect(0, 0, pageWidth, 120, 'F');
     
     // Header Content
@@ -185,7 +185,7 @@ export default function PayrollPage() {
             ['Organization', '-', companyName],
         ],
         theme: 'striped',
-        headStyles: { fillColor: [83, 142, 194], textColor: 255 },
+        headStyles: { fillColor: [83, 142, 194], textColor: 255, fontStyle: 'bold', fontSize: 9 },
         margin: { left: margin, right: margin },
     });
 
@@ -354,12 +354,12 @@ export default function PayrollPage() {
                </Table>
             </CardContent>
             <CardFooter className="bg-muted/5 py-4 flex items-center justify-between border-t">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Showing {paginatedPayroll.length} of {displayPayroll.length} runs
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
-                    <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{currentPage} / {totalPages || 1}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground px-2">{currentPage} / {totalPages || 1}</span>
                     <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
                 </div>
             </CardFooter>
