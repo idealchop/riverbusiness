@@ -58,10 +58,6 @@ export default function WorkspaceLandingPage() {
     }));
   };
 
-  const handleKnowledgeBase = () => {
-    toast({ title: "Opening Knowledge Base", description: "Accessing shared organizational libraries." });
-  };
-
   const handleAskAi = async () => {
     if (!prompt.trim()) return;
     setIsProcessing(true);
@@ -143,11 +139,6 @@ export default function WorkspaceLandingPage() {
                     onClick={() => handleCreate('board')}
                     icon={<Layout className="h-4 w-4 text-purple-600" />}
                     label="Flow Canvas"
-                />
-                <QuickActionButton 
-                    onClick={handleKnowledgeBase}
-                    icon={<Globe className="h-4 w-4 text-slate-400" />}
-                    label="Knowledge Library"
                 />
             </div>
         </div>
