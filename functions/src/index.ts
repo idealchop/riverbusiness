@@ -11,7 +11,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, ManualReceiptRequest } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, ManualReceiptRequest, HRLeaveRequest } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -23,7 +23,8 @@ import {
     getSanitationReportTemplate,
     getPaymentReminderTemplate,
     getEmployeeInvitationTemplate,
-    getEmployeePayslipTemplate
+    getEmployeePayslipTemplate,
+    getLeaveStatusTemplate
 } from './email';
 
 // Export all billing functions
@@ -877,6 +878,40 @@ export const ondeliveryupdate = onDocumentUpdated({
     }
 });
 
+export const onleavestatusupdate = onDocumentUpdated({
+    document: "hr_companies/{companyId}/leaveRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const before = event.data.before.data() as HRLeaveRequest;
+    const after = event.data.after.data() as HRLeaveRequest;
+    
+    if (before.status === after.status || after.status === 'pending') return;
+
+    logger.info(`Leave Request ${event.params.requestId} resolved to ${after.status}. Notifying employee.`);
+
+    const period = `${after.startDate} - ${after.endDate}`;
+    const template = getLeaveStatusTemplate(after.employeeName, after.type, period, after.status);
+    
+    const db = getFirestore();
+    const employeeDoc = await db.collection('users').doc(after.employeeId).get();
+    const employeeData = employeeDoc.data();
+
+    if (employeeData?.email) {
+        try {
+            await sendEmail({
+                to: employeeData.email,
+                subject: template.subject,
+                text: `Your leave request for ${period} has been ${after.status}.`,
+                html: template.html
+            });
+            logger.info(`Leave notification dispatched to ${employeeData.email}`);
+        } catch (error) {
+            logger.error(`Failed to send leave status email`, error);
+        }
+    }
+});
+
 export const onpaymentupdate = onDocumentUpdated({
     document: "users/{userId}/payments/{paymentId}",
     secrets: ["BREVO_API_KEY"]
@@ -993,87 +1028,6 @@ export const onrefillrequestupdate = onDocumentUpdated({
     }
 });
 
-export const onsanitationcreate = onDocumentCreated({
-    document: "users/{userId}/sanitationVisits/{visitId}",
-    secrets: ["BREVO_API_KEY"]
-}, async (event) => {
-    if (!event.data) return;
-    const userId = event.params.userId;
-    const visit = event.data.data() as SanitationVisit;
-    const db = getFirestore();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-
-    const targetEmails = getRecipients(userData);
-    if (targetEmails.length > 0 && visit.status === 'Scheduled') {
-        const dateStr = format(toSafeDate(visit.scheduledDate), 'PPP');
-        const template = getSanitationScheduledTemplate(userData!.businessName, visit.assignedTo, dateStr);
-        const bccList = getBCCList();
-        await sendEmail({ 
-            to: targetEmails.join(','), 
-            bcc: bccList,
-            subject: template.subject, 
-            text: `Visit scheduled`, 
-            html: template.html 
-        });
-    }
-});
-
-export const onsanitationupdate = onDocumentUpdated({
-    document: "users/{userId}/sanitationVisits/{visitId}",
-    secrets: ["BREVO_API_KEY"]
-}, async (event) => {
-    if (!event.data) return;
-    const before = event.data.before.data() as SanitationVisit;
-    const after = event.data.after.data() as SanitationVisit;
-    const userId = event.params.userId;
-    const visitId = event.params.visitId;
-    
-    if (before.status !== 'Completed' && after.status === 'Completed') {
-        const db = getFirestore();
-        const userDoc = await db.collection('users').doc(userId).get();
-        const userData = userDoc.data();
-        
-        const dateStr = format(toSafeDate(after.scheduledDate), 'PPP');
-        const passRate = getSanitationPassRate(after);
-        
-        // 1. Create In-App Notification for Client
-        await createNotification(userId, {
-            type: 'sanitation',
-            title: 'Sanitation Visit Completed',
-            description: `Your sanitation report for ${dateStr} is complete. Score: ${passRate}.`,
-            data: { visitId: visitId }
-        });
-
-        // 2. Create In-App Notification for Admin
-        const adminEmail = 'admin@riverph.com';
-        const adminsSnap = await db.collection('users').where('email', '==', adminEmail).limit(1).get();
-        if (!adminsSnap.empty) {
-            const adminId = adminsSnap.docs[0].id;
-            await createNotification(adminId, {
-                type: 'sanitation',
-                title: `Visit for ${userData?.businessName}: Completed`,
-                description: `The sanitation visit on ${dateStr} was completed with a score of ${passRate}.`,
-                data: { userId: userId, visitId: visitId }
-            });
-        }
-
-        // 3. Send Email Notification broadcast
-        const targetEmails = getRecipients(userData);
-        if (targetEmails.length > 0) {
-            const template = getSanitationReportTemplate(userData!.businessName, after.assignedTo, dateStr, passRate);
-            const bccList = getBCCList();
-            await sendEmail({ 
-                to: targetEmails.join(','), 
-                bcc: bccList,
-                subject: template.subject, 
-                text: `Report ready. Score: ${passRate}`, 
-                html: template.html 
-            });
-        }
-    }
-});
-
 export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
@@ -1082,9 +1036,13 @@ export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event
   const bucket = storage.bucket(event.data.bucket);
   const file = bucket.file(filePath);
   const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
+  
   if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
       const userId = filePath.split("/")[1];
       await db.collection("users").doc(userId).update({ photoURL: url });
+  } else if (filePath.startsWith("users/") && filePath.includes("/support_profile/")) {
+      const userId = filePath.split("/")[1];
+      await db.collection("users").doc(userId).update({ supportPhotoURL: url });
   } else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
       const customMetadata = event.data.metadata;
       if (customMetadata?.paymentId && customMetadata?.userId) {

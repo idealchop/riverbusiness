@@ -320,3 +320,20 @@ export function getEmployeePayslipTemplate(employeeName: string, businessName: s
     html: getEmailWrapper(content, 'Payroll Disbursement Verified', `<p style="text-align: center; color: #64748b; font-size: 14px;">Authorized Digital Record</p>`, 'View Team Workspace')
   };
 }
+
+export function getLeaveStatusTemplate(employeeName: string, type: string, period: string, status: string) {
+  const isApproved = status === 'approved';
+  const content = `
+    <p class="body-text">Hello ${employeeName},</p>
+    <p class="body-text">Your application for <strong>${type}</strong> for the period of <strong>${period}</strong> has been processed by your administrator.</p>
+    <div style="text-align: center; margin: 32px 0;">
+      <div style="background-color: ${isApproved ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${isApproved ? '#bbf7d0' : '#fecaca'}; color: ${isApproved ? '#15803d' : '#b91c1c'}; padding: 12px 24px; border-radius: 50px; font-weight: 800; display: inline-block; font-size: 14px; text-transform: uppercase;">
+        ${status}
+      </div>
+    </div>
+  `;
+  return {
+    subject: `Update: Your Leave Application for ${period} 🗓️`,
+    html: getEmailWrapper(content, 'Application Resolved', '', 'View History', 'https://app.riverph.com/hr-dashboard/attendance')
+  };
+}
