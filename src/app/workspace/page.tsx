@@ -78,7 +78,7 @@ export default function WorkspaceLandingPage() {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/30 overflow-hidden">
-        <div className="max-w-5xl w-full px-8 flex flex-col items-center justify-center space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-12">
+        <div className="max-w-5xl w-full px-8 flex flex-col items-center justify-center space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-12">
             <div className="w-full text-center space-y-4">
                 <div className="flex justify-center mb-8">
                     <LogoBlack className="h-20 w-20" />
@@ -128,58 +128,31 @@ export default function WorkspaceLandingPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-                <QuickCard 
+            <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-4xl">
+                <QuickActionButton 
                     onClick={() => handleCreate('doc')}
-                    icon={<FileText className="h-6 w-6 text-blue-500" />}
-                    title="Write Document"
-                    description="Rich text editor with AI assistant."
+                    icon={<FileText className="h-4 w-4 text-blue-500" />}
+                    label="Write Document"
                 />
-                <QuickCard 
+                <QuickActionButton 
                     onClick={() => handleCreate('sheet')}
-                    icon={<Grid className="h-6 w-6 text-green-600" />}
-                    title="Operational Sheet"
-                    description="Grid-based data and supply tracking."
+                    icon={<Grid className="h-4 w-4 text-green-600" />}
+                    label="Operational Sheet"
                 />
-                <QuickCard 
+                <QuickActionButton 
                     onClick={() => handleCreate('board')}
-                    icon={<Layout className="h-6 w-6 text-purple-600" />}
-                    title="Flow Canvas"
-                    description="Visual whiteboards for team logic."
+                    icon={<Layout className="h-4 w-4 text-purple-600" />}
+                    label="Flow Canvas"
                 />
-            </div>
-
-            <div className="flex items-center gap-3 pt-4">
                 <QuickActionButton 
                     onClick={handleKnowledgeBase}
-                    icon={<Globe className="h-4 w-4" />}
+                    icon={<Globe className="h-4 w-4 text-slate-400" />}
                     label="Knowledge Library"
                 />
             </div>
         </div>
     </div>
   );
-}
-
-function QuickCard({ onClick, icon, title, description }: { onClick: () => void, icon: React.ReactNode, title: string, description: string }) {
-    return (
-        <Card className="border-none shadow-sm bg-white cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group rounded-[2rem] overflow-hidden" onClick={onClick}>
-            <CardContent className="p-8 space-y-4">
-                <div className="p-4 rounded-2xl bg-slate-50 w-fit group-hover:bg-primary/5 transition-colors">
-                    {icon}
-                </div>
-                <div className="space-y-1.5">
-                    <h3 className="font-bold text-slate-900 flex items-center justify-between">
-                        {title}
-                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-all group-hover:translate-x-1" />
-                    </h3>
-                    <p className="text-xs font-medium text-slate-400 leading-relaxed">
-                        {description}
-                    </p>
-                </div>
-            </CardContent>
-        </Card>
-    );
 }
 
 function QuickActionButton({ onClick, icon, label }: { onClick: () => void, icon: React.ReactNode, label: string }) {
