@@ -53,8 +53,11 @@ function SignupContent() {
     }
 
     try {
+      // Normalize email for strict identity matching
+      const normalizedEmail = data.email.toLowerCase().trim();
+      
       // Create account and trigger verification
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, data.password);
       await sendEmailVerification(userCredential.user);
       
       toast({ 

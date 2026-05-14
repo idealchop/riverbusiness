@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
 import { CheckCircle, ArrowRight, Building2, UserCircle } from 'lucide-react';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
@@ -59,17 +59,35 @@ export default function ClaimAccountPage() {
         return;
     }
 
-    const checkExistingProfile = async () => {
+    const checkExistingOrInvited = async () => {
         const userDocRef = doc(firestore, 'users', authUser.uid);
         const userDocSnap = await getDoc(userDocRef);
+        
+        // If user already has a profile, go to onboarding to route them correctly
         if (userDocSnap.exists()) {
-            router.push('/onboarding'); // Let onboarding decide where to go
-        } else {
-            setIsCheckingProfile(false);
+            router.push('/onboarding');
+            return;
         }
+
+        // Check if user is an invited employee. If so, they shouldn't be here.
+        const userEmail = authUser.email?.toLowerCase().trim();
+        if (userEmail) {
+            const inviteQuery = query(
+                collection(firestore, 'unclaimedEmployees'),
+                where('email', '==', userEmail)
+            );
+            const inviteSnap = await getDocs(inviteQuery);
+            if (!inviteSnap.empty) {
+                // Return to onboarding to trigger the "Magic Claim"
+                router.push('/onboarding');
+                return;
+            }
+        }
+
+        setIsCheckingProfile(false);
     };
     
-    checkExistingProfile();
+    checkExistingOrInvited();
     
   }, [authUser, isUserLoading, firestore, router]);
 
@@ -162,7 +180,7 @@ export default function ClaimAccountPage() {
   };
 
   if (isUserLoading || isCheckingProfile) {
-    return <FullScreenLoader text="Synchronizing identity..." />;
+    return <FullScreenLoader text="Validating organizational access..." />;
   }
 
   if (claimedProfile) {
