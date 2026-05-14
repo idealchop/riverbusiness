@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -152,82 +153,88 @@ export function InfoCards() {
             </div>
           </Card>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
-          <div className="flex flex-col md:flex-row h-full">
+        <DialogContent className="sm:max-w-4xl rounded-[2rem] md:rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white max-h-[92vh] sm:max-h-[85vh] flex flex-col">
+          <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Left Side: Image Showcase */}
-            <div className="w-full md:w-[45%] bg-slate-50 flex items-center justify-center p-12 relative overflow-hidden">
+            <div className="w-full md:w-[40%] bg-slate-50 flex items-center justify-center p-8 md:p-12 relative overflow-hidden shrink-0">
                 {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" 
                      style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #000 1px, transparent 0)', backgroundSize: '24px 24px' }} />
                 
-                <div key={currentApp.id} className="relative w-full aspect-square animate-in fade-in zoom-in-95 duration-500">
+                <div key={currentApp.id} className="relative w-32 h-32 sm:w-48 sm:h-48 md:w-full md:aspect-square animate-in fade-in zoom-in-95 duration-500">
                     <Image 
                         src={currentApp.iconUrl} 
                         alt={currentApp.name} 
                         fill 
-                        sizes="(max-width: 768px) 100vw, 400px"
+                        sizes="(max-width: 768px) 128px, 400px"
                         className="object-contain drop-shadow-2xl"
                     />
                 </div>
             </div>
 
             {/* Right Side: Feature Details */}
-            <div className="flex-1 p-10 md:p-14 flex flex-col justify-between min-h-[500px]">
-                <div key={currentApp.id + '-text'} className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="space-y-2">
-                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-black text-[10px] uppercase tracking-[0.2em] px-3 py-1">
-                            App {currentStep + 1} of {apps.length}
-                        </Badge>
-                        <h2 className="text-4xl font-black tracking-tighter text-slate-900">
-                            {currentApp.name}
-                        </h2>
-                        <h2 className="text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight">
-                            {currentApp.description}
-                        </h2>
-                    </div>
+            <div className="flex-1 flex flex-col min-h-0">
+                <ScrollArea className="flex-1">
+                    <div className="p-6 sm:p-10 md:p-14 flex flex-col h-full">
+                        <div key={currentApp.id + '-text'} className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="space-y-2">
+                                <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-black text-[9px] sm:text-[10px] uppercase tracking-[0.2em] px-3 py-1">
+                                    App {currentStep + 1} of {apps.length}
+                                </Badge>
+                                <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900">
+                                    {currentApp.name}
+                                </h2>
+                                <h2 className="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-tight">
+                                    {currentApp.description}
+                                </h2>
+                            </div>
 
-                    <div className="space-y-4 pt-4 border-t border-slate-50">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Core capabilities</h4>
-                        <ul className="grid gap-3">
-                            {currentApp.features.map((feature, i) => (
-                                <li key={i} className="flex items-center gap-3 group">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 group-hover:scale-125 transition-transform" />
-                                    <span className="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-
-                <div className="pt-10 flex flex-col gap-8">
-                    <Button asChild className="h-14 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20">
-                        <Link href={currentApp.href}>
-                            Launch {currentApp.name} <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                    </Button>
-
-                    <div className="flex items-center justify-between">
-                        <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleBack} 
-                                disabled={currentStep === 0}
-                                className="h-10 px-4 rounded-xl border-slate-100 text-slate-500 font-bold uppercase tracking-widest text-[10px] disabled:opacity-20"
-                            >
-                                <ChevronLeft className="mr-1 h-3 w-3" /> Back
-                            </Button>
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleNext} 
-                                disabled={currentStep === apps.length - 1}
-                                className="h-10 px-4 rounded-xl border-slate-100 text-slate-500 font-bold uppercase tracking-widest text-[10px] disabled:opacity-20"
-                            >
-                                Next <ChevronRight className="ml-1 h-3 w-3" />
-                            </Button>
+                            <div className="space-y-4 pt-4 border-t border-slate-50">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Core capabilities</h4>
+                                <ul className="grid gap-3">
+                                    {currentApp.features.map((feature, i) => (
+                                        <li key={i} className="flex items-center gap-3 group">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 group-hover:scale-125 transition-transform" />
+                                            <span className="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">River Command</p>
+                    </div>
+                </ScrollArea>
+
+                <div className="p-6 sm:p-10 md:p-14 pt-4 border-t bg-white shrink-0">
+                    <div className="flex flex-col gap-6">
+                        <Button asChild className="h-12 md:h-14 rounded-xl md:rounded-2xl font-black text-xs md:text-sm uppercase tracking-widest shadow-xl shadow-primary/20 w-full">
+                            <Link href={currentApp.href}>
+                                Launch {currentApp.name} <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                        </Button>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex gap-2">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={handleBack} 
+                                    disabled={currentStep === 0}
+                                    className="h-9 md:h-10 px-3 md:px-4 rounded-lg md:rounded-xl border-slate-100 text-slate-500 font-bold uppercase tracking-widest text-[9px] md:text-[10px] disabled:opacity-20"
+                                >
+                                    <ChevronLeft className="mr-1 h-3 w-3" /> Back
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={handleNext} 
+                                    disabled={currentStep === apps.length - 1}
+                                    className="h-9 md:h-10 px-3 md:px-4 rounded-lg md:rounded-xl border-slate-100 text-slate-500 font-bold uppercase tracking-widest text-[9px] md:text-[10px] disabled:opacity-20"
+                                >
+                                    Next <ChevronRight className="ml-1 h-3 w-3" />
+                                </Button>
+                            </div>
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">River Command</p>
+                        </div>
                     </div>
                 </div>
             </div>
