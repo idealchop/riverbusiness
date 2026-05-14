@@ -263,10 +263,14 @@ export default function ClaimAccountPage() {
                 <div className="space-y-8 animate-in fade-in duration-500">
                     {setupStep === 1 && (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                            <div className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <Label className="text-xs font-bold text-slate-400 ml-1">Business Name</Label>
                                     <Input placeholder="Acme Inc." className="h-12 rounded-xl bg-slate-50 border-slate-100" {...registerForm.register('businessName')} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold text-slate-400 ml-1">Address</Label>
+                                    <Textarea placeholder="Where are you located?" className="rounded-xl bg-slate-50 border-slate-100 h-12 min-h-[48px] resize-none" {...registerForm.register('address')} />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label className="text-xs font-bold text-slate-400 ml-1">Industry</Label>
@@ -274,10 +278,6 @@ export default function ClaimAccountPage() {
                                         <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100"><SelectValue placeholder="Select Industry" /></SelectTrigger>
                                         <SelectContent className="rounded-xl">{INDUSTRIES.map(ind => <SelectItem key={ind} value={ind}>{ind}</SelectItem>)}</SelectContent>
                                     </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-bold text-slate-400 ml-1">Address</Label>
-                                    <Textarea placeholder="Where are you located?" className="rounded-xl bg-slate-50 border-slate-100 min-h-[80px]" {...registerForm.register('address')} />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label className="text-xs font-bold text-slate-400 ml-1">Your Name</Label>
