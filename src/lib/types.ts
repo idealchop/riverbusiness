@@ -134,6 +134,58 @@ export interface BoardConnection {
     label?: string;
 }
 
+// --- Sheet Specific Types ---
+
+export type SheetFieldType = 
+  | 'text' 
+  | 'number' 
+  | 'date' 
+  | 'checkbox' 
+  | 'select' 
+  | 'multiselect' 
+  | 'attachment' 
+  | 'email' 
+  | 'phone' 
+  | 'url' 
+  | 'user' 
+  | 'currency' 
+  | 'status' 
+  | 'formula';
+
+export interface SheetField {
+    id: string;
+    name: string;
+    type: SheetFieldType;
+    options?: { label: string; color: string }[]; // For select/status
+    width?: number;
+    required?: boolean;
+    isPrimary?: boolean;
+}
+
+export interface SheetRecord {
+    id: string;
+    values: Record<string, any>;
+    createdAt: any;
+    updatedAt: any;
+    createdBy?: string;
+}
+
+export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'gallery' | 'list';
+
+export interface SheetView {
+    id: string;
+    name: string;
+    type: SheetViewType;
+    config?: {
+        kanbanFieldId?: string; // For Kanban grouping
+        calendarFieldId?: string; // For Calendar mapping
+        galleryCoverId?: string; // For Gallery preview
+        hiddenFields?: string[];
+        filters?: any[];
+        sorts?: any[];
+    };
+}
+
 export interface CollabPage {
     id: string;
     companyId: string;
@@ -143,11 +195,7 @@ export interface CollabPage {
     title: string;
     icon?: string;
     coverImage?: string;
-    content?: {
-        elements?: BoardElement[];
-        connections?: BoardConnection[];
-        [key: string]: any;
-    }; 
+    content?: any; // Dynamic content based on type (Doc content, Sheet data, or Board elements)
     createdBy: string;
     createdAt: any;
     updatedAt?: any;
