@@ -28,7 +28,8 @@ import {
   Lock, 
   Clock, 
   Copy, 
-  CheckCircle2
+  CheckCircle2,
+  MoreHorizontal
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,6 +49,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const EMOJI_LIST = [
   { char: '📄', keywords: 'document page file' },
@@ -77,21 +86,21 @@ const EMOJI_LIST = [
 export function PageSkeleton() {
   return (
     <div className="h-full flex flex-col bg-white animate-in fade-in duration-500">
-      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
+      <div className="sticky top-0 z-20 px-4 sm:px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
           <Skeleton className="h-3.5 w-3.5 rounded" />
-          <Skeleton className="h-4 w-32 rounded" />
+          <Skeleton className="h-4 w-24 sm:w-32 rounded" />
         </div>
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-6 w-24 rounded-full" />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Skeleton className="h-6 w-16 sm:w-24 rounded-full" />
           <Skeleton className="h-8 w-8 rounded-lg" />
           <Skeleton className="h-8 w-8 rounded-lg" />
         </div>
       </div>
       <div className="flex-1 flex flex-col">
-        <div className="h-[30vh] w-full bg-slate-50/50 animate-pulse" />
-        <div className="max-w-4xl mx-auto px-8 pt-10 space-y-6 w-full flex-1">
+        <div className="h-[20vh] sm:h-[30vh] w-full bg-slate-50/50 animate-pulse" />
+        <div className="max-w-4xl mx-auto px-4 sm:px-8 pt-10 space-y-6 w-full flex-1">
           <Skeleton className="h-12 w-12 rounded-2xl" />
           <Skeleton className="h-12 w-3/4 rounded-xl" />
           <div className="space-y-4 pt-4">
@@ -108,7 +117,7 @@ export function PageSkeleton() {
 /**
  * Share Component - Functional Link Expiry and Encryption Popover.
  */
-function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: Partial<CollabPage>) => Promise<void> }) {
+function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, onUpdate: (data: Partial<CollabPage>) => Promise<void>, isMobile?: boolean }) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [hasCopied, setHasCopied] = useState(false);
     const [isPasswordEnabled, setIsPasswordEnabled] = useState(!!page.sharePassword);
@@ -169,6 +178,14 @@ function SharePopover({ page, onUpdate }: { page: CollabPage, onUpdate: (data: P
             description: 'The secure shareable link is now in your clipboard.' 
         });
     };
+
+    if (isMobile) {
+      return (
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+            <Share2 className="h-4 w-4" /> Share Access
+        </DropdownMenuItem>
+      );
+    }
 
     return (
         <Popover>
@@ -258,6 +275,7 @@ function PageEditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get('prompt');
+  const isMobile = useIsMobile();
   
   const { user } = useUser();
   const firestore = useFirestore();
@@ -410,13 +428,13 @@ function PageEditorContent() {
   const editorContainer = (
     <div className={cn(
         "flex-1 flex flex-col min-h-0",
-        pageType === 'doc' && "max-w-4xl mx-auto px-8 pt-10 pb-32 w-full"
+        pageType === 'doc' && "max-w-4xl mx-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-32 w-full"
     )}>
         {pageType === 'doc' && (
             <>
-                {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
+                {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-4xl sm:text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
                 {!page.isTrashed && <div className="flex gap-4 opacity-0 hover:opacity-100 mb-4">{!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}{!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}</div>}
-                <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
+                <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-3xl sm:text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
                 <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
             </>
         )}
@@ -434,31 +452,32 @@ function PageEditorContent() {
   return (
     <div className="h-full flex flex-col bg-white animate-in fade-in duration-700 relative overflow-hidden">
       {page.isTrashed && (
-          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-8 animate-in slide-in-from-top duration-500 shrink-0">
-              <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 text-red-600" /><p className="text-xs font-bold text-red-900 leading-none">This Document Is In The Trash Bin</p></div>
+          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-4 sm:px-8 animate-in slide-in-from-top duration-500 shrink-0">
+              <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 text-red-600 shrink-0" /><p className="text-[10px] sm:text-xs font-bold text-red-900 leading-none">Archived in Trash</p></div>
               <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }))} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[10px] gap-2 hover:bg-red-50"><RotateCcw className="h-3 w-3" /> Restore Document</Button>
-                  {/* Delete functionality wrapped in specialized popover */}
+                  <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }))} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[9px] sm:text-[10px] gap-2 hover:bg-red-50">
+                    <RotateCcw className="h-3 w-3" /> <span className="hidden sm:inline">Restore</span>
+                  </Button>
                   <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-permanent-delete-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
               </div>
           </div>
       )}
 
-      <div className="sticky top-0 z-20 px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm shrink-0">
+      <div className="sticky top-0 z-20 px-4 sm:px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href="/workspace"><div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"><Home className="h-4 w-4" /></div></Link>
-          {parentPage && <><ChevronRight className="h-3.5 w-3.5 text-slate-300" /><Link href={`/workspace/${parentPage.id}`}><span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[120px] truncate block">{parentPage.title || 'Untitled'}</span></Link></>}
-          <ChevronRight className="h-3.5 w-3.5 text-slate-300" /><span className="text-xs font-bold text-slate-900 truncate max-w-[180px]">{page.title || 'Untitled'}</span>
+          {!isMobile && <Link href="/workspace"><div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"><Home className="h-4 w-4" /></div></Link>}
+          {parentPage && <><ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" /><Link href={`/workspace/${parentPage.id}`} className="min-w-0"><span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[80px] sm:max-w-[120px] truncate block">{parentPage.title || 'Untitled'}</span></Link></>}
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" /><span className="text-xs font-bold text-slate-900 truncate max-w-[100px] sm:max-w-[180px]">{page.title || 'Untitled'}</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex -space-x-1.5 mr-4">
-              {collaborators?.filter(c => c.userId !== user?.uid).map(collab => (
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex -space-x-1.5 mr-1 sm:mr-4">
+              {collaborators?.filter(c => c.userId !== user?.uid).slice(0, 3).map(collab => (
                   <TooltipProvider key={collab.userId}>
                       <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>
-                              <Avatar className={cn("h-6 w-6 border-2 border-white shadow-sm transition-all", !collab.isActive && "grayscale opacity-50", collab.isTyping && "ring-2 ring-primary ring-offset-1 animate-pulse")}>
-                                  <AvatarImage src={collab.photoURL} /><AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
+                              <Avatar className={cn("h-5 w-5 sm:h-6 sm:w-6 border-2 border-white shadow-sm transition-all", !collab.isActive && "grayscale opacity-50", collab.isTyping && "ring-2 ring-primary ring-offset-1 animate-pulse")}>
+                                  <AvatarImage src={collab.photoURL} /><AvatarFallback className="text-[7px] sm:text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
                               </Avatar>
                           </TooltipTrigger>
                           <TooltipContent className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl border">
@@ -468,9 +487,58 @@ function PageEditorContent() {
                       </Tooltip>
                   </TooltipProvider>
               ))}
+              {collaborators && collaborators.length > 4 && (
+                  <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-500">+{collaborators.length - 3}</div>
+              )}
           </div>
-          <div className="w-20 flex justify-center">{isSaving ? <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95"><div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /><span className="text-[9px] font-black text-primary">Syncing</span></div> : <div className="flex items-center gap-1.5 opacity-40"><CheckCircle className="h-3 w-3 text-slate-400" /><span className="text-[9px] font-black text-slate-400">Saved</span></div>}</div>
-          {!page.isTrashed && <><button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button><button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button><SharePopover page={page} onUpdate={handleUpdateMeta} /><button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button></>}
+          
+          <div className="hidden sm:flex w-20 justify-center">
+            {isSaving ? (
+                <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[9px] font-black text-primary">Syncing</span>
+                </div>
+            ) : (
+                <div className="flex items-center gap-1.5 opacity-40">
+                    <CheckCircle className="h-3 w-3 text-slate-400" />
+                    <span className="text-[9px] font-black text-slate-400">Saved</span>
+                </div>
+            )}
+          </div>
+
+          {!page.isTrashed && (
+            <div className="flex items-center gap-0.5 sm:gap-1">
+                {isMobile ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100">
+                             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                                <FilePlus className="h-4 w-4 text-blue-500" /> New Sub-page
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                                <Star className={cn("h-4 w-4", page.isFavorite && "fill-amber-500 text-amber-500")} /> {page.isFavorite ? 'Unfavorite' : 'Add to Favorites'}
+                            </DropdownMenuItem>
+                            <SharePopover page={page} onUpdate={handleUpdateMeta} isMobile />
+                            <DropdownMenuSeparator className="bg-slate-50" />
+                            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
+                                <Trash2 className="h-4 w-4" /> Move to Trash
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <>
+                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"><FilePlus className="h-4 w-4" /></button>
+                        <button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button>
+                        <SharePopover page={page} onUpdate={handleUpdateMeta} />
+                        <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
+                    </>
+                )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -478,9 +546,9 @@ function PageEditorContent() {
           {pageType === 'doc' ? (
               <ScrollArea className="flex-1">
                   {page.coverImage && (
-                      <div className="h-[30vh] w-full relative group">
+                      <div className="h-[20vh] sm:h-[30vh] w-full relative group">
                           <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
-                          {!page.isTrashed && <div className="absolute bottom-6 right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest">Change Cover</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
+                          {!page.isTrashed && <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest">Change</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
                       </div>
                   )}
                   {editorContainer}
