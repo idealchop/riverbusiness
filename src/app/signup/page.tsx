@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, MailCheck } from 'lucide-react';
 import { useAuth } from '@/firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from '@/components/ui/loader';
 import { Logo } from '@/components/icons';
@@ -56,16 +56,15 @@ function SignupContent() {
       // Normalize email for strict identity matching
       const normalizedEmail = data.email.toLowerCase().trim();
       
-      // Create account and trigger verification
-      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, data.password);
-      await sendEmailVerification(userCredential.user);
+      // Create account
+      await createUserWithEmailAndPassword(auth, normalizedEmail, data.password);
       
       toast({ 
         title: "Account created", 
-        description: "A verification email has been sent. Please check your inbox before activating your profile." 
+        description: "Welcome to River Business! Taking you to your dashboard." 
       });
       
-      router.push('/verify-email');
+      router.push('/onboarding');
     } catch (error: any) {
         let title = 'Sign up failed';
         let description = 'Could not create your account. Please try again.';

@@ -23,7 +23,8 @@ export default function VerifyEmailPage() {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-    if (user?.emailVerified) {
+    // Redirect to onboarding automatically as we are skipping the wall
+    if (!isUserLoading && user) {
       router.push('/onboarding');
     }
   }, [user, isUserLoading, router]);
@@ -49,16 +50,9 @@ export default function VerifyEmailPage() {
     if (!auth?.currentUser) return;
     setIsChecking(true);
     try {
-      // Force reload the user object from Firebase to get latest verification status
+      // Force reload the user object from Firebase
       await auth.currentUser.reload();
-      if (auth.currentUser.emailVerified) {
-        router.push('/onboarding');
-      } else {
-        toast({ 
-          title: "Still pending", 
-          description: "We haven't detected the verification yet. Please click the link in your email." 
-        });
-      }
+      router.push('/onboarding');
     } catch (error) {
       toast({ variant: 'destructive', title: "Error", description: "Could not refresh status." });
     } finally {
@@ -76,51 +70,5 @@ export default function VerifyEmailPage() {
     }
   };
 
-  if (isUserLoading || (user && user.emailVerified)) {
-    return <FullScreenLoader text="Verifying status..." />;
-  }
-
-  return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
-        <CardHeader className="text-center pt-10 pb-6">
-          <Logo className="h-16 w-16 mb-6 mx-auto" />
-          <CardTitle className="text-2xl font-bold text-slate-900">Verify your email</CardTitle>
-          <CardDescription className="text-sm font-medium text-slate-500 pt-2">
-            We've sent a link to <span className="font-bold text-slate-900">{user?.email}</span>. Please verify to continue.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 flex flex-col items-center pb-8 px-10">
-            <div className="p-6 rounded-full bg-blue-50 text-primary mb-2">
-                <Mail className="h-10 w-10" />
-            </div>
-            
-            <div className="space-y-3 w-full">
-                <Button 
-                    onClick={checkStatus} 
-                    disabled={isChecking} 
-                    className="w-full h-12 rounded-xl font-bold"
-                >
-                    {isChecking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                    I've verified my email
-                </Button>
-                
-                <Button 
-                    variant="ghost" 
-                    onClick={handleResend} 
-                    disabled={isResending} 
-                    className="w-full h-10 rounded-xl font-bold text-slate-400 hover:text-primary transition-colors text-xs"
-                >
-                    {isResending ? "Resending..." : "Resend verification email"}
-                </Button>
-            </div>
-        </CardContent>
-        <CardFooter className="py-6 flex justify-center border-t bg-slate-50/30">
-            <Button variant="ghost" onClick={handleLogout} className="text-xs font-bold text-slate-400 gap-2 hover:text-slate-900">
-                <LogOut className="h-3 w-3" /> Use a different account
-            </Button>
-        </CardFooter>
-      </Card>
-    </main>
-  );
+  return <FullScreenLoader text="Verifying status..." />;
 }

@@ -30,12 +30,6 @@ export default function OnboardingPage() {
       return;
     }
 
-    // MANDATORY EMAIL VERIFICATION CHECK
-    if (!authUser.emailVerified) {
-        router.push('/verify-email');
-        return;
-    }
-
     const analyzeIdentityAndRoute = async () => {
       const userDocRef = doc(firestore, 'users', authUser.uid);
       const userDocSnap = await getDoc(userDocRef);
