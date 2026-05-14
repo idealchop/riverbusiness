@@ -21,6 +21,8 @@ import { signOut } from 'firebase/auth';
 import { useMounted } from '@/hooks/use-mounted';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { LogoBlack } from '@/components/icons';
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
