@@ -341,7 +341,7 @@ export default function ClaimAccountPage() {
                <Separator className="bg-slate-50" />
                <div className="flex items-center justify-between w-full">
                     <button onClick={() => { setMode(mode === 'claim' ? 'create' : 'claim'); setSetupStep(1); }} className="text-xs font-bold text-blue-500 hover:underline">
-                        {mode === 'claim' ? "Create new workspace" : "Already have a Client ID?"}
+                        {mode === 'claim' ? "Create New Workspace" : "Already have a Client ID?"}
                     </button>
                     <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">River Support</p>
                </div>
