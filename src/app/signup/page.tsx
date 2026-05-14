@@ -173,7 +173,7 @@ function SignupContent() {
                     </div>
 
                     <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Activate account'}
+                        {isSubmitting ? <Loader className="text-white" /> : 'Create account'}
                     </Button>
                 </form>
 
