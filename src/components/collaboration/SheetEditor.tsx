@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -36,7 +37,11 @@ import {
     Check,
     AlertCircle,
     FileText,
-    ArrowRight
+    ArrowRight,
+    Loader2,
+    FilterX,
+    PlusCircle,
+    CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,17 +58,33 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
+import { 
+    Popover,
+    PopoverContent,
+    PopoverTrigger 
+} from '@/components/ui/popover';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { SheetField, SheetRecord, SheetView, SheetFieldType } from '@/lib/types';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO } from 'date-fns';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SheetEditorProps {
   initialData: any;
   onContentChange: (json: any) => void;
   editable?: boolean;
+}
+
+type FilterOperator = 'contains' | 'not_contains' | 'is' | 'is_not' | 'is_empty' | 'is_not_empty' | 'gt' | 'lt' | 'after' | 'before';
+
+interface FilterRule {
+    id: string;
+    fieldId: string;
+    operator: FilterOperator;
+    value: string;
 }
 
 const FIELD_ICONS: Record<SheetFieldType, React.ElementType> = {
@@ -117,14 +138,18 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
+  const [filters, setFilters] = useState<FilterRule[]>([]);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
   const sync = useCallback((newFields: SheetField[], newRecords: SheetRecord[], newViews: SheetView[], newViewId: string) => {
       if (!editable) return;
+      setIsSyncing(true);
       onContentChange({ fields: newFields, records: newRecords, views: newViews, activeViewId: newViewId });
+      setTimeout(() => setIsSyncing(false), 800);
   }, [onContentChange, editable]);
 
   const addRecord = () => {
@@ -153,12 +178,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     const id = `f-${Date.now()}`;
     const newField: SheetField = {
         id,
-        name: `New ${type}`,
+        name: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
         type,
         width: 150,
         options: (type === 'status' || type === 'select') ? [
-            { label: 'Todo', color: 'bg-slate-100 text-slate-700' },
-            { label: 'Complete', color: 'bg-green-100 text-green-700' }
+            { label: 'Option 1', color: 'bg-slate-100 text-slate-700' },
+            { label: 'Option 2', color: 'bg-blue-100 text-blue-700' }
         ] : undefined
     };
     const next = [...fields, newField];
@@ -185,10 +210,15 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     toast({ title: 'Column purged' });
   };
 
-  const renameField = (fieldId: string, newName: string) => {
-      const next = fields.map(f => f.id === fieldId ? { ...f, name: newName } : f);
-      setFields(next);
-      sync(next, records, views, activeViewId);
+  const handleRenameField = (fieldId: string) => {
+    const field = fields.find(f => f.id === fieldId);
+    if (!field) return;
+    const newName = window.prompt('Enter new column name:', field.name);
+    if (newName && newName.trim() !== '') {
+        const next = fields.map(f => f.id === fieldId ? { ...f, name: newName.trim() } : f);
+        setFields(next);
+        sync(next, records, views, activeViewId);
+    }
   };
 
   const changeFieldType = (fieldId: string, newType: SheetFieldType) => {
@@ -210,9 +240,28 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       sync(fields, records, views, id);
   };
 
+  const addFilter = () => {
+      const newFilter: FilterRule = {
+          id: `flt-${Date.now()}`,
+          fieldId: fields[0].id,
+          operator: 'contains',
+          value: ''
+      };
+      setFilters([...filters, newFilter]);
+  };
+
+  const updateFilter = (id: string, updates: Partial<FilterRule>) => {
+      setFilters(filters.map(f => f.id === id ? { ...f, ...updates } : f));
+  };
+
+  const removeFilter = (id: string) => {
+      setFilters(filters.filter(f => f.id !== id));
+  };
+
   const filteredRecords = useMemo(() => {
     let list = [...records];
     
+    // Global Search
     if (searchTerm) {
         const s = searchTerm.toLowerCase().trim();
         list = list.filter(r => 
@@ -220,6 +269,32 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         );
     }
 
+    // Advanced Multi-Rule Filtering
+    if (filters.length > 0) {
+        list = list.filter(record => {
+            return filters.every(filter => {
+                const fieldValue = record.values[filter.fieldId];
+                const filterValue = filter.value.toLowerCase();
+                const strValue = String(fieldValue || '').toLowerCase();
+
+                switch (filter.operator) {
+                    case 'contains': return strValue.includes(filterValue);
+                    case 'not_contains': return !strValue.includes(filterValue);
+                    case 'is': return strValue === filterValue;
+                    case 'is_not': return strValue !== filterValue;
+                    case 'is_empty': return !fieldValue || strValue === '';
+                    case 'is_not_empty': return fieldValue && strValue !== '';
+                    case 'gt': return Number(fieldValue) > Number(filter.value);
+                    case 'lt': return Number(fieldValue) < Number(filter.value);
+                    case 'after': return isAfter(parseISO(strValue), parseISO(filter.value));
+                    case 'before': return isBefore(parseISO(strValue), parseISO(filter.value));
+                    default: return true;
+                }
+            });
+        });
+    }
+
+    // Sorting
     if (sortConfig) {
         list.sort((a, b) => {
             const valA = String(a.values[sortConfig.fieldId] || '');
@@ -231,7 +306,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     }
 
     return list;
-  }, [records, searchTerm, sortConfig]);
+  }, [records, searchTerm, sortConfig, filters]);
 
   if (!isMounted) return null;
 
@@ -295,21 +370,76 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: 'Logic builder', description: 'Advanced filters coming soon.' })} className="h-8 px-3 rounded-lg gap-2 text-slate-500 hover:text-slate-900 font-bold text-[10px] uppercase tracking-wider">
-                        <Filter className="h-3.5 w-3.5" /> Filter
-                    </Button>
+                    
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-3 rounded-lg gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <Filter className="h-3.5 w-3.5" /> 
+                                Filter
+                                {filters.length > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{filters.length}</Badge>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
+                            <div className="p-4 border-b bg-slate-50 flex items-center justify-between">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Protocol</h4>
+                                <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="h-7 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">Clear All</Button>
+                            </div>
+                            <ScrollArea className="max-h-72">
+                                <div className="p-4 space-y-3">
+                                    {filters.map((f, i) => (
+                                        <div key={f.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
+                                            <Select value={f.fieldId} onValueChange={(val) => updateFilter(f.id, { fieldId: val })}>
+                                                <SelectTrigger className="w-[120px] h-9 rounded-xl text-[10px] font-bold">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    {fields.map(field => <SelectItem key={field.id} value={field.id} className="text-xs font-bold">{field.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={f.operator} onValueChange={(val: any) => updateFilter(f.id, { operator: val })}>
+                                                <SelectTrigger className="w-[100px] h-9 rounded-xl text-[10px] font-bold">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="contains" className="text-xs font-bold">contains</SelectItem>
+                                                    <SelectItem value="is" className="text-xs font-bold">is</SelectItem>
+                                                    <SelectItem value="is_not" className="text-xs font-bold">is not</SelectItem>
+                                                    <SelectItem value="is_empty" className="text-xs font-bold">is empty</SelectItem>
+                                                    <SelectItem value="gt" className="text-xs font-bold">greater than</SelectItem>
+                                                    <SelectItem value="lt" className="text-xs font-bold">less than</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {!['is_empty', 'is_not_empty'].includes(f.operator) && (
+                                                <Input 
+                                                    placeholder="value..." 
+                                                    value={f.value}
+                                                    onChange={(e) => updateFilter(f.id, { value: e.target.value })}
+                                                    className="h-9 rounded-xl text-xs font-bold flex-1"
+                                                />
+                                            )}
+                                            <Button variant="ghost" size="icon" onClick={() => removeFilter(f.id)} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></Button>
+                                        </div>
+                                    ))}
+                                    <Button variant="ghost" onClick={addFilter} className="w-full h-10 border-dashed border border-slate-200 rounded-xl gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50">
+                                        <Plus className="h-3 w-3" /> Add Rule
+                                    </Button>
+                                </div>
+                            </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
 
             <div className="flex items-center gap-3">
-                <div className="relative group/search hidden md:block">
+                <div className="relative group/search hidden md:flex items-center">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input 
-                        placeholder="Search records..." 
-                        className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold w-48 transition-all focus:w-64"
+                        placeholder="Quick find..." 
+                        className="h-9 pl-9 pr-10 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold w-40 transition-all focus:w-64"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    {isSyncing && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary opacity-50" /></div>}
                 </div>
                 <Button onClick={addRecord} className="h-9 px-4 rounded-xl font-bold text-xs gap-2 shadow-lg shadow-primary/10">
                     <Plus className="h-3.5 w-3.5" /> New Record
@@ -340,10 +470,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             </button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer" onClick={() => {
-                                                const name = window.prompt('Enter new column name:', field.name);
-                                                if (name) renameField(field.id, name);
-                                            }}>
+                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer" onClick={() => handleRenameField(field.id)}>
                                                 <Edit className="h-3.5 w-3.5" /> Rename Field
                                             </DropdownMenuItem>
                                             
