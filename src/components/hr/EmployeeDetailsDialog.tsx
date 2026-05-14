@@ -42,7 +42,9 @@ import {
   X,
   Upload,
   Eye,
-  Info
+  Info,
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
@@ -84,7 +86,6 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
   const storage = useStorage();
   const auth = useAuth();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
   
   const companyId = employee?.companyId || 'default';
   
@@ -219,31 +220,29 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col h-[90vh] bg-white shadow-3xl">
+      <DialogContent className="sm:max-w-4xl rounded-2xl md:rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col h-[100dvh] sm:h-[90vh] bg-white shadow-3xl">
         {/* Header - Fixed */}
-        <div className="p-8 pb-4 shrink-0">
+        <div className="p-6 md:p-8 pb-4 shrink-0">
             <DialogHeader>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <Avatar className="h-20 w-20 rounded-3xl shadow-inner border-4 border-slate-50">
-                            <AvatarImage src={employee.photoURL} alt={employee.name} className="object-cover" />
-                            <AvatarFallback className="rounded-3xl bg-slate-100 text-2xl font-bold text-slate-400">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-1">
-                            <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
-                            <div className="flex items-center gap-3">
-                                <Badge className={cn(
-                                    "border-none text-[10px] font-bold px-3 py-1",
-                                    profile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
-                                )}>
-                                    {profile?.status || 'Active'}
-                                </Badge>
-                                <span className="text-sm font-medium text-slate-500">
-                                    {profile?.employeeNumber || 'ID Pending'} • {profile?.position || 'Unassigned'} • {profile?.department || 'General'}
-                                </span>
-                            </div>
+                <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 md:gap-6">
+                    <Avatar className="h-16 w-16 md:h-20 md:w-20 rounded-2xl md:rounded-3xl shadow-inner border-4 border-slate-50">
+                        <AvatarImage src={employee.photoURL} alt={employee.name} className="object-cover" />
+                        <AvatarFallback className="rounded-2xl md:rounded-3xl bg-slate-100 text-xl md:text-2xl font-bold text-slate-400">
+                            {initials}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                        <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 md:gap-3">
+                            <Badge className={cn(
+                                "border-none text-[9px] md:text-[10px] font-bold px-3 py-1",
+                                profile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+                            )}>
+                                {profile?.status || 'Active'}
+                            </Badge>
+                            <span className="text-xs md:text-sm font-medium text-slate-500">
+                                {profile?.employeeNumber || 'ID Pending'} • {profile?.position || 'Unassigned'}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -251,24 +250,24 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            {/* Tabs List - Fixed */}
-            <div className="px-8 border-b border-slate-50 shrink-0">
-                <TabsList className="bg-transparent h-12 p-0 gap-8">
-                    <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Overview</TabsTrigger>
-                    <TabsTrigger value="performance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Performance</TabsTrigger>
-                    <TabsTrigger value="attendance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Attendance</TabsTrigger>
-                    <TabsTrigger value="leaves" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Leaves</TabsTrigger>
+            {/* Tabs List - Fixed & Scrollable on mobile */}
+            <div className="px-6 md:px-8 border-b border-slate-50 shrink-0 overflow-x-auto overflow-y-hidden scrollbar-none">
+                <TabsList className="bg-transparent h-12 p-0 gap-6 md:gap-8 flex w-max sm:w-auto">
+                    <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs md:text-sm tracking-tight px-0">Overview</TabsTrigger>
+                    <TabsTrigger value="performance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs md:text-sm tracking-tight px-0">Performance</TabsTrigger>
+                    <TabsTrigger value="attendance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs md:text-sm tracking-tight px-0">Attendance</TabsTrigger>
+                    <TabsTrigger value="leaves" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs md:text-sm tracking-tight px-0">Leaves</TabsTrigger>
                 </TabsList>
             </div>
 
             {/* Content Area - Scrollable */}
             <ScrollArea className="flex-1 min-h-0">
-                <div className="p-8">
+                <div className="p-6 md:p-8">
                     <TabsContent value="overview" className="mt-0 space-y-10 animate-in fade-in duration-500">
                         {isEditing ? (
                             <div className="space-y-12 pb-10">
                                 <div className="space-y-6">
-                                    <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                         <Briefcase className="h-4 w-4" /> Employment Configuration
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -312,13 +311,13 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                 <Separator className="bg-slate-50" />
 
                                 <div className="space-y-6">
-                                    <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                         <HeartPulse className="h-3.5 w-3.5" /> Benefits & Statutory Details
                                     </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                                        <div className="space-y-4">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">ID Credentials</p>
-                                            <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
+                                        <div className="space-y-5">
+                                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">ID Credentials</p>
+                                            <div className="grid grid-cols-1 gap-4">
                                                 <div className="space-y-2">
                                                     <Label className="text-xs font-semibold">SSS Number</Label>
                                                     <Input value={editData.sssNumber} onChange={(e) => setEditData({...editData, sssNumber: e.target.value})} className="h-10 rounded-xl" placeholder="00-0000000-0" />
@@ -337,9 +336,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-4">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Monthly Deductions (PHP)</p>
-                                            <div className="space-y-4">
+                                        <div className="space-y-5">
+                                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Monthly Deductions (PHP)</p>
+                                            <div className="grid grid-cols-1 gap-4">
                                                 <div className="space-y-2">
                                                     <Label className="text-xs font-semibold">SSS Deduction</Label>
                                                     <Input type="number" value={editData.sssDeduction} onChange={(e) => setEditData({...editData, sssDeduction: e.target.value})} className="h-10 rounded-xl" />
@@ -366,47 +365,47 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     <div className="space-y-8">
                                         <div className="space-y-6">
-                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                            <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                                 <UserCircle className="h-4 w-4" /> Personal & Contact
                                             </h4>
                                             <div className="space-y-4">
                                                 <div className="flex items-center gap-4 group">
                                                     <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
-                                                    <div className="space-y-0.5">
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Login Email</p>
-                                                        <p className="text-sm font-semibold text-slate-700">{employee.email || 'N/A'}</p>
+                                                    <div className="space-y-0.5 overflow-hidden">
+                                                        <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Login Email</p>
+                                                        <p className="text-xs md:text-sm font-semibold text-slate-700 truncate">{employee.email || 'N/A'}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-4 group">
                                                     <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
                                                     <div className="space-y-0.5">
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
-                                                        <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
+                                                        <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
+                                                        <p className="text-xs md:text-sm font-semibold text-slate-700">{employee.contactNumber || 'No Record'}</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="space-y-6">
-                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                            <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                                 <ShieldCheck className="h-4 w-4" /> Statutory Accounts
                                             </h4>
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-2 gap-3 md:gap-4">
                                                 <Card className="border-none bg-slate-50/50 p-4 space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase">SSS</p>
-                                                    <p className="text-xs font-bold text-slate-900">{profile?.sssNumber || 'Unset'}</p>
+                                                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">SSS</p>
+                                                    <p className="text-[10px] md:text-xs font-bold text-slate-900">{profile?.sssNumber || 'Unset'}</p>
                                                 </Card>
                                                 <Card className="border-none bg-slate-50/50 p-4 space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase">PhilHealth</p>
-                                                    <p className="text-xs font-bold text-slate-900">{profile?.philhealthNumber || 'Unset'}</p>
+                                                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">PhilHealth</p>
+                                                    <p className="text-[10px] md:text-xs font-bold text-slate-900">{profile?.philhealthNumber || 'Unset'}</p>
                                                 </Card>
                                                 <Card className="border-none bg-slate-50/50 p-4 space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase">Pag-IBIG</p>
-                                                    <p className="text-xs font-bold text-slate-900">{profile?.pagibigNumber || 'Unset'}</p>
+                                                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">Pag-IBIG</p>
+                                                    <p className="text-[10px] md:text-xs font-bold text-slate-900">{profile?.pagibigNumber || 'Unset'}</p>
                                                 </Card>
                                                 <Card className="border-none bg-slate-50/50 p-4 space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase">TIN</p>
-                                                    <p className="text-xs font-bold text-slate-900">{profile?.tinNumber || 'Unset'}</p>
+                                                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">TIN</p>
+                                                    <p className="text-[10px] md:text-xs font-bold text-slate-900">{profile?.tinNumber || 'Unset'}</p>
                                                 </Card>
                                             </div>
                                         </div>
@@ -414,46 +413,46 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
 
                                     <div className="space-y-8">
                                         <div className="space-y-6">
-                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                            <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                                 <DollarSign className="h-4 w-4" /> Compensation Profile
                                             </h4>
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-2 gap-3 md:gap-4">
                                                 <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
-                                                    <p className="text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
+                                                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
+                                                    <p className="text-base md:text-lg font-bold text-slate-900">₱{(Number(profile?.rate) || 0).toLocaleString()}</p>
                                                 </div>
                                                 <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
-                                                    <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
+                                                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
+                                                    <p className="text-base md:text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="space-y-6">
-                                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                            <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                                 <Landmark className="h-4 w-4" /> Monthly Deductions
                                             </h4>
-                                            <div className="p-6 rounded-[2rem] border border-slate-100 bg-white shadow-sm space-y-4">
-                                                <div className="flex justify-between items-center text-xs">
+                                            <div className="p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-slate-100 bg-white shadow-sm space-y-4">
+                                                <div className="flex justify-between items-center text-[11px] md:text-xs">
                                                     <span className="text-slate-500">SSS Contribution</span>
                                                     <span className="font-bold text-slate-900">₱{(profile?.sssDeduction || 0).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center text-xs">
+                                                <div className="flex justify-between items-center text-[11px] md:text-xs">
                                                     <span className="text-slate-500">PhilHealth</span>
                                                     <span className="font-bold text-slate-900">₱{(profile?.philhealthDeduction || 0).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center text-xs">
+                                                <div className="flex justify-between items-center text-[11px] md:text-xs">
                                                     <span className="text-slate-500">Pag-IBIG</span>
                                                     <span className="font-bold text-slate-900">₱{(profile?.pagibigDeduction || 0).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center text-xs">
+                                                <div className="flex justify-between items-center text-[11px] md:text-xs">
                                                     <span className="text-slate-500">Withholding Tax</span>
                                                     <span className="font-bold text-slate-900">₱{(profile?.taxDeduction || 0).toLocaleString()}</span>
                                                 </div>
                                                 <Separator className="bg-slate-50" />
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-black uppercase text-slate-400">Total Deductions</span>
-                                                    <span className="text-sm font-black text-primary">₱{((profile?.sssDeduction || 0) + (profile?.philhealthDeduction || 0) + (profile?.pagibigDeduction || 0) + (profile?.taxDeduction || 0)).toLocaleString()}</span>
+                                                    <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400">Total</span>
+                                                    <span className="text-sm md:text-base font-black text-primary">₱{((profile?.sssDeduction || 0) + (profile?.philhealthDeduction || 0) + (profile?.pagibigDeduction || 0) + (profile?.taxDeduction || 0)).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -464,63 +463,63 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                 
                                 {/* Legal Documents Section */}
                                 <div className="space-y-6">
-                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                         <FileText className="h-4 w-4" /> Legal Documents
                                     </h4>
                                     <Card className="border-none shadow-sm overflow-hidden bg-slate-50/20">
-                                        <CardHeader className="bg-slate-50/50 p-6 flex flex-row items-center justify-between">
+                                        <CardHeader className="bg-slate-50/50 p-4 md:p-6 flex flex-row items-center justify-between">
                                             <div>
-                                                <CardTitle className="text-sm font-bold">Employment Contract</CardTitle>
-                                                <CardDescription className="text-xs">Authorized digital copy of signed agreement.</CardDescription>
+                                                <CardTitle className="text-xs md:text-sm font-bold">Employment Contract</CardTitle>
+                                                <CardDescription className="text-[10px] md:text-xs">Authorized digital copy.</CardDescription>
                                             </div>
                                             {employee.currentContractUrl && (
-                                                <Badge className="bg-green-50 text-green-700 border-none font-bold uppercase text-[9px] px-3">Verified Active</Badge>
+                                                <Badge className="bg-green-50 text-green-700 border-none font-bold uppercase text-[8px] md:text-[9px] px-3">Active</Badge>
                                             )}
                                         </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="flex flex-col md:flex-row items-center gap-8">
+                                        <CardContent className="p-4 md:p-6">
+                                            <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-8">
                                                 <div className="flex-1 w-full flex flex-col gap-4">
                                                     {employee.currentContractUrl ? (
-                                                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                                                            <div className="p-2.5 rounded-xl bg-blue-50 text-primary">
-                                                                <FileText className="h-6 w-6" />
+                                                        <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                                                            <div className="p-2 md:p-2.5 rounded-xl bg-blue-50 text-primary">
+                                                                <FileText className="h-5 w-5 md:h-6 md:w-6" />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-bold text-slate-900 truncate">contract_signed_digital.pdf</p>
-                                                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
-                                                                    Uploaded {employee.contractUploadedDate ? format(toSafeDate(employee.contractUploadedDate)!, 'PPP') : 'Recently'}
+                                                                <p className="text-xs md:text-sm font-bold text-slate-900 truncate">contract_signed.pdf</p>
+                                                                <p className="text-[9px] md:text-[10px] font-medium text-slate-400 uppercase">
+                                                                    {employee.contractUploadedDate ? format(toSafeDate(employee.contractUploadedDate)!, 'MMM d, yyyy') : 'N/A'}
                                                                 </p>
                                                             </div>
-                                                            <Button asChild variant="outline" size="sm" className="h-9 px-4 rounded-xl font-bold text-xs gap-2 border-slate-200">
+                                                            <Button asChild variant="outline" size="sm" className="h-8 md:h-9 px-3 md:px-4 rounded-xl font-bold text-[10px] md:text-xs gap-2 border-slate-200">
                                                                 <a href={employee.currentContractUrl} target="_blank" rel="noopener noreferrer">
-                                                                    <Eye className="h-3.5 w-3.5" /> View
+                                                                    <Eye className="h-3 w-3 md:h-3.5 md:w-3.5" /> View
                                                                 </a>
                                                             </Button>
                                                         </div>
                                                     ) : (
-                                                        <div className="p-8 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center text-center gap-3 bg-white/40">
+                                                        <div className="p-6 md:p-8 border-2 border-dashed rounded-2xl md:rounded-[2rem] flex flex-col items-center justify-center text-center gap-3 bg-white/40">
                                                             <div className="p-3 rounded-full bg-slate-50 text-slate-300">
-                                                                <FileText className="h-8 w-8" />
+                                                                <FileText className="h-6 w-6 md:h-8 md:w-8" />
                                                             </div>
-                                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No Contract on File</p>
+                                                            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">No Contract on File</p>
                                                         </div>
                                                     )}
                                                 </div>
                                                 
                                                 <div className="flex-1 w-full space-y-4">
                                                     <div className="space-y-2">
-                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
+                                                        <Label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
                                                         <div className="flex gap-2">
                                                             <Input 
                                                                 type="file" 
                                                                 onChange={(e) => setContractFile(e.target.files?.[0] || null)}
-                                                                className="h-10 rounded-xl bg-white border-slate-200 text-xs font-medium"
+                                                                className="h-9 md:h-10 rounded-xl bg-white border-slate-200 text-[10px] md:text-xs font-medium"
                                                                 disabled={isUploadingContract}
                                                                 accept=".pdf,image/*"
                                                             />
                                                             <Button 
                                                                 size="sm" 
-                                                                className="h-10 px-5 rounded-xl font-bold text-xs shadow-md"
+                                                                className="h-9 md:h-10 px-4 md:px-5 rounded-xl font-bold text-xs shadow-md"
                                                                 onClick={handleContractUpload}
                                                                 disabled={!contractFile || isUploadingContract}
                                                             >
@@ -529,17 +528,11 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                                         </div>
                                                     </div>
                                                     {isUploadingContract && (
-                                                        <div className="space-y-1.5">
+                                                        <div className="space-y-1">
                                                             <Progress value={uploadProgress} className="h-1" />
-                                                            <p className="text-[9px] font-black text-right text-primary uppercase tracking-widest">{uploadProgress.toFixed(0)}% Synchronizing</p>
+                                                            <p className="text-[8px] md:text-[9px] font-black text-right text-primary uppercase tracking-widest">{uploadProgress.toFixed(0)}% Synchronizing</p>
                                                         </div>
                                                     )}
-                                                    <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-3">
-                                                        <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                                        <p className="text-[10px] font-medium text-slate-600 leading-relaxed italic">
-                                                            Attaching a new contract will archive the previous version and update the organizational compliance status for this employee.
-                                                        </p>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -549,41 +542,41 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                         )}
                     </TabsContent>
 
-                    <TabsContent value="performance" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
+                    <TabsContent value="performance" className="mt-0 space-y-6 md:space-y-8 animate-in fade-in duration-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <Card className="rounded-2xl md:rounded-3xl border-none bg-slate-50/50 p-5 md:p-6 space-y-4">
                                 <CardContent className="p-0 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="p-2 rounded-xl bg-white shadow-sm text-green-600"><TrendingUp className="h-5 w-5" /></div>
-                                        <p className="text-[10px] font-bold text-green-600 uppercase">Punctuality</p>
+                                        <p className="text-[9px] md:text-[10px] font-bold text-green-600 uppercase">Punctuality</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.punctuality.toFixed(0)}%</p>
-                                        <p className="text-xs font-medium text-slate-400">On-time rate</p>
+                                        <p className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{metrics.punctuality.toFixed(0)}%</p>
+                                        <p className="text-[10px] md:text-xs font-medium text-slate-400">On-time rate</p>
                                     </div>
                                 </CardContent>
                             </Card>
-                            <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
+                            <Card className="rounded-2xl md:rounded-3xl border-none bg-slate-50/50 p-5 md:p-6 space-y-4">
                                 <CardContent className="p-0 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="p-2 rounded-xl bg-white shadow-sm text-primary"><Activity className="h-5 w-5" /></div>
-                                        <p className="text-[10px] font-bold text-primary uppercase">Volume</p>
+                                        <p className="text-[9px] md:text-[10px] font-bold text-primary uppercase">Volume</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.hoursWorked.toFixed(1)}h</p>
-                                        <p className="text-xs font-medium text-slate-400">Hours logged</p>
+                                        <p className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{metrics.hoursWorked.toFixed(1)}h</p>
+                                        <p className="text-[10px] md:text-xs font-medium text-slate-400">Hours logged</p>
                                     </div>
                                 </CardContent>
                             </Card>
-                            <Card className="rounded-3xl border-none bg-slate-50/50 p-6 space-y-4">
+                            <Card className="rounded-2xl md:rounded-3xl border-none bg-slate-50/50 p-5 md:p-6 space-y-4">
                                 <CardContent className="p-0 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="p-2 rounded-xl bg-white shadow-sm text-amber-600"><AlertCircle className="h-5 w-5" /></div>
-                                        <p className="text-[10px] font-bold text-amber-600 uppercase">Records</p>
+                                        <p className="text-[9px] md:text-[10px] font-bold text-amber-600 uppercase">Records</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-3xl font-bold tracking-tight text-slate-900">{metrics.attendanceCount}</p>
-                                        <p className="text-xs font-medium text-slate-400">Total shifts</p>
+                                        <p className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{metrics.attendanceCount}</p>
+                                        <p className="text-[10px] md:text-xs font-medium text-slate-400">Total shifts</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -591,8 +584,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                     </TabsContent>
 
                     <TabsContent value="attendance" className="mt-0 animate-in fade-in duration-500">
-                         <div className="rounded-3xl border border-slate-50 overflow-hidden bg-slate-50/20">
-                            <Table>
+                         <div className="rounded-2xl md:rounded-3xl border border-slate-50 overflow-hidden bg-slate-50/20">
+                            {/* Desktop Attendance Table */}
+                            <Table className="hidden md:table">
                                 <TableHeader className="bg-slate-50/50">
                                     <TableRow className="border-none">
                                         <TableHead className="text-xs font-bold text-slate-400 pl-6">Work Date</TableHead>
@@ -636,6 +630,46 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                     )}
                                 </TableBody>
                             </Table>
+
+                            {/* Mobile Attendance View */}
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {loadingAttendance ? (
+                                    <p className="text-center py-12 opacity-50 font-bold uppercase text-[9px]">Syncing...</p>
+                                ) : attendanceLogs && attendanceLogs.length > 0 ? (
+                                    attendanceLogs.map(log => {
+                                        const workDate = toSafeDate(log.date);
+                                        const timeIn = toSafeDate(log.timeIn);
+                                        const timeOut = toSafeDate(log.timeOut);
+                                        return (
+                                            <div key={log.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <p className="text-sm font-black text-slate-900">{workDate ? format(workDate, 'MMM d, yyyy') : 'N/A'}</p>
+                                                    <Badge className={cn(
+                                                        "text-[9px] font-black uppercase border-none px-2 h-5",
+                                                        log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                                                    )}>{log.status || 'present'}</Badge>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 text-center">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">In</p>
+                                                        <p className="text-xs font-bold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Out</p>
+                                                        <p className="text-xs font-bold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</p>
+                                                    </div>
+                                                    <div className="space-y-1 border-l border-slate-50">
+                                                        <p className="text-[8px] font-black text-primary uppercase tracking-widest">Duration</p>
+                                                        <p className="text-xs font-black text-primary">{formatDuration(log.totalMinutes)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                ) : (
+                                    <p className="text-center py-12 text-xs font-bold text-slate-300 uppercase tracking-widest">No Logs Found</p>
+                                )}
+                            </div>
                          </div>
                     </TabsContent>
 
@@ -648,25 +682,28 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                     const start = toSafeDate(request.startDate);
                                     const end = toSafeDate(request.endDate);
                                     return (
-                                        <div key={request.id} className="p-6 rounded-[2rem] border border-slate-50 bg-slate-50/30 flex items-center justify-between hover:bg-white hover:border-slate-100 transition-all shadow-none">
-                                            <div className="flex items-center gap-5">
-                                                <div className="h-12 w-12 rounded-2xl bg-white border border-slate-50 flex items-center justify-center text-slate-400 shadow-sm">
-                                                    <CalendarDays className="h-6 w-6" />
+                                        <div key={request.id} className="p-5 md:p-6 rounded-2xl md:rounded-[2rem] border border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-white hover:border-slate-100 transition-all shadow-none gap-4">
+                                            <div className="flex items-center gap-4 md:gap-5">
+                                                <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-white border border-slate-50 flex items-center justify-center text-slate-400 shadow-sm shrink-0">
+                                                    <CalendarDays className="h-5 w-5 md:h-6 md:w-6" />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-base font-bold text-slate-900">{request.type || 'Leave'}</p>
-                                                    <p className="text-xs font-semibold text-slate-400">
+                                                <div className="space-y-0.5 overflow-hidden">
+                                                    <p className="text-sm md:text-base font-bold text-slate-900">{request.type || 'Leave'}</p>
+                                                    <p className="text-[10px] md:text-xs font-semibold text-slate-400">
                                                         {start ? format(start, 'MMM d') : '?'} — {end ? format(end, 'MMM d, yyyy') : '?'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <Badge className={cn(
-                                                "text-[10px] font-bold uppercase border-none px-4 py-1",
-                                                request.status === 'approved' ? "bg-green-50 text-green-700" : 
-                                                request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
-                                            )}>
-                                                {request.status}
-                                            </Badge>
+                                            <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t sm:border-none border-slate-100/50">
+                                                <span className="sm:hidden text-[9px] font-black uppercase text-slate-400">Status</span>
+                                                <Badge className={cn(
+                                                    "text-[9px] md:text-[10px] font-bold uppercase border-none px-3 md:px-4 py-1",
+                                                    request.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                                    request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                                                )}>
+                                                    {request.status}
+                                                </Badge>
+                                            </div>
                                         </div>
                                     );
                                 })
@@ -682,25 +719,26 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
         </Tabs>
 
         {/* Footer - Fixed */}
-        <div className="p-8 pt-4 border-t bg-slate-50/20 shrink-0">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Confidential Workforce Data — Unauthorized Access Prohibited</p>
+        <div className="p-6 md:p-8 pt-4 border-t bg-slate-50/20 shrink-0">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="hidden md:flex items-center gap-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorized Access Only</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-full md:w-auto gap-3">
                     {isEditing ? (
                         <>
-                            <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-8 font-bold text-xs" disabled={isSaving}>Cancel</Button>
-                            <Button onClick={handleSaveProfile} disabled={isSaving} className="rounded-xl h-11 px-10 font-bold text-xs shadow-xl shadow-primary/20">
-                                {isSaving ? 'Processing...' : 'Save Profile Changes'}
+                            <Button variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl h-11 px-6 font-bold text-xs" disabled={isSaving}>Cancel</Button>
+                            <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 md:flex-none rounded-xl h-11 px-8 font-bold text-xs shadow-xl shadow-primary/20">
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                                Save Changes
                             </Button>
                         </>
                     ) : (
                         <>
-                            <Button variant="outline" className="rounded-xl font-bold text-xs h-11 px-8 border-slate-200 bg-white" onClick={() => setIsEditing(true)}>
+                            <Button variant="outline" className="flex-1 md:flex-none rounded-xl font-bold text-xs h-11 px-6 border-slate-200 bg-white" onClick={() => setIsEditing(true)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit Profile
                             </Button>
-                            <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-bold h-11 px-8 rounded-2xl">Dismiss</Button>
+                            <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold text-xs h-11 px-6 text-slate-400">Dismiss</Button>
                         </>
                     )}
                 </div>
