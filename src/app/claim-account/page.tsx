@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,10 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { CheckCircle, ArrowRight, Building2, UserCircle } from 'lucide-react';
+import { CheckCircle, ArrowRight, Building2, UserCircle, MapPin, Briefcase, Droplets, Users, Layout } from 'lucide-react';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 const claimSchema = z.object({
@@ -27,10 +31,31 @@ const claimSchema = z.object({
 const registerWorkspaceSchema = z.object({
   businessName: z.string().min(2, { message: 'Business name is required.' }),
   name: z.string().min(2, { message: 'Full name is required.' }),
+  address: z.string().min(5, { message: 'Complete business address is required.' }),
+  industry: z.string().min(1, { message: 'Industry classification is required.' }),
+  interests: z.array(z.string()).min(1, { message: 'Select at least one area of interest.' }),
 });
 
 type ClaimFormValues = z.infer<typeof claimSchema>;
 type RegisterWorkspaceValues = z.infer<typeof registerWorkspaceSchema>;
+
+const INDUSTRIES = [
+  'Retail & E-commerce',
+  'Technology & Software',
+  'Manufacturing & Logistics',
+  'Healthcare & Medical',
+  'Education & Training',
+  'Food & Beverage',
+  'Real Estate & Construction',
+  'Professional Services',
+  'Other'
+];
+
+const INTERESTS = [
+  { id: 'water', label: 'Water Refill', icon: Droplets },
+  { id: 'hr', label: 'HR Management', icon: Users },
+  { id: 'collab', label: 'Collaboration', icon: Layout },
+];
 
 export default function ClaimAccountPage() {
   const router = useRouter();
@@ -47,6 +72,9 @@ export default function ClaimAccountPage() {
 
   const registerForm = useForm<RegisterWorkspaceValues>({
     resolver: zodResolver(registerWorkspaceSchema),
+    defaultValues: {
+      interests: [],
+    }
   });
 
   useEffect(() => {
@@ -63,13 +91,11 @@ export default function ClaimAccountPage() {
         const userDocRef = doc(firestore, 'users', authUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         
-        // If user already has a profile, go to onboarding to route them correctly
         if (userDocSnap.exists()) {
             router.push('/onboarding');
             return;
         }
 
-        // Check if user is an invited employee. If so, they shouldn't be here.
         const userEmail = authUser.email?.toLowerCase().trim();
         if (userEmail) {
             const inviteQuery = query(
@@ -78,7 +104,6 @@ export default function ClaimAccountPage() {
             );
             const inviteSnap = await getDocs(inviteQuery);
             if (!inviteSnap.empty) {
-                // Return to onboarding to trigger the "Magic Claim"
                 router.push('/onboarding');
                 return;
             }
@@ -141,7 +166,6 @@ export default function ClaimAccountPage() {
     try {
       const batch = writeBatch(firestore);
       
-      // Generate a unique Client ID for self-registration
       const randomSuffix = Math.floor(100000 + Math.random() * 900000);
       const generatedClientId = `SC-SR-${randomSuffix}`;
       
@@ -153,6 +177,9 @@ export default function ClaimAccountPage() {
         name: data.name,
         email: authUser.email!.toLowerCase().trim(),
         businessName: data.businessName,
+        address: data.address,
+        industry: data.industry,
+        interests: data.interests,
         companyId: generatedClientId,
         role: 'User',
         hrRole: 'owner',
@@ -235,7 +262,7 @@ export default function ClaimAccountPage() {
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4 font-sans">
-      <div className="flex flex-col items-center gap-8 w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <div className="flex flex-col items-center gap-8 w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-1000">
         <Logo className="h-16 w-16" />
         
         <Card className="w-full border-none shadow-2xl rounded-[2.5rem] p-4 bg-white relative overflow-hidden">
@@ -245,7 +272,7 @@ export default function ClaimAccountPage() {
             <CardTitle className="text-2xl font-black tracking-tight text-slate-900">
               {mode === 'claim' ? 'Enter Client ID' : 'Setup Workspace'}
             </CardTitle>
-            <CardDescription className="text-base pt-2 font-medium leading-relaxed">
+            <CardDescription className="text-sm pt-2 font-medium leading-relaxed">
               {mode === 'claim' 
                 ? 'Link your business profile provided by an administrator.' 
                 : 'Initialize a new organizational infrastructure for your team.'}
@@ -278,36 +305,92 @@ export default function ClaimAccountPage() {
               </form>
             ) : (
               <form onSubmit={registerForm.handleSubmit(onCreateSubmit)} className="space-y-6 animate-in fade-in duration-500">
-                <div className="space-y-4">
-                    <div className="space-y-2 group">
-                        <Label htmlFor="businessName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business name</Label>
-                        <div className="relative">
-                            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                            <Input
-                                id="businessName"
-                                placeholder="e.g. Acme Corp"
-                                className="h-14 rounded-2xl bg-slate-50 border-slate-200 pl-11 pr-5 font-bold focus-visible:ring-primary/20"
-                                {...registerForm.register('businessName')}
-                                disabled={registerForm.formState.isSubmitting}
-                            />
+                <ScrollArea className="max-h-[50vh] pr-4 -mr-4">
+                    <div className="space-y-6 pb-2">
+                        <div className="space-y-4">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                                <Building2 className="h-3 w-3" /> 1. Business Information
+                            </h4>
+                            <div className="space-y-4">
+                                <div className="space-y-2 group">
+                                    <Label htmlFor="businessName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Company name</Label>
+                                    <Input
+                                        id="businessName"
+                                        placeholder="e.g. Acme Corp"
+                                        className="h-12 rounded-xl bg-slate-50 border-slate-200 px-4 font-bold"
+                                        {...registerForm.register('businessName')}
+                                        disabled={registerForm.formState.isSubmitting}
+                                    />
+                                    {registerForm.formState.errors.businessName && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.businessName.message}</p>}
+                                </div>
+                                <div className="space-y-2 group">
+                                    <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Primary owner</Label>
+                                    <Input
+                                        id="name"
+                                        placeholder="Full Name"
+                                        className="h-12 rounded-xl bg-slate-50 border-slate-200 px-4 font-bold"
+                                        {...registerForm.register('name')}
+                                        disabled={registerForm.formState.isSubmitting}
+                                    />
+                                    {registerForm.formState.errors.name && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.name.message}</p>}
+                                </div>
+                                <div className="space-y-2 group">
+                                    <Label htmlFor="industry" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Industry classification</Label>
+                                    <Select onValueChange={(val) => registerForm.setValue('industry', val)} defaultValue={registerForm.getValues('industry')}>
+                                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-200 px-4 font-bold">
+                                            <SelectValue placeholder="Select Industry" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            {INDUSTRIES.map(ind => (
+                                                <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {registerForm.formState.errors.industry && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.industry.message}</p>}
+                                </div>
+                                <div className="space-y-2 group">
+                                    <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business address</Label>
+                                    <Textarea
+                                        id="address"
+                                        placeholder="Complete Service Address"
+                                        className="rounded-xl bg-slate-50 border-slate-200 px-4 py-3 font-bold min-h-[80px]"
+                                        {...registerForm.register('address')}
+                                        disabled={registerForm.formState.isSubmitting}
+                                    />
+                                    {registerForm.formState.errors.address && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.address.message}</p>}
+                                </div>
+                            </div>
                         </div>
-                        {registerForm.formState.errors.businessName && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.businessName.message}</p>}
-                    </div>
-                    <div className="space-y-2 group">
-                        <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Account owner</Label>
-                        <div className="relative">
-                            <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                            <Input
-                                id="name"
-                                placeholder="Full Name"
-                                className="h-14 rounded-2xl bg-slate-50 border-slate-200 pl-11 pr-5 font-bold focus-visible:ring-primary/20"
-                                {...registerForm.register('name')}
-                                disabled={registerForm.formState.isSubmitting}
-                            />
+
+                        <div className="space-y-4">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                                <CheckCircle className="h-3 w-3" /> 2. Operational Interests
+                            </h4>
+                            <div className="grid grid-cols-1 gap-2">
+                                {INTERESTS.map((interest) => (
+                                    <div key={interest.id} className="flex items-center space-x-3 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-primary/20 transition-all group">
+                                        <Checkbox 
+                                            id={interest.id} 
+                                            onCheckedChange={(checked) => {
+                                                const current = registerForm.getValues('interests') || [];
+                                                if (checked) {
+                                                    registerForm.setValue('interests', [...current, interest.label]);
+                                                } else {
+                                                    registerForm.setValue('interests', current.filter(i => i !== interest.label));
+                                                }
+                                            }}
+                                        />
+                                        <Label htmlFor={interest.id} className="flex items-center gap-3 cursor-pointer flex-1">
+                                            <interest.icon className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                                            <span className="font-bold text-slate-700">{interest.label}</span>
+                                        </Label>
+                                    </div>
+                                ))}
+                                {registerForm.formState.errors.interests && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.interests.message}</p>}
+                            </div>
                         </div>
-                        {registerForm.formState.errors.name && <p className="text-[10px] font-black text-destructive uppercase tracking-tighter ml-1">{registerForm.formState.errors.name.message}</p>}
                     </div>
-                </div>
+                </ScrollArea>
                 <Button type="submit" className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-primary/10" disabled={registerForm.formState.isSubmitting}>
                   {registerForm.formState.isSubmitting ? <Loader /> : 'Initialize Workspace'}
                 </Button>

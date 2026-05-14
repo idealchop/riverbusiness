@@ -13,62 +13,101 @@
         "businessEmail": { "type": "string", "format": "email", "description": "User's business contact email address." },
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
+        "industry": { "type": "string", "description": "The industry the business belongs to." },
+        "interests": { "type": "array", "items": { "type": "string" }, "description": "Modules the user is interested in." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
         "totalConsumptionLiters": { "type": "number" },
-        "usedStorageBytes": { "type": "number", "description": "Current storage consumption in bytes." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"] },
         "lastLogin": { "type": "string", "format": "date-time" },
         "role": { "type": "string", "enum": ["Admin", "User"] },
         "hrRole": { "type": "string", "enum": ["owner", "admin", "employee"], "description": "Role within the HR module." },
-        "companyId": { "type": "string", "description": "Tenant ID for multi-tenant isolation." },
+        "companyId": { "type": "string", "description": "Tenant ID for multi-tenant isolation (matches Company Client ID)." },
         "assignedWaterStationId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "onboardingComplete": { "type": "boolean" },
         "plan": { "type": "object" },
-        "customPlanDetails": { "type": "object" }
+        "customPlanDetails": { "type": "object" },
+        "hrProfile": {
+            "type": "object",
+            "properties": {
+                "firstName": { "type": "string" },
+                "lastName": { "type": "string" },
+                "employeeNumber": { "type": "string", "description": "Unique identifier for the employee within the company." },
+                "salaryType": { "type": "string", "enum": ["daily", "weekly", "monthly", "bimonthly"] },
+                "rate": { "type": "number" },
+                "startDate": { "type": "string", "format": "date" },
+                "position": { "type": "string" },
+                "department": { "type": "string" },
+                "status": { "type": "string", "enum": ["Active", "Terminated", "On Leave"] }
+            },
+            "required": ["employeeNumber", "firstName", "lastName", "position", "department"]
+        }
       },
-      "required": ["id", "name", "email", "role", "createdAt"]
+      "required": ["id", "name", "email", "role", "createdAt", "companyId"]
     },
-    "CloudFile": {
-        "title": "CloudFile",
+    "HRAttendanceLog": {
+        "title": "HRAttendanceLog",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
-            "name": { "type": "string" },
-            "type": { "type": "string", "description": "MIME type" },
-            "size": { "type": "number", "description": "Size in bytes" },
-            "url": { "type": "string" },
-            "folderId": { "type": "string", "description": "Parent folder ID or null for root" },
-            "ownerId": { "type": "string" },
-            "ownerName": { "type": "string" },
-            "ownerPhoto": { "type": "string" },
             "companyId": { "type": "string" },
-            "isFavorite": { "type": "boolean" },
-            "isTrashed": { "type": "boolean" },
-            "trashedAt": { "type": "string", "format": "date-time" },
-            "createdAt": { "type": "string", "format": "date-time" },
-            "updatedAt": { "type": "string", "format": "date-time" }
+            "employeeId": { "type": "string" },
+            "employeeName": { "type": "string" },
+            "date": { "type": "string", "format": "date" },
+            "timeIn": { "type": "string", "format": "date-time" },
+            "timeOut": { "type": "string", "format": "date-time" },
+            "method": { "type": "string", "enum": ["QR", "manual"] },
+            "status": { "type": "string", "enum": ["present", "late", "absent", "leave"] }
         },
-        "required": ["name", "type", "size", "url", "ownerId", "companyId"]
+        "required": ["companyId", "employeeId", "date", "timeIn"]
     },
-    "CloudFolder": {
-        "title": "CloudFolder",
+    "HRLeaveRequest": {
+        "title": "HRLeaveRequest",
         "type": "object",
         "properties": {
             "id": { "type": "string" },
-            "name": { "type": "string" },
-            "parentId": { "type": "string", "description": "Parent folder ID or null for root" },
-            "ownerId": { "type": "string" },
-            "ownerName": { "type": "string" },
-            "ownerPhoto": { "type": "string" },
             "companyId": { "type": "string" },
-            "isFavorite": { "type": "boolean" },
-            "isTrashed": { "type": "boolean" },
-            "trashedAt": { "type": "string", "format": "date-time" },
-            "createdAt": { "type": "string", "format": "date-time" },
-            "updatedAt": { "type": "string", "format": "date-time" }
+            "employeeId": { "type": "string" },
+            "employeeName": { "type": "string" },
+            "type": { "type": "string", "enum": ["Vacation", "Sick", "Emergency", "Maternity/Paternity"] },
+            "startDate": { "type": "string", "format": "date" },
+            "endDate": { "type": "string", "format": "date" },
+            "reason": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+            "appliedAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["name", "ownerId", "companyId"]
+        "required": ["companyId", "employeeId", "type", "startDate", "endDate", "status"]
+    },
+    "HRPayrollRun": {
+        "title": "HRPayrollRun",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "companyId": { "type": "string" },
+            "periodStart": { "type": "string", "format": "date" },
+            "periodEnd": { "type": "string", "format": "date" },
+            "status": { "type": "string", "enum": ["draft", "processed", "paid"] },
+            "totalNetSalary": { "type": "number" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["companyId", "periodStart", "periodEnd", "status"]
+    },
+    "HRLearningModule": {
+        "title": "HRLearningModule",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "companyId": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "category": { "type": "string" },
+            "contentType": { "type": "string", "enum": ["video", "image", "article"] },
+            "contentUrl": { "type": "string" },
+            "textContent": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "isPublished": { "type": "boolean" }
+        },
+        "required": ["companyId", "title", "contentType"]
     }
   },
   "auth": {
@@ -79,13 +118,21 @@
       "schema": { "$ref": "#/entities/AppUser" },
       "description": "Stores user and employee profile information."
     },
-    "/cloud_files/{fileId}": {
-        "schema": { "$ref": "#/entities/CloudFile" },
-        "description": "Metadata for files stored in cloud storage."
+    "/hr_companies/{companyId}/attendance/{logId}": {
+        "schema": { "$ref": "#/entities/HRAttendanceLog" },
+        "description": "Daily attendance logs for a company."
     },
-    "/cloud_folders/{folderId}": {
-        "schema": { "$ref": "#/entities/CloudFolder" },
-        "description": "Folder structures for organizational storage."
+    "/hr_companies/{companyId}/leaveRequests/{requestId}": {
+        "schema": { "$ref": "#/entities/HRLeaveRequest" },
+        "description": "Leave applications from employees."
+    },
+    "/hr_companies/{companyId}/payrollRuns/{runId}": {
+        "schema": { "$ref": "#/entities/HRPayrollRun" },
+        "description": "Historical records of payroll processing."
+    },
+    "/hr_companies/{companyId}/learningModules/{moduleId}": {
+        "schema": { "$ref": "#/entities/HRLearningModule" },
+        "description": "Company training and module materials."
     }
   }
 }

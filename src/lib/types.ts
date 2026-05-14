@@ -1,3 +1,4 @@
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -8,6 +9,8 @@ export interface AppUser {
     businessEmail?: string;
     businessName: string;
     address?: string;
+    industry?: string;
+    interests?: string[];
     contactNumber?: string;
     notificationEmails?: string[];
     totalConsumptionLiters: number; 
