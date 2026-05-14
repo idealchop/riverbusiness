@@ -8,34 +8,26 @@ Instead of juggling multiple tools, River Apps gives businesses one place to run
 
 ---
 
-# 🚀 What River Apps Is
+# 🚀 Deployment Instructions
 
-River Apps is a **modular multi-tenant SaaS platform** designed to help businesses operate smarter by combining core operational systems into one connected environment.
+### Cloud Functions
+To deploy the backend intelligence (billing, notifications, and HR automation), follow these steps:
 
-It is built for companies that need:
-
-- Operational control (water refilling businesses and service operations)
-- HR and employee management
-- Internal collaboration and documentation
-- Secure file storage and sharing
-- Sensitive data protection
-- Scalable system upgrades over time
-
----
-
-# 🧠 Core Philosophy
-
-Traditional businesses use fragmented tools:
-
-- HR software
-- Google Drive / Dropbox
-- Notion / Docs
-- Spreadsheets
-- Manual operations
-
-River Apps replaces this with:
-
-> **One ecosystem. One data layer. One operating system for your business.**
+1.  **Set API Secrets**:
+    The system uses Brevo for email delivery. You must set your API key as a secret first:
+    ```bash
+    firebase functions:secrets:set BREVO_API_KEY
+    ```
+2.  **Build the Project**:
+    Navigate to the functions directory and compile the TypeScript source code:
+    ```bash
+    cd functions && npm run build
+    ```
+3.  **Deploy**:
+    Run the deployment command from the project root:
+    ```bash
+    firebase deploy --only functions
+    ```
 
 ---
 
