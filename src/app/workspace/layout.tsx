@@ -18,6 +18,8 @@ import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { ShareDialog } from '@/components/collaboration/ShareDialog';
 import { signOut } from 'firebase/auth';
 import { useMounted } from '@/hooks/use-mounted';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -27,8 +29,10 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const auth = useAuth();
   const isMounted = useMounted();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [sharingPageId, setSharingPageId] = useState<string | null>(null);
@@ -93,6 +97,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       .then((docRef) => {
         const redirectUrl = `/workspace/${docRef.id}${initialPrompt ? `?prompt=${encodeURIComponent(initialPrompt)}` : ''}`;
         router.push(redirectUrl);
+        setIsMobileSidebarOpen(false);
         
         if (!initialPrompt) {
             toast({ 
@@ -256,29 +261,52 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     }
   };
 
+  const sidebarContent = (
+    <Sidebar 
+      isOpen={isSidebarOpen || isMobile} 
+      onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+      pages={pages || []}
+      activePageId={pathname.split('/').pop() || null}
+      onCreatePage={handleCreatePage}
+      user={user}
+    />
+  );
+
   if (!isMounted || isUserLoading || !authUser || isLoggingOut) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Initializing workspace"} />;
   }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        pages={pages || []}
-        activePageId={pathname.split('/').pop() || null}
-        onCreatePage={handleCreatePage}
-        user={user}
-      />
+      {!isMobile && sidebarContent}
 
       <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <header className="h-14 border-b flex items-center justify-between px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-4">
-             {!isSidebarOpen && (
-                <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="h-8 w-8 rounded-lg">
-                    <Menu className="h-5 w-5" />
-                </Button>
+        <header className="h-14 border-b flex items-center justify-between px-4 sm:px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center gap-2 sm:gap-4">
+             {isMobile ? (
+                <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+                    <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-72 border-none">
+                        <SheetHeader className="sr-only">
+                            <SheetTitle>Workspace Navigation</SheetTitle>
+                        </SheetHeader>
+                        {sidebarContent}
+                    </SheetContent>
+                </Sheet>
+             ) : (
+                !isSidebarOpen && (
+                    <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="h-8 w-8 rounded-lg">
+                        <Menu className="h-5 w-5" />
+                    </Button>
+                )
              )}
+             <Link href="/dashboard" className={cn("items-center gap-2 font-bold text-sm hidden", isMobile ? "flex" : "hidden")}>
+                <LogoBlack className="h-7 w-7" />
+             </Link>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">

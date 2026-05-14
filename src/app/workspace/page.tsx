@@ -73,20 +73,20 @@ export default function WorkspaceLandingPage() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/30 overflow-hidden">
-        <div className="max-w-5xl w-full px-8 flex flex-col items-center justify-center space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-12">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/30 overflow-hidden px-4">
+        <div className="max-w-5xl w-full flex flex-col items-center justify-center space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-20 sm:-mt-12">
             <div className="w-full text-center space-y-4">
-                <div className="flex justify-center mb-8">
-                    <LogoBlack className="h-20 w-20" />
+                <div className="flex justify-center mb-6 sm:mb-8">
+                    <LogoBlack className="h-16 w-16 sm:h-20 sm:w-20" />
                 </div>
                 
-                <h1 className="text-5xl font-light tracking-tighter text-slate-900 leading-none mb-16">
+                <h1 className="text-3xl sm:text-5xl font-light tracking-tighter text-slate-900 leading-tight mb-8 sm:mb-16">
                     Ready, when you are.
                 </h1>
 
-                <div className="relative w-full max-w-2xl mx-auto mb-12">
+                <div className="relative w-full max-w-2xl mx-auto mb-8 sm:mb-12">
                     <div className={cn(
-                      "relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
+                      "relative bg-white rounded-2xl sm:rounded-[2rem] border border-slate-200 overflow-hidden transition-all duration-300 px-1 py-1",
                       "shadow-xl shadow-slate-200/50 ring-0 outline-none"
                     )}>
                         <div className="flex items-end">
@@ -101,21 +101,21 @@ export default function WorkspaceLandingPage() {
                                         handleAskAi();
                                     }
                                 }}
-                                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none px-6 py-4 text-slate-600 font-normal text-base placeholder:text-slate-300 resize-none min-h-[56px] overflow-hidden"
+                                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none px-4 sm:px-6 py-3 sm:py-4 text-slate-600 font-normal text-sm sm:text-base placeholder:text-slate-300 resize-none min-h-[48px] sm:min-h-[56px] overflow-hidden"
                                 placeholder={SUGGESTIONS[placeholderIndex]}
                                 rows={1}
                             />
-                            <div className="pb-2 pr-2">
+                            <div className="pb-1.5 sm:pb-2 pr-1.5 sm:pr-2">
                                 <Button 
                                     onClick={handleAskAi}
                                     disabled={!prompt.trim() || isProcessing}
                                     size="icon"
-                                    className="h-10 w-10 rounded-full shadow-none active:scale-95 transition-all bg-slate-900 hover:bg-slate-800"
+                                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full shadow-none active:scale-95 transition-all bg-slate-900 hover:bg-slate-800"
                                 >
                                     {isProcessing ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                     ) : (
-                                        <ArrowUp className="h-5 w-5" />
+                                        <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" />
                                     )}
                                 </Button>
                             </div>
@@ -124,7 +124,7 @@ export default function WorkspaceLandingPage() {
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-4xl">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full max-w-4xl px-2">
                 <QuickActionButton 
                     onClick={() => handleCreate('doc')}
                     icon={<FileText className="h-4 w-4 text-blue-500" />}
@@ -150,12 +150,12 @@ function QuickActionButton({ onClick, icon, label }: { onClick: () => void, icon
     return (
         <button 
             onClick={onClick}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all duration-200 active:scale-[0.97] group shadow-sm"
+            className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all duration-200 active:scale-[0.97] group shadow-sm"
         >
             <span className="text-slate-900 transition-transform group-hover:scale-110 duration-300">
                 {icon}
             </span>
-            <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-600">
                 {label}
             </span>
         </button>
