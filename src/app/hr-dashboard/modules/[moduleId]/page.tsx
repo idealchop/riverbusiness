@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -48,6 +47,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from '@/components/ui/input';
+
+const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+};
 
 export default function ModuleDetailPage() {
   const { moduleId } = useParams();
@@ -165,8 +172,8 @@ export default function ModuleDetailPage() {
   const sortedViewers = useMemo(() => {
     if (!viewers) return [];
     return [...viewers].sort((a, b) => {
-        const timeA = a.lastVisitedAt?.seconds || 0;
-        const timeB = b.lastVisitedAt?.seconds || 0;
+        const timeA = toSafeDate(a.lastVisitedAt)?.getTime() || 0;
+        const timeB = toSafeDate(b.lastVisitedAt)?.getTime() || 0;
         return timeB - timeA;
     });
   }, [viewers]);
