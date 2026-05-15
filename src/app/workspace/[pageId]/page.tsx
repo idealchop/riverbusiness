@@ -82,9 +82,6 @@ const EMOJI_LIST = [
   { char: '🚛', keywords: 'truck' },
 ];
 
-/**
- * Structural Skeleton to maintain visual stability during page transitions.
- */
 export function PageSkeleton() {
   return (
     <div className="h-full flex flex-col bg-white animate-in fade-in duration-500">
@@ -116,9 +113,6 @@ export function PageSkeleton() {
   );
 }
 
-/**
- * Share Component - Functional Link Expiry and Encryption Popover.
- */
 function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, onUpdate: (data: Partial<CollabPage>) => Promise<void>, isMobile?: boolean }) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [hasCopied, setHasCopied] = useState(false);
@@ -269,9 +263,6 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
     );
 }
 
-/**
- * Main Workspace Page Controller.
- */
 function PageEditorContent() {
   const { pageId } = useParams();
   const router = useRouter();
@@ -610,7 +601,7 @@ function PageEditorContent() {
                             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
                                 <Trash2 className="h-4 w-4" /> Move to Trash
                             </DropdownMenuItem>
-                        </DropdownMenuContent>
+                        </DropdownMenu>
                     </DropdownMenu>
                 ) : (
                     <>

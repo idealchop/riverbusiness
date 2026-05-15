@@ -61,10 +61,6 @@ interface SidebarProps {
   user: AppUser | null;
 }
 
-/**
- * Memoized Navigation Item to prevent tree-wide re-renders.
- * Isolates click events to prevent accidental navigation during expansion.
- */
 const NavItem = memo(({ 
     page, 
     level = 0, 
@@ -110,7 +106,6 @@ const NavItem = memo(({
                 )}
                 style={{ paddingLeft: `${(level * 12) + 8}px` }}
             >
-                {/* Expansion Trigger - Isolated from Link */}
                 <button 
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExpand(page.id); }}
                     className={cn(
@@ -121,7 +116,6 @@ const NavItem = memo(({
                     {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 </button>
 
-                {/* Page Navigation Link */}
                 <Link 
                     href={`/workspace/${page.id}`} 
                     className="flex-1 flex items-center gap-2 min-w-0 h-full outline-none"
@@ -132,7 +126,6 @@ const NavItem = memo(({
                     <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
                 </Link>
 
-                {/* Contextual Actions */}
                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5 shrink-0 bg-inherit pl-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -191,7 +184,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={handleFavorite}
+                            onFavorite={onFavorite}
                             onTrash={onTrash}
                         />
                     ))}
@@ -229,6 +222,10 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
   const handleFavorite = useCallback((pageId: string, isFavorite: boolean) => {
     window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId, isFavorite } }));
+  }, []);
+
+  const onTrash = useCallback((pageId: string) => {
+    setPageToTrash(pageId);
   }, []);
 
   const filteredPages = useMemo(() => {
@@ -398,7 +395,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                             onToggleExpand={toggleExpand}
                             onCreatePage={onCreatePage}
                             onFavorite={handleFavorite}
-                            onTrash={(id) => setPageToTrash(id)}
+                            onTrash={onTrash}
                         />
                     ))}
                     {rootPages.length === 0 && (

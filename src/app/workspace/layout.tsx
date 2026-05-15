@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc, or } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc, or, and } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -45,15 +45,17 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const companyId = user?.companyId || null;
 
-  // Fetch only organizational pages (trashed or not) - SCOPED BY companyId
-  // AND respecter of privacy: Only show public docs OR docs created by me
+  // Fetch organizational pages scoped by companyId
+  // Shows pages that are NOT private OR pages created by the current user
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId && authUser) ? query(
         collection(firestore, 'collaboration_pages'), 
-        where('companyId', '==', companyId),
-        or(
-            where('isPrivate', '==', false),
-            where('createdBy', '==', authUser.uid)
+        and(
+            where('companyId', '==', companyId),
+            or(
+                where('isPrivate', '==', false),
+                where('createdBy', '==', authUser.uid)
+            )
         )
     ) : null, 
     [firestore, companyId, authUser]
@@ -101,7 +103,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isTrashed: false,
-      isPrivate: false, // Default to Collaboration (Team Access)
+      isPrivate: false, // Default to Team Collaboration
       content: initialContent,
     };
 
@@ -280,7 +282,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       pages={pages || []}
       activePageId={pathname.split('/').pop() || null}
       onCreatePage={handleCreatePage}
-      user={user}
+      user={user || null}
     />
   );
 
