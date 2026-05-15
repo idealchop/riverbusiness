@@ -9,7 +9,6 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogDescription,
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
@@ -28,14 +27,13 @@ import {
   FormField, 
   FormItem, 
   FormLabel, 
-  FormMessage,
-  FormDescription
+  FormMessage 
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { BookOpen, Video, Image as ImageIcon, FileText, X } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import type { HRLearningModule } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -112,13 +110,13 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
           isPublished: true,
           createdAt: serverTimestamp()
         });
-        toast({ title: 'Module created', description: 'The training material is now live in the hub.' });
+        toast({ title: 'Module published' });
       }
       onOpenChange(false);
       form.reset();
     } catch (error) {
       console.error("Error saving module:", error);
-      toast({ variant: 'destructive', title: 'Operation failed' });
+      toast({ variant: 'destructive', title: 'Action failed' });
     } finally {
       setIsSubmitting(false);
     }
@@ -130,17 +128,14 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-2xl flex flex-col max-h-[90vh]">
         <div className="p-8 pb-4 shrink-0 border-b bg-slate-50/50">
-            <DialogHeader className="mb-4">
+            <DialogHeader>
                 <div className="flex items-center gap-4">
                     <div className="p-2.5 rounded-xl bg-blue-50 text-primary">
                         <BookOpen className="h-5 w-5" />
                     </div>
-                    <div>
-                        <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">
-                            {moduleToEdit ? 'Configure Module' : 'Architect Module'}
-                        </DialogTitle>
-                        <DialogDescription className="text-slate-500 font-medium text-xs mt-1">Design training materials authorized for your team.</DialogDescription>
-                    </div>
+                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">
+                        {moduleToEdit ? 'Edit Module' : 'New Module'}
+                    </DialogTitle>
                 </div>
             </DialogHeader>
         </div>
@@ -148,14 +143,14 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
         <ScrollArea className="flex-1">
             <div className="p-8">
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField
                             control={form.control}
                             name="title"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">1. Module Title</FormLabel>
-                                <FormControl><Input placeholder="e.g. Daily Sanitation Flow" className="h-12 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary font-bold text-slate-900" {...field} /></FormControl>
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Title</FormLabel>
+                                <FormControl><Input placeholder="Enter title" className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold text-slate-900" {...field} /></FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -167,8 +162,8 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
                                 name="category"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">2. Category</FormLabel>
-                                    <FormControl><Input placeholder="e.g. Safety" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none font-semibold" {...field} /></FormControl>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Category</FormLabel>
+                                    <FormControl><Input placeholder="General" className="h-11 rounded-xl bg-slate-50 border-slate-100 font-semibold" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                                 )}
@@ -178,15 +173,15 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
                                 name="contentType"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">3. Format</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Format</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
                                         <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100 font-semibold"><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent className="rounded-xl">
-                                            <SelectItem value="video" className="text-xs font-semibold">Video URL</SelectItem>
-                                            <SelectItem value="image" className="text-xs font-semibold">Image Display</SelectItem>
-                                            <SelectItem value="article" className="text-xs font-semibold">Text Article</SelectItem>
+                                            <SelectItem value="video">Video URL</SelectItem>
+                                            <SelectItem value="image">Image URL</SelectItem>
+                                            <SelectItem value="article">Text Article</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -200,12 +195,9 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
                                 control={form.control}
                                 name="contentUrl"
                                 render={({ field }) => (
-                                    <FormItem className="animate-in slide-in-from-top-2 duration-300">
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                        {selectedType === 'video' ? 'Embed URL' : 'Image URL'}
-                                    </FormLabel>
-                                    <FormControl><Input placeholder="https://..." className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none font-mono text-xs" {...field} /></FormControl>
-                                    <FormDescription className="text-[10px] font-medium text-slate-400">Provide a public URL for the training media.</FormDescription>
+                                    <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">URL</FormLabel>
+                                    <FormControl><Input placeholder="https://..." className="h-11 rounded-xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl>
                                     <FormMessage />
                                     </FormItem>
                                 )}
@@ -217,8 +209,8 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">4. Brief Overview</FormLabel>
-                                <FormControl><Textarea placeholder="What will the team learn? Summary for the card view." className="rounded-xl min-h-[80px] bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary text-sm font-medium" {...field} /></FormControl>
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description</FormLabel>
+                                <FormControl><Textarea placeholder="Brief summary..." className="rounded-xl min-h-[80px] bg-slate-50 border-slate-100 text-sm font-medium" {...field} /></FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -229,9 +221,9 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
                                 control={form.control}
                                 name="textContent"
                                 render={({ field }) => (
-                                    <FormItem className="animate-in slide-in-from-top-2 duration-300">
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">5. Authoritative Article Body</FormLabel>
-                                    <FormControl><Textarea placeholder="Enter detailed training instructions... This content will be rendered in high-fidelity." className="rounded-2xl min-h-[250px] bg-slate-50 border-slate-100 shadow-none font-medium leading-relaxed" {...field} /></FormControl>
+                                    <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Content</FormLabel>
+                                    <FormControl><Textarea placeholder="Type training instructions..." className="rounded-2xl min-h-[200px] bg-slate-50 border-slate-100 font-medium leading-relaxed" {...field} /></FormControl>
                                     <FormMessage />
                                     </FormItem>
                                 )}
@@ -247,8 +239,8 @@ export function LearningModuleDialog({ isOpen, onOpenChange, companyId, moduleTo
                 <DialogClose asChild>
                     <Button type="button" variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Cancel</Button>
                 </DialogClose>
-                <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting} className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
-                    {isSubmitting ? 'Syncing...' : (moduleToEdit ? 'Confirm Updates' : 'Publish to Hub')}
+                <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting} className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl">
+                    {isSubmitting ? 'Saving...' : 'Save'}
                 </Button>
             </div>
         </DialogFooter>
