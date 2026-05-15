@@ -47,7 +47,8 @@ import {
     Undo2,
     Bold,
     Baseline,
-    RotateCcw
+    RotateCcw,
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO, addDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 
 interface SheetEditorProps {
   initialData: any;
@@ -287,9 +289,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       { id: 'r1', values: { f1: 'Initialize Workspace', f2: 'In Progress', f3: format(new Date(), 'yyyy-MM-dd') }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
   ]);
   const [views, setViews] = useState<SheetView[]>(initialData?.views || [
-      { id: 'v1', name: 'Main Grid', type: 'grid' },
-      { id: 'v2', name: 'Board', type: 'kanban' },
-      { id: 'v4', name: 'Calendar', type: 'calendar' }
+      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [] } },
+      { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [] } },
+      { id: 'v4', name: 'Calendar', type: 'calendar', config: { hiddenFields: [] } }
   ]);
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
@@ -395,6 +397,30 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       toast({ title: 'Type conversion complete' });
   }, [fields, records, views, activeViewId, sync, toast]);
 
+  const handleToggleFieldVisibility = (fieldId: string, visible: boolean) => {
+    const currentHidden = activeView.config?.hiddenFields || [];
+    const newHidden = visible 
+        ? currentHidden.filter(id => id !== fieldId)
+        : [...currentHidden, fieldId];
+    
+    const nextViews = views.map(v => v.id === activeViewId ? {
+        ...v,
+        config: { ...v.config, hiddenFields: newHidden }
+    } : v);
+    
+    setViews(nextViews);
+    sync(fields, records, nextViews, activeViewId);
+  };
+
+  const handleToggleAllFields = (visible: boolean) => {
+    const nextViews = views.map(v => v.id === activeViewId ? {
+        ...v,
+        config: { ...v.config, hiddenFields: visible ? [] : fields.filter(f => !f.isPrimary).map(f => f.id) }
+    } : v);
+    setViews(nextViews);
+    sync(fields, records, nextViews, activeViewId);
+  };
+
   const handleAddOptionDirectly = useCallback((fieldId: string, label: string) => {
     const field = fields.find(f => f.id === fieldId);
     if (!field || !field.options || !label.trim()) return;
@@ -461,7 +487,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const handleCreateView = useCallback((type: SheetViewType) => {
     const id = `v-${Date.now()}`;
     const name = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-    const newView: SheetView = { id, name, type };
+    const newView: SheetView = { id, name, type, config: { hiddenFields: [] } };
     const next = [...views, newView];
     setViews(next);
     setActiveViewId(id);
@@ -567,6 +593,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     };
   }, [resizingFieldId, fields, records, views, activeViewId, sync]);
 
+  const visibleFields = useMemo(() => {
+      const hidden = activeView.config?.hiddenFields || [];
+      return fields.filter(f => !hidden.includes(f.id));
+  }, [fields, activeView]);
+
   if (!isMounted) return null;
 
   return (
@@ -670,100 +701,136 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                 <Separator orientation="vertical" className="h-6 mx-1 bg-slate-100 hidden sm:block" />
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                            <ArrowUpDown className="h-3.5 w-3.5" /> 
-                            <span className="hidden sm:inline">Sort</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-2xl border-slate-100">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 p-2">Order records by</DropdownMenuLabel>
-                        {fields.map(f => (
-                            <DropdownMenuItem key={f.id} onClick={() => setSortConfig({ fieldId: f.id, direction: sortConfig?.fieldId === f.id && sortConfig.direction === 'asc' ? 'desc' : 'asc' })} className="text-xs font-bold py-2 rounded-lg cursor-pointer flex justify-between">
-                                <div className="flex items-center gap-2">
-                                    {React.createElement(FIELD_ICONS[f.type], { className: "h-3 w-3 opacity-40" })}
-                                    {f.name}
-                                </div>
-                                {sortConfig?.fieldId === f.id && (
-                                    <Badge variant="secondary" className="text-[8px]">{sortConfig.direction.toUpperCase()}</Badge>
-                                )}
-                            </DropdownMenuItem>
-                        ))}
-                        {sortConfig && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-xs font-bold py-2 rounded-lg cursor-pointer text-red-500">Clear all sorting</DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                            <Filter className="h-3.5 w-3.5" /> 
-                            <span className="hidden sm:inline">Filter</span>
-                            {filters.length > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{filters.length}</Badge>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-[320px] sm:w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
-                        <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Protocol</h4>
-                            <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="h-7 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">Clear All</Button>
-                        </div>
-                        <ScrollArea className="max-h-72">
-                            <div className="p-4 space-y-3">
-                                {filters.map((f, i) => (
-                                    <div key={f.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
-                                        <Select value={f.fieldId} onValueChange={(val) => updateFilter(f.id, { fieldId: val })}>
-                                            <SelectTrigger className="w-[110px] h-9 rounded-xl text-[10px] font-bold">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                {fields.map(field => <SelectItem key={field.id} value={field.id} className="text-xs font-bold">{field.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                        <Select value={f.operator} onValueChange={(val: any) => updateFilter(f.id, { operator: val })}>
-                                            <SelectTrigger className="w-[90px] h-9 rounded-xl text-[10px] font-bold">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                <SelectItem value="contains" className="text-xs font-bold">contains</SelectItem>
-                                                <SelectItem value="is" className="text-xs font-bold">is</SelectItem>
-                                                <SelectItem value="is_not" className="text-xs font-bold">is not</SelectItem>
-                                                <SelectItem value="is_empty" className="text-xs font-bold">is empty</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {!['is_empty', 'is_not_empty'].includes(f.operator) && (
-                                            <Input 
-                                                placeholder="val..." 
-                                                value={f.value}
-                                                onChange={(e) => updateFilter(f.id, { value: e.target.value })}
-                                                className="h-9 rounded-xl text-xs font-bold flex-1"
-                                            />
-                                        )}
-                                        <Button variant="ghost" size="icon" onClick={() => removeFilter(f.id)} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></Button>
-                                    </div>
-                                ))}
-                                <Button variant="ghost" onClick={addFilter} className="w-full h-10 border-dashed border border-slate-200 rounded-xl gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50">
-                                    <Plus className="h-3 w-3" /> Add Rule
-                                </Button>
+                <div className="flex items-center gap-1">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <EyeOff className="h-3.5 w-3.5" /> 
+                                <span className="hidden sm:inline">Hide</span>
+                                {(activeView.config?.hiddenFields?.length || 0) > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{activeView.config?.hiddenFields?.length}</Badge>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
+                            <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Visibility Protocol</h4>
+                                <Button variant="ghost" size="sm" onClick={() => handleToggleAllFields(true)} className="h-7 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-blue-50">Show All</Button>
                             </div>
-                        </ScrollArea>
-                    </PopoverContent>
-                </Popover>
+                            <ScrollArea className="max-h-72">
+                                <div className="p-2 space-y-0.5">
+                                    {fields.map(f => (
+                                        <div key={f.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-3.5 w-3.5 text-slate-400 shrink-0" })}
+                                                <span className="text-xs font-semibold text-slate-700 truncate">{f.name}</span>
+                                            </div>
+                                            <Switch 
+                                                checked={!activeView.config?.hiddenFields?.includes(f.id)} 
+                                                onCheckedChange={(checked) => handleToggleFieldVisibility(f.id, checked)}
+                                                disabled={f.isPrimary}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <ArrowUpDown className="h-3.5 w-3.5" /> 
+                                <span className="hidden sm:inline">Sort</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-2xl border-slate-100">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 p-2">Order records by</DropdownMenuLabel>
+                            {fields.map(f => (
+                                <DropdownMenuItem key={f.id} onClick={() => setSortConfig({ fieldId: f.id, direction: sortConfig?.fieldId === f.id && sortConfig.direction === 'asc' ? 'desc' : 'asc' })} className="text-xs font-bold py-2 rounded-lg cursor-pointer flex justify-between">
+                                    <div className="flex items-center gap-2">
+                                        {React.createElement(FIELD_ICONS[f.type], { className: "h-3.5 w-3.5 opacity-40" })}
+                                        {f.name}
+                                    </div>
+                                    {sortConfig?.fieldId === f.id && (
+                                        <Badge variant="secondary" className="text-[8px]">{sortConfig.direction.toUpperCase()}</Badge>
+                                    )}
+                                </DropdownMenuItem>
+                            ))}
+                            {sortConfig && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-xs font-bold py-2 rounded-lg cursor-pointer text-red-500">Clear all sorting</DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <Filter className="h-3.5 w-3.5" /> 
+                                <span className="hidden sm:inline">Filter</span>
+                                {filters.length > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{filters.length}</Badge>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[320px] sm:w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
+                            <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Protocol</h4>
+                                <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="h-7 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">Clear All</Button>
+                            </div>
+                            <ScrollArea className="max-h-72">
+                                <div className="p-4 space-y-3">
+                                    {filters.map((f, i) => (
+                                        <div key={f.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
+                                            <Select value={f.fieldId} onValueChange={(val) => updateFilter(f.id, { fieldId: val })}>
+                                                <SelectTrigger className="w-[110px] h-9 rounded-xl text-[10px] font-bold">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    {fields.map(field => <SelectItem key={field.id} value={field.id} className="text-xs font-bold">{field.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={f.operator} onValueChange={(val: any) => updateFilter(f.id, { operator: val })}>
+                                                <SelectTrigger className="w-[90px] h-9 rounded-xl text-[10px] font-bold">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="contains" className="text-xs font-bold">contains</SelectItem>
+                                                    <SelectItem value="is" className="text-xs font-bold">is</SelectItem>
+                                                    <SelectItem value="is_not" className="text-xs font-bold">is not</SelectItem>
+                                                    <SelectItem value="is_empty" className="text-xs font-bold">is empty</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {!['is_empty', 'is_not_empty'].includes(f.operator) && (
+                                                <Input 
+                                                    placeholder="val..." 
+                                                    value={f.value}
+                                                    onChange={(e) => updateFilter(f.id, { value: e.target.value })}
+                                                    className="h-9 rounded-xl text-xs font-bold flex-1"
+                                                />
+                                            )}
+                                            <Button variant="ghost" size="icon" onClick={() => removeFilter(f.id)} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></Button>
+                                        </div>
+                                    ))}
+                                    <Button variant="ghost" onClick={addFilter} className="w-full h-10 border-dashed border border-slate-200 rounded-xl gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50">
+                                        <Plus className="h-3 w-3" /> Add Rule
+                                    </Button>
+                                </div>
+                            </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
+                </div>
             </div>
         </div>
 
-        {(filters.length > 0 || sortConfig) && (
+        {(filters.length > 0 || sortConfig || (activeView.config?.hiddenFields?.length || 0) > 0) && (
             <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
-                <div className="flex items-center gap-1.5 mr-2">
-                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-blue-50 text-blue-600 font-bold text-[9px] uppercase gap-1.5">
-                        <EyeOff className="h-3 w-3" /> 0 Hidden Fields
-                    </Badge>
-                </div>
-                <Separator orientation="vertical" className="h-4 bg-slate-200" />
+                {(activeView.config?.hiddenFields?.length || 0) > 0 && (
+                    <div className="flex items-center gap-1.5 mr-2">
+                        <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-blue-50 text-blue-600 font-bold text-[9px] uppercase gap-1.5">
+                            <EyeOff className="h-3 w-3" /> {activeView.config?.hiddenFields?.length} Hidden Fields
+                        </Badge>
+                    </div>
+                )}
                 
                 {filters.length > 0 && (
                     <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-green-50 text-green-700 font-bold text-[9px] uppercase gap-1.5">
@@ -787,7 +854,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <div className="w-12 h-10 border-r bg-slate-100/50 flex items-center justify-center shrink-0">
                                 <span className="text-[10px] font-black text-slate-300">#</span>
                             </div>
-                            {fields.map((field) => (
+                            {visibleFields.map((field) => (
                                 <div key={field.id} style={{ width: field.width }} className="group h-10 border-r flex items-center justify-between px-3 shrink-0 relative">
                                     <div className="flex items-center gap-2 overflow-hidden flex-1">
                                         {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3 w-3 text-slate-400 shrink-0" })}
@@ -926,7 +993,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     <div className="w-12 h-10 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
                                         {idx + 1}
                                     </div>
-                                    {fields.map((field) => (
+                                    {visibleFields.map((field) => (
                                         <div key={field.id} style={{ width: field.width }} className="h-10 border-r shrink-0 flex items-center relative">
                                             <CellRenderer 
                                                 field={field} 
