@@ -43,7 +43,11 @@ import {
     EyeOff,
     Grab,
     MoreHorizontal,
-    MessageSquare
+    MessageSquare,
+    Undo2,
+    Bold,
+    Baseline,
+    RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +76,6 @@ import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO, addDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
 interface SheetEditorProps {
@@ -165,7 +168,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [filters, setFilters] = useState<FilterRule[]>([]);
 
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
-  const [editingOptionsFieldId, setEditingOptionsFieldId] = useState<string | null>(null);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
@@ -248,18 +250,20 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       toast({ title: 'Type conversion complete' });
   };
 
-  const handleAddOption = (fieldId: string) => {
-      const field = fields.find(f => f.id === fieldId);
-      if (!field || !field.options) return;
+  const handleAddOptionDirectly = (fieldId: string, label: string) => {
+    const field = fields.find(f => f.id === fieldId);
+    if (!field || !field.options || !label.trim()) return;
 
-      const newLabel = window.prompt('Enter option label:');
-      if (newLabel && newLabel.trim()) {
-          const nextOptions = [...field.options, { label: newLabel.trim(), color: 'bg-slate-100 text-slate-700' }];
-          const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
-          setFields(nextFields);
-          sync(nextFields, records, views, activeViewId);
-          toast({ title: 'Option added' });
-      }
+    if (field.options.some(o => o.label.toLowerCase() === label.trim().toLowerCase())) {
+        toast({ title: 'Option exists' });
+        return;
+    }
+
+    const nextOptions = [...field.options, { label: label.trim(), color: 'bg-slate-100 text-slate-700' }];
+    const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
+    setFields(nextFields);
+    sync(nextFields, records, views, activeViewId);
+    toast({ title: 'New category added' });
   };
 
   const updateOption = (fieldId: string, oldLabel: string, newLabel: string, newColor?: string) => {
@@ -322,10 +326,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     toast({ title: 'Tab initialized', description: `New ${type} view has been added to your workspace.` });
   };
 
-  const handleRenameView = (viewId: string) => {
-    const view = views.find(v => v.id === viewId);
-    if (!view) return;
-    const newName = window.prompt('Enter view name:', view.name);
+  const handleRenameView = (viewId: string, newName: string) => {
     if (newName && newName.trim()) {
         const next = views.map(v => v.id === viewId ? { ...v, name: newName.trim() } : v);
         setViews(next);
@@ -446,7 +447,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                                    <DropdownMenuItem onClick={() => handleRenameView(v.id)} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
+                                    <DropdownMenuItem onClick={() => {
+                                        const newName = window.prompt('Rename view:', v.name);
+                                        if (newName) handleRenameView(v.id, newName);
+                                    }} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
                                         <Edit className="h-3.5 w-3.5" /> Rename Tab
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleCreateView(v.type)} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
@@ -649,7 +653,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                         const next = fields.map(f => f.id === field.id ? { ...f, name: newName } : f);
                                                         setFields(next);
                                                         sync(next, records, views, activeViewId);
-                                                        toast({ title: 'Column renamed' });
                                                     }
                                                     setEditingFieldId(null);
                                                 }}
@@ -697,12 +700,53 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 <>
                                                     <DropdownMenuSeparator className="bg-slate-50" />
                                                     <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 tracking-widest">Options</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleAddOption(field.id)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
-                                                        <PlusCircle className="h-3.5 w-3.5 text-blue-500" /> Add New Option
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setEditingOptionsFieldId(field.id)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
-                                                        <Pencil className="h-3.5 w-3.5" /> Manage Options
-                                                    </DropdownMenuItem>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold rounded-lg cursor-pointer hover:bg-accent transition-colors">
+                                                                <Tag className="h-3.5 w-3.5 text-blue-500" /> Manage Options
+                                                            </div>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent align="start" className="w-64 p-0 rounded-2xl shadow-3xl border-slate-100 overflow-hidden bg-white">
+                                                            <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Edit Categories</span>
+                                                            </div>
+                                                            <div className="p-4 space-y-3">
+                                                                {field.options?.map((opt, idx) => (
+                                                                    <div key={idx} className="flex items-center gap-2">
+                                                                        <DropdownMenu>
+                                                                            <DropdownMenuTrigger asChild>
+                                                                                <button className={cn("h-5 w-5 rounded-full shrink-0 border border-white shadow-sm", opt.color.split(' ')[0])} />
+                                                                            </DropdownMenuTrigger>
+                                                                            <DropdownMenuContent className="grid grid-cols-4 gap-1 p-2 rounded-xl bg-white shadow-2xl">
+                                                                                {OPTION_COLORS.map(c => (
+                                                                                    <button key={c.value} onClick={() => updateOption(field.id, opt.label, opt.label, c.value)} className={cn("h-6 w-6 rounded-lg border", opt.color === c.value && "ring-2 ring-primary ring-offset-1")} style={{ backgroundColor: c.value.split(' ')[0].replace('bg-', '') }} />
+                                                                                ))}
+                                                                            </DropdownMenuContent>
+                                                                        </DropdownMenu>
+                                                                        <Input 
+                                                                            defaultValue={opt.label} 
+                                                                            onBlur={(e) => updateOption(field.id, opt.label, e.target.value)}
+                                                                            className="h-8 text-xs font-bold bg-slate-50 border-none rounded-lg"
+                                                                        />
+                                                                        <Button variant="ghost" size="icon" onClick={() => deleteOption(field.id, opt.label)} className="h-7 w-7 text-red-400"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                                    </div>
+                                                                ))}
+                                                                <Separator className="bg-slate-100" />
+                                                                <div className="flex gap-2">
+                                                                    <Input 
+                                                                        placeholder="New choice..." 
+                                                                        className="h-8 text-xs bg-slate-50 border-none"
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                handleAddOptionDirectly(field.id, (e.target as HTMLInputElement).value);
+                                                                                (e.target as HTMLInputElement).value = '';
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Popover>
                                                 </>
                                             )}
 
@@ -747,6 +791,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 value={record.values[field.id]} 
                                                 onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
                                                 onExpand={() => setSelectedRecordId(record.id)}
+                                                onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
                                                 editable={editable}
                                             />
                                         </div>
@@ -802,6 +847,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             field={field} 
                                             value={records.find(r => r.id === selectedRecordId)?.values[field.id]} 
                                             onChange={(val: any) => updateRecordValue(selectedRecordId, field.id, val)}
+                                            onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
                                             editable={editable}
                                             isExpanded
                                         />
@@ -836,72 +882,14 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </div>
             </div>
         )}
-
-        <Dialog open={!!editingOptionsFieldId} onOpenChange={(open) => !open && setEditingOptionsFieldId(null)}>
-            <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
-                <DialogHeader className="p-8 pb-4 bg-slate-50 border-b">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                            <Tag className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Manage Options</DialogTitle>
-                            <DialogDescription className="text-xs font-medium text-slate-500">Configure labels and color branding.</DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
-                <ScrollArea className="max-h-[400px]">
-                    <div className="p-8 space-y-4">
-                        {fields.find(f => f.id === editingOptionsFieldId)?.options?.map((opt, idx) => (
-                            <div key={idx} className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                <div className={cn("h-4 w-4 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
-                                <Input 
-                                    value={opt.label} 
-                                    onChange={(e) => updateOption(editingOptionsFieldId!, opt.label, e.target.value)}
-                                    className="h-10 rounded-xl bg-slate-50 border-none font-bold text-xs"
-                                />
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-slate-100 shrink-0">
-                                            <Palette className="h-4 w-4 text-slate-400" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent className="grid grid-cols-4 gap-1 p-2 rounded-xl shadow-2xl border-slate-100">
-                                        {OPTION_COLORS.map(c => (
-                                            <button 
-                                                key={c.value} 
-                                                onClick={() => updateOption(editingOptionsFieldId!, opt.label, opt.label, c.value)}
-                                                className={cn("h-6 w-6 rounded-lg border", opt.color === c.value && "ring-2 ring-primary ring-offset-1")}
-                                                style={{ backgroundColor: c.value.split(' ')[0].replace('bg-', '') }}
-                                                title={c.label}
-                                            />
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                <Button variant="ghost" size="icon" onClick={() => deleteOption(editingOptionsFieldId!, opt.label)} className="h-10 w-10 rounded-xl hover:bg-red-50 text-red-400 shrink-0">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
-                        <Button onClick={() => handleAddOption(editingOptionsFieldId!)} variant="ghost" className="w-full h-11 border-dashed border border-slate-200 rounded-2xl gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-all">
-                            <Plus className="h-4 w-4" /> New Category
-                        </Button>
-                    </div>
-                </ScrollArea>
-                <DialogFooter className="p-8 pt-4 bg-slate-50 border-t">
-                    <DialogClose asChild>
-                        <Button className="w-full rounded-xl h-11 font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/10">Finished</Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }
 
-function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded = false }: any) {
+function CellRenderer({ field, value, onChange, onExpand, onAddOption, editable, isExpanded = false }: any) {
     const [localValue, setLocalValue] = useState(value);
     const [isEditing, setIsEditing] = useState(false);
+    const [newOptionLabel, setNewOptionLabel] = useState('');
 
     useEffect(() => setLocalValue(value), [value]);
 
@@ -935,23 +923,41 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
                                 {value}
                             </Badge>
                         ) : <span className="text-slate-200 text-xs italic">Select...</span>}
-                        {!isExpanded && <ChevronDown className="h-3.5 w-3.5 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
+                        {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                    {field.options?.map((opt: any) => (
-                        <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer py-2.5">
-                            <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", opt.color.split(' ')[0])} />
-                            {opt.label}
-                        </DropdownMenuItem>
-                    ))}
+                <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200">
+                    <ScrollArea className="max-h-60">
+                        <div className="p-1 space-y-0.5">
+                            {field.options?.map((opt: any) => (
+                                <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
+                                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
+                                    <span className="flex-1">{opt.label}</span>
+                                    {value === opt.label && <Check className="h-3 w-3 text-primary" />}
+                                </DropdownMenuItem>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                    
                     {editable && (
-                        <>
-                            <DropdownMenuSeparator className="bg-slate-50" />
-                            <DropdownMenuItem className="gap-2 text-[9px] font-black uppercase text-slate-400 tracking-widest cursor-default italic">
-                                Manage via header menu
-                            </DropdownMenuItem>
-                        </>
+                        <div className="p-2 bg-slate-50 border-t">
+                            <div className="relative">
+                                <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                                <Input 
+                                    placeholder="Add new option..." 
+                                    value={newOptionLabel}
+                                    onChange={(e) => setNewOptionLabel(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && newOptionLabel.trim()) {
+                                            onAddOption(newOptionLabel.trim());
+                                            onChange(newOptionLabel.trim());
+                                            setNewOptionLabel('');
+                                        }
+                                    }}
+                                    className="h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-bold uppercase tracking-widest" 
+                                />
+                            </div>
+                        </div>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -1014,7 +1020,8 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
 
 function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
     const statusField = fields.find((f: any) => f.type === 'status') || fields.find((f: any) => f.type === 'select');
-    const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+    const [draggedRecordId, setDraggedRecordId] = useState<string | null>(null);
+    const [dropTargetId, setDropTargetId] = useState<string | null>(null);
     
     if (!statusField) {
         return (
@@ -1029,22 +1036,24 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
     const groups = statusField.options || [{ label: 'Uncategorized', color: 'bg-slate-100 text-slate-400' }];
 
     const handleDragStart = (e: React.DragEvent, recordId: string) => {
+        setDraggedRecordId(recordId);
         e.dataTransfer.setData('recordId', recordId);
         e.dataTransfer.effectAllowed = 'move';
     };
 
     const handleDrop = (e: React.DragEvent, statusLabel: string) => {
         e.preventDefault();
-        setDragOverColumn(null);
         const recordId = e.dataTransfer.getData('recordId');
         if (recordId) {
             onRecordUpdate(recordId, statusField.id, statusLabel);
         }
+        setDraggedRecordId(null);
+        setDropTargetId(null);
     };
 
     const handleDragOver = (e: React.DragEvent, statusLabel: string) => {
         e.preventDefault();
-        setDragOverColumn(statusLabel);
+        setDropTargetId(statusLabel);
     };
 
     return (
@@ -1052,17 +1061,17 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
             <div className="flex gap-8 p-10 h-full min-h-[600px]">
                 {groups.map((group: any) => {
                     const groupRecords = records.filter((r: any) => r.values[statusField.id] === group.label || (!r.values[statusField.id] && group.label === 'Uncategorized'));
-                    const isOver = dragOverColumn === group.label;
+                    const isTarget = dropTargetId === group.label;
 
                     return (
                         <div 
                             key={group.label} 
                             className={cn(
                                 "w-80 shrink-0 flex flex-col gap-6 p-4 rounded-3xl transition-all duration-300",
-                                isOver ? "bg-primary/5 ring-2 ring-primary/20" : "bg-transparent"
+                                isTarget ? "bg-primary/5 ring-2 ring-primary/20 scale-[1.02]" : "bg-transparent"
                             )}
                             onDragOver={(e) => handleDragOver(e, group.label)}
-                            onDragLeave={() => setDragOverColumn(null)}
+                            onDragLeave={() => setDropTargetId(null)}
                             onDrop={(e) => handleDrop(e, group.label)}
                         >
                             <div className="flex items-center justify-between px-3">
@@ -1082,7 +1091,10 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, r.id)}
                                         onClick={() => onRecordClick(r.id)} 
-                                        className="border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-grab active:cursor-grabbing group rounded-[1.5rem] bg-white p-6 relative animate-in fade-in zoom-in-95 duration-200"
+                                        className={cn(
+                                            "border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-grab active:cursor-grabbing group rounded-[1.5rem] bg-white p-6 relative animate-in fade-in zoom-in-95 duration-200",
+                                            draggedRecordId === r.id && "opacity-40 grayscale"
+                                        )}
                                     >
                                         <p className="text-sm font-black text-slate-900 leading-tight mb-4 group-hover:text-primary transition-colors">{r.values[fields[0].id] || 'Untitled Object'}</p>
                                         <div className="space-y-3">
