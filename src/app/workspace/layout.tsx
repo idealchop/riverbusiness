@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc, or, and } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc, or, and, getDoc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -129,6 +129,39 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       });
   }, [firestore, authUser, companyId, router, toast]);
 
+  const handleDuplicatePage = useCallback(async (pageId: string) => {
+    if (!firestore || !authUser || !companyId) return;
+    
+    try {
+      const sourceRef = doc(firestore, 'collaboration_pages', pageId);
+      const sourceSnap = await getDoc(sourceRef);
+      
+      if (sourceSnap.exists()) {
+        const sourceData = sourceSnap.data() as CollabPage;
+        const newPage = {
+          ...sourceData,
+          title: `Copy of ${sourceData.title || 'Untitled'}`,
+          createdBy: authUser.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          isFavorite: false,
+          isTrashed: false,
+          parentId: null, // Clones are created at root for clear access
+        };
+        
+        const docRef = await addDoc(collection(firestore, 'collaboration_pages'), newPage);
+        router.push(`/workspace/${docRef.id}`);
+        toast({ 
+            title: 'Document duplicated', 
+            description: 'A professional copy has been created and attributed to you.' 
+        });
+      }
+    } catch (error) {
+      console.error("Duplication failed:", error);
+      toast({ variant: 'destructive', title: 'Action failed', description: 'The server was unable to clone this document.' });
+    }
+  }, [firestore, authUser, companyId, router, toast]);
+
   const handleSoftDelete = useCallback(async (pageId: string) => {
     if (!firestore) return;
     try {
@@ -239,12 +272,20 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         }
     };
 
+    const handleRequestDuplicate = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            handleDuplicatePage(customEvent.detail.pageId);
+        }
+    };
+
     window.addEventListener('request-new-collab-page', handleRequestNewPage);
     window.addEventListener('request-delete-collab-page', handleRequestTrashPage);
     window.addEventListener('request-restore-collab-page', handleRequestRestorePage);
     window.addEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
     window.addEventListener('request-favorite-collab-page', handleRequestFavorite);
     window.addEventListener('request-share-collab-page', handleRequestShare);
+    window.addEventListener('request-duplicate-collab-page', handleRequestDuplicate);
     
     return () => {
         window.removeEventListener('request-new-collab-page', handleRequestNewPage);
@@ -253,8 +294,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         window.removeEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
         window.removeEventListener('request-favorite-collab-page', handleRequestFavorite);
         window.removeEventListener('request-share-collab-page', handleRequestShare);
+        window.removeEventListener('request-duplicate-collab-page', handleRequestDuplicate);
     };
-  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle]);
+  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle, handleDuplicatePage]);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {

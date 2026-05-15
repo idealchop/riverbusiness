@@ -21,7 +21,8 @@ import {
     Users,
     Check,
     History,
-    Lock
+    Lock,
+    Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -60,7 +61,8 @@ const NavItem = memo(({
     onToggleExpand, 
     onCreatePage,
     onFavorite,
-    onTrash 
+    onTrash,
+    onDuplicate
 }: { 
     page: CollabPage, 
     level?: number, 
@@ -70,7 +72,8 @@ const NavItem = memo(({
     onToggleExpand: (id: string) => void,
     onCreatePage: (parentId: string | null, title: string, type: CollabPageType) => void,
     onFavorite: (id: string, isFavorite: boolean) => void,
-    onTrash: (id: string) => void
+    onTrash: (id: string) => void,
+    onDuplicate: (id: string) => void
 }) => {
     const isExpanded = expandedPages[page.id];
     const isActive = activePageId === page.id;
@@ -103,7 +106,7 @@ const NavItem = memo(({
                         !hasChildren && "opacity-0 pointer-events-none"
                     )}
                 >
-                    {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                 </button>
 
                 <Link 
@@ -153,7 +156,11 @@ const NavItem = memo(({
                                 <MoreHorizontal className="h-3.5 w-3.5" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100 bg-white">
+                        <DropdownMenuContent align="start" className="w-56 rounded-xl p-1 shadow-2xl border-slate-100 bg-white">
+                            <DropdownMenuItem onClick={() => onDuplicate(page.id)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
+                                <Copy className="h-3.5 w-3.5 text-slate-500" /> Duplicate Document
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-slate-50" />
                             <DropdownMenuItem onClick={() => onTrash(page.id)} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer py-2.5">
                                 <Trash2 className="h-3.5 w-3.5" /> Move to trash
                             </DropdownMenuItem>
@@ -176,6 +183,7 @@ const NavItem = memo(({
                             onCreatePage={onCreatePage}
                             onFavorite={onFavorite}
                             onTrash={onTrash}
+                            onDuplicate={onDuplicate}
                         />
                     ))}
                 </div>
@@ -193,7 +201,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [pageToTrash, setPageToTrash] = useState<string | null>(null);
   
   const [selectedMemberId, setSelectedMemberId] = useState<string>(user?.id || 'all');
 
@@ -216,6 +223,10 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
   const onTrash = useCallback((pageId: string) => {
     window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId } }));
+  }, []);
+
+  const onDuplicate = useCallback((pageId: string) => {
+    window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId } }));
   }, []);
 
   const filteredPages = useMemo(() => {
@@ -386,6 +397,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                             onCreatePage={onCreatePage}
                             onFavorite={handleFavorite}
                             onTrash={onTrash}
+                            onDuplicate={onDuplicate}
                         />
                     ))}
                     {rootPages.length === 0 && (

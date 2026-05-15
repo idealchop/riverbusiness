@@ -593,6 +593,9 @@ function PageEditorContent() {
                              <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
                                 <FilePlus className="h-4 w-4 text-blue-500" /> New Sub-page
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                                <Copy className="h-4 w-4 text-slate-500" /> Duplicate Document
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
                                 <Star className={cn("h-4 w-4", page.isFavorite && "fill-amber-500 text-amber-500")} /> {page.isFavorite ? 'Unfavorite' : 'Add to Favorites'}
                             </DropdownMenuItem>
@@ -606,6 +609,7 @@ function PageEditorContent() {
                 ) : (
                     <>
                         <button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"><FilePlus className="h-4 w-4" /></button>
+                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"><Copy className="h-4 w-4" /></button>
                         <button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button>
                         <SharePopover page={page} onUpdate={handleUpdateMeta} />
                         <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
