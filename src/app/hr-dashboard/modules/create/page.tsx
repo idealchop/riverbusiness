@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -54,6 +54,7 @@ export default function CreateModulePage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const editorRef = useRef<any>(null);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -144,7 +145,7 @@ export default function CreateModulePage() {
                                         <FormControl>
                                             <input 
                                                 placeholder="Enter Module Title..." 
-                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none placeholder:text-slate-100 shadow-none ring-0"
+                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none placeholder:text-slate-100 shadow-none ring-0"
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -163,7 +164,7 @@ export default function CreateModulePage() {
                                             <FormControl>
                                                 <input 
                                                     placeholder="e.g. Safety" 
-                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0 shadow-none ring-0" 
+                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-sm font-bold text-slate-900 p-0 shadow-none ring-0" 
                                                     {...field} 
                                                 />
                                             </FormControl>
@@ -204,7 +205,7 @@ export default function CreateModulePage() {
                                         <FormControl>
                                             <textarea 
                                                 placeholder="Enter a short overview of this module..." 
-                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
+                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -228,9 +229,10 @@ export default function CreateModulePage() {
                             )}
 
                             {selectedType === 'article' && (
-                                <div className="pt-4">
+                                <div className="pt-4" onClick={() => editorRef.current?.focus()}>
                                     <div className="min-h-[600px] bg-white border-none outline-none ring-0">
                                         <Editor 
+                                            ref={editorRef}
                                             initialContent={form.getValues('textContent')} 
                                             onContentChange={(json) => form.setValue('textContent', json)}
                                             companyId={user?.companyId}

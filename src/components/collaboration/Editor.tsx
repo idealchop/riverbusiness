@@ -235,10 +235,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none focus:ring-0 focus-visible:ring-0 min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40 border-none outline-none'
+            class: 'prose prose-slate max-w-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40 border-none outline-none'
         },
     }
-  }, [uploadAndInsertImage, isMounted]);
+  }, [isMounted]);
 
   useImperativeHandle(ref, () => ({
       focus: () => {
@@ -247,6 +247,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           }
       }
   }));
+
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
 
   useEffect(() => {
     if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {

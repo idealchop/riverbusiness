@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -55,6 +55,7 @@ export default function EditModulePage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const editorRef = useRef<any>(null);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -78,7 +79,7 @@ export default function EditModulePage() {
       category: 'General',
       contentType: 'article',
       contentUrl: '',
-      textContent: { type: 'doc', content: [{ type: 'paragraph' }] },
+      textContent: null,
     }
   });
 
@@ -118,7 +119,7 @@ export default function EditModulePage() {
 
   const selectedType = form.watch('contentType');
 
-  if (isUserLoading || isUserDocLoading || (isModuleLoading && companyId)) {
+  if (isUserLoading || isUserDocLoading || isModuleLoading) {
     return <FullScreenLoader text="Opening architecture tools..." />;
   }
 
@@ -164,7 +165,7 @@ export default function EditModulePage() {
                                         <FormControl>
                                             <input 
                                                 placeholder="Module Title" 
-                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none placeholder:text-slate-200"
+                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none placeholder:text-slate-200"
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -183,7 +184,7 @@ export default function EditModulePage() {
                                             <FormControl>
                                                 <input 
                                                     placeholder="e.g. Safety" 
-                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0 shadow-none ring-0" 
+                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-sm font-bold text-slate-900 p-0 shadow-none ring-0" 
                                                     {...field} 
                                                 />
                                             </FormControl>
@@ -224,7 +225,7 @@ export default function EditModulePage() {
                                         <FormControl>
                                             <textarea 
                                                 placeholder="Enter a short overview of this module..." 
-                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
+                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -247,12 +248,13 @@ export default function EditModulePage() {
                                 />
                             )}
 
-                            {selectedType === 'article' && (
-                                <div className="pt-4">
+                            {selectedType === 'article' && module && (
+                                <div className="pt-4" onClick={() => editorRef.current?.focus()}>
                                     <div className="min-h-[600px] bg-white border-none outline-none ring-0">
                                         <Editor 
-                                            key={module?.id}
-                                            initialContent={form.getValues('textContent')} 
+                                            ref={editorRef}
+                                            key={module.id}
+                                            initialContent={module.textContent || { type: 'doc', content: [{ type: 'paragraph' }] }} 
                                             onContentChange={(json) => form.setValue('textContent', json)}
                                             companyId={user?.companyId}
                                             editable={true}
