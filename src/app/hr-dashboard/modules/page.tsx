@@ -100,16 +100,16 @@ export default function LearningHubPage() {
   if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Synchronizing Hub..." />;
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="space-y-6 md:space-y-10 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Hub</h1>
-          <p className="text-slate-500 font-medium text-sm">Design and Browse Training Materials.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 leading-none">Learning Hub</h1>
+          <p className="text-slate-500 font-medium text-xs md:text-sm">Design and Browse Training Materials.</p>
         </div>
         {isManager && (
             <Button 
                 asChild
-                className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
+                className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10 w-full lg:w-auto"
             >
                 <Link href="/hr-dashboard/modules/create">
                     <Plus className="mr-2 h-4 w-4" /> Create Module
@@ -128,12 +128,12 @@ export default function LearningHubPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
         </div>
-        <Button variant="outline" className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm">
+        <Button variant="outline" className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm hidden md:flex">
             <Filter className="mr-2 h-4 w-4" /> Filters
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {displayModules.map((module) => (
             <Card key={module.id} className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white flex flex-col group hover:shadow-xl transition-all duration-500 border border-slate-50">
                 <div className="relative h-48 bg-slate-100 overflow-hidden cursor-pointer" onClick={() => handleLaunchModule(module)}>
@@ -156,9 +156,9 @@ export default function LearningHubPage() {
                     </Badge>
                 </div>
 
-                <CardHeader className="flex-1 cursor-pointer" onClick={() => handleLaunchModule(module)}>
+                <CardHeader className="flex-1 cursor-pointer p-6" onClick={() => handleLaunchModule(module)}>
                     <div className="flex items-start justify-between gap-4">
-                        <CardTitle className="text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                        <CardTitle className="text-lg md:text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                             {module.title}
                         </CardTitle>
                         <DropdownMenu>
@@ -189,7 +189,7 @@ export default function LearningHubPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    <CardDescription className="text-sm font-medium text-slate-500 line-clamp-2 mt-2 leading-relaxed">
+                    <CardDescription className="text-xs md:text-sm font-medium text-slate-500 line-clamp-2 mt-2 leading-relaxed">
                         {module.description}
                     </CardDescription>
                 </CardHeader>
@@ -199,7 +199,7 @@ export default function LearningHubPage() {
                         <Clock className="h-3 w-3" /> 
                         {module.createdAt instanceof Timestamp ? format(module.createdAt.toDate(), 'MMM d') : 'Active'}
                     </div>
-                    <Button onClick={() => handleLaunchModule(module)} variant="ghost" className="rounded-xl font-bold text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors h-9 px-4">
+                    <Button onClick={() => handleLaunchModule(module)} variant="ghost" className="rounded-xl font-bold text-[10px] md:text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors h-9 px-4">
                         Open Training <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                     </Button>
                 </CardFooter>

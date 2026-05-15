@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -139,26 +138,26 @@ export default function EditModulePage() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
                 <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => router.push(`/hr-dashboard/modules/${moduleId}`)}
-                    className="h-9 px-3 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
+                    className="h-9 px-2 md:px-3 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <X className="h-4 w-4" />
-                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Discard</span>
+                    <span className="hidden sm:inline font-bold text-[10px] md:text-xs uppercase tracking-widest">Discard</span>
                 </Button>
-                <div className="h-4 w-px bg-slate-100 hidden sm:block" />
+                <div className="h-4 w-px bg-slate-100" />
                 <div className="flex items-center gap-2">
-                    <Edit className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Edit Module</span>
+                    <Edit className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-widest whitespace-nowrap">Edit Module</span>
                 </div>
             </div>
             <Button 
                 onClick={form.handleSubmit(onSubmit)} 
                 disabled={isSubmitting}
-                className="rounded-xl h-10 px-8 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
+                className="rounded-xl h-10 px-6 md:px-8 font-bold text-[10px] md:text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
             >
                 {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
                 Sync
@@ -166,10 +165,10 @@ export default function EditModulePage() {
         </div>
 
         <ScrollArea className="flex-1">
-            <div className="max-w-4xl mx-auto px-6 py-12 pb-40">
+            <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 pb-40">
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
-                        <div className="space-y-10">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10 md:space-y-12">
+                        <div className="space-y-8 md:space-y-10">
                             <FormField
                                 control={form.control}
                                 name="title"
@@ -178,7 +177,7 @@ export default function EditModulePage() {
                                         <FormControl>
                                             <input 
                                                 placeholder="Module Title" 
-                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none placeholder:text-slate-200"
+                                                className="w-full text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none placeholder:text-slate-100"
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -187,13 +186,13 @@ export default function EditModulePage() {
                                 )}
                             />
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8 pt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 md:gap-y-8 pt-4">
                                 <FormField
                                     control={form.control}
                                     name="category"
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Category</FormLabel>
+                                            <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Category</FormLabel>
                                             <FormControl>
                                                 <input 
                                                     placeholder="e.g. Safety" 
@@ -210,7 +209,7 @@ export default function EditModulePage() {
                                     name="contentType"
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
+                                            <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className="h-10 rounded-none bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-bold p-0 shadow-none">
@@ -234,11 +233,11 @@ export default function EditModulePage() {
                                 name="description"
                                 render={({ field }) => (
                                     <FormItem className="space-y-1.5">
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
+                                        <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
                                         <FormControl>
                                             <textarea 
                                                 placeholder="Enter a short overview of this module..." 
-                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
+                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-base md:text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -253,8 +252,8 @@ export default function EditModulePage() {
                                     name="contentUrl"
                                     render={({ field }) => (
                                         <FormItem className="space-y-3">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
-                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs shadow-none focus:ring-0 focus-visible:ring-0" {...field} /></FormControl>
+                                            <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
+                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-[10px] md:text-xs shadow-none focus:ring-0 focus-visible:ring-0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -263,7 +262,7 @@ export default function EditModulePage() {
 
                             {selectedType === 'article' && module && (
                                 <div className="pt-4" onClick={() => editorRef.current?.focus()}>
-                                    <div className="min-h-[600px] bg-white border-none outline-none ring-0">
+                                    <div className="min-h-[400px] md:min-h-[600px] bg-white border-none outline-none ring-0">
                                         <Editor 
                                             ref={editorRef}
                                             key={module.id}

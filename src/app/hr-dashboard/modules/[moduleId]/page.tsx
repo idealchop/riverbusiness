@@ -220,9 +220,9 @@ export default function ModuleDetailPage() {
   };
 
   const formattedDate = module.updatedAt instanceof Timestamp 
-    ? format(module.updatedAt.toDate(), 'MMMM do, yyyy') 
+    ? format(module.updatedAt.toDate(), 'MMM d, yyyy') 
     : module.createdAt instanceof Timestamp 
-    ? format(module.createdAt.toDate(), 'MMMM do, yyyy')
+    ? format(module.createdAt.toDate(), 'MMM d, yyyy')
     : 'Recent';
 
   return (
@@ -237,22 +237,22 @@ export default function ModuleDetailPage() {
                     className="h-9 px-2 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Hub</span>
+                    <span className="hidden md:inline font-bold text-xs uppercase tracking-widest">Hub</span>
                 </Button>
                 <ChevronRight className="h-3.5 w-3.5 text-slate-200 shrink-0" />
                 <div className="flex items-center gap-2 overflow-hidden">
-                    <Badge variant="outline" className="bg-primary/5 text-primary border-none font-black text-[9px] uppercase tracking-widest h-5 px-2 whitespace-nowrap">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-none font-black text-[9px] uppercase tracking-widest h-5 px-2 whitespace-nowrap hidden sm:flex">
                         {module.category}
                     </Badge>
-                    <span className="text-xs font-bold text-slate-900 truncate max-w-[150px] sm:max-w-xs">{module.title}</span>
+                    <span className="text-xs font-bold text-slate-900 truncate max-w-[100px] sm:max-w-xs">{module.title}</span>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
                 {/* Viewers Avatars */}
-                <div className="hidden md:flex items-center -space-x-1.5 overflow-hidden pr-2 border-r">
+                <div className="hidden lg:flex items-center -space-x-1.5 overflow-hidden pr-2 border-r">
                     <TooltipProvider delayDuration={0}>
-                        {sortedViewers.slice(0, 5).map((viewer) => (
+                        {sortedViewers.slice(0, 3).map((viewer) => (
                             <Tooltip key={viewer.userId}>
                                 <TooltipTrigger asChild>
                                     <Avatar className="h-6 w-6 border-2 border-white shadow-sm ring-1 ring-slate-100">
@@ -270,15 +270,15 @@ export default function ModuleDetailPage() {
                                 </TooltipContent>
                             </Tooltip>
                         ))}
-                        {sortedViewers.length > 5 && (
+                        {sortedViewers.length > 3 && (
                             <div className="h-6 w-6 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-slate-400 z-10">
-                                +{sortedViewers.length - 5}
+                                +{sortedViewers.length - 3}
                             </div>
                         )}
                     </TooltipProvider>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                     <Button 
                         onClick={handleGenerateSummary}
                         disabled={isAiProcessing}
@@ -287,7 +287,7 @@ export default function ModuleDetailPage() {
                         className="h-9 rounded-xl gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-primary hover:bg-primary/5"
                     >
                         {isAiProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                        {aiSummary ? 'Regenerate Insights' : 'AI Insights'}
+                        <span className="hidden sm:inline">{aiSummary ? 'Regenerate' : 'AI Insights'}</span>
                     </Button>
 
                     {isManager && (
@@ -295,17 +295,17 @@ export default function ModuleDetailPage() {
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-9 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-50">
                                     <UserPlus className="h-3.5 w-3.5" />
-                                    {module.assignedEmployeeId ? 'Change Author' : 'Assign'}
+                                    <span className="hidden md:inline">{module.assignedEmployeeId ? 'Change Author' : 'Assign'}</span>
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-64 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white overflow-hidden">
                                 <div className="p-4 bg-slate-50 border-b">
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Delegate Authorship</p>
                                     <div className="relative mt-2">
-                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-300" />
+                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                                         <Input 
                                             placeholder="Find employee..." 
-                                            className="h-8 pl-7 text-xs border-none bg-white shadow-inner rounded-lg"
+                                            className="h-8 pl-7 text-[10px] border-none bg-white shadow-inner rounded-lg"
                                             value={employeeSearch}
                                             onChange={(e) => setEmployeeSearch(e.target.value)}
                                         />
@@ -349,7 +349,7 @@ export default function ModuleDetailPage() {
                         >
                             <Link href={`/hr-dashboard/modules/${moduleId}/edit`}>
                                 <Edit className="h-3.5 w-3.5" />
-                                Edit Module
+                                <span className="hidden sm:inline">Edit Module</span>
                             </Link>
                         </Button>
                     )}
@@ -358,18 +358,18 @@ export default function ModuleDetailPage() {
         </div>
 
         <ScrollArea className="flex-1">
-            <div className="max-w-4xl mx-auto px-6 sm:px-12 py-12 pb-40">
-                <div className="space-y-12">
+            <div className="max-w-4xl mx-auto px-4 sm:px-12 py-8 md:py-12 pb-40">
+                <div className="space-y-8 md:space-y-12">
                     {/* Module Identity */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                    <div className="space-y-4 md:space-y-6">
+                        <div className="flex items-center gap-3 text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
                             <Clock className="h-3.5 w-3.5" />
-                            Last verified {formattedDate}
+                            Verified {formattedDate}
                         </div>
-                        <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 leading-none">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-slate-900 leading-tight">
                             {module.title}
                         </h1>
-                        <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-3xl">
+                        <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-3xl">
                             {module.description}
                         </p>
                     </div>
@@ -380,13 +380,13 @@ export default function ModuleDetailPage() {
                             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                                 <Sparkles className="h-20 w-20" />
                             </div>
-                            <CardContent className="p-10 space-y-6 relative z-10">
+                            <CardContent className="p-6 md:p-10 space-y-6 relative z-10">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 rounded-xl bg-primary/20 text-primary-light">
                                             <Sparkles className="h-5 w-5" />
                                         </div>
-                                        <h4 className="text-sm font-black uppercase tracking-[0.2em] text-white">Executive Insights</h4>
+                                        <h4 className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white">Executive Insights</h4>
                                     </div>
                                     <button onClick={() => setAiSummary(null)} className="text-white/20 hover:text-white transition-colors">
                                         <X className="h-4 w-4" />
@@ -407,7 +407,7 @@ export default function ModuleDetailPage() {
 
                     {/* Rich Media Section */}
                     {module.contentType === 'video' && module.contentUrl && (
-                        <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-8 border-slate-50">
+                        <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 md:border-8 border-slate-50">
                             <iframe 
                                 src={getEmbedUrl(module.contentUrl)} 
                                 className="absolute inset-0 w-full h-full"
@@ -425,13 +425,14 @@ export default function ModuleDetailPage() {
                                 fill 
                                 className="object-cover"
                                 priority
+                                unoptimized
                             />
                         </div>
                     )}
 
                     {/* Content Section */}
                     {module.contentType === 'article' && (
-                        <div className="pt-10 border-t border-slate-50">
+                        <div className="pt-6 md:pt-10 border-t border-slate-50">
                             <Editor 
                                 initialContent={module.textContent || { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: module.description }] }] }}
                                 onContentChange={() => {}}
