@@ -629,7 +629,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                         "h-6 w-6 rounded-lg hover:bg-slate-900/5 flex items-center justify-center transition-all",
                                         isActive ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-slate-300"
                                     )}>
-                                        <ChevronDown className="h-3 w-3" />
+                                        <ChevronDown className="h-3.5 w-3.5" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
@@ -673,41 +673,39 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </DropdownMenu>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
                 <div className="flex items-center">
                     {isSearchExpanded ? (
-                        <div className="relative flex items-center animate-in slide-in-from-right-2 duration-300">
-                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <div className="relative flex items-center animate-in slide-in-from-right-1 duration-200">
+                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                              <Input 
                                 autoFocus
-                                placeholder="Find in sheet..." 
-                                className="h-9 pl-9 pr-8 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold w-48 sm:w-64"
+                                placeholder="Find..." 
+                                className="h-8 pl-8 pr-7 rounded-xl bg-slate-50 border-none shadow-inner text-[11px] font-semibold w-32 sm:w-48"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 onBlur={() => !searchTerm && setIsSearchExpanded(false)}
                             />
                             <button onClick={() => {setSearchTerm(''); setIsSearchExpanded(false);}} className="absolute right-2 text-slate-300 hover:text-slate-600 transition-colors">
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-3 w-3" />
                             </button>
                         </div>
                     ) : (
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-slate-900" onClick={() => setIsSearchExpanded(true)}>
-                            <Search className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-400 hover:text-slate-900" onClick={() => setIsSearchExpanded(true)}>
+                            <Search className="h-3.5 w-3.5" />
                         </Button>
                     )}
                 </div>
 
-                {isSyncing && <div className="mx-1"><Loader2 className="h-4 w-4 animate-spin text-primary opacity-50" /></div>}
+                {isSyncing && <div className="mx-1"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary opacity-50" /></div>}
 
-                <Separator orientation="vertical" className="h-6 mx-1 bg-slate-100 hidden sm:block" />
-
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                                <EyeOff className="h-3.5 w-3.5" /> 
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2.5 rounded-xl gap-2 font-bold text-[9px] uppercase tracking-wider transition-all", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <EyeOff className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Hide</span>
-                                {(activeView.config?.hiddenFields?.length || 0) > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{activeView.config?.hiddenFields?.length}</Badge>}
+                                {(activeView.config?.hiddenFields?.length || 0) > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{activeView.config?.hiddenFields?.length}</Badge>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
@@ -737,8 +735,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                                <ArrowUpDown className="h-3.5 w-3.5" /> 
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2.5 rounded-xl gap-2 font-bold text-[9px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <ArrowUpDown className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Sort</span>
                             </Button>
                         </DropdownMenuTrigger>
@@ -766,10 +764,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                                <Filter className="h-3.5 w-3.5" /> 
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2.5 rounded-xl gap-2 font-bold text-[9px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <Filter className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Filter</span>
-                                {filters.length > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{filters.length}</Badge>}
+                                {filters.length > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{filters.length}</Badge>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-[320px] sm:w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">

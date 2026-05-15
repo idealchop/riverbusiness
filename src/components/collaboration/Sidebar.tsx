@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -204,20 +203,20 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 <Button 
                     variant="outline" 
                     onClick={() => setIsSearching(true)}
-                    className="w-full justify-start h-10 rounded-xl border-slate-200 bg-white shadow-sm gap-3 font-bold text-xs"
+                    className="w-full justify-start h-8 rounded-xl border-slate-200 bg-white shadow-sm gap-2 font-bold text-[10px] uppercase tracking-widest"
                 >
-                    <Search className="h-4 w-4 text-slate-400" />
+                    <Search className="h-3 w-3 text-slate-400" />
                     {isSearching ? '' : 'Quick Find'}
                 </Button>
                 {isSearching && (
-                    <div className="absolute inset-0 z-50">
+                    <div className="absolute inset-0 z-50 animate-in fade-in slide-in-from-right-1 duration-200">
                         <Input 
                             autoFocus
                             placeholder="Type to filter..." 
                             value={searchQuery}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onBlur={() => !searchQuery && setIsSearching(false)}
-                            className="h-10 rounded-xl bg-white shadow-lg border-primary pr-8"
+                            className="h-8 rounded-xl bg-white shadow-lg border-primary pr-7 text-[10px] font-bold uppercase tracking-widest"
                         />
                         <button 
                             onClick={() => { setSearchTerm(''); setIsSearching(false); }}
