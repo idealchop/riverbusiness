@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, memo, useRef } from 'react';
 import { 
     Grid, 
     Layout, 
@@ -141,9 +141,6 @@ const OPTION_COLORS = [
     { label: 'Indigo', value: 'bg-indigo-100 text-indigo-700' },
 ];
 
-/**
- * Optimized Cell Component - Prevents re-renders of the entire grid on typing
- */
 const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, editable, isExpanded = false }: any) => {
     const [localValue, setLocalValue] = useState(value);
     const [isEditing, setIsEditing] = useState(false);
@@ -305,7 +302,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
-  // Search Debounce Logic to prevent lag on every keystroke
+  // Resizing state
+  const [resizingFieldId, setResizingFieldId] = useState<string | null>(null);
+  const resizeStartXRef = useRef(0);
+  const resizeStartWidthRef = useRef(0);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
@@ -535,6 +536,37 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     return list;
   }, [records, debouncedSearch, sortConfig, filters]);
 
+  // Resize Handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent, fieldId: string, currentWidth: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingFieldId(fieldId);
+    resizeStartXRef.current = e.clientX;
+    resizeStartWidthRef.current = currentWidth;
+  }, []);
+
+  useEffect(() => {
+    if (!resizingFieldId) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+        const delta = e.clientX - resizeStartXRef.current;
+        const newWidth = Math.max(80, resizeStartWidthRef.current + delta);
+        setFields(prev => prev.map(f => f.id === resizingFieldId ? { ...f, width: newWidth } : f));
+    };
+
+    const handleMouseUp = () => {
+        sync(fields, records, views, activeViewId);
+        setResizingFieldId(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingFieldId, fields, records, views, activeViewId, sync]);
+
   if (!isMounted) return null;
 
   return (
@@ -756,7 +788,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 <span className="text-[10px] font-black text-slate-300">#</span>
                             </div>
                             {fields.map((field) => (
-                                <div key={field.id} style={{ width: field.width }} className="group h-10 border-r flex items-center justify-between px-3 shrink-0">
+                                <div key={field.id} style={{ width: field.width }} className="group h-10 border-r flex items-center justify-between px-3 shrink-0 relative">
                                     <div className="flex items-center gap-2 overflow-hidden flex-1">
                                         {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3 w-3 text-slate-400 shrink-0" })}
                                         {editingFieldId === field.id ? (
@@ -862,9 +894,14 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
+
+                                    {/* Resize Handle */}
+                                    <div 
+                                        onMouseDown={(e) => handleResizeStart(e, field.id, field.width || 150)}
+                                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/40 transition-colors z-30" 
+                                    />
                                 </div>
                             ))}
-                            {/* Permanent Add Column Button */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="h-10 w-12 flex items-center justify-center hover:bg-slate-50 border-r shrink-0 text-slate-300 hover:text-primary transition-all group outline-none">
@@ -874,7 +911,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white z-[60]">
                                     <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New Column Logic</DropdownMenuLabel>
                                     {FIELD_TYPES.map(ft => (
-                                        <DropdownMenuItem key={ft.type} onClick={() => addField(ft.type)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                        <DropdownMenuItem key={ft.type} onClick={() => addField(ft.type)} className="gap-3 font-semibold text-xs py-2 rounded-xl cursor-pointer">
                                             {React.createElement(FIELD_ICONS[ft.type], { className: "h-3.5 w-3.5 opacity-40" })}
                                             {ft.label}
                                         </DropdownMenuItem>
