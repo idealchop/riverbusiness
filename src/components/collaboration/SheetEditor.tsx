@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -42,7 +41,9 @@ import {
     Copy,
     ListFilter,
     EyeOff,
-    Grab
+    Grab,
+    MoreHorizontal,
+    MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -420,24 +421,25 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     const ViewIcon = VIEW_ICONS[v.type] || Grid;
                     const isActive = v.id === activeViewId;
                     return (
-                        <div key={v.id} className="group relative flex items-center shrink-0">
-                            <Button 
-                                variant="ghost" 
+                        <div key={v.id} 
+                            className={cn(
+                                "group relative flex items-center shrink-0 h-9 rounded-xl transition-all whitespace-nowrap px-1 gap-0.5",
+                                isActive 
+                                    ? "bg-primary/10 text-primary border border-primary/20" 
+                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
+                            )}
+                        >
+                            <button 
                                 onClick={() => handleSwitchView(v.id)}
-                                className={cn(
-                                    "h-9 px-3 gap-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap",
-                                    isActive 
-                                        ? "bg-primary/10 text-primary border border-primary/20" 
-                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                                )}
+                                className="flex items-center gap-2 pl-2 pr-1 h-full font-bold text-xs outline-none"
                             >
                                 <ViewIcon className={cn("h-3.5 w-3.5", isActive ? "text-primary" : "text-slate-400")} />
                                 {v.name}
-                            </Button>
+                            </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className={cn(
-                                        "h-5 w-5 ml-0.5 rounded-lg hover:bg-slate-100 flex items-center justify-center transition-all",
+                                        "h-6 w-6 rounded-lg hover:bg-slate-900/5 flex items-center justify-center transition-all",
                                         isActive ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-slate-300"
                                     )}>
                                         <ChevronDown className="h-3 w-3" />
