@@ -44,7 +44,8 @@ import {
   AlignRight,
   Palette,
   Underline as UnderlineIcon,
-  CheckSquare
+  CheckSquare,
+  Baseline
 } from 'lucide-react';
 import type { AppUser, HRLearningModule } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
@@ -78,11 +79,16 @@ const moduleSchema = z.object({
 type ModuleFormValues = z.infer<typeof moduleSchema>;
 
 const COLORS = [
+    { label: 'Default', value: 'inherit' },
     { label: 'Slate', value: '#64748b' },
-    { label: 'Blue', value: '#3b82f6' },
-    { label: 'Green', value: '#22c55e' },
     { label: 'Red', value: '#ef4444' },
+    { label: 'Orange', value: '#f97316' },
+    { label: 'Amber', value: '#f59e0b' },
+    { label: 'Green', value: '#22c55e' },
+    { label: 'Blue', value: '#3b82f6' },
+    { label: 'Indigo', value: '#6366f1' },
     { label: 'Purple', value: '#a855f7' },
+    { label: 'Pink', value: '#ec4899' },
 ];
 
 export default function EditModulePage() {
@@ -121,7 +127,9 @@ export default function EditModulePage() {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] }
+      }),
       Underline,
       TextStyle,
       Color,
@@ -163,7 +171,7 @@ export default function EditModulePage() {
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: 'Module Synchronized', description: 'Changes have been pushed to the organizational library.' });
+      toast({ title: 'Module Synchronized', description: 'Changes saved to the organizational library.' });
       router.push(`/hr-dashboard/modules/${moduleId}`);
     } catch (error) {
       console.error("Error updating module:", error);
@@ -191,12 +199,12 @@ export default function EditModulePage() {
                     className="h-9 px-3 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <X className="h-4 w-4" />
-                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Discard Edits</span>
+                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Discard</span>
                 </Button>
                 <div className="h-4 w-px bg-slate-100 hidden sm:block" />
                 <div className="flex items-center gap-2">
                     <Edit className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Core Architecture Edit</span>
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Edit Module</span>
                 </div>
             </div>
             <Button 
@@ -205,7 +213,7 @@ export default function EditModulePage() {
                 className="rounded-xl h-10 px-8 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
             >
                 {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
-                Sync Updates
+                Sync
             </Button>
         </div>
 
@@ -237,7 +245,7 @@ export default function EditModulePage() {
                                     name="category"
                                     render={({ field }) => (
                                         <FormItem className="space-y-3">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Target Category</FormLabel>
+                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Category</FormLabel>
                                             <FormControl><Input className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-bold" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -248,15 +256,15 @@ export default function EditModulePage() {
                                     name="contentType"
                                     render={({ field }) => (
                                         <FormItem className="space-y-3">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media Format</FormLabel>
+                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-bold"><SelectValue /></SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent className="rounded-2xl">
-                                                    <SelectItem value="video">Instructional Video</SelectItem>
-                                                    <SelectItem value="image">Visual Infographic</SelectItem>
                                                     <SelectItem value="article">Text Document</SelectItem>
+                                                    <SelectItem value="video">Video Instruction</SelectItem>
+                                                    <SelectItem value="image">Image/Graphic</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -270,10 +278,10 @@ export default function EditModulePage() {
                                 name="description"
                                 render={({ field }) => (
                                     <FormItem className="space-y-3">
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Module Brief</FormLabel>
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
                                         <FormControl>
                                             <Textarea 
-                                                className="rounded-3xl min-h-[80px] bg-slate-50 border-slate-100 text-lg font-medium leading-relaxed p-6" 
+                                                className="rounded-3xl min-h-[80px] bg-slate-50 border-slate-100 text-lg font-medium leading-relaxed p-6 shadow-none" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -288,7 +296,7 @@ export default function EditModulePage() {
                                     name="contentUrl"
                                     render={({ field }) => (
                                         <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Source URL</FormLabel>
+                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
                                             <FormControl><Input className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -298,9 +306,7 @@ export default function EditModulePage() {
 
                             {selectedType === 'article' && (
                                 <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
-                                    <div className="flex items-center gap-3">
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
-                                    </div>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
                                     
                                     {/* Tiptap Toolbar */}
                                     {editor && (
@@ -322,18 +328,22 @@ export default function EditModulePage() {
                                             <Separator orientation="vertical" className="h-6 mx-1" />
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl"><Palette className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl"><Baseline className="h-4 w-4" /></Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent className="p-2 grid grid-cols-5 gap-1 rounded-xl bg-white border-slate-100">
+                                                <DropdownMenuContent className="p-2 grid grid-cols-5 gap-1 rounded-xl bg-white border-slate-100 shadow-2xl">
                                                     {COLORS.map(c => (
-                                                        <button key={c.value} type="button" onClick={() => editor.chain().focus().setColor(c.value).run()} className="h-6 w-6 rounded-full border" style={{ backgroundColor: c.value }} />
+                                                        <button key={c.value} type="button" onClick={() => editor.chain().focus().setColor(c.value === 'inherit' ? '' : c.value).run()} 
+                                                            className={cn("h-6 w-6 rounded-full border border-slate-100 flex items-center justify-center", editor.getAttributes('textStyle').color === c.value && "ring-2 ring-primary")} 
+                                                            style={{ backgroundColor: c.value === 'inherit' ? 'transparent' : c.value }}>
+                                                            {c.value === 'inherit' && <X className="h-3 w-3 text-slate-400" />}
+                                                        </button>
                                                     ))}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
                                     )}
 
-                                    <div className="min-h-[500px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100">
+                                    <div className="min-h-[600px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100">
                                         <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none" />
                                     </div>
                                 </div>

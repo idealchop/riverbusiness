@@ -181,7 +181,7 @@ export default function ModuleDetailPage() {
                         <div className="pt-10 border-t border-slate-50">
                             <div className="prose prose-slate max-w-none">
                                 <div 
-                                    className="text-slate-700 leading-loose text-lg font-normal bg-slate-50/40 p-8 sm:p-12 rounded-[2.5rem] border border-slate-100 shadow-inner italic"
+                                    className="text-slate-700 leading-loose text-lg font-normal bg-slate-50/40 p-8 sm:p-12 rounded-[2.5rem] border border-slate-100 italic"
                                     dangerouslySetInnerHTML={{ __html: module.textContent }}
                                 />
                             </div>
