@@ -98,6 +98,8 @@ export default function EditModulePage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -141,7 +143,9 @@ export default function EditModulePage() {
     ],
     onUpdate: ({ editor }) => {
       form.setValue('textContent', editor.getHTML(), { shouldDirty: true });
-    }
+    },
+    onFocus: () => setIsFocused(true),
+    onBlur: () => setIsFocused(false),
   });
 
   useEffect(() => {
@@ -294,7 +298,7 @@ export default function EditModulePage() {
                                     control={form.control}
                                     name="contentUrl"
                                     render={({ field }) => (
-                                        <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                        <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
                                             <FormControl><Input className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl>
                                             <FormMessage />
@@ -304,11 +308,18 @@ export default function EditModulePage() {
                             )}
 
                             {selectedType === 'article' && (
-                                <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
+                                <div 
+                                    className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2"
+                                    onMouseEnter={() => setIsHovering(true)}
+                                    onMouseLeave={() => setIsHovering(false)}
+                                >
                                     <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
                                     
                                     {editor && (
-                                        <div className="sticky top-20 z-40 w-full p-1.5 bg-white border border-slate-200 shadow-xl rounded-2xl flex flex-wrap items-center gap-1">
+                                        <div className={cn(
+                                            "sticky top-20 z-40 mx-auto w-fit p-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-[2rem] flex items-center gap-1 transition-all duration-300",
+                                            (isFocused || isHovering) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                                        )}>
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} icon={<Heading3 className="h-4 w-4" />} />
