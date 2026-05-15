@@ -20,7 +20,8 @@ import {
     UserCircle,
     Users,
     Check,
-    History
+    History,
+    Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -91,6 +92,7 @@ const NavItem = memo(({
     const hasChildren = children.length > 0;
 
     const getPageIcon = () => {
+        if (page.isPrivate) return <Lock className="h-3.5 w-3.5 text-amber-500" />;
         if (page.icon) return <span className="text-xs leading-none select-none">{page.icon}</span>;
         switch (page.type) {
             case 'sheet': return <Grid className={cn("h-3.5 w-3.5", isActive ? "text-primary" : "text-slate-400")} />;
@@ -189,7 +191,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={onFavorite}
+                            onFavorite={handleFavorite}
                             onTrash={onTrash}
                         />
                     ))}

@@ -1,4 +1,3 @@
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -200,6 +199,7 @@ export interface CollabPage {
     createdAt: any;
     updatedAt?: any;
     isFavorite?: boolean;
+    isPrivate?: boolean; // NEW: Toggle between "Only Me" and "Team Access"
     isPublic?: boolean;
     shareToken?: string;
     sharePassword?: string;

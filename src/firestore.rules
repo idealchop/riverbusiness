@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -11,6 +10,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return isAuthenticated() && (
         request.auth.token.email == 'admin@riverph.com' || 
         request.auth.token.admin == true
@@ -78,11 +78,23 @@ service cloud.firestore {
     // --- COLLABORATION PLATFORM ---
 
     match /collaboration_pages/{pageId} {
-      // INTERNAL ACCESS: Filtered by companyId on the resource
-      allow read, write: if isAuthenticated() && (isSameCompany(resource.data.companyId) || isSameCompany(request.resource.data.companyId));
+      function canReadPage() {
+        return isAuthenticated() && (
+          isAdmin() ||
+          (isSameCompany(resource.data.companyId) && (resource.data.isPrivate != true || resource.data.createdBy == request.auth.uid))
+        );
+      }
       
-      // PUBLIC ACCESS: Limited read for unauthenticated users if page is public and not expired
-      allow get: if isPublicPage(resource.data);
+      function canWritePage() {
+        return isAuthenticated() && (
+          isAdmin() ||
+          (isSameCompany(resource.data.companyId) && (resource.data.isPrivate != true || resource.data.createdBy == request.auth.uid))
+        );
+      }
+
+      allow read: if canReadPage() || isPublicPage(resource.data);
+      allow create: if isAuthenticated() && isSameCompany(request.resource.data.companyId);
+      allow update, delete: if canWritePage();
     }
     
     // Allow collection group query for public pages by shareToken

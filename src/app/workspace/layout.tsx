@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc, or } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -46,9 +46,17 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const companyId = user?.companyId || null;
 
   // Fetch only organizational pages (trashed or not) - SCOPED BY companyId
+  // AND respecter of privacy: Only show public docs OR docs created by me
   const pagesQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'collaboration_pages'), where('companyId', '==', companyId)) : null, 
-    [firestore, companyId]
+    () => (firestore && companyId && authUser) ? query(
+        collection(firestore, 'collaboration_pages'), 
+        where('companyId', '==', companyId),
+        or(
+            where('isPrivate', '==', false),
+            where('createdBy', '==', authUser.uid)
+        )
+    ) : null, 
+    [firestore, companyId, authUser]
   );
 
   const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
@@ -93,6 +101,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isTrashed: false,
+      isPrivate: false, // Default to Collaboration (Team Access)
       content: initialContent,
     };
 

@@ -30,7 +30,8 @@ import {
   Copy, 
   CheckCircle2,
   MoreHorizontal,
-  UserCircle
+  UserCircle,
+  Users
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -422,7 +423,15 @@ function PageEditorContent() {
   }, [firestore, pageId, page?.isTrashed, triggerTypingIndicator]);
 
   const handleUpdateMeta = async (data: Partial<CollabPage>) => {
-    if (firestore && page) updateDoc(doc(firestore, 'collaboration_pages', page.id), { ...data, updatedAt: serverTimestamp() });
+    if (firestore && page) {
+        updateDoc(doc(firestore, 'collaboration_pages', page.id), { ...data, updatedAt: serverTimestamp() });
+        if (data.isPrivate !== undefined) {
+            toast({
+                title: data.isPrivate ? 'Set to private' : 'Open to team',
+                description: data.isPrivate ? 'This document is now visible only to you.' : 'Everyone in your organization can now collaborate on this document.'
+            });
+        }
+    }
   };
 
   const addRandomCover = () => handleUpdateMeta({ coverImage: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/1200/400` });
@@ -563,6 +572,25 @@ function PageEditorContent() {
 
           {!page.isTrashed && (
             <div className="flex items-center gap-0.5 sm:gap-1">
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button 
+                                onClick={() => handleUpdateMeta({ isPrivate: !page.isPrivate })}
+                                className={cn(
+                                    "h-8 w-8 rounded-lg transition-all flex items-center justify-center",
+                                    page.isPrivate ? "bg-amber-50 text-amber-600" : "text-slate-400 hover:text-slate-900 hover:bg-slate-50"
+                                )}
+                            >
+                                {page.isPrivate ? <Lock className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="rounded-xl font-bold text-[9px] uppercase tracking-widest bg-slate-900 text-white border-none px-3 py-1.5 shadow-2xl">
+                            {page.isPrivate ? 'Private: Only You' : 'Team Access: Open to Org'}
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
                 {isMobile ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
