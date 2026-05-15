@@ -45,7 +45,9 @@ import {
     Tag,
     Pencil,
     Copy,
-    ListFilter
+    ListFilter,
+    EyeOff,
+    Grab
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -324,7 +326,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     const next = [...views, newView];
     setViews(next);
     setActiveViewId(id);
-    sync(fields, records, next, id);
+    sync(fields, next, records, id);
     toast({ title: 'Tab initialized', description: `New ${type} view has been added to your workspace.` });
   };
 
@@ -608,10 +610,40 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             </div>
         </div>
 
+        {/* High-Fidelity Active Configuration Row */}
+        {(filters.length > 0 || sortConfig) && (
+            <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
+                <div className="flex items-center gap-1.5 mr-2">
+                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-blue-50 text-blue-600 font-bold text-[9px] uppercase gap-1.5">
+                        <EyeOff className="h-3 w-3" /> 0 Hidden Fields
+                    </Badge>
+                </div>
+                <Separator orientation="vertical" className="h-4 bg-slate-200" />
+                
+                {filters.length > 0 && (
+                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-green-50 text-green-700 font-bold text-[9px] uppercase gap-1.5">
+                        <Filter className="h-3 w-3" /> Filtered by {filters.length} {filters.length === 1 ? 'rule' : 'rules'}
+                    </Badge>
+                )}
+
+                {activeView.type === 'kanban' && (
+                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-purple-50 text-purple-700 font-bold text-[9px] uppercase gap-1.5">
+                        <Layout className="h-3 w-3" /> Grouped by status
+                    </Badge>
+                )}
+
+                {sortConfig && (
+                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5">
+                        <ArrowUpDown className="h-3 w-3" /> Sorted by {fields.find(f => f.id === sortConfig.fieldId)?.name}
+                    </Badge>
+                )}
+            </div>
+        )}
+
         {/* View Content Renderer */}
         <div className="flex-1 overflow-hidden flex flex-col relative bg-white">
             {activeView.type === 'grid' && (
-                <ScrollArea className="flex-1 border-t">
+                <ScrollArea className="flex-1">
                     <div className="inline-block min-w-full">
                         {/* Header Row */}
                         <div className="flex bg-slate-50/50 sticky top-0 z-20 border-b backdrop-blur-md">
@@ -685,7 +717,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                         <PlusCircle className="h-3.5 w-3.5 text-blue-500" /> Add New Option
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => setEditingOptionsFieldId(field.id)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
-                                                        <Pencil className="h-3.5 w-3.5 text-slate-400" /> Manage Options
+                                                        <Pencil className="h-3.5 w-3.5" /> Manage Options
                                                     </DropdownMenuItem>
                                                 </>
                                             )}
@@ -1003,8 +1035,9 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
     );
 }
 
-function KanbanView({ fields, records, onRecordClick }: any) {
+function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
     const statusField = fields.find((f: any) => f.type === 'status') || fields.find((f: any) => f.type === 'select');
+    const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
     
     if (!statusField) {
         return (
@@ -1017,14 +1050,44 @@ function KanbanView({ fields, records, onRecordClick }: any) {
     }
 
     const groups = statusField.options || [{ label: 'Uncategorized', color: 'bg-slate-100 text-slate-400' }];
-    
+
+    const handleDragStart = (e: React.DragEvent, recordId: string) => {
+        e.dataTransfer.setData('recordId', recordId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, statusLabel: string) => {
+        e.preventDefault();
+        setDragOverColumn(null);
+        const recordId = e.dataTransfer.getData('recordId');
+        if (recordId) {
+            onRecordUpdate(recordId, statusField.id, statusLabel);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent, statusLabel: string) => {
+        e.preventDefault();
+        setDragOverColumn(statusLabel);
+    };
+
     return (
-        <ScrollArea className="flex-1 h-full bg-slate-50/50">
+        <ScrollArea className="flex-1 h-full bg-slate-50/30">
             <div className="flex gap-8 p-10 h-full min-h-[600px]">
                 {groups.map((group: any) => {
                     const groupRecords = records.filter((r: any) => r.values[statusField.id] === group.label || (!r.values[statusField.id] && group.label === 'Uncategorized'));
+                    const isOver = dragOverColumn === group.label;
+
                     return (
-                        <div key={group.label} className="w-80 shrink-0 flex flex-col gap-6">
+                        <div 
+                            key={group.label} 
+                            className={cn(
+                                "w-80 shrink-0 flex flex-col gap-6 p-4 rounded-3xl transition-all duration-300",
+                                isOver ? "bg-primary/5 ring-2 ring-primary/20" : "bg-transparent"
+                            )}
+                            onDragOver={(e) => handleDragOver(e, group.label)}
+                            onDragLeave={() => setDragOverColumn(null)}
+                            onDrop={(e) => handleDrop(e, group.label)}
+                        >
                             <div className="flex items-center justify-between px-3">
                                 <div className="flex items-center gap-3">
                                     <Badge variant="outline" className={cn("text-[10px] font-black uppercase tracking-widest border-none px-3 py-1 shadow-sm", group.color)}>
@@ -1034,11 +1097,21 @@ function KanbanView({ fields, records, onRecordClick }: any) {
                                 </div>
                                 <button className="h-8 w-8 rounded-lg text-slate-300 hover:text-slate-900 transition-colors"><Plus className="h-4 w-4" /></button>
                             </div>
-                            <div className="space-y-4">
+
+                            <div className="space-y-4 flex-1">
                                 {groupRecords.map((r: any) => (
-                                    <Card key={r.id} onClick={() => onRecordClick(r.id)} className="border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group rounded-[1.5rem] bg-white p-6 relative">
+                                    <Card 
+                                        key={r.id} 
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, r.id)}
+                                        onClick={() => onRecordClick(r.id)} 
+                                        className="border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-grab active:cursor-grabbing group rounded-[1.5rem] bg-white p-6 relative animate-in fade-in zoom-in-95 duration-200"
+                                    >
                                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <MoreHorizontal className="h-4 w-4 text-slate-300" />
+                                        </div>
+                                        <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Grab className="h-3.5 w-3.5 text-slate-200" />
                                         </div>
                                         <p className="text-sm font-black text-slate-900 leading-tight mb-4 group-hover:text-primary transition-colors">{r.values[fields[0].id] || 'Untitled Object'}</p>
                                         <div className="space-y-3">
@@ -1055,7 +1128,7 @@ function KanbanView({ fields, records, onRecordClick }: any) {
                                         </div>
                                     </Card>
                                 ))}
-                                <Button variant="ghost" className="w-full justify-start h-12 rounded-2xl gap-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-primary hover:bg-white hover:shadow-sm transition-all">
+                                <Button variant="ghost" className="w-full justify-start h-12 rounded-2xl gap-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-primary hover:bg-white hover:shadow-sm transition-all border-dashed border border-slate-100">
                                     <Plus className="h-4 w-4" /> Initialize Item
                                 </Button>
                             </div>
