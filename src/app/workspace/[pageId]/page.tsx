@@ -172,7 +172,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
 
     const copyLink = () => {
         navigator.clipboard.writeText(shareUrl);
-        setHasCopied(true);
+        setHasCopied(false);
         setTimeout(() => setHasCopied(false), 2000);
         toast({ 
             title: 'Link copied', 

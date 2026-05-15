@@ -187,7 +187,7 @@ const NavItem = memo(({
                             pages={pages}
                             activePageId={activePageId}
                             expandedPages={expandedPages}
-                            onToggleExpand={toggleExpand}
+                            onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
                             onFavorite={onFavorite}
                             onTrash={onTrash}
@@ -210,10 +210,8 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [isSearching, setIsSearching] = useState(false);
   const [pageToTrash, setPageToTrash] = useState<string | null>(null);
   
-  // Set default filter to current user's account
   const [selectedMemberId, setSelectedMemberId] = useState<string>(user?.id || 'all');
 
-  // Ensure filter matches current user once available
   useEffect(() => {
       if (user?.id && selectedMemberId === 'all') {
           setSelectedMemberId(user.id);
