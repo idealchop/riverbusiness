@@ -157,8 +157,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<FilterRule[]>([]);
 
-  // Option Management States
+  // Option & Rename Management States
   const [editingOptionsFieldId, setEditingOptionsFieldId] = useState<string | null>(null);
+  const [renamingField, setRenamingField] = useState<{ id: string, name: string } | null>(null);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
@@ -227,16 +228,13 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     toast({ title: 'Column purged' });
   };
 
-  const handleRenameField = (fieldId: string) => {
-    const field = fields.find(f => f.id === fieldId);
-    if (!field) return;
-    const newName = window.prompt('Enter new column name:', field.name);
-    if (newName && newName.trim() !== '') {
-        const next = fields.map(f => f.id === fieldId ? { ...f, name: newName.trim() } : f);
-        setFields(next);
-        sync(next, records, views, activeViewId);
-        toast({ title: 'Column renamed' });
-    }
+  const finalizeRenameField = () => {
+    if (!renamingField || !renamingField.name.trim()) return;
+    const next = fields.map(f => f.id === renamingField.id ? { ...f, name: renamingField.name.trim() } : f);
+    setFields(next);
+    sync(next, records, views, activeViewId);
+    setRenamingField(null);
+    toast({ title: 'Column renamed' });
   };
 
   const changeFieldType = (fieldId: string, newType: SheetFieldType) => {
@@ -549,7 +547,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             </button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
-                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5" onClick={() => handleRenameField(field.id)}>
+                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5" onClick={() => setRenamingField({ id: field.id, name: field.name })}>
                                                 <Edit className="h-3.5 w-3.5" /> Rename Column
                                             </DropdownMenuItem>
                                             
@@ -717,6 +715,39 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </div>
             </div>
         )}
+
+        {/* Rename Field Dialog */}
+        <Dialog open={!!renamingField} onOpenChange={(open) => !open && setRenamingField(null)}>
+            <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
+                <DialogHeader className="p-8 pb-4 bg-slate-50 border-b">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                            <Edit className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Rename Column</DialogTitle>
+                            <DialogDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest">Update identification</DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+                <div className="p-8 space-y-6">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Column Label</Label>
+                        <Input 
+                            autoFocus
+                            value={renamingField?.name || ''} 
+                            onChange={(e) => setRenamingField(prev => prev ? { ...prev, name: e.target.value } : null)}
+                            onKeyDown={(e) => e.key === 'Enter' && finalizeRenameField()}
+                            className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-inner"
+                        />
+                    </div>
+                </div>
+                <DialogFooter className="p-8 pt-0 flex gap-3">
+                    <Button variant="ghost" onClick={() => setRenamingField(null)} className="rounded-xl font-bold text-xs px-6">Cancel</Button>
+                    <Button onClick={finalizeRenameField} disabled={!renamingField?.name.trim()} className="rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 flex-1">Apply Rename</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         {/* Option Management Dialog */}
         <Dialog open={!!editingOptionsFieldId} onOpenChange={(open) => !open && setEditingOptionsFieldId(null)}>
