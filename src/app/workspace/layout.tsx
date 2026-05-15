@@ -47,7 +47,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   // Fetch organizational pages scoped by companyId
   // Shows pages that are NOT private OR pages created by the current user
-  // Nested in and() to satisfy Firestore composite filter rules
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId && authUser) ? query(
         collection(firestore, 'collaboration_pages'), 
@@ -104,7 +103,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isTrashed: false,
-      isPrivate: false, // Default to Team Collaboration
+      isPrivate: false, 
       content: initialContent,
     };
 
@@ -144,7 +143,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         }
         toast({ 
             title: 'Document archived', 
-            description: 'The file has been moved to the trash bin and will be retained for 30 days.' 
+            description: 'The file has been moved to the trash bin.' 
         });
     } catch (error) {
         console.error("Error moving to trash:", error);
@@ -174,7 +173,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
         toast({ 
             title: 'Protocol: Data Purge', 
-            description: 'This document and its full block history have been permanently removed from the infrastructure.' 
+            description: 'This document has been permanently removed.' 
         });
     } catch (error) {
         console.error("Error deleting permanently:", error);
@@ -187,8 +186,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isFavorite });
         toast({ 
-            title: isFavorite ? 'Added to favorites' : 'Removed from favorites',
-            description: isFavorite ? 'This document is now pinned to your priority navigation.' : 'Asset removed from your priority list.'
+            title: isFavorite ? 'Added to favorites' : 'Removed from favorites'
         });
     } catch (error) {
         console.error("Error toggling favorite:", error);

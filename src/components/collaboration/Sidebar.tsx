@@ -38,16 +38,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { LogoBlack } from '@/components/icons';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -184,7 +174,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={handleFavorite}
+                            onFavorite={onFavorite}
                             onTrash={onTrash}
                         />
                     ))}
@@ -225,7 +215,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   }, []);
 
   const onTrash = useCallback((pageId: string) => {
-    setPageToTrash(pageId);
+    window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId } }));
   }, []);
 
   const filteredPages = useMemo(() => {
@@ -422,31 +412,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </Button>
         </Link>
       </div>
-
-      <AlertDialog open={!!pageToTrash} onOpenChange={() => setPageToTrash(null)}>
-        <AlertDialogContent className="rounded-[2rem] border-none shadow-3xl p-10">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Move to trash?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-              This document will be removed from the active team library but can be restored from the trash bin within 30 days.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="pt-6">
-            <AlertDialogCancel className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-                onClick={() => {
-                    if (pageToTrash) {
-                        window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: pageToTrash } }));
-                        setPageToTrash(null);
-                    }
-                }}
-                className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-xs uppercase tracking-widest"
-            >
-                Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
