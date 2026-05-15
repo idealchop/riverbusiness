@@ -170,7 +170,7 @@ export interface SheetRecord {
     createdBy?: string;
 }
 
-export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'gallery' | 'list';
+export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'list';
 
 export interface SheetView {
     id: string;
@@ -179,7 +179,7 @@ export interface SheetView {
     config?: {
         kanbanFieldId?: string; // For Kanban grouping
         calendarFieldId?: string; // For Calendar mapping
-        galleryCoverId?: string; // For Gallery preview
+        galleryCoverId?: string; // Legacy
         hiddenFields?: string[];
         filters?: any[];
         sorts?: any[];

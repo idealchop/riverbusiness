@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -5,12 +6,10 @@ import {
     Grid, 
     Layout, 
     Calendar as CalendarIcon, 
-    GalleryHorizontal, 
     Plus,
     Search,
     Filter,
     ArrowUpDown,
-    MoreHorizontal,
     ChevronDown,
     Hash,
     Type,
@@ -28,17 +27,13 @@ import {
     X,
     Maximize2,
     Columns,
-    Group,
     Edit,
-    MessageSquare,
     ChevronRight,
     ChevronLeft,
     Check,
     AlertCircle,
     FileText,
-    ArrowRight,
     Loader2,
-    FilterX,
     PlusCircle,
     CheckCircle2,
     Palette,
@@ -76,7 +71,6 @@ import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO, addDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
@@ -116,7 +110,6 @@ const VIEW_ICONS: Record<SheetViewType, React.ElementType> = {
     grid: Grid,
     kanban: Layout,
     calendar: CalendarIcon,
-    gallery: GalleryHorizontal,
     list: ListFilter
 };
 
@@ -159,7 +152,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [views, setViews] = useState<SheetView[]>(initialData?.views || [
       { id: 'v1', name: 'Main Grid', type: 'grid' },
       { id: 'v2', name: 'Board', type: 'kanban' },
-      { id: 'v3', name: 'Gallery', type: 'gallery' },
       { id: 'v4', name: 'Calendar', type: 'calendar' }
   ]);
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
@@ -171,7 +163,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<FilterRule[]>([]);
 
-  // Management States
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [editingOptionsFieldId, setEditingOptionsFieldId] = useState<string | null>(null);
 
@@ -423,9 +414,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
   return (
     <div className="flex-1 flex flex-col bg-white overflow-hidden select-none h-full font-sans">
-        {/* Workspace Toolbar - Tab Based Layout */}
         <div className="h-14 border-b flex items-center justify-between px-4 sm:px-6 bg-white shrink-0 z-30">
-            {/* View Tabs - Left Side */}
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pr-4">
                 {views.map(v => {
                     const ViewIcon = VIEW_ICONS[v.type] || Grid;
@@ -485,9 +474,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         <DropdownMenuItem onClick={() => handleCreateView('kanban')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                             <Layout className="h-4 w-4 text-purple-500" /> Kanban Stacks
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCreateView('gallery')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
-                            <GalleryHorizontal className="h-4 w-4 text-amber-500" /> Visual Gallery
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleCreateView('calendar')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                             <CalendarIcon className="h-4 w-4 text-green-500" /> Date Calendar
                         </DropdownMenuItem>
@@ -495,7 +481,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </DropdownMenu>
             </div>
 
-            {/* Orchestration Tools - Right Side */}
             <div className="flex items-center gap-2">
                 <div className="flex items-center">
                     {isSearchExpanded ? (
@@ -610,7 +595,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             </div>
         </div>
 
-        {/* High-Fidelity Active Configuration Row */}
         {(filters.length > 0 || sortConfig) && (
             <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
                 <div className="flex items-center gap-1.5 mr-2">
@@ -640,12 +624,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             </div>
         )}
 
-        {/* View Content Renderer */}
         <div className="flex-1 overflow-hidden flex flex-col relative bg-white">
             {activeView.type === 'grid' && (
                 <ScrollArea className="flex-1">
                     <div className="inline-block min-w-full">
-                        {/* Header Row */}
                         <div className="flex bg-slate-50/50 sticky top-0 z-20 border-b backdrop-blur-md">
                             <div className="w-12 h-10 border-r bg-slate-100/50 flex items-center justify-center shrink-0">
                                 <span className="text-[10px] font-black text-slate-300">#</span>
@@ -750,7 +732,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             </DropdownMenu>
                         </div>
 
-                        {/* Record Rows */}
                         <div className="divide-y">
                             {filteredRecords.map((record, idx) => (
                                 <div key={record.id} className="flex hover:bg-slate-50/30 transition-colors group">
@@ -787,16 +768,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <KanbanView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} onRecordUpdate={updateRecordValue} />
             )}
 
-            {activeView.type === 'gallery' && (
-                <GalleryView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
-            )}
-
             {activeView.type === 'calendar' && (
                 <CalendarView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
             )}
         </div>
 
-        {/* Record Detail Side Panel */}
         {selectedRecordId && (
             <div className="absolute inset-y-0 right-0 w-full sm:w-[500px] bg-white border-l shadow-3xl z-[100] animate-in slide-in-from-right duration-300 flex flex-col">
                 <div className="h-16 border-b flex items-center justify-between px-6 bg-slate-50/50">
@@ -859,7 +835,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             </div>
         )}
 
-        {/* Option Management Dialog */}
         <Dialog open={!!editingOptionsFieldId} onOpenChange={(open) => !open && setEditingOptionsFieldId(null)}>
             <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
                 <DialogHeader className="p-8 pb-4 bg-slate-50 border-b">
@@ -1107,12 +1082,6 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
                                         onClick={() => onRecordClick(r.id)} 
                                         className="border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-grab active:cursor-grabbing group rounded-[1.5rem] bg-white p-6 relative animate-in fade-in zoom-in-95 duration-200"
                                     >
-                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <MoreHorizontal className="h-4 w-4 text-slate-300" />
-                                        </div>
-                                        <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Grab className="h-3.5 w-3.5 text-slate-200" />
-                                        </div>
                                         <p className="text-sm font-black text-slate-900 leading-tight mb-4 group-hover:text-primary transition-colors">{r.values[fields[0].id] || 'Untitled Object'}</p>
                                         <div className="space-y-3">
                                             {fields.slice(1, 4).map((f: any) => {
@@ -1139,47 +1108,6 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
             <ScrollBar orientation="horizontal" />
         </ScrollArea>
     );
-}
-
-function GalleryView({ fields, records, onRecordClick }: any) {
-    return (
-        <ScrollArea className="flex-1 h-full bg-slate-50/30">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 p-10">
-                {records.map((r: any) => (
-                    <Card key={r.id} onClick={() => onRecordClick(r.id)} className="border-none shadow-sm hover:shadow-2xl transition-all cursor-pointer group rounded-[2.5rem] bg-white overflow-hidden flex flex-col h-full active:scale-[0.98]">
-                        <div className="h-44 bg-slate-100 flex items-center justify-center border-b border-slate-50 group-hover:bg-primary/5 transition-colors">
-                            <ImageIcon className="h-12 w-12 text-slate-200 group-hover:text-primary/20 transition-colors" />
-                        </div>
-                        <div className="p-8 space-y-6 flex-1">
-                            <p className="text-xl font-black text-slate-900 leading-tight group-hover:text-primary transition-colors line-clamp-2">{r.values[fields[0].id] || 'Untitled Item'}</p>
-                            <div className="space-y-4 pt-4 border-t border-slate-50">
-                                {fields.slice(1, 4).map((f: any) => {
-                                    const val = r.values[f.id];
-                                    if (!val) return null;
-                                    return (
-                                        <div key={f.id} className="space-y-1">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-300">{f.name}</p>
-                                            <div className="text-[11px] font-bold text-slate-600 flex items-center gap-2">
-                                                 {f.type === 'status' || f.type === 'select' ? (
-                                                    <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest py-0 border-slate-200">{val}</Badge>
-                                                 ) : (f.type === 'currency' ? `₱${Number(val).toLocaleString()}` : val)}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    </Card>
-                ))}
-                {records.length === 0 && (
-                    <div className="col-span-full py-40 text-center opacity-30 flex flex-col items-center gap-4">
-                        <ImageIcon className="h-12 w-12" />
-                        <p className="text-xs font-black uppercase tracking-[0.4em]">Gallery Empty</p>
-                    </div>
-                )}
-            </div>
-        </ScrollArea>
-    )
 }
 
 function CalendarView({ fields, records, onRecordClick }: any) {
