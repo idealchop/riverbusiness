@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -64,12 +65,21 @@ export default function EditModulePage() {
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   const companyId = user?.companyId || user?.clientId || null;
+  const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   const moduleRef = useMemoFirebase(
     () => (firestore && companyId && moduleId) ? doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId as string) : null,
     [firestore, companyId, moduleId]
   );
   const { data: module, isLoading: isModuleLoading } = useDoc<HRLearningModule>(moduleRef);
+
+  // Security Guard: Redirect non-managers
+  useEffect(() => {
+    if (!isUserLoading && !isUserDocLoading && user && !isManager) {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'Only managers can modify training modules.' });
+        router.push('/hr-dashboard/modules');
+    }
+  }, [user, isUserLoading, isUserDocLoading, isManager, router, toast]);
 
   const form = useForm<ModuleFormValues>({
     resolver: zodResolver(moduleSchema),
@@ -97,7 +107,7 @@ export default function EditModulePage() {
   }, [module, form]);
 
   const onSubmit = async (values: ModuleFormValues) => {
-    if (!firestore || !companyId || !moduleId) return;
+    if (!firestore || !companyId || !moduleId || !isManager) return;
 
     setIsSubmitting(true);
     try {
@@ -119,8 +129,8 @@ export default function EditModulePage() {
 
   const selectedType = form.watch('contentType');
 
-  if (isUserLoading || isUserDocLoading || isModuleLoading) {
-    return <FullScreenLoader text="Opening architecture tools..." />;
+  if (isUserLoading || isUserDocLoading || isModuleLoading || (user && !isManager)) {
+    return <FullScreenLoader text="Verifying credentials..." />;
   }
 
   return (

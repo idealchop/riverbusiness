@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -62,6 +63,17 @@ export default function CreateModulePage() {
   );
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
+  const companyId = user?.companyId || user?.clientId;
+  const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+
+  // Security Guard: Redirect non-managers
+  useEffect(() => {
+      if (!isUserLoading && !isUserDocLoading && user && !isManager) {
+          toast({ variant: 'destructive', title: 'Access Denied', description: 'Only managers can create training modules.' });
+          router.push('/hr-dashboard/modules');
+      }
+  }, [user, isUserLoading, isUserDocLoading, isManager, router, toast]);
+
   const form = useForm<ModuleFormValues>({
     resolver: zodResolver(moduleSchema),
     defaultValues: {
@@ -75,8 +87,7 @@ export default function CreateModulePage() {
   });
 
   const onSubmit = async (values: ModuleFormValues) => {
-    const companyId = user?.companyId || user?.clientId;
-    if (!firestore || !companyId) return;
+    if (!firestore || !companyId || !isManager) return;
 
     setIsSubmitting(true);
     try {
@@ -101,7 +112,7 @@ export default function CreateModulePage() {
 
   const selectedType = form.watch('contentType');
 
-  if (isUserLoading || isUserDocLoading) return <FullScreenLoader text="Initializing workspace..." />;
+  if (isUserLoading || isUserDocLoading || (user && !isManager)) return <FullScreenLoader text="Verifying credentials..." />;
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">

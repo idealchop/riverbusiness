@@ -33,7 +33,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import Link from 'next/link';
+import Link from 'link';
 import Image from 'next/image';
 import type { HRLearningModule, AppUser } from '@/lib/types';
 
@@ -58,6 +58,7 @@ export default function LearningHubPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const companyId = user?.companyId || user?.clientId || 'default';
+  const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   const modulesQuery = useMemoFirebase(
     () => (firestore && companyId !== 'default') ? query(
@@ -79,7 +80,7 @@ export default function LearningHubPage() {
   }, [modules, searchTerm]);
 
   const handleDeleteModule = async (moduleId: string) => {
-    if (!firestore || companyId === 'default') return;
+    if (!firestore || companyId === 'default' || !isManager) return;
     try {
         await deleteDoc(doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId));
         toast({ title: 'Module removed' });
@@ -106,14 +107,16 @@ export default function LearningHubPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Hub</h1>
           <p className="text-slate-500 font-medium text-sm">Design and Browse Training Materials.</p>
         </div>
-        <Button 
-            asChild
-            className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
-        >
-            <Link href="/hr-dashboard/modules/create">
-                <Plus className="mr-2 h-4 w-4" /> Create Module
-            </Link>
-        </Button>
+        {isManager && (
+            <Button 
+                asChild
+                className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
+            >
+                <Link href="/hr-dashboard/modules/create">
+                    <Plus className="mr-2 h-4 w-4" /> Create Module
+                </Link>
+            </Button>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
@@ -136,7 +139,7 @@ export default function LearningHubPage() {
             <Card key={module.id} className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white flex flex-col group hover:shadow-xl transition-all duration-500 border border-slate-50">
                 <div className="relative h-48 bg-slate-100 overflow-hidden cursor-pointer" onClick={() => handleLaunchModule(module)}>
                     {module.contentType === 'image' && module.contentUrl ? (
-                        <Image src={module.contentUrl} alt={module.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" data-ai-hint="training material" />
+                        <Image src={module.contentUrl} alt={module.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" unoptimized />
                     ) : module.contentType === 'video' ? (
                         <div className="h-full w-full flex items-center justify-center bg-slate-900 text-white relative">
                             <Video className="h-10 w-10 opacity-40" />
@@ -166,18 +169,24 @@ export default function LearningHubPage() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
-                                <DropdownMenuItem asChild className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                    <Link href={`/hr-dashboard/modules/${module.id}/edit`}>
-                                        <Edit className="h-3.5 w-3.5" /> Edit
-                                    </Link>
-                                </DropdownMenuItem>
+                                {isManager && (
+                                    <DropdownMenuItem asChild className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
+                                        <Link href={`/hr-dashboard/modules/${module.id}/edit`}>
+                                            <Edit className="h-3.5 w-3.5" /> Edit
+                                        </Link>
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
                                     <Share2 className="h-3.5 w-3.5" /> Share
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-slate-50" />
-                                <DropdownMenuItem onClick={() => handleDeleteModule(module.id!)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                                </DropdownMenuItem>
+                                {isManager && (
+                                    <>
+                                        <DropdownMenuSeparator className="bg-slate-50" />
+                                        <DropdownMenuItem onClick={() => handleDeleteModule(module.id!)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
