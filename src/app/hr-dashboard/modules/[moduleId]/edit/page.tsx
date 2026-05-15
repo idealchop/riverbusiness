@@ -65,7 +65,6 @@ export default function EditModulePage() {
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   const companyId = user?.companyId || user?.clientId || null;
-  const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   const moduleRef = useMemoFirebase(
     () => (firestore && companyId && moduleId) ? doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId as string) : null,
@@ -73,13 +72,17 @@ export default function EditModulePage() {
   );
   const { data: module, isLoading: isModuleLoading } = useDoc<HRLearningModule>(moduleRef);
 
-  // Security Guard: Redirect non-managers
+  const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+  const isAssigned = module?.assignedEmployeeId === user?.id;
+  const canEdit = isManager || isAssigned;
+
+  // Security Guard: Redirect unauthorized users
   useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && user && !isManager) {
-        toast({ variant: 'destructive', title: 'Access Denied', description: 'Only managers can modify training modules.' });
+    if (!isUserLoading && !isUserDocLoading && user && !isModuleLoading && module && !canEdit) {
+        toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to modify this training material.' });
         router.push('/hr-dashboard/modules');
     }
-  }, [user, isUserLoading, isUserDocLoading, isManager, router, toast]);
+  }, [user, isUserLoading, isUserDocLoading, isModuleLoading, module, canEdit, router, toast]);
 
   const form = useForm<ModuleFormValues>({
     resolver: zodResolver(moduleSchema),
@@ -107,7 +110,7 @@ export default function EditModulePage() {
   }, [module, form]);
 
   const onSubmit = async (values: ModuleFormValues) => {
-    if (!firestore || !companyId || !moduleId || !isManager) return;
+    if (!firestore || !companyId || !moduleId || !canEdit) return;
 
     setIsSubmitting(true);
     try {
@@ -129,7 +132,7 @@ export default function EditModulePage() {
 
   const selectedType = form.watch('contentType');
 
-  if (isUserLoading || isUserDocLoading || isModuleLoading || (user && !isManager)) {
+  if (isUserLoading || isUserDocLoading || isModuleLoading || (module && !canEdit)) {
     return <FullScreenLoader text="Verifying credentials..." />;
   }
 

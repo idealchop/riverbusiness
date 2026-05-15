@@ -105,9 +105,21 @@
             "contentUrl": { "type": "string" },
             "textContent": { "type": "string" },
             "createdAt": { "type": "string", "format": "date-time" },
-            "isPublished": { "type": "boolean" }
+            "isPublished": { "type": "boolean" },
+            "assignedEmployeeId": { "type": "string", "description": "Optional employee ID who has edit rights to this module." }
         },
         "required": ["companyId", "title", "contentType"]
+    },
+    "HRLearningModuleViewer": {
+        "title": "HRLearningModuleViewer",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "name": { "type": "string" },
+            "photoURL": { "type": "string" },
+            "lastVisitedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["userId", "lastVisitedAt"]
     }
   },
   "auth": {
@@ -133,6 +145,10 @@
     "/hr_companies/{companyId}/learningModules/{moduleId}": {
         "schema": { "$ref": "#/entities/HRLearningModule" },
         "description": "Company training and module materials."
+    },
+    "/hr_companies/{companyId}/learningModules/{moduleId}/viewers/{userId}": {
+        "schema": { "$ref": "#/entities/HRLearningModuleViewer" },
+        "description": "Tracks users who have viewed this specific module."
     }
   }
 }

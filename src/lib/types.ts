@@ -1,3 +1,4 @@
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -261,6 +262,15 @@ export interface HRLearningModule {
     createdAt: any;
     updatedAt?: any;
     isPublished: boolean;
+    assignedEmployeeId?: string;
+}
+
+export interface HRLearningModuleViewer {
+    id: string;
+    userId: string;
+    name: string;
+    photoURL?: string;
+    lastVisitedAt: any;
 }
 
 export interface Delivery {
