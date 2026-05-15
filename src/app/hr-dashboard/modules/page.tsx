@@ -31,6 +31,7 @@ import { collection, query, orderBy, doc, deleteDoc, Timestamp } from 'firebase/
 import { FullScreenLoader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { HRLearningModule, AppUser } from '@/lib/types';
