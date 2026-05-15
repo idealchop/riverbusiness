@@ -601,7 +601,7 @@ function PageEditorContent() {
                             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
                                 <Trash2 className="h-4 w-4" /> Move to Trash
                             </DropdownMenuItem>
-                        </DropdownMenu>
+                        </DropdownMenuContent>
                     </DropdownMenu>
                 ) : (
                     <>

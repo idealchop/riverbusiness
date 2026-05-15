@@ -47,6 +47,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   // Fetch organizational pages scoped by companyId
   // Shows pages that are NOT private OR pages created by the current user
+  // Nested in and() to satisfy Firestore composite filter rules
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId && authUser) ? query(
         collection(firestore, 'collaboration_pages'), 
