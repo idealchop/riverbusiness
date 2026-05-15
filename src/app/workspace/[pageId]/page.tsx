@@ -287,6 +287,7 @@ function PageEditorContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
+  const [isEditingBreadcrumbTitle, setIsEditingBreadcrumbTitle] = useState(false);
   
   const [localIsTyping, setLocalIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -467,7 +468,24 @@ function PageEditorContent() {
         <div className="flex items-center gap-2 min-w-0">
           {!isMobile && <Link href="/workspace"><div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"><Home className="h-4 w-4" /></div></Link>}
           {parentPage && <><ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" /><Link href={`/workspace/${parentPage.id}`} className="min-w-0"><span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[80px] sm:max-w-[120px] truncate block">{parentPage.title || 'Untitled'}</span></Link></>}
-          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" /><span className="text-xs font-bold text-slate-900 truncate max-w-[100px] sm:max-w-[180px]">{page.title || 'Untitled'}</span>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          {isEditingBreadcrumbTitle ? (
+              <input
+                  autoFocus
+                  value={page.title}
+                  onChange={(e) => handleUpdateTitle(e.target.value)}
+                  onBlur={() => setIsEditingBreadcrumbTitle(false)}
+                  onKeyDown={(e) => e.key === 'Enter' && setIsEditingBreadcrumbTitle(false)}
+                  className="text-xs font-bold text-slate-900 bg-transparent border-none focus:ring-0 focus:outline-none p-0 w-full max-w-[100px] sm:max-w-[180px]"
+              />
+          ) : (
+              <span 
+                  onDoubleClick={() => !page.isTrashed && setIsEditingBreadcrumbTitle(true)}
+                  className="text-xs font-bold text-slate-900 truncate max-w-[100px] sm:max-w-[180px] cursor-pointer"
+              >
+                  {page.title || 'Untitled'}
+              </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
