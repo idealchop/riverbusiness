@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -252,6 +253,7 @@ export default function EditModulePage() {
                                     <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
                                     <div className="min-h-[500px]">
                                         <Editor 
+                                            key={module?.id}
                                             initialContent={form.getValues('textContent')} 
                                             onContentChange={(json) => form.setValue('textContent', json)}
                                             companyId={user?.companyId}
