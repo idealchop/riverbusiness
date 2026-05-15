@@ -151,6 +151,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   ]);
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -407,111 +408,120 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
+            </div>
+
+            <div className="flex items-center gap-2">
+                {/* Expandable Search */}
+                <div className="flex items-center">
+                    {isSearchExpanded ? (
+                        <div className="relative flex items-center animate-in slide-in-from-right-2 duration-300">
+                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                             <Input 
+                                autoFocus
+                                placeholder="Find in sheet..." 
+                                className="h-9 pl-9 pr-8 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold w-48 sm:w-64"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onBlur={() => !searchTerm && setIsSearchExpanded(false)}
+                            />
+                            <button onClick={() => {setSearchTerm(''); setIsSearchExpanded(false);}} className="absolute right-2 text-slate-300 hover:text-slate-600 transition-colors">
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-slate-900" onClick={() => setIsSearchExpanded(true)}>
+                            <Search className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+
+                {isSyncing && <div className="mx-1"><Loader2 className="h-4 w-4 animate-spin text-primary opacity-50" /></div>}
 
                 <Separator orientation="vertical" className="h-6 mx-1 bg-slate-100 hidden sm:block" />
 
-                <div className="hidden sm:flex items-center gap-1.5">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg gap-2 text-slate-500 hover:text-slate-900 font-bold text-[10px] uppercase tracking-wider transition-all">
-                                <ArrowUpDown className="h-3.5 w-3.5" /> Sort
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 p-1 rounded-xl shadow-2xl border-slate-100">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 p-2">Order records by</DropdownMenuLabel>
-                            {fields.map(f => (
-                                <DropdownMenuItem key={f.id} onClick={() => setSortConfig({ fieldId: f.id, direction: sortConfig?.fieldId === f.id && sortConfig.direction === 'asc' ? 'desc' : 'asc' })} className="text-xs font-bold py-2 rounded-lg cursor-pointer flex justify-between">
-                                    <div className="flex items-center gap-2">
-                                        {React.createElement(FIELD_ICONS[f.type], { className: "h-3 w-3 opacity-40" })}
-                                        {f.name}
-                                    </div>
-                                    {sortConfig?.fieldId === f.id && (
-                                        <Badge variant="secondary" className="text-[8px]">{sortConfig.direction.toUpperCase()}</Badge>
-                                    )}
-                                </DropdownMenuItem>
-                            ))}
-                            {sortConfig && (
-                                <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-xs font-bold py-2 rounded-lg cursor-pointer text-red-500">Clear all sorting</DropdownMenuItem>
-                                </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-3 rounded-lg gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                                <Filter className="h-3.5 w-3.5" /> 
-                                Filter
-                                {filters.length > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{filters.length}</Badge>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
-                            <div className="p-4 border-b bg-slate-50 flex items-center justify-between">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Protocol</h4>
-                                <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="h-7 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">Clear All</Button>
-                            </div>
-                            <ScrollArea className="max-h-72">
-                                <div className="p-4 space-y-3">
-                                    {filters.map((f, i) => (
-                                        <div key={f.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
-                                            <Select value={f.fieldId} onValueChange={(val) => updateFilter(f.id, { fieldId: val })}>
-                                                <SelectTrigger className="w-[120px] h-9 rounded-xl text-[10px] font-bold">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent className="rounded-xl">
-                                                    {fields.map(field => <SelectItem key={field.id} value={field.id} className="text-xs font-bold">{field.name}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={f.operator} onValueChange={(val: any) => updateFilter(f.id, { operator: val })}>
-                                                <SelectTrigger className="w-[100px] h-9 rounded-xl text-[10px] font-bold">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent className="rounded-xl">
-                                                    <SelectItem value="contains" className="text-xs font-bold">contains</SelectItem>
-                                                    <SelectItem value="is" className="text-xs font-bold">is</SelectItem>
-                                                    <SelectItem value="is_not" className="text-xs font-bold">is not</SelectItem>
-                                                    <SelectItem value="is_empty" className="text-xs font-bold">is empty</SelectItem>
-                                                    <SelectItem value="gt" className="text-xs font-bold">greater than</SelectItem>
-                                                    <SelectItem value="lt" className="text-xs font-bold">less than</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {!['is_empty', 'is_not_empty'].includes(f.operator) && (
-                                                <Input 
-                                                    placeholder="value..." 
-                                                    value={f.value}
-                                                    onChange={(e) => updateFilter(f.id, { value: e.target.value })}
-                                                    className="h-9 rounded-xl text-xs font-bold flex-1"
-                                                />
-                                            )}
-                                            <Button variant="ghost" size="icon" onClick={() => removeFilter(f.id)} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></Button>
-                                        </div>
-                                    ))}
-                                    <Button variant="ghost" onClick={addFilter} className="w-full h-10 border-dashed border border-slate-200 rounded-xl gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50">
-                                        <Plus className="h-3 w-3" /> Add Rule
-                                    </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <ArrowUpDown className="h-3.5 w-3.5" /> 
+                            <span className="hidden sm:inline">Sort</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-2xl border-slate-100">
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 p-2">Order records by</DropdownMenuLabel>
+                        {fields.map(f => (
+                            <DropdownMenuItem key={f.id} onClick={() => setSortConfig({ fieldId: f.id, direction: sortConfig?.fieldId === f.id && sortConfig.direction === 'asc' ? 'desc' : 'asc' })} className="text-xs font-bold py-2 rounded-lg cursor-pointer flex justify-between">
+                                <div className="flex items-center gap-2">
+                                    {React.createElement(FIELD_ICONS[f.type], { className: "h-3 w-3 opacity-40" })}
+                                    {f.name}
                                 </div>
-                            </ScrollArea>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-                <div className="relative group/search hidden md:flex items-center">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <Input 
-                        placeholder="Quick find..." 
-                        className="h-9 pl-9 pr-10 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold w-40 transition-all focus:w-64"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    {isSyncing && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary opacity-50" /></div>}
-                </div>
-                <Button onClick={addRecord} className="h-9 px-4 rounded-xl font-bold text-xs gap-2 shadow-lg shadow-primary/10">
-                    <Plus className="h-3.5 w-3.5" /> New Record
-                </Button>
+                                {sortConfig?.fieldId === f.id && (
+                                    <Badge variant="secondary" className="text-[8px]">{sortConfig.direction.toUpperCase()}</Badge>
+                                )}
+                            </DropdownMenuItem>
+                        ))}
+                        {sortConfig && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-xs font-bold py-2 rounded-lg cursor-pointer text-red-500">Clear all sorting</DropdownMenuItem>
+                            </>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className={cn("h-9 px-3 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Filter className="h-3.5 w-3.5" /> 
+                            <span className="hidden sm:inline">Filter</span>
+                            {filters.length > 0 && <Badge className="h-4 min-w-4 px-1 ml-1 bg-primary text-[8px]">{filters.length}</Badge>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-[320px] sm:w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
+                        <div className="p-4 border-b bg-slate-50 flex items-center justify-between">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Protocol</h4>
+                            <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="h-7 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">Clear All</Button>
+                        </div>
+                        <ScrollArea className="max-h-72">
+                            <div className="p-4 space-y-3">
+                                {filters.map((f, i) => (
+                                    <div key={f.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
+                                        <Select value={f.fieldId} onValueChange={(val) => updateFilter(f.id, { fieldId: val })}>
+                                            <SelectTrigger className="w-[110px] h-9 rounded-xl text-[10px] font-bold">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                {fields.map(field => <SelectItem key={field.id} value={field.id} className="text-xs font-bold">{field.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <Select value={f.operator} onValueChange={(val: any) => updateFilter(f.id, { operator: val })}>
+                                            <SelectTrigger className="w-[90px] h-9 rounded-xl text-[10px] font-bold">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl">
+                                                <SelectItem value="contains" className="text-xs font-bold">contains</SelectItem>
+                                                <SelectItem value="is" className="text-xs font-bold">is</SelectItem>
+                                                <SelectItem value="is_not" className="text-xs font-bold">is not</SelectItem>
+                                                <SelectItem value="is_empty" className="text-xs font-bold">is empty</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {!['is_empty', 'is_not_empty'].includes(f.operator) && (
+                                            <Input 
+                                                placeholder="val..." 
+                                                value={f.value}
+                                                onChange={(e) => updateFilter(f.id, { value: e.target.value })}
+                                                className="h-9 rounded-xl text-xs font-bold flex-1"
+                                            />
+                                        )}
+                                        <Button variant="ghost" size="icon" onClick={() => removeFilter(f.id)} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></Button>
+                                    </div>
+                                ))}
+                                <Button variant="ghost" onClick={addFilter} className="w-full h-10 border-dashed border border-slate-200 rounded-xl gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50">
+                                    <Plus className="h-3 w-3" /> Add Rule
+                                </Button>
+                            </div>
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
             </div>
         </div>
 
@@ -816,7 +826,7 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
                     checked={!!value} 
                     onChange={(e) => onChange(e.target.checked)}
                     disabled={!editable}
-                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-all cursor-pointer"
+                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 transition-all cursor-pointer"
                 />
             </div>
         );
