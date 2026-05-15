@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, memo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, memo, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -170,7 +170,7 @@ const NavItem = memo(({
             </div>
 
             {isExpanded && hasChildren && (
-                <div className="animate-in slide-in-from-top-1 duration-300">
+                <div>
                     {children.map(child => (
                         <NavItem 
                             key={child.id} 
@@ -202,13 +202,16 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   
-  const [selectedMemberId, setSelectedMemberId] = useState<string>(user?.id || 'all');
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
+  const hasSetDefault = useRef(false);
 
+  // Set default contributor filter to current user only once upon load
   useEffect(() => {
-      if (user?.id && selectedMemberId === 'all') {
-          setSelectedMemberId(user.id);
-      }
-  }, [user?.id, selectedMemberId]);
+    if (user?.id && !hasSetDefault.current) {
+        setSelectedMemberId(user.id);
+        hasSetDefault.current = true;
+    }
+  }, [user?.id]);
 
   const teamQuery = useMemoFirebase(() => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null, [firestore, companyId]);
   const { data: teamMembers } = useCollection<AppUser>(teamQuery);
@@ -310,7 +313,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </div>
             
             {isSearching && (
-                <div className="px-1 py-1 animate-in slide-in-from-top-1 duration-200">
+                <div className="px-1 py-1">
                     <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                         <Input 
