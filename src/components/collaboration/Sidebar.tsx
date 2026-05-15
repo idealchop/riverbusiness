@@ -16,10 +16,8 @@ import {
     PanelLeftClose,
     History,
     X,
-    Sparkles,
     Grid,
     Layout,
-    StickyNote,
     UserCircle,
     Users,
     Check
@@ -73,7 +71,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [pageToTrash, setPageToTrash] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
 
-  // Fetch all users in the same organization
   const teamQuery = useMemoFirebase(() => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null, [firestore, companyId]);
   const { data: teamMembers } = useCollection<AppUser>(teamQuery);
 
@@ -188,7 +185,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 </DropdownMenu>
             </div>
           </div>
-        </Link> link 
+        </Link>
         {isExpanded && hasChildren && (
           <div className="animate-in fade-in slide-in-from-top-1 duration-200">
             {children.map(child => <NavItem key={child.id} page={child} level={level + 1} />)}
@@ -203,7 +200,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
       "bg-slate-50/80 border-r transition-all duration-300 flex flex-col h-full group/sidebar shrink-0 relative",
       isOpen ? "w-72" : "w-0 overflow-hidden border-none"
     )}>
-      {/* Sidebar Header */}
       <div className="p-6 shrink-0 space-y-6">
         <div className="flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-3">
@@ -314,7 +310,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         </div>
       </div>
 
-      {/* Pages Navigation */}
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
             {favorites.length > 0 && !searchQuery && selectedMemberId === 'all' && (
@@ -356,7 +351,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         </div>
       </ScrollArea>
 
-      {/* Sidebar Footer - Management Section */}
       <div className="p-4 mt-auto border-t bg-slate-50/50 space-y-1">
         <Link href="/workspace/recent">
             <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>

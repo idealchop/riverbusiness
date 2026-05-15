@@ -291,7 +291,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [views, setViews] = useState<SheetView[]>(initialData?.views || [
       { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [] } },
       { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [] } },
-      { id: 'v4', name: 'Calendar', type: 'calendar', config: { hiddenFields: [] } }
+      { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [] } }
   ]);
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
@@ -304,7 +304,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
-  // Resizing state
   const [resizingFieldId, setResizingFieldId] = useState<string | null>(null);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
@@ -362,13 +361,13 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     const next = [...fields, newField];
     setFields(next);
     sync(next, records, views, activeViewId);
-    toast({ title: 'Column added', description: `High-fidelity ${type} field is ready.` });
+    toast({ title: 'Column added' });
   }, [fields, records, views, activeViewId, sync, toast]);
 
   const deleteField = useCallback((fieldId: string) => {
     const fieldToDelete = fields.find(f => f.id === fieldId);
     if (fieldToDelete?.isPrimary) {
-        toast({ variant: 'destructive', title: 'Restricted Action', description: 'Primary columns are essential for database integrity.' });
+        toast({ variant: 'destructive', title: 'Restricted Action' });
         return;
     }
     const nextFields = fields.filter(f => f.id !== fieldId);
@@ -394,8 +393,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       } : f);
       setFields(next);
       sync(next, records, views, activeViewId);
-      toast({ title: 'Type conversion complete' });
-  }, [fields, records, views, activeViewId, sync, toast]);
+  }, [fields, records, views, activeViewId, sync]);
 
   const handleToggleFieldVisibility = (fieldId: string, visible: boolean) => {
     const currentHidden = activeView.config?.hiddenFields || [];
@@ -425,16 +423,13 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     const field = fields.find(f => f.id === fieldId);
     if (!field || !field.options || !label.trim()) return;
 
-    if (field.options.some(o => o.label.toLowerCase() === label.trim().toLowerCase())) {
-        toast({ title: 'Option exists' });
-        return;
-    }
+    if (field.options.some(o => o.label.toLowerCase() === label.trim().toLowerCase())) return;
 
     const nextOptions = [...field.options, { label: label.trim(), color: 'bg-slate-100 text-slate-700' }];
     const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
     setFields(nextFields);
     sync(nextFields, records, views, activeViewId);
-  }, [fields, records, views, activeViewId, sync, toast]);
+  }, [fields, records, views, activeViewId, sync]);
 
   const updateOption = useCallback((fieldId: string, oldLabel: string, newLabel: string, newColor?: string) => {
       const field = fields.find(f => f.id === fieldId);
@@ -476,8 +471,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       setFields(nextFields);
       setRecords(nextRecords);
       sync(nextFields, nextRecords, views, activeViewId);
-      toast({ title: 'Option removed' });
-  }, [fields, records, views, activeViewId, sync, toast]);
+  }, [fields, records, views, activeViewId, sync]);
 
   const handleSwitchView = useCallback((id: string) => {
       setActiveViewId(id);
@@ -562,7 +556,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     return list;
   }, [records, debouncedSearch, sortConfig, filters]);
 
-  // Resize Handlers
   const handleResizeStart = useCallback((e: React.MouseEvent, fieldId: string, currentWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -677,11 +670,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <div className="flex items-center">
                     {isSearchExpanded ? (
                         <div className="relative flex items-center animate-in slide-in-from-right-1 duration-200">
-                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                              <Input 
                                 autoFocus
                                 placeholder="Find..." 
-                                className="h-8 pl-8 pr-7 rounded-xl bg-slate-50 border-none shadow-inner text-[11px] font-semibold w-32 sm:w-48"
+                                className="h-8 pl-7 pr-7 rounded-xl bg-slate-50 border-none shadow-inner text-[10px] font-semibold w-40 sm:w-56"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 onBlur={() => !searchTerm && setIsSearchExpanded(false)}
@@ -702,7 +695,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <div className="flex items-center gap-0.5">
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2.5 rounded-xl gap-2 font-bold text-[9px] uppercase tracking-wider transition-all", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <EyeOff className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Hide</span>
                                 {(activeView.config?.hiddenFields?.length || 0) > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{activeView.config?.hiddenFields?.length}</Badge>}
@@ -735,7 +728,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2.5 rounded-xl gap-2 font-bold text-[9px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <ArrowUpDown className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Sort</span>
                             </Button>
@@ -764,7 +757,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2.5 rounded-xl gap-2 font-bold text-[9px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <Filter className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Filter</span>
                                 {filters.length > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{filters.length}</Badge>}
@@ -960,7 +953,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                         </DropdownMenuContent>
                                     </DropdownMenu>
 
-                                    {/* Resize Handle */}
                                     <div 
                                         onMouseDown={(e) => handleResizeStart(e, field.id, field.width || 150)}
                                         className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/40 transition-colors z-30" 
