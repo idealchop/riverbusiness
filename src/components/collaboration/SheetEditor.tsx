@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { 
     Grid, 
     Layout, 
@@ -141,6 +141,142 @@ const OPTION_COLORS = [
     { label: 'Indigo', value: 'bg-indigo-100 text-indigo-700' },
 ];
 
+/**
+ * Optimized Cell Component - Prevents re-renders of the entire grid on typing
+ */
+const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, editable, isExpanded = false }: any) => {
+    const [localValue, setLocalValue] = useState(value);
+    const [isEditing, setIsEditing] = useState(false);
+    const [newOptionLabel, setNewOptionLabel] = useState('');
+
+    useEffect(() => setLocalValue(value), [value]);
+
+    const handleBlur = () => {
+        setIsEditing(false);
+        if (localValue !== value) onChange(localValue);
+    };
+
+    if (field.type === 'checkbox') {
+        return (
+            <div className="w-full h-full flex items-center justify-center">
+                <input 
+                    type="checkbox" 
+                    checked={!!value} 
+                    onChange={(e) => onChange(e.target.checked)}
+                    disabled={!editable}
+                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 transition-all cursor-pointer"
+                />
+            </div>
+        );
+    }
+
+    if (field.type === 'status' || field.type === 'select') {
+        const option = field.options?.find((o: any) => o.label === value);
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button className="w-full h-full px-3 flex items-center justify-between group/cell outline-none">
+                        {value ? (
+                            <Badge className={cn("text-[9px] font-bold uppercase tracking-widest border-none shadow-none", option?.color || 'bg-slate-100 text-slate-700')}>
+                                {value}
+                            </Badge>
+                        ) : <span className="text-slate-200 text-xs italic">Select...</span>}
+                        {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200">
+                    <ScrollArea className="max-h-60">
+                        <div className="p-1 space-y-0.5">
+                            {field.options?.map((opt: any) => (
+                                <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
+                                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
+                                    <span className="flex-1">{opt.label}</span>
+                                    {value === opt.label && <Check className="h-3 w-3 text-primary" />}
+                                </DropdownMenuItem>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                    
+                    {editable && (
+                        <div className="p-2 bg-slate-50 border-t">
+                            <div className="relative">
+                                <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                                <Input 
+                                    placeholder="Add new option..." 
+                                    value={newOptionLabel}
+                                    onChange={(e) => setNewOptionLabel(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && newOptionLabel.trim()) {
+                                            onAddOption(newOptionLabel.trim());
+                                            onChange(newOptionLabel.trim());
+                                            setNewOptionLabel('');
+                                        }
+                                    }}
+                                    className="h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-bold uppercase tracking-widest" 
+                                />
+                            </div>
+                        </div>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
+    }
+
+    if (isEditing || isExpanded) {
+        let inputType = "text";
+        if (field.type === 'number' || field.type === 'currency') inputType = "number";
+        if (field.type === 'date') inputType = "date";
+        if (field.type === 'email') inputType = "email";
+        if (field.type === 'url') inputType = "url";
+        if (field.type === 'phone') inputType = "tel";
+
+        return (
+            <div className="flex items-center w-full h-full">
+                {field.type === 'currency' && <span className="pl-3 text-slate-400 text-sm font-bold">₱</span>}
+                <input 
+                    autoFocus={!isExpanded}
+                    type={inputType}
+                    value={localValue || ''}
+                    onChange={(e) => setLocalValue(e.target.value)}
+                    onBlur={handleBlur}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleBlur();
+                        if (e.key === 'Escape') setIsEditing(false);
+                    }}
+                    className={cn(
+                        "w-full h-full bg-transparent px-3 text-sm font-semibold focus:outline-none transition-colors",
+                        field.type === 'currency' && "pl-1"
+                    )}
+                    placeholder={field.type === 'date' ? '' : "..."}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div 
+            className="w-full h-full px-3 flex items-center group/cell cursor-text"
+            onClick={() => editable && setIsEditing(true)}
+        >
+            <span className={cn(
+                "text-sm font-semibold truncate flex-1",
+                !value && "text-slate-200 italic font-normal"
+            )}>
+                {field.type === 'currency' && value ? `₱${Number(value).toLocaleString()}` : (value || (field.isPrimary ? "Enter Item..." : ""))}
+            </span>
+            {field.isPrimary && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onExpand?.(); }}
+                    className="opacity-0 group-hover/cell:opacity-100 p-1 rounded hover:bg-slate-200 text-slate-400 transition-all"
+                >
+                    <Maximize2 className="h-3 w-3" />
+                </button>
+            )}
+        </div>
+    );
+});
+CellRenderer.displayName = 'CellRenderer';
+
 export function SheetEditor({ initialData, onContentChange, editable = true }: SheetEditorProps) {
   const isMounted = useMounted();
   const { toast } = useToast();
@@ -160,14 +296,20 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   ]);
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<FilterRule[]>([]);
-
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+
+  // Search Debounce Logic to prevent lag on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
@@ -175,10 +317,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       if (!editable) return;
       setIsSyncing(true);
       onContentChange({ fields: newFields, records: newRecords, views: newViews, activeViewId: newViewId });
-      setTimeout(() => setIsSyncing(false), 800);
+      setTimeout(() => setIsSyncing(false), 500);
   }, [onContentChange, editable]);
 
-  const addRecord = () => {
+  const addRecord = useCallback(() => {
     const newRecord: SheetRecord = {
         id: `r-${Date.now()}`,
         values: {},
@@ -188,19 +330,21 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     const next = [newRecord, ...records];
     setRecords(next);
     sync(fields, next, views, activeViewId);
-  };
+  }, [records, fields, views, activeViewId, sync]);
 
-  const updateRecordValue = (recordId: string, fieldId: string, value: any) => {
-    const next = records.map(r => r.id === recordId ? { 
-        ...r, 
-        values: { ...r.values, [fieldId]: value }, 
-        updatedAt: new Date().toISOString() 
-    } : r);
-    setRecords(next);
-    sync(fields, next, views, activeViewId);
-  };
+  const updateRecordValue = useCallback((recordId: string, fieldId: string, value: any) => {
+    setRecords(prev => {
+        const next = prev.map(r => r.id === recordId ? { 
+            ...r, 
+            values: { ...r.values, [fieldId]: value }, 
+            updatedAt: new Date().toISOString() 
+        } : r);
+        sync(fields, next, views, activeViewId);
+        return next;
+    });
+  }, [fields, views, activeViewId, sync]);
 
-  const addField = (type: SheetFieldType) => {
+  const addField = useCallback((type: SheetFieldType) => {
     const id = `f-${Date.now()}`;
     const newField: SheetField = {
         id,
@@ -216,9 +360,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     setFields(next);
     sync(next, records, views, activeViewId);
     toast({ title: 'Column added', description: `High-fidelity ${type} field is ready.` });
-  };
+  }, [fields, records, views, activeViewId, sync, toast]);
 
-  const deleteField = (fieldId: string) => {
+  const deleteField = useCallback((fieldId: string) => {
     const fieldToDelete = fields.find(f => f.id === fieldId);
     if (fieldToDelete?.isPrimary) {
         toast({ variant: 'destructive', title: 'Restricted Action', description: 'Primary columns are essential for database integrity.' });
@@ -234,9 +378,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     setRecords(nextRecords);
     sync(nextFields, nextRecords, views, activeViewId);
     toast({ title: 'Column purged' });
-  };
+  }, [fields, records, views, activeViewId, sync, toast]);
 
-  const changeFieldType = (fieldId: string, newType: SheetFieldType) => {
+  const changeFieldType = useCallback((fieldId: string, newType: SheetFieldType) => {
       const next = fields.map(f => f.id === fieldId ? { 
           ...f, 
           type: newType,
@@ -248,9 +392,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       setFields(next);
       sync(next, records, views, activeViewId);
       toast({ title: 'Type conversion complete' });
-  };
+  }, [fields, records, views, activeViewId, sync, toast]);
 
-  const handleAddOptionDirectly = (fieldId: string, label: string) => {
+  const handleAddOptionDirectly = useCallback((fieldId: string, label: string) => {
     const field = fields.find(f => f.id === fieldId);
     if (!field || !field.options || !label.trim()) return;
 
@@ -263,10 +407,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
     setFields(nextFields);
     sync(nextFields, records, views, activeViewId);
-    toast({ title: 'New category added' });
-  };
+  }, [fields, records, views, activeViewId, sync, toast]);
 
-  const updateOption = (fieldId: string, oldLabel: string, newLabel: string, newColor?: string) => {
+  const updateOption = useCallback((fieldId: string, oldLabel: string, newLabel: string, newColor?: string) => {
       const field = fields.find(f => f.id === fieldId);
       if (!field || !field.options) return;
 
@@ -275,7 +418,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       );
       
       const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
-      
       const nextRecords = records.map(r => {
           if (r.values[fieldId] === oldLabel) {
               return { ...r, values: { ...r.values, [fieldId]: newLabel } };
@@ -286,9 +428,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       setFields(nextFields);
       setRecords(nextRecords);
       sync(nextFields, nextRecords, views, activeViewId);
-  };
+  }, [fields, records, views, activeViewId, sync]);
 
-  const deleteOption = (fieldId: string, label: string) => {
+  const deleteOption = useCallback((fieldId: string, label: string) => {
       const field = fields.find(f => f.id === fieldId);
       if (!field || !field.options) return;
 
@@ -308,14 +450,14 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       setRecords(nextRecords);
       sync(nextFields, nextRecords, views, activeViewId);
       toast({ title: 'Option removed' });
-  };
+  }, [fields, records, views, activeViewId, sync, toast]);
 
-  const handleSwitchView = (id: string) => {
+  const handleSwitchView = useCallback((id: string) => {
       setActiveViewId(id);
       sync(fields, records, views, id);
-  };
+  }, [fields, records, views, sync]);
 
-  const handleCreateView = (type: SheetViewType) => {
+  const handleCreateView = useCallback((type: SheetViewType) => {
     const id = `v-${Date.now()}`;
     const name = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
     const newView: SheetView = { id, name, type };
@@ -323,56 +465,43 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     setViews(next);
     setActiveViewId(id);
     sync(fields, next, records, id);
-    toast({ title: 'Tab initialized', description: `New ${type} view has been added to your workspace.` });
-  };
+  }, [views, fields, records, sync]);
 
-  const handleRenameView = (viewId: string, newName: string) => {
+  const handleRenameView = useCallback((viewId: string, newName: string) => {
     if (newName && newName.trim()) {
         const next = views.map(v => v.id === viewId ? { ...v, name: newName.trim() } : v);
         setViews(next);
         sync(fields, records, next, activeViewId);
     }
-  };
+  }, [views, fields, records, activeViewId, sync]);
 
-  const handleDeleteView = (viewId: string) => {
-    if (views.length <= 1) {
-        toast({ variant: 'destructive', title: 'Action Denied', description: 'At least one view must be maintained.' });
-        return;
-    }
+  const handleDeleteView = useCallback((viewId: string) => {
+    if (views.length <= 1) return;
     const next = views.filter(v => v.id !== viewId);
     const nextActive = activeViewId === viewId ? next[0].id : activeViewId;
     setViews(next);
     setActiveViewId(nextActive);
-    sync(fields, records, next, nextActive);
-    toast({ title: 'Tab removed' });
-  };
+    sync(fields, next, records, nextActive);
+  }, [views, fields, records, activeViewId, sync]);
 
-  const addFilter = () => {
-      const newFilter: FilterRule = {
-          id: `flt-${Date.now()}`,
-          fieldId: fields[0].id,
-          operator: 'contains',
-          value: ''
-      };
-      setFilters([...filters, newFilter]);
-  };
+  const addFilter = useCallback(() => {
+      setFilters(prev => [...prev, { id: `flt-${Date.now()}`, fieldId: fields[0].id, operator: 'contains', value: '' }]);
+  }, [fields]);
 
-  const updateFilter = (id: string, updates: Partial<FilterRule>) => {
-      setFilters(filters.map(f => f.id === id ? { ...f, ...updates } : f));
-  };
+  const updateFilter = useCallback((id: string, updates: Partial<FilterRule>) => {
+      setFilters(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+  }, []);
 
-  const removeFilter = (id: string) => {
-      setFilters(filters.filter(f => f.id !== id));
-  };
+  const removeFilter = useCallback((id: string) => {
+      setFilters(prev => prev.filter(f => f.id !== id));
+  }, []);
 
   const filteredRecords = useMemo(() => {
     let list = [...records];
     
-    if (searchTerm) {
-        const s = searchTerm.toLowerCase().trim();
-        list = list.filter(r => 
-            Object.values(r.values).some(v => String(v).toLowerCase().includes(s))
-        );
+    if (debouncedSearch) {
+        const s = debouncedSearch.toLowerCase().trim();
+        list = list.filter(r => Object.values(r.values).some(v => String(v).toLowerCase().includes(s)));
     }
 
     if (filters.length > 0) {
@@ -384,15 +513,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                 switch (filter.operator) {
                     case 'contains': return strValue.includes(filterValue);
-                    case 'not_contains': return !strValue.includes(filterValue);
                     case 'is': return strValue === filterValue;
                     case 'is_not': return strValue !== filterValue;
                     case 'is_empty': return !fieldValue || strValue === '';
-                    case 'is_not_empty': return fieldValue && strValue !== '';
-                    case 'gt': return Number(fieldValue) > Number(filter.value);
-                    case 'lt': return Number(fieldValue) < Number(filter.value);
-                    case 'after': return isAfter(parseISO(strValue), parseISO(filter.value));
-                    case 'before': return isBefore(parseISO(strValue), parseISO(filter.value));
                     default: return true;
                 }
             });
@@ -410,7 +533,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     }
 
     return list;
-  }, [records, searchTerm, sortConfig, filters]);
+  }, [records, debouncedSearch, sortConfig, filters]);
 
   if (!isMounted) return null;
 
@@ -616,12 +739,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     </Badge>
                 )}
 
-                {activeView.type === 'kanban' && (
-                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-purple-50 text-purple-700 font-bold text-[9px] uppercase gap-1.5">
-                        <Layout className="h-3 w-3" /> Grouped by status
-                    </Badge>
-                )}
-
                 {sortConfig && (
                     <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5">
                         <ArrowUpDown className="h-3 w-3" /> Sorted by {fields.find(f => f.id === sortConfig.fieldId)?.name}
@@ -731,19 +848,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                                         <Button variant="ghost" size="icon" onClick={() => deleteOption(field.id, opt.label)} className="h-7 w-7 text-red-400"><Trash2 className="h-3.5 w-3.5" /></Button>
                                                                     </div>
                                                                 ))}
-                                                                <Separator className="bg-slate-100" />
-                                                                <div className="flex gap-2">
-                                                                    <Input 
-                                                                        placeholder="New choice..." 
-                                                                        className="h-8 text-xs bg-slate-50 border-none"
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Enter') {
-                                                                                handleAddOptionDirectly(field.id, (e.target as HTMLInputElement).value);
-                                                                                (e.target as HTMLInputElement).value = '';
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                </div>
                                                             </div>
                                                         </PopoverContent>
                                                     </Popover>
@@ -760,22 +864,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     </DropdownMenu>
                                 </div>
                             ))}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button className="w-12 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors border-r">
-                                        <Plus className="h-4 w-4" />
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56 p-1 rounded-2xl shadow-2xl border-slate-100 max-h-80 overflow-y-auto">
-                                    <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Select Field Logic</DropdownMenuLabel>
-                                    {FIELD_TYPES.map(f => (
-                                        <DropdownMenuItem key={f.type} onClick={() => addField(f.type)} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
-                                            {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-3.5 w-3.5 text-slate-400" })}
-                                            {f.label}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
                         </div>
 
                         <div className="divide-y">
@@ -855,26 +943,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 </div>
                             ))}
                         </div>
-
-                        <Separator className="bg-slate-50" />
-
-                        <div className="space-y-6">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Metadata</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">Created</p>
-                                    <p className="text-[10px] font-bold text-slate-500 mt-1">
-                                        {records.find(r => r.id === selectedRecordId)?.createdAt ? format(new Date(records.find(r => r.id === selectedRecordId)!.createdAt), 'PPP') : 'N/A'}
-                                    </p>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">Modified</p>
-                                    <p className="text-[10px] font-bold text-slate-500 mt-1">
-                                        {records.find(r => r.id === selectedRecordId)?.updatedAt ? format(new Date(records.find(r => r.id === selectedRecordId)!.updatedAt), 'PPP') : 'Recently'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </ScrollArea>
                 <div className="h-20 border-t p-6 bg-slate-50/50 flex items-center justify-end">
@@ -886,140 +954,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   );
 }
 
-function CellRenderer({ field, value, onChange, onExpand, onAddOption, editable, isExpanded = false }: any) {
-    const [localValue, setLocalValue] = useState(value);
-    const [isEditing, setIsEditing] = useState(false);
-    const [newOptionLabel, setNewOptionLabel] = useState('');
-
-    useEffect(() => setLocalValue(value), [value]);
-
-    const handleBlur = () => {
-        setIsEditing(false);
-        if (localValue !== value) onChange(localValue);
-    };
-
-    if (field.type === 'checkbox') {
-        return (
-            <div className="w-full h-full flex items-center justify-center">
-                <input 
-                    type="checkbox" 
-                    checked={!!value} 
-                    onChange={(e) => onChange(e.target.checked)}
-                    disabled={!editable}
-                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 transition-all cursor-pointer"
-                />
-            </div>
-        );
-    }
-
-    if (field.type === 'status' || field.type === 'select') {
-        const option = field.options?.find((o: any) => o.label === value);
-        return (
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button className="w-full h-full px-3 flex items-center justify-between group/cell outline-none">
-                        {value ? (
-                            <Badge className={cn("text-[9px] font-bold uppercase tracking-widest border-none shadow-none", option?.color || 'bg-slate-100 text-slate-700')}>
-                                {value}
-                            </Badge>
-                        ) : <span className="text-slate-200 text-xs italic">Select...</span>}
-                        {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200">
-                    <ScrollArea className="max-h-60">
-                        <div className="p-1 space-y-0.5">
-                            {field.options?.map((opt: any) => (
-                                <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
-                                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
-                                    <span className="flex-1">{opt.label}</span>
-                                    {value === opt.label && <Check className="h-3 w-3 text-primary" />}
-                                </DropdownMenuItem>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                    
-                    {editable && (
-                        <div className="p-2 bg-slate-50 border-t">
-                            <div className="relative">
-                                <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-                                <Input 
-                                    placeholder="Add new option..." 
-                                    value={newOptionLabel}
-                                    onChange={(e) => setNewOptionLabel(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && newOptionLabel.trim()) {
-                                            onAddOption(newOptionLabel.trim());
-                                            onChange(newOptionLabel.trim());
-                                            setNewOptionLabel('');
-                                        }
-                                    }}
-                                    className="h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-bold uppercase tracking-widest" 
-                                />
-                            </div>
-                        </div>
-                    )}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        );
-    }
-
-    if (isEditing || isExpanded) {
-        let inputType = "text";
-        if (field.type === 'number' || field.type === 'currency') inputType = "number";
-        if (field.type === 'date') inputType = "date";
-        if (field.type === 'email') inputType = "email";
-        if (field.type === 'url') inputType = "url";
-        if (field.type === 'phone') inputType = "tel";
-
-        return (
-            <div className="flex items-center w-full h-full">
-                {field.type === 'currency' && <span className="pl-3 text-slate-400 text-sm font-bold">₱</span>}
-                <input 
-                    autoFocus={!isExpanded}
-                    type={inputType}
-                    value={localValue || ''}
-                    onChange={(e) => setLocalValue(e.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleBlur();
-                        if (e.key === 'Escape') setIsEditing(false);
-                    }}
-                    className={cn(
-                        "w-full h-full bg-transparent px-3 text-sm font-semibold focus:outline-none transition-colors",
-                        field.type === 'currency' && "pl-1"
-                    )}
-                    placeholder={field.type === 'date' ? '' : "..."}
-                />
-            </div>
-        );
-    }
-
-    return (
-        <div 
-            className="w-full h-full px-3 flex items-center group/cell cursor-text"
-            onClick={() => editable && setIsEditing(true)}
-        >
-            <span className={cn(
-                "text-sm font-semibold truncate flex-1",
-                !value && "text-slate-200 italic font-normal"
-            )}>
-                {field.type === 'currency' && value ? `₱${Number(value).toLocaleString()}` : (value || (field.isPrimary ? "Enter Item..." : ""))}
-            </span>
-            {field.isPrimary && (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onExpand?.(); }}
-                    className="opacity-0 group-hover/cell:opacity-100 p-1 rounded hover:bg-slate-200 text-slate-400 transition-all"
-                >
-                    <Maximize2 className="h-3 w-3" />
-                </button>
-            )}
-        </div>
-    );
-}
-
 function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
-    const statusField = fields.find((f: any) => f.type === 'status') || fields.find((f: any) => f.type === 'select');
+    const statusField = useMemo(() => fields.find((f: any) => f.type === 'status') || fields.find((f: any) => f.type === 'select'), [fields]);
     const [draggedRecordId, setDraggedRecordId] = useState<string | null>(null);
     const [dropTargetId, setDropTargetId] = useState<string | null>(null);
     
@@ -1051,11 +987,6 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
         setDropTargetId(null);
     };
 
-    const handleDragOver = (e: React.DragEvent, statusLabel: string) => {
-        e.preventDefault();
-        setDropTargetId(statusLabel);
-    };
-
     return (
         <ScrollArea className="flex-1 h-full bg-slate-50/30">
             <div className="flex gap-8 p-10 h-full min-h-[600px]">
@@ -1070,7 +1001,7 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
                                 "w-80 shrink-0 flex flex-col gap-6 p-4 rounded-3xl transition-all duration-300",
                                 isTarget ? "bg-primary/5 ring-2 ring-primary/20 scale-[1.02]" : "bg-transparent"
                             )}
-                            onDragOver={(e) => handleDragOver(e, group.label)}
+                            onDragOver={(e) => { e.preventDefault(); setDropTargetId(group.label); }}
                             onDragLeave={() => setDropTargetId(null)}
                             onDrop={(e) => handleDrop(e, group.label)}
                         >
@@ -1081,7 +1012,6 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
                                     </Badge>
                                     <span className="text-[10px] font-black text-slate-300">{groupRecords.length}</span>
                                 </div>
-                                <button className="h-8 w-8 rounded-lg text-slate-300 hover:text-slate-900 transition-colors"><Plus className="h-4 w-4" /></button>
                             </div>
 
                             <div className="space-y-4 flex-1">
@@ -1111,9 +1041,6 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
                                         </div>
                                     </Card>
                                 ))}
-                                <Button variant="ghost" className="w-full justify-start h-12 rounded-2xl gap-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-primary hover:bg-white hover:shadow-sm transition-all border-dashed border border-slate-100">
-                                    <Plus className="h-4 w-4" /> Initialize Item
-                                </Button>
                             </div>
                         </div>
                     );
@@ -1126,7 +1053,7 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
 
 function CalendarView({ fields, records, onRecordClick }: any) {
     const [viewDate, setViewDate] = useState(new Date());
-    const dateField = fields.find((f: any) => f.type === 'date');
+    const dateField = useMemo(() => fields.find((f: any) => f.type === 'date'), [fields]);
     
     if (!dateField) {
         return (
