@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  BookOpen, 
   Plus, 
   Search, 
   Video, 
@@ -14,8 +13,7 @@ import {
   Share2,
   Filter,
   ArrowRight,
-  Clock,
-  Globe
+  Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,9 +30,8 @@ import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@
 import { collection, query, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LearningModuleDialog } from '@/components/hr/LearningModuleDialog';
-import { ModuleViewerDialog } from '@/components/hr/ModuleViewerDialog';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import type { HRLearningModule, AppUser } from '@/lib/types';
@@ -49,6 +46,7 @@ export default function LearningHubPage() {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -58,9 +56,7 @@ export default function LearningHubPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [moduleToEdit, setModuleToEdit] = useState<HRLearningModule | null>(null);
-  const [moduleToView, setModuleToView] = useState<HRLearningModule | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -87,9 +83,9 @@ export default function LearningHubPage() {
     if (!firestore || companyId === 'default') return;
     try {
         await deleteDoc(doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId));
-        toast({ title: 'Module removed', description: 'The training material has been deleted.' });
+        toast({ title: 'Module removed' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed', description: 'Could not remove module.' });
+        toast({ variant: 'destructive', title: 'Action failed' });
     }
   };
 
@@ -99,23 +95,22 @@ export default function LearningHubPage() {
   };
 
   const handleLaunchModule = (module: HRLearningModule) => {
-    setModuleToView(module);
-    setIsViewerOpen(true);
+    router.push(`/hr-dashboard/modules/${module.id}`);
   };
 
   const handleShareModule = (module: HRLearningModule) => {
-      navigator.clipboard.writeText(`${window.location.origin}/hr-dashboard/modules?view=${module.id}`);
-      toast({ title: 'Link Copied', description: 'Training link copied to clipboard for sharing.' });
+      navigator.clipboard.writeText(`${window.location.origin}/hr-dashboard/modules/${module.id}`);
+      toast({ title: 'Link Copied', description: 'Training link copied to clipboard.' });
   };
 
-  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
+  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Synchronizing Hub..." />;
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-10 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Hub</h1>
-          <p className="text-slate-500 font-medium text-sm">Design and Browse Authorized Training Materials Collaboratively.</p>
+          <p className="text-slate-500 font-medium text-sm">Design and Browse Training Materials.</p>
         </div>
         <Button 
             onClick={() => { setModuleToEdit(null); setIsManageDialogOpen(true); }}
@@ -129,7 +124,7 @@ export default function LearningHubPage() {
         <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
-                placeholder="Search modules by title or category..." 
+                placeholder="Search modules..." 
                 className="pl-10 h-11 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -176,10 +171,10 @@ export default function LearningHubPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
                                 <DropdownMenuItem onClick={() => handleEditModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                    <Edit className="h-3.5 w-3.5" /> Edit Module
+                                    <Edit className="h-3.5 w-3.5" /> Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                    <Share2 className="h-3.5 w-3.5" /> Share to Team
+                                    <Share2 className="h-3.5 w-3.5" /> Share
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-50" />
                                 <DropdownMenuItem onClick={() => handleDeleteModule(module.id)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
@@ -211,12 +206,6 @@ export default function LearningHubPage() {
         onOpenChange={setIsManageDialogOpen}
         companyId={companyId}
         moduleToEdit={moduleToEdit}
-      />
-
-      <ModuleViewerDialog
-        isOpen={isViewerOpen}
-        onOpenChange={setIsViewerOpen}
-        module={moduleToView}
       />
     </div>
   );
