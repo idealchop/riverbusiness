@@ -19,7 +19,10 @@ import {
     Sparkles,
     Grid,
     Layout,
-    StickyNote
+    StickyNote,
+    UserCircle,
+    Users,
+    Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -46,6 +49,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -58,10 +64,18 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
   const pathname = usePathname();
+  const firestore = useFirestore();
+  const companyId = user?.companyId || null;
+
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [pageToTrash, setPageToTrash] = useState<string | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
+
+  // Fetch all users in the same organization
+  const teamQuery = useMemoFirebase(() => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null, [firestore, companyId]);
+  const { data: teamMembers } = useCollection<AppUser>(teamQuery);
 
   const toggleExpand = (e: React.MouseEvent, pageId: string) => {
     e.preventDefault();
@@ -70,9 +84,15 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   };
 
   const filteredPages = useMemo(() => {
-      if (!searchQuery) return pages;
-      return pages.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [pages, searchQuery]);
+      let list = pages;
+      if (selectedMemberId !== 'all') {
+          list = list.filter(p => p.createdBy === selectedMemberId);
+      }
+      if (searchQuery) {
+          list = list.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+      }
+      return list;
+  }, [pages, searchQuery, selectedMemberId]);
 
   const favorites = pages.filter(p => p.isFavorite);
   const rootPages = filteredPages.filter(p => !p.parentId);
@@ -199,34 +219,71 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         </div>
 
         <div className="space-y-1">
-            <div className="relative group/search">
+            <div className="flex items-center gap-1.5">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button 
+                            variant="outline" 
+                            className="flex-1 justify-start h-8 rounded-xl border-slate-200 bg-white shadow-sm gap-2 font-bold text-[10px] uppercase tracking-widest px-3"
+                        >
+                            <UserCircle className="h-3.5 w-3.5 text-primary" />
+                            <span className="truncate max-w-[120px]">
+                                {selectedMemberId === 'all' ? 'Team docs' : teamMembers?.find(m => m.id === selectedMemberId)?.name || 'Member'}
+                            </span>
+                            <ChevronDown className="h-3 w-3 ml-auto text-slate-300" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em] border-b mb-1">Organization Filter</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => setSelectedMemberId('all')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <div className="p-1.5 rounded-lg bg-slate-50 text-slate-400"><Users className="h-3.5 w-3.5" /></div>
+                            All Team Documents
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-slate-50" />
+                        <ScrollArea className="h-48">
+                            {teamMembers?.map(member => (
+                                <DropdownMenuItem key={member.id} onClick={() => setSelectedMemberId(member.id)} className="gap-3 font-semibold text-xs py-2 rounded-xl cursor-pointer">
+                                    <Avatar className="h-6 w-6">
+                                        <AvatarImage src={member.photoURL} />
+                                        <AvatarFallback className="text-[8px]">{member.name?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate flex-1">{member.name} {member.id === user?.id && '(You)'}</span>
+                                    {selectedMemberId === member.id && <Check className="h-3 w-3 text-primary" />}
+                                </DropdownMenuItem>
+                            ))}
+                        </ScrollArea>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Button 
-                    variant="outline" 
-                    onClick={() => setIsSearching(true)}
-                    className="w-full justify-start h-8 rounded-xl border-slate-200 bg-white shadow-sm gap-2 font-bold text-[10px] uppercase tracking-widest"
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsSearching(!isSearching)}
+                    className={cn("h-8 w-8 rounded-xl shrink-0 transition-colors", isSearching ? "text-primary bg-primary/10" : "text-slate-400 hover:text-slate-900")}
                 >
-                    <Search className="h-3 w-3 text-slate-400" />
-                    {isSearching ? '' : 'Quick Find'}
+                    <Search className="h-3.5 w-3.5" />
                 </Button>
-                {isSearching && (
-                    <div className="absolute inset-0 z-50 animate-in fade-in slide-in-from-right-1 duration-200">
+            </div>
+            
+            {isSearching && (
+                <div className="px-1 py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                         <Input 
                             autoFocus
                             placeholder="Type to filter..." 
                             value={searchQuery}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            onBlur={() => !searchQuery && setIsSearching(false)}
-                            className="h-8 rounded-xl bg-white shadow-lg border-primary pr-7 text-[10px] font-bold uppercase tracking-widest"
+                            className="h-8 rounded-xl bg-white border-slate-200 pr-7 text-[10px] font-bold uppercase tracking-widest pl-8 shadow-inner"
                         />
-                        <button 
-                            onClick={() => { setSearchTerm(''); setIsSearching(false); }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100"
-                        >
-                            <X className="h-3 w-3 text-slate-400" />
-                        </button>
+                        {searchQuery && (
+                            <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100">
+                                <X className="h-3 w-3 text-slate-400" />
+                            </button>
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
             
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -260,7 +317,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
       {/* Pages Navigation */}
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
-            {favorites.length > 0 && !searchQuery && (
+            {favorites.length > 0 && !searchQuery && selectedMemberId === 'all' && (
                 <div className="space-y-1">
                     <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Favorites</h4>
                     <div className="space-y-0.5">
@@ -282,12 +339,16 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             )}
 
             <div className="space-y-1">
-                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Workspace</h4>
+                <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">
+                    {selectedMemberId === 'all' ? 'Workspace' : 'Filtered Content'}
+                </h4>
                 <div className="space-y-0.5">
                     {rootPages.map(page => <NavItem key={page.id} page={page} />)}
-                    {rootPages.length === 0 && !searchQuery && (
+                    {rootPages.length === 0 && (
                         <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Empty workspace</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                {selectedMemberId === 'all' ? 'Empty workspace' : 'No matches found'}
+                            </p>
                         </div>
                     )}
                 </div>
