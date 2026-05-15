@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,13 +37,16 @@ import {
   List,
   Heading1,
   Heading2,
+  Heading3,
   AlignLeft,
   AlignCenter,
   AlignRight,
   Palette,
   Underline as UnderlineIcon,
   CheckSquare,
-  X
+  X,
+  Type,
+  ChevronDown
 } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
@@ -62,7 +65,9 @@ import { Separator } from '@/components/ui/separator';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
-    DropdownMenuTrigger 
+    DropdownMenuItem, 
+    DropdownMenuTrigger,
+    DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 
 const moduleSchema = z.object({
@@ -122,7 +127,7 @@ export default function CreateModulePage() {
       Placeholder.configure({ placeholder: 'Initialize your training documentation here...' }),
     ],
     onUpdate: ({ editor }) => {
-      form.setValue('textContent', editor.getHTML());
+      form.setValue('textContent', editor.getHTML(), { shouldDirty: true });
     }
   });
 
@@ -284,6 +289,7 @@ export default function CreateModulePage() {
                                         <div className="sticky top-20 z-40 w-full p-1.5 bg-white border border-slate-200 shadow-xl rounded-2xl flex flex-wrap items-center gap-1">
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} icon={<Heading3 className="h-4 w-4" />} />
                                             <Separator orientation="vertical" className="h-6 mx-1" />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} />

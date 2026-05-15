@@ -38,6 +38,7 @@ import {
   List,
   Heading1,
   Heading2,
+  Heading3,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -131,7 +132,7 @@ export default function EditModulePage() {
       Placeholder.configure({ placeholder: 'Edit your training documentation...' }),
     ],
     onUpdate: ({ editor }) => {
-      form.setValue('textContent', editor.getHTML());
+      form.setValue('textContent', editor.getHTML(), { shouldDirty: true });
     }
   });
 
@@ -298,7 +299,7 @@ export default function EditModulePage() {
                             {selectedType === 'article' && (
                                 <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
                                     <div className="flex items-center gap-3">
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Full Documentation</FormLabel>
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
                                     </div>
                                     
                                     {/* Tiptap Toolbar */}
@@ -306,6 +307,7 @@ export default function EditModulePage() {
                                         <div className="sticky top-20 z-40 w-full p-1.5 bg-white border border-slate-200 shadow-xl rounded-2xl flex flex-wrap items-center gap-1">
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} icon={<Heading3 className="h-4 w-4" />} />
                                             <Separator orientation="vertical" className="h-6 mx-1" />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} />
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} />
