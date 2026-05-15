@@ -29,7 +29,8 @@ import {
   Clock, 
   Copy, 
   CheckCircle2,
-  MoreHorizontal
+  MoreHorizontal,
+  UserCircle
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -219,7 +220,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Shareable link</Label>
                                 <div className="flex gap-2">
                                     <Input readOnly value={shareUrl} className="h-9 rounded-lg bg-slate-50 border-slate-100 font-mono text-[10px] shadow-inner truncate" />
-                                    <Button onClick={copyLink} variant="outline" className={cn("h-9 px-3 rounded-lg border-slate-100 shadow-sm font-bold text-xs shrink-0 transition-all", hasCopied ? "bg-green-50 text-green-600 border-green-100" : "bg-white")}>
+                                    <Button onClick={copyLink} variant="outline" className={cn("h-9 px-3 rounded-lg border-slate-100 shadow-sm font-bold text-xs shrink-0 transition-all", hasCopied ? "bg-green-50 text-green-700 border-green-100" : "bg-white")}>
                                         {hasCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                     </Button>
                                 </div>
@@ -294,6 +295,9 @@ function PageEditorContent() {
 
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<AppUser>(userDocRef);
+
+  const creatorQuery = useMemoFirebase(() => (firestore && page?.createdBy) ? doc(firestore, 'users', page.createdBy) : null, [firestore, page?.createdBy]);
+  const { data: creatorProfile } = useDoc<AppUser>(creatorQuery);
 
   const latestContentRef = useRef<any>(null);
   const latestTitleRef = useRef<string>('');
@@ -434,7 +438,28 @@ function PageEditorContent() {
         {pageType === 'doc' && (
             <>
                 {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-4xl sm:text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
-                {!page.isTrashed && <div className="flex gap-4 opacity-0 hover:opacity-100 mb-4">{!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}{!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}</div>}
+                {!page.isTrashed && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 mt-4">
+                        <div className="flex gap-4">
+                            {!page.icon && <Popover onOpenChange={() => setEmojiSearch('')}><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-slate-400">Add Icon</Button></PopoverTrigger><PopoverContent align="start" className="w-64 p-3 rounded-2xl border-slate-100 shadow-3xl bg-white"><div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" /><Input placeholder="Search emojis..." className="pl-8 h-8 text-[10px] bg-slate-50 border-none shadow-inner" value={emojiSearch} onChange={(e) => setEmojiSearch(e.target.value)} /></div><ScrollArea className="h-32 pr-2"><div className="grid grid-cols-5 gap-1">{filteredEmojis.map(e => (<button key={e.char} onClick={() => setIcon(e.char)} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl">{e.char}</button>))}</div></ScrollArea></div></PopoverContent></Popover>}
+                            {!page.coverImage && <Button variant="ghost" size="sm" onClick={addRandomCover} className="h-7 text-[10px] font-bold text-slate-400">Add Cover</Button>}
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 w-fit">
+                            <div className="flex -space-x-1.5">
+                                <Avatar className="h-5 w-5 border border-white">
+                                    <AvatarImage src={creatorProfile?.photoURL} />
+                                    <AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">{creatorProfile?.name?.charAt(0) || '?'}</AvatarFallback>
+                                </Avatar>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Drafted by</span>
+                                <span className="text-[10px] font-bold text-slate-900 leading-tight">
+                                    {creatorProfile?.id === user?.uid ? 'You' : creatorProfile?.name || 'Authorized Member'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-3xl sm:text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
                 <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
             </>

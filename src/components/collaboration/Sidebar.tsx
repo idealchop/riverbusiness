@@ -188,7 +188,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 </DropdownMenu>
             </div>
           </div>
-        </Link>
+        </Link> link 
         {isExpanded && hasChildren && (
           <div className="animate-in fade-in slide-in-from-top-1 duration-200">
             {children.map(child => <NavItem key={child.id} page={child} level={level + 1} />)}
@@ -242,7 +242,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <ScrollArea className="h-48">
                             {teamMembers?.map(member => (
-                                <DropdownMenuItem key={member.id} onClick={() => setSelectedMemberId(member.id)} className="gap-3 font-semibold text-xs py-2 rounded-xl cursor-pointer">
+                                <DropdownMenuItem key={member.id} onClick={() => setSelectedMemberId(member.id)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                     <Avatar className="h-6 w-6">
                                         <AvatarImage src={member.photoURL} />
                                         <AvatarFallback className="text-[8px]">{member.name?.charAt(0)}</AvatarFallback>
