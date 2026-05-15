@@ -450,23 +450,17 @@ function PageEditorContent() {
                                 <AvatarImage src={creatorProfile?.photoURL} />
                                 <AvatarFallback className="text-[7px] font-bold bg-primary/5 text-primary">{creatorProfile?.name?.charAt(0) || '?'}</AvatarFallback>
                             </Avatar>
-                            <div className="flex flex-col">
-                                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-300 leading-none">Created by</span>
-                                <span className="text-[10px] font-bold text-slate-400 leading-tight">
-                                    {creatorProfile?.id === user?.uid ? 'You' : creatorProfile?.name?.split(' ')[0] || 'Team'}
-                                </span>
-                            </div>
+                            <span className="text-[10px] font-bold text-slate-400 leading-tight">
+                                Created by <span className="text-slate-900">{creatorProfile?.id === user?.uid ? 'You' : creatorProfile?.name?.split(' ')[0] || 'Team'}</span>
+                            </span>
                         </div>
                         
                         {typingCollaborators.length > 0 && (
-                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-500">
-                                <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                                <div className="flex flex-col">
-                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-primary leading-none">Collaborating</span>
-                                    <span className="text-[10px] font-bold text-primary leading-tight">
-                                        {typingCollaborators[0].name?.split(' ')[0]} {typingCollaborators.length > 1 ? `+${typingCollaborators.length - 1}` : 'is typing...'}
-                                    </span>
-                                </div>
+                            <div className="flex items-center gap-2 animate-in fade-in duration-500">
+                                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                <span className="text-[10px] font-bold text-primary leading-tight">
+                                    Collaborating: {typingCollaborators[0].name?.split(' ')[0]} {typingCollaborators.length > 1 ? `+${typingCollaborators.length - 1}` : ''}
+                                </span>
                             </div>
                         )}
 

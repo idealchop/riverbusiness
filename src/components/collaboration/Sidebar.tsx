@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, memo, useCallback } from 'react';
+import React, { useState, useMemo, memo, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -187,7 +187,7 @@ const NavItem = memo(({
                             pages={pages}
                             activePageId={activePageId}
                             expandedPages={expandedPages}
-                            onToggleExpand={onToggleExpand}
+                            onToggleExpand={toggleExpand}
                             onCreatePage={onCreatePage}
                             onFavorite={onFavorite}
                             onTrash={onTrash}
@@ -209,7 +209,16 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [pageToTrash, setPageToTrash] = useState<string | null>(null);
-  const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
+  
+  // Set default filter to current user's account
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(user?.id || 'all');
+
+  // Ensure filter matches current user once available
+  useEffect(() => {
+      if (user?.id && selectedMemberId === 'all') {
+          setSelectedMemberId(user.id);
+      }
+  }, [user?.id, selectedMemberId]);
 
   const teamQuery = useMemoFirebase(() => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null, [firestore, companyId]);
   const { data: teamMembers } = useCollection<AppUser>(teamQuery);
@@ -353,7 +362,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
-            {favorites.length > 0 && !searchQuery && selectedMemberId === 'all' && (
+            {favorites.length > 0 && !searchQuery && selectedMemberId === user?.id && (
                 <div className="space-y-1">
                     <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Favorites</h4>
                     <div className="space-y-0.5">
@@ -376,7 +385,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
             <div className="space-y-1">
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">
-                    {selectedMemberId === 'all' ? 'Documents' : 'Filtered results'}
+                    {selectedMemberId === 'all' ? 'Team library' : (selectedMemberId === user?.id ? 'My Workspace' : 'Documents')}
                 </h4>
                 <div className="space-y-0.5">
                     {rootPages.map(page => (
