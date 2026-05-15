@@ -10,7 +10,9 @@ import {
   Video, 
   Image as ImageIcon, 
   FileText,
-  Bookmark
+  Bookmark,
+  Edit,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import Link from 'next/link';
 import type { HRLearningModule, AppUser } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -41,12 +44,20 @@ export default function ModuleDetailPage() {
   );
   const { data: module, isLoading: isModuleLoading } = useDoc<HRLearningModule>(moduleRef);
 
-  // Unified loading handler
+  const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+
+  // Robust loading handler
   if (isUserLoading || isUserDocLoading || (isModuleLoading && companyId)) {
     return <FullScreenLoader text="Opening training material..." />;
   }
 
-  if (!module) {
+  // Handle unauthorized or missing company context
+  if (!isUserDocLoading && !user) {
+      router.push('/login');
+      return null;
+  }
+
+  if (!module && !isModuleLoading && companyId) {
     return (
         <div className="h-screen flex flex-col items-center justify-center bg-white space-y-6 text-center px-6">
             <div className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100 shadow-inner opacity-40">
@@ -64,6 +75,8 @@ export default function ModuleDetailPage() {
         </div>
     );
   }
+
+  if (!module) return null;
 
   const getEmbedUrl = (url: string) => {
     if (!url) return '';
@@ -86,24 +99,38 @@ export default function ModuleDetailPage() {
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
         {/* Document Header Control */}
         <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-4 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
                 <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => router.push('/hr-dashboard/modules')}
-                    className="h-9 px-3 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
+                    className="h-9 px-2 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Back to Hub</span>
+                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Hub</span>
                 </Button>
-                <div className="h-4 w-px bg-slate-100 hidden sm:block" />
-                <div className="flex items-center gap-2">
+                <ChevronRight className="h-3.5 w-3.5 text-slate-200 shrink-0" />
+                <div className="flex items-center gap-2 overflow-hidden">
                     <Badge variant="outline" className="bg-primary/5 text-primary border-none font-black text-[9px] uppercase tracking-widest h-5 px-2 whitespace-nowrap">
                         {module.category}
                     </Badge>
+                    <span className="text-xs font-bold text-slate-900 truncate max-w-[150px] sm:max-w-xs">{module.title}</span>
                 </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+                {isManager && (
+                    <Button 
+                        asChild
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-9 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest text-primary hover:bg-primary/5"
+                    >
+                        <Link href={`/hr-dashboard/modules/${moduleId}/edit`}>
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit Module
+                        </Link>
+                    </Button>
+                )}
                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400">
                     <Bookmark className="h-4 w-4" />
                 </Button>
@@ -129,7 +156,7 @@ export default function ModuleDetailPage() {
 
                     {/* Rich Media Section */}
                     {module.contentType === 'video' && module.contentUrl && (
-                        <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-8 border-slate-50 group">
+                        <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-8 border-slate-50">
                             <iframe 
                                 src={getEmbedUrl(module.contentUrl)} 
                                 className="absolute inset-0 w-full h-full"

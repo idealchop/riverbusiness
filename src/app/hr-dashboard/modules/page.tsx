@@ -29,9 +29,9 @@ import {
 import { useUser, useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
-import { LearningModuleDialog } from '@/components/hr/LearningModuleDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import type { HRLearningModule, AppUser } from '@/lib/types';
 
@@ -54,8 +54,6 @@ export default function LearningHubPage() {
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const [moduleToEdit, setModuleToEdit] = useState<HRLearningModule | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -88,11 +86,6 @@ export default function LearningHubPage() {
     }
   };
 
-  const handleEditModule = (module: HRLearningModule) => {
-    setModuleToEdit(module);
-    setIsManageDialogOpen(true);
-  };
-
   const handleLaunchModule = (module: HRLearningModule) => {
     router.push(`/hr-dashboard/modules/${module.id}`);
   };
@@ -112,10 +105,12 @@ export default function LearningHubPage() {
           <p className="text-slate-500 font-medium text-sm">Design and Browse Training Materials.</p>
         </div>
         <Button 
-            onClick={() => { setModuleToEdit(null); setIsManageDialogOpen(true); }}
+            asChild
             className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
         >
-            <Plus className="mr-2 h-4 w-4" /> Create Module
+            <Link href="/hr-dashboard/modules/create">
+                <Plus className="mr-2 h-4 w-4" /> Create Module
+            </Link>
         </Button>
       </div>
 
@@ -169,14 +164,16 @@ export default function LearningHubPage() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
-                                <DropdownMenuItem onClick={() => handleEditModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                    <Edit className="h-3.5 w-3.5" /> Edit
+                                <DropdownMenuItem asChild className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
+                                    <Link href={`/hr-dashboard/modules/${module.id}/edit`}>
+                                        <Edit className="h-3.5 w-3.5" /> Edit
+                                    </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
                                     <Share2 className="h-3.5 w-3.5" /> Share
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-50" />
-                                <DropdownMenuItem onClick={() => handleDeleteModule(module.id)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                                <DropdownMenuItem onClick={() => handleDeleteModule(module.id!)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
                                     <Trash2 className="h-3.5 w-3.5" /> Delete
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -199,13 +196,6 @@ export default function LearningHubPage() {
             </Card>
         ))}
       </div>
-
-      <LearningModuleDialog 
-        isOpen={isManageDialogOpen}
-        onOpenChange={setIsManageDialogOpen}
-        companyId={companyId}
-        moduleToEdit={moduleToEdit}
-      />
     </div>
   );
 }
