@@ -46,12 +46,10 @@ export default function ModuleDetailPage() {
 
   const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
-  // Robust loading handler
   if (isUserLoading || isUserDocLoading || (isModuleLoading && companyId)) {
     return <FullScreenLoader text="Opening training material..." />;
   }
 
-  // Handle unauthorized or missing company context
   if (!isUserDocLoading && !user) {
       router.push('/login');
       return null;
@@ -182,9 +180,10 @@ export default function ModuleDetailPage() {
                     {module.contentType === 'article' && module.textContent && (
                         <div className="pt-10 border-t border-slate-50">
                             <div className="prose prose-slate max-w-none">
-                                <div className="whitespace-pre-wrap text-slate-700 leading-loose text-lg font-normal bg-slate-50/40 p-8 sm:p-12 rounded-[2.5rem] border border-slate-100 shadow-inner italic">
-                                    {module.textContent}
-                                </div>
+                                <div 
+                                    className="text-slate-700 leading-loose text-lg font-normal bg-slate-50/40 p-8 sm:p-12 rounded-[2.5rem] border border-slate-100 shadow-inner italic"
+                                    dangerouslySetInnerHTML={{ __html: module.textContent }}
+                                />
                             </div>
                         </div>
                     )}

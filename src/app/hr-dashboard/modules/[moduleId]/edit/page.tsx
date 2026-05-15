@@ -27,9 +27,38 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ArrowLeft, BookOpen, Save, Loader2, Edit, X } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Save, 
+  Loader2, 
+  Edit, 
+  X,
+  Bold,
+  Italic,
+  List,
+  Heading1,
+  Heading2,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Palette,
+  Underline as UnderlineIcon,
+  CheckSquare
+} from 'lucide-react';
 import type { AppUser, HRLearningModule } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Placeholder from '@tiptap/extension-placeholder';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -41,6 +70,14 @@ const moduleSchema = z.object({
 });
 
 type ModuleFormValues = z.infer<typeof moduleSchema>;
+
+const COLORS = [
+    { label: 'Slate', value: '#64748b' },
+    { label: 'Blue', value: '#3b82f6' },
+    { label: 'Green', value: '#22c55e' },
+    { label: 'Red', value: '#ef4444' },
+    { label: 'Purple', value: '#a855f7' },
+];
 
 export default function EditModulePage() {
   const router = useRouter();
@@ -76,6 +113,23 @@ export default function EditModulePage() {
     }
   });
 
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Placeholder.configure({ placeholder: 'Edit your training documentation...' }),
+    ],
+    onUpdate: ({ editor }) => {
+      form.setValue('textContent', editor.getHTML());
+    }
+  });
+
   useEffect(() => {
     if (module) {
       form.reset({
@@ -86,8 +140,11 @@ export default function EditModulePage() {
         contentUrl: module.contentUrl || '',
         textContent: module.textContent || '',
       });
+      if (editor && module.textContent) {
+          editor.commands.setContent(module.textContent);
+      }
     }
-  }, [module, form]);
+  }, [module, form, editor]);
 
   const onSubmit = async (values: ModuleFormValues) => {
     if (!firestore || !companyId || !moduleId) return;
@@ -119,7 +176,7 @@ export default function EditModulePage() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
         {/* Editor Header */}
-        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
+        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
                 <Button 
                     variant="ghost" 
@@ -147,10 +204,10 @@ export default function EditModulePage() {
         </div>
 
         <ScrollArea className="flex-1">
-            <div className="max-w-3xl mx-auto px-6 py-12 pb-40">
+            <div className="max-w-4xl mx-auto px-6 py-12 pb-40">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
-                        <div className="space-y-8">
+                        <div className="space-y-10">
                             <FormField
                                 control={form.control}
                                 name="title"
@@ -193,7 +250,7 @@ export default function EditModulePage() {
                                                 <SelectContent className="rounded-2xl">
                                                     <SelectItem value="video">Instructional Video</SelectItem>
                                                     <SelectItem value="image">Visual Infographic</SelectItem>
-                                                    <SelectItem value="article">Text Article</SelectItem>
+                                                    <SelectItem value="article">Text Document</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -210,7 +267,7 @@ export default function EditModulePage() {
                                         <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Module Brief</FormLabel>
                                         <FormControl>
                                             <Textarea 
-                                                className="rounded-3xl min-h-[100px] bg-slate-50 border-slate-100 text-lg font-medium leading-relaxed p-6" 
+                                                className="rounded-3xl min-h-[80px] bg-slate-50 border-slate-100 text-lg font-medium leading-relaxed p-6" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -234,22 +291,45 @@ export default function EditModulePage() {
                             )}
 
                             {selectedType === 'article' && (
-                                <FormField
-                                    control={form.control}
-                                    name="textContent"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-3 pt-4 animate-in fade-in slide-in-from-top-2">
-                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
-                                            <FormControl>
-                                                <Textarea 
-                                                    className="rounded-[2.5rem] min-h-[400px] bg-slate-50/50 border-slate-100 font-medium leading-loose text-lg p-10 italic shadow-inner" 
-                                                    {...field} 
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-3">
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Full Documentation</FormLabel>
+                                    </div>
+                                    
+                                    {/* Tiptap Toolbar */}
+                                    {editor && (
+                                        <div className="sticky top-20 z-40 w-full p-1.5 bg-white border border-slate-200 shadow-xl rounded-2xl flex flex-wrap items-center gap-1">
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} />
+                                            <Separator orientation="vertical" className="h-6 mx-1" />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon className="h-4 w-4" />} />
+                                            <Separator orientation="vertical" className="h-6 mx-1" />
+                                            <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} icon={<AlignLeft className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} icon={<AlignCenter className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} icon={<AlignRight className="h-4 w-4" />} />
+                                            <Separator orientation="vertical" className="h-6 mx-1" />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} />
+                                            <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} />
+                                            <Separator orientation="vertical" className="h-6 mx-1" />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl"><Palette className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent className="p-2 grid grid-cols-5 gap-1 rounded-xl bg-white border-slate-100">
+                                                    {COLORS.map(c => (
+                                                        <button key={c.value} type="button" onClick={() => editor.chain().focus().setColor(c.value).run()} className="h-6 w-6 rounded-full border" style={{ backgroundColor: c.value }} />
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     )}
-                                />
+
+                                    <div className="min-h-[500px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100 shadow-inner">
+                                        <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none" />
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </form>
@@ -259,3 +339,23 @@ export default function EditModulePage() {
     </div>
   );
 }
+
+function ToolbarButton({ onClick, active, icon }: any) {
+    return (
+        <Button 
+            type="button"
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.preventDefault(); onClick(); }}
+            className={cn("h-8 w-8 rounded-xl transition-all", active ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-100")}
+        >
+            {icon}
+        </Button>
+    );
+}
+
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
