@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
@@ -146,6 +146,26 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       }
     }
   }, [storage, auth, toast, isMounted, companyId]);
+
+  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadAndInsertImage(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const acceptAiSuggestion = () => {
+    if (!aiPreview || !editor) return;
+    setAiPreview(null);
+    toast({ title: 'Suggestion accepted' });
+  };
+
+  const discardAiSuggestion = () => {
+    if (!aiPreview || !editor) return;
+    const { from, to, originalText } = aiPreview;
+    editor.chain().focus().deleteRange(from, to).insertContentAt(from, originalText).run();
+    setAiPreview(null);
+    toast({ title: 'Suggestion discarded' });
+  };
 
   const CustomImage = ImageExtension.extend({
     addAttributes() {
