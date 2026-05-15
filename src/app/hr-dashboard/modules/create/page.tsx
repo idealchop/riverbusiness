@@ -22,54 +22,21 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { 
-  ArrowLeft, 
   Save, 
   Loader2, 
   FilePlus,
-  Bold,
-  Italic,
-  List,
-  Heading1,
-  Heading2,
-  Heading3,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Palette,
-  Underline as UnderlineIcon,
-  CheckSquare,
   X,
-  Type,
-  ChevronDown,
-  Baseline
+  ChevronDown
 } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import TextAlign from '@tiptap/extension-text-align';
-import TextStyle from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import Highlight from '@tiptap/extension-highlight';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
-import Placeholder from '@tiptap/extension-placeholder';
+import { Editor } from '@/components/collaboration/Editor';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuTrigger,
-    DropdownMenuLabel
-} from '@/components/ui/dropdown-menu';
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -77,23 +44,10 @@ const moduleSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   contentType: z.enum(['video', 'image', 'article']),
   contentUrl: z.string().url('Invalid URL format').optional().or(z.literal('')),
-  textContent: z.string().optional(),
+  textContent: z.any().optional(),
 });
 
 type ModuleFormValues = z.infer<typeof moduleSchema>;
-
-const COLORS = [
-    { label: 'Default', value: 'inherit' },
-    { label: 'Slate', value: '#64748b' },
-    { label: 'Red', value: '#ef4444' },
-    { label: 'Orange', value: '#f97316' },
-    { label: 'Amber', value: '#f59e0b' },
-    { label: 'Green', value: '#22c55e' },
-    { label: 'Blue', value: '#3b82f6' },
-    { label: 'Indigo', value: '#6366f1' },
-    { label: 'Purple', value: '#a855f7' },
-    { label: 'Pink', value: '#ec4899' },
-];
 
 export default function CreateModulePage() {
   const router = useRouter();
@@ -101,8 +55,6 @@ export default function CreateModulePage() {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -118,34 +70,8 @@ export default function CreateModulePage() {
       category: 'General',
       contentType: 'article',
       contentUrl: '',
-      textContent: '',
+      textContent: { type: 'doc', content: [{ type: 'paragraph' }] },
     }
-  });
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] }
-      }),
-      Underline,
-      TextStyle,
-      Color,
-      Highlight.configure({ multicolor: true }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Placeholder.configure({ placeholder: 'Start typing your training documentation here...' }),
-    ],
-    editorProps: {
-        attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40'
-        }
-    },
-    onUpdate: ({ editor }) => {
-      form.setValue('textContent', editor.getHTML(), { shouldDirty: true });
-    },
-    onFocus: () => setIsFocused(true),
-    onBlur: () => setIsFocused(false),
   });
 
   const onSubmit = async (values: ModuleFormValues) => {
@@ -293,7 +219,7 @@ export default function CreateModulePage() {
                                     control={form.control}
                                     name="contentUrl"
                                     render={({ field }) => (
-                                        <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <FormItem className="space-y-3">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
                                             <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs shadow-none focus:ring-0 focus-visible:ring-0" {...field} /></FormControl>
                                             <FormMessage />
@@ -303,55 +229,14 @@ export default function CreateModulePage() {
                             )}
 
                             {selectedType === 'article' && (
-                                <div 
-                                    className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2"
-                                    onMouseEnter={() => setIsHovering(true)}
-                                    onMouseLeave={() => setIsHovering(false)}
-                                >
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Documentation Content</FormLabel>
-                                    
-                                    {editor && (
-                                        <div className={cn(
-                                            "sticky top-20 z-40 mx-auto w-fit p-1.5 bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-[2rem] flex items-center gap-1 transition-all duration-300",
-                                            (isFocused || isHovering) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
-                                        )}>
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} icon={<Heading3 className="h-4 w-4" />} />
-                                            <Separator orientation="vertical" className="h-6 mx-1" />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon className="h-4 w-4" />} />
-                                            <Separator orientation="vertical" className="h-6 mx-1" />
-                                            <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} icon={<AlignLeft className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} icon={<AlignCenter className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} icon={<AlignRight className="h-4 w-4" />} />
-                                            <Separator orientation="vertical" className="h-6 mx-1" />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} />
-                                            <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} />
-                                            <Separator orientation="vertical" className="h-6 mx-1" />
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl"><Baseline className="h-4 w-4" /></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent className="p-2 grid grid-cols-5 gap-1 rounded-xl bg-white border-slate-100 shadow-2xl">
-                                                    {COLORS.map(c => (
-                                                        <button key={c.value} type="button" onClick={() => editor.chain().focus().setColor(c.value === 'inherit' ? '' : c.value).run()} 
-                                                            className={cn("h-6 w-6 rounded-lg border border-slate-100 flex items-center justify-center", editor.getAttributes('textStyle').color === c.value && "ring-2 ring-primary")} 
-                                                            style={{ backgroundColor: c.value === 'inherit' ? 'transparent' : c.value }}>
-                                                            {c.value === 'inherit' && <X className="h-3 w-3 text-slate-400" />}
-                                                        </button>
-                                                    ))}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    )}
-
-                                    <div 
-                                        className="min-h-[600px] transition-all cursor-text border-none outline-none ring-0 focus:ring-0 focus-visible:ring-0"
-                                        onClick={() => editor?.commands.focus()}
-                                    >
-                                        <EditorContent editor={editor} className="outline-none border-none ring-0 focus:ring-0 focus-visible:ring-0" />
+                                <div className="space-y-6 pt-4">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
+                                    <div className="min-h-[500px]">
+                                        <Editor 
+                                            initialContent={form.getValues('textContent')} 
+                                            onContentChange={(json) => form.setValue('textContent', json)}
+                                            companyId={user?.companyId}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -362,18 +247,4 @@ export default function CreateModulePage() {
         </ScrollArea>
     </div>
   );
-}
-
-function ToolbarButton({ onClick, active, icon }: any) {
-    return (
-        <Button 
-            type="button"
-            variant="ghost" 
-            size="icon" 
-            onClick={(e) => { e.preventDefault(); onClick(); }}
-            className={cn("h-8 w-8 rounded-xl transition-all", active ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-100")}
-        >
-            {icon}
-        </Button>
-    );
 }

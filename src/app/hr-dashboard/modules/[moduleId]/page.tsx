@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, Timestamp } from 'firebase/firestore';
@@ -12,7 +12,11 @@ import {
   FileText,
   Bookmark,
   Edit,
-  ChevronRight
+  ChevronRight,
+  Sparkles,
+  Loader2,
+  X,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +27,19 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { HRLearningModule, AppUser } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Editor } from '@/components/collaboration/Editor';
+import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ModuleDetailPage() {
   const { moduleId } = useParams();
   const router = useRouter();
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
+  const { toast } = useToast();
+
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -45,6 +56,37 @@ export default function ModuleDetailPage() {
   const { data: module, isLoading: isModuleLoading } = useDoc<HRLearningModule>(moduleRef);
 
   const isManager = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+
+  const handleGenerateSummary = async () => {
+    if (!module || isAiProcessing) return;
+    
+    setIsAiProcessing(true);
+    toast({ title: 'AI Insights Active', description: 'Generating a high-fidelity summary of this training material.' });
+
+    try {
+        const textToSummarize = module.textContent 
+            ? JSON.stringify(module.textContent) 
+            : module.description;
+
+        const response = await fetch('/api/ai/assistant', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: textToSummarize,
+                action: 'summarize',
+                customGoal: 'Provide a professional executive summary with bullet points for this training module.'
+            })
+        });
+
+        if (!response.ok) throw new Error('AI failed');
+        const data = await response.json();
+        setAiSummary(data.suggestedText);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Intelligence Offline', description: 'Could not generate summary at this time.' });
+    } finally {
+        setIsAiProcessing(false);
+    }
+  };
 
   if (isUserLoading || isUserDocLoading || (isModuleLoading && companyId)) {
     return <FullScreenLoader text="Opening training material..." />;
@@ -116,6 +158,17 @@ export default function ModuleDetailPage() {
                 </div>
             </div>
             <div className="flex items-center gap-2">
+                <Button 
+                    onClick={handleGenerateSummary}
+                    disabled={isAiProcessing}
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 rounded-xl gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-primary hover:bg-primary/5"
+                >
+                    {isAiProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {aiSummary ? 'Regenerate Insights' : 'AI Insights'}
+                </Button>
+
                 {isManager && (
                     <Button 
                         asChild
@@ -152,6 +205,37 @@ export default function ModuleDetailPage() {
                         </p>
                     </div>
 
+                    {/* AI Summary Panel */}
+                    {aiSummary && (
+                        <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden relative group animate-in slide-in-from-top-4 duration-500">
+                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                <Sparkles className="h-20 w-20" />
+                            </div>
+                            <CardContent className="p-10 space-y-6 relative z-10">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-xl bg-primary/20 text-primary-light">
+                                            <Sparkles className="h-5 w-5" />
+                                        </div>
+                                        <h4 className="text-sm font-black uppercase tracking-[0.2em] text-white">Executive Insights</h4>
+                                    </div>
+                                    <button onClick={() => setAiSummary(null)} className="text-white/20 hover:text-white transition-colors">
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                <div className="prose prose-invert max-w-none">
+                                    <p className="text-slate-300 leading-relaxed text-sm font-medium whitespace-pre-wrap">
+                                        {aiSummary}
+                                    </p>
+                                </div>
+                                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">AI Generated Intelligence</p>
+                                    <History className="h-3 w-3 text-white/20" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Rich Media Section */}
                     {module.contentType === 'video' && module.contentUrl && (
                         <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-8 border-slate-50">
@@ -177,14 +261,14 @@ export default function ModuleDetailPage() {
                     )}
 
                     {/* Content Section */}
-                    {module.contentType === 'article' && module.textContent && (
+                    {module.contentType === 'article' && (
                         <div className="pt-10 border-t border-slate-50">
-                            <div className="prose prose-slate max-w-none">
-                                <div 
-                                    className="text-slate-700 leading-loose text-lg font-normal bg-slate-50/40 p-8 sm:p-12 rounded-[2.5rem] border border-slate-100 italic"
-                                    dangerouslySetInnerHTML={{ __html: module.textContent }}
-                                />
-                            </div>
+                            <Editor 
+                                initialContent={module.textContent || { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: module.description }] }] }}
+                                onContentChange={() => {}}
+                                editable={false}
+                                companyId={module.companyId}
+                            />
                         </div>
                     )}
 
