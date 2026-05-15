@@ -20,7 +20,7 @@ import {
     UserCircle,
     Users,
     Check,
-    FilePlus
+    History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -108,7 +108,7 @@ const NavItem = memo(({
                 )}
                 style={{ paddingLeft: `${(level * 12) + 8}px` }}
             >
-                {/* 1. Expansion Trigger - Isolated from Link */}
+                {/* Expansion Trigger - Isolated from Link */}
                 <button 
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExpand(page.id); }}
                     className={cn(
@@ -119,7 +119,7 @@ const NavItem = memo(({
                     {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 </button>
 
-                {/* 2. Page Navigation Link */}
+                {/* Page Navigation Link */}
                 <Link 
                     href={`/workspace/${page.id}`} 
                     className="flex-1 flex items-center gap-2 min-w-0 h-full outline-none"
@@ -130,7 +130,7 @@ const NavItem = memo(({
                     <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
                 </Link>
 
-                {/* 3. Contextual Actions - Positioned to prevent layout shift */}
+                {/* Contextual Actions */}
                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5 shrink-0 bg-inherit pl-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -203,6 +203,7 @@ NavItem.displayName = 'NavItem';
 export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
   const firestore = useFirestore();
   const companyId = user?.companyId || null;
+  const pathname = usePathname();
 
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchTerm] = useState('');
@@ -307,7 +308,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                         <Input 
                             autoFocus
-                            placeholder="Type to filter titles..." 
+                            placeholder="Type to filter..." 
                             value={searchQuery}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="h-8 rounded-xl bg-white border-slate-200 pr-7 text-[10px] font-bold uppercase tracking-widest pl-8 shadow-inner"
@@ -331,7 +332,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         Create new asset
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100">
+                <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white">
                     <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
                         <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
@@ -388,7 +389,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                             onToggleExpand={toggleExpand}
                             onCreatePage={onCreatePage}
                             onFavorite={handleFavorite}
-                            onTrash={setPageToTrash}
+                            onTrash={(id) => setPageToTrash(id)}
                         />
                     ))}
                     {rootPages.length === 0 && (

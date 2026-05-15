@@ -619,7 +619,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className={cn(
-                                        "h-6 w-6 rounded-lg hover:bg-slate-900/5 flex items-center justify-center transition-all",
+                                        "h-6 w-6 rounded-md hover:bg-slate-900/5 flex items-center justify-center transition-all",
                                         isActive ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-slate-300"
                                     )}>
                                         <ChevronDown className="h-3.5 w-3.5" />
@@ -632,7 +632,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     }} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
                                         <Edit className="h-3.5 w-3.5" /> Rename Tab
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleCreateView(v.type)} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
+                                    <DropdownMenuItem onClick={() => handleCreateView(v.type)} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
                                         <Copy className="h-3.5 w-3.5" /> Duplicate View
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-slate-50" />
@@ -670,7 +670,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <div className="flex items-center">
                     {isSearchExpanded ? (
                         <div className="relative flex items-center animate-in slide-in-from-right-1 duration-200">
-                             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                              <Input 
                                 autoFocus
                                 placeholder="Find..." 
@@ -848,7 +848,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             {visibleFields.map((field) => (
                                 <div key={field.id} style={{ width: field.width }} className="group h-10 border-r flex items-center justify-between px-3 shrink-0 relative">
                                     <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                        {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3 w-3 text-slate-400 shrink-0" })}
+                                        {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3.5 w-3.5 text-slate-400 shrink-0" })}
                                         {editingFieldId === field.id ? (
                                             <input 
                                                 autoFocus
