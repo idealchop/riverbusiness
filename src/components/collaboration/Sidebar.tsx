@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -14,13 +14,13 @@ import {
     Trash2, 
     MoreHorizontal,
     PanelLeftClose,
-    History,
     X,
     Grid,
     Layout,
     UserCircle,
     Users,
-    Check
+    Check,
+    FilePlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -60,8 +60,147 @@ interface SidebarProps {
   user: AppUser | null;
 }
 
+/**
+ * Memoized Navigation Item to prevent tree-wide re-renders.
+ * Isolates click events to prevent accidental navigation during expansion.
+ */
+const NavItem = memo(({ 
+    page, 
+    level = 0, 
+    pages, 
+    activePageId, 
+    expandedPages, 
+    onToggleExpand, 
+    onCreatePage,
+    onFavorite,
+    onTrash 
+}: { 
+    page: CollabPage, 
+    level?: number, 
+    pages: CollabPage[], 
+    activePageId: string | null,
+    expandedPages: Record<string, boolean>,
+    onToggleExpand: (id: string) => void,
+    onCreatePage: (parentId: string | null, title: string, type: CollabPageType) => void,
+    onFavorite: (id: string, isFavorite: boolean) => void,
+    onTrash: (id: string) => void
+}) => {
+    const isExpanded = expandedPages[page.id];
+    const isActive = activePageId === page.id;
+    const children = pages.filter(p => p.parentId === page.id);
+    const hasChildren = children.length > 0;
+
+    const getPageIcon = () => {
+        if (page.icon) return <span className="text-xs leading-none select-none">{page.icon}</span>;
+        switch (page.type) {
+            case 'sheet': return <Grid className={cn("h-3.5 w-3.5", isActive ? "text-primary" : "text-slate-400")} />;
+            case 'board': return <Layout className={cn("h-3.5 w-3.5", isActive ? "text-primary" : "text-slate-400")} />;
+            default: return <FileText className={cn("h-3.5 w-3.5", isActive ? "text-primary" : "text-slate-400")} />;
+        }
+    };
+
+    return (
+        <div className="space-y-0.5">
+            <div 
+                className={cn(
+                    "group flex items-center h-8 rounded-lg transition-all relative pr-2",
+                    isActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                )}
+                style={{ paddingLeft: `${(level * 12) + 8}px` }}
+            >
+                {/* 1. Expansion Trigger - Isolated from Link */}
+                <button 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExpand(page.id); }}
+                    className={cn(
+                        "h-6 w-6 rounded-md hover:bg-slate-200/50 flex items-center justify-center transition-colors shrink-0",
+                        !hasChildren && "opacity-0 pointer-events-none"
+                    )}
+                >
+                    {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                </button>
+
+                {/* 2. Page Navigation Link */}
+                <Link 
+                    href={`/workspace/${page.id}`} 
+                    className="flex-1 flex items-center gap-2 min-w-0 h-full outline-none"
+                >
+                    <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                        {getPageIcon()}
+                    </div>
+                    <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
+                </Link>
+
+                {/* 3. Contextual Actions - Positioned to prevent layout shift */}
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5 shrink-0 bg-inherit pl-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
+                                <Plus className="h-3.5 w-3.5" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100 bg-white">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-2 py-1.5 tracking-widest">New Sub-Item</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => onCreatePage(page.id, 'New Doc', 'doc')} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
+                                <FileText className="h-3.5 w-3.5 text-blue-500" /> New Doc
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onCreatePage(page.id, 'New Sheet', 'sheet')} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
+                                <Grid className="h-3.5 w-3.5 text-green-500" /> New Sheet
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onCreatePage(page.id, 'New Board', 'board')} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5">
+                                <Layout className="h-3.5 w-3.5 text-purple-500" /> New Board
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <button 
+                        onClick={(e) => { e.preventDefault(); onFavorite(page.id, !page.isFavorite); }}
+                        className={cn(
+                            "h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center transition-colors",
+                            page.isFavorite ? "text-amber-500" : "text-slate-400 hover:text-amber-500"
+                        )}
+                    >
+                        <Star className={cn("h-3.5 w-3.5", page.isFavorite && "fill-current")} />
+                    </button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100 bg-white">
+                            <DropdownMenuItem onClick={() => onTrash(page.id)} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer py-2.5">
+                                <Trash2 className="h-3.5 w-3.5" /> Move to trash
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+
+            {isExpanded && hasChildren && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                    {children.map(child => (
+                        <NavItem 
+                            key={child.id} 
+                            page={child} 
+                            level={level + 1} 
+                            pages={pages}
+                            activePageId={activePageId}
+                            expandedPages={expandedPages}
+                            onToggleExpand={onToggleExpand}
+                            onCreatePage={onCreatePage}
+                            onFavorite={onFavorite}
+                            onTrash={onTrash}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+NavItem.displayName = 'NavItem';
+
 export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
-  const pathname = usePathname();
   const firestore = useFirestore();
   const companyId = user?.companyId || null;
 
@@ -74,11 +213,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const teamQuery = useMemoFirebase(() => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null, [firestore, companyId]);
   const { data: teamMembers } = useCollection<AppUser>(teamQuery);
 
-  const toggleExpand = (e: React.MouseEvent, pageId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggleExpand = useCallback((pageId: string) => {
     setExpandedPages(prev => ({ ...prev, [pageId]: !prev[pageId] }));
-  };
+  }, []);
+
+  const handleFavorite = useCallback((pageId: string, isFavorite: boolean) => {
+    window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId, isFavorite } }));
+  }, []);
 
   const filteredPages = useMemo(() => {
       let list = pages;
@@ -93,107 +234,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
   const favorites = pages.filter(p => p.isFavorite);
   const rootPages = filteredPages.filter(p => !p.parentId);
-
-  const getPageIcon = (page: CollabPage, isActive: boolean) => {
-    if (page.icon) return <span className="text-xs leading-none select-none">{page.icon}</span>;
-    
-    const type = page.type || 'doc';
-    switch (type) {
-        case 'sheet': return <Grid className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400")} />;
-        case 'board': return <Layout className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400")} />;
-        default: return <FileText className={cn("h-4 w-4", isActive ? "text-primary" : "text-slate-400")} />;
-    }
-  };
-
-  const NavItem = ({ page, level = 0 }: { page: CollabPage, level?: number }) => {
-    const isExpanded = expandedPages[page.id];
-    const isActive = activePageId === page.id;
-    const children = pages.filter(p => p.parentId === page.id);
-    const hasChildren = children.length > 0;
-
-    return (
-      <div className="space-y-0.5">
-        <Link href={`/workspace/${page.id}`}>
-          <div className={cn(
-            "group flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer relative",
-            isActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-          )} style={{ paddingLeft: `${(level * 16) + 12}px` }}>
-            
-            <button 
-                onClick={(e) => toggleExpand(e, page.id)}
-                className={cn(
-                    "h-5 w-5 rounded hover:bg-slate-200 flex items-center justify-center transition-colors",
-                    !hasChildren && "opacity-0 pointer-events-none"
-                )}
-            >
-              {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-            </button>
-
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="w-4 h-4 shrink-0 flex items-center justify-center">
-                    {getPageIcon(page, isActive)}
-                </div>
-                <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
-            </div>
-
-            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
-                            <Plus className="h-3.5 w-3.5" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-2 py-1.5 tracking-widest">New Sub-Item</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id, 'New Doc', 'doc'); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
-                            <FileText className="h-3.5 w-3.5 text-blue-500" /> New Doc
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id, 'New Sheet', 'sheet'); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
-                            <Grid className="h-3.5 w-3.5 text-green-500" /> New Sheet
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCreatePage(page.id, 'New Board', 'board'); }} className="gap-2 text-xs font-semibold rounded-lg cursor-pointer">
-                            <Layout className="h-3.5 w-3.5 text-purple-500" /> New Board
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                <button 
-                    onClick={(e) => { 
-                        e.preventDefault(); 
-                        e.stopPropagation(); 
-                        window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }));
-                    }}
-                    className={cn(
-                        "h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center transition-colors",
-                        page.isFavorite ? "text-amber-500" : "text-slate-400 hover:text-amber-500"
-                    )}
-                    title={page.isFavorite ? "Remove from favorites" : "Add to favorites"}
-                >
-                    <Star className={cn("h-3.5 w-3.5", page.isFavorite && "fill-current")} />
-                </button>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center">
-                            <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
-                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); setPageToTrash(page.id); }} className="gap-2 text-xs font-semibold text-red-600 rounded-lg cursor-pointer">
-                            <Trash2 className="h-3.5 w-3.5" /> Move to trash
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-          </div>
-        </Link>
-        {isExpanded && hasChildren && (
-          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-            {children.map(child => <NavItem key={child.id} page={child} level={level + 1} />)}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className={cn(
@@ -224,13 +264,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         >
                             <UserCircle className="h-3.5 w-3.5 text-primary" />
                             <span className="truncate max-w-[120px]">
-                                {selectedMemberId === 'all' ? 'Team docs' : teamMembers?.find(m => m.id === selectedMemberId)?.name || 'Member'}
+                                {selectedMemberId === 'all' ? 'Team library' : teamMembers?.find(m => m.id === selectedMemberId)?.name || 'Member'}
                             </span>
                             <ChevronDown className="h-3 w-3 ml-auto text-slate-300" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em] border-b mb-1">Organization Filter</DropdownMenuLabel>
+                    <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white z-[60]">
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em] border-b mb-1">Contributor Filter</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => setSelectedMemberId('all')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                             <div className="p-1.5 rounded-lg bg-slate-50 text-slate-400"><Users className="h-3.5 w-3.5" /></div>
                             All Team Documents
@@ -243,7 +283,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                         <AvatarImage src={member.photoURL} />
                                         <AvatarFallback className="text-[8px]">{member.name?.charAt(0)}</AvatarFallback>
                                     </Avatar>
-                                    <span className="truncate flex-1">{member.name} {member.id === user?.id && '(You)'}</span>
+                                    <span className="truncate flex-1 font-bold">{member.name} {member.id === user?.id && '(You)'}</span>
                                     {selectedMemberId === member.id && <Check className="h-3 w-3 text-primary" />}
                                 </DropdownMenuItem>
                             ))}
@@ -267,7 +307,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                         <Input 
                             autoFocus
-                            placeholder="Type to filter..." 
+                            placeholder="Type to filter titles..." 
                             value={searchQuery}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="h-8 rounded-xl bg-white border-slate-200 pr-7 text-[10px] font-bold uppercase tracking-widest pl-8 shadow-inner"
@@ -288,11 +328,11 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900"
                     >
                         <Plus className="h-4 w-4" />
-                        New workspace item
+                        Create new asset
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100">
-                    <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">Asset Creator</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
                         <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
                         Rich Text Document
@@ -319,11 +359,11 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         {favorites.map(p => (
                              <Link key={p.id} href={`/workspace/${p.id}`}>
                                 <div className={cn(
-                                    "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                                    activePageId === p.id ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                                    "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-bold transition-all",
+                                    activePageId === p.id ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
                                 )}>
                                     <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
-                                        {getPageIcon(p, activePageId === p.id)}
+                                        <Star className={cn("h-3.5 w-3.5", activePageId === p.id ? "fill-primary text-primary" : "fill-amber-400 text-amber-400")} />
                                     </div>
                                     <span className="truncate">{p.title || 'Untitled'}</span>
                                 </div>
@@ -335,14 +375,26 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
             <div className="space-y-1">
                 <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">
-                    {selectedMemberId === 'all' ? 'Workspace' : 'Filtered Content'}
+                    {selectedMemberId === 'all' ? 'Documents' : 'Filtered results'}
                 </h4>
                 <div className="space-y-0.5">
-                    {rootPages.map(page => <NavItem key={page.id} page={page} />)}
+                    {rootPages.map(page => (
+                        <NavItem 
+                            key={page.id} 
+                            page={page} 
+                            pages={pages}
+                            activePageId={activePageId}
+                            expandedPages={expandedPages}
+                            onToggleExpand={toggleExpand}
+                            onCreatePage={onCreatePage}
+                            onFavorite={handleFavorite}
+                            onTrash={setPageToTrash}
+                        />
+                    ))}
                     {rootPages.length === 0 && (
                         <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                {selectedMemberId === 'all' ? 'Empty workspace' : 'No matches found'}
+                                {selectedMemberId === 'all' ? 'Empty library' : 'No records found'}
                             </p>
                         </div>
                     )}
@@ -353,13 +405,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       <div className="p-4 mt-auto border-t bg-slate-50/50 space-y-1">
         <Link href="/workspace/recent">
-            <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                <History className="h-4 w-4" /> Recently Edited
+            <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/recent' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900')}>
+                <History className="h-4 w-4" /> Recent edits
             </Button>
         </Link>
         <Link href="/workspace/trash">
-            <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900')}>
-                <Trash2 className="h-4 w-4" /> Trash Bin
+            <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900')}>
+                <Trash2 className="h-4 w-4" /> Trash bin
             </Button>
         </Link>
       </div>
@@ -369,7 +421,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">Move to trash?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-bold leading-relaxed pt-2">
-              This document will be removed from your workspace but can be restored from the trash folder within 30 days.
+              This document will be removed from the active team library but can be restored from the trash bin within 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
