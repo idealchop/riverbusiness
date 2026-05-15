@@ -676,7 +676,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-[320px] sm:w-[400px] p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
-                        <div className="p-4 border-b bg-slate-50 flex items-center justify-between">
+                        <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Protocol</h4>
                             <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="h-7 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">Clear All</Button>
                         </div>
@@ -864,6 +864,23 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     </DropdownMenu>
                                 </div>
                             ))}
+                            {/* Permanent Add Column Button */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="h-10 w-12 flex items-center justify-center hover:bg-slate-50 border-r shrink-0 text-slate-300 hover:text-primary transition-all group outline-none">
+                                        <Plus className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white z-[60]">
+                                    <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New Column Logic</DropdownMenuLabel>
+                                    {FIELD_TYPES.map(ft => (
+                                        <DropdownMenuItem key={ft.type} onClick={() => addField(ft.type)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                            {React.createElement(FIELD_ICONS[ft.type], { className: "h-3.5 w-3.5 opacity-40" })}
+                                            {ft.label}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
 
                         <div className="divide-y">
