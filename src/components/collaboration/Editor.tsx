@@ -124,7 +124,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     setIsUploading(true);
     setUploadProgress(0);
     
-    // Align with Client ID and Organization
     const targetPath = companyId || 'unassigned';
     const path = `collab_images/${targetPath}/${Date.now()}-${file.name}`;
 
@@ -135,14 +134,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       
       if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src: url }).run();
-          toast({ 
-              title: 'Asset synchronized', 
-              description: 'The image has been securely uploaded to the organizational cloud.' 
-          });
+          toast({ title: 'Asset synchronized' });
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      if (isMounted) toast({ variant: 'destructive', title: 'Synchronization failed', description: 'Unauthorized or network error.' });
+      if (isMounted) toast({ variant: 'destructive', title: 'Synchronization failed' });
     } finally {
       if (isMounted) {
         setIsUploading(false);
@@ -185,7 +181,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         types: ['heading', 'paragraph'],
       }),
       Placeholder.configure({
-        placeholder: 'Press "/" for commands...',
+        placeholder: 'Architecture blueprint... Start typing or press "/" for commands.',
       }),
       TaskList,
       TaskItem.configure({
@@ -219,30 +215,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-slate max-w-none focus:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40'
+            class: 'prose prose-slate max-w-none focus:outline-none focus:ring-0 focus-visible:ring-0 min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40 border-none outline-none'
         },
-        handleDrop: (view, event, slice, moved) => {
-            if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
-                const file = event.dataTransfer.files[0];
-                if (file.type.startsWith('image/')) {
-                    event.preventDefault();
-                    uploadAndInsertImage(file);
-                    return true;
-                }
-            }
-            return false;
-        },
-        handlePaste: (view, event) => {
-            if (event.clipboardData && event.clipboardData.files && event.clipboardData.files[0]) {
-                const file = event.clipboardData.files[0];
-                if (file.type.startsWith('image/')) {
-                    event.preventDefault();
-                    uploadAndInsertImage(file);
-                    return true;
-                }
-            }
-            return false;
-        }
     }
   }, [uploadAndInsertImage, isMounted]);
 
@@ -259,38 +233,28 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         const streamDoc = async () => {
             setIsAiProcessing(true);
             setAiStatus('Architecting content...');
-            
             try {
                 const response = await fetch('/api/ai/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: initialPrompt })
                 });
-
                 if (!response.body) throw new Error('Stream failed');
-
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let accumulatedHtml = '';
-
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-
                     const chunk = decoder.decode(value, { stream: true });
                     accumulatedHtml += chunk;
-                    
                     if (isMounted && editor && !editor.isDestroyed) {
                         editor.commands.setContent(accumulatedHtml, false);
                     }
                 }
-
                 if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
-                    toast({ 
-                        title: 'Draft finalized', 
-                        description: 'The AI-generated structural blueprint is now active.' 
-                    });
+                    toast({ title: 'Draft finalized' });
                 }
             } catch (error) {
                 console.error('Streaming error:', error);
@@ -302,70 +266,31 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 }
             }
         };
-
         streamDoc();
     }
   }, [initialPrompt, editor, onContentChange, toast, isMounted]);
 
-  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        uploadAndInsertImage(file);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const setLink = () => {
-    if (!editor || editor.isDestroyed) return;
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('Enter link URL', previousUrl);
-
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
-
   const callAiAssistant = async (action: string, customInstruction?: string) => {
     if (!editor || editor.isDestroyed) return;
-    
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, ' ');
     const textToProcess = selectedText || editor.getText();
     const context = editor.getText();
-
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Selection required', description: 'Highlight text for processing.' });
+        toast({ variant: 'destructive', title: 'Selection required' });
         return;
     }
-
     setIsAiProcessing(true);
     setShowAiToolbar(false);
     setAiStatus('Intelligence protocol active...');
-    
-    toast({ 
-        title: 'Intelligence active', 
-        description: 'The AI assistant is analyzing your content for high-fidelity optimization.' 
-    });
-
     try {
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: textToProcess,
-          action,
-          customGoal: customInstruction,
-          context
-        })
+        body: JSON.stringify({ text: textToProcess, action, customGoal: customInstruction, context })
       });
-
       if (!response.ok) throw new Error('Assistant error');
-
       const data = await response.json();
-
       if (data && data.suggestedText && isMounted && !editor.isDestroyed) {
           if (selectedText) {
               const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
@@ -375,11 +300,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
           }
-          
-          toast({ 
-              title: 'Analysis complete', 
-              description: 'The AI has provided refined suggestions for your review.' 
-          });
+          toast({ title: 'Analysis complete' });
       }
     } catch (error: any) {
       if (isMounted) toast({ variant: 'destructive', title: 'Assistant error' });
@@ -389,27 +310,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           setAiStatus('');
       }
     }
-  };
-
-  const discardAiSuggestion = () => {
-      if (!editor || editor.isDestroyed || !aiPreview) return;
-      const { from, to, originalText } = aiPreview;
-      editor.chain().focus().setTextSelection({ from, to }).deleteSelection().insertContentAt(from, originalText).unsetMark('strike').run();
-      setAiPreview(null);
-      toast({ title: 'Suggestion discarded' });
-  };
-
-  const acceptAiSuggestion = () => {
-      if (!editor || editor.isDestroyed || !aiPreview) return;
-      const { from, to, text } = aiPreview;
-      editor.chain().focus().setTextSelection({ from, to }).deleteSelection().unsetMark('strike').insertContentAt(from, text).run();
-      setAiPreview(null);
-      toast({ title: 'Changes accepted', description: 'Content has been successfully integrated.' });
-  };
-
-  const updateImageSize = (width: string) => {
-    if (!editor || editor.isDestroyed) return;
-    editor.chain().focus().updateAttributes('image', { width, height: 'auto' }).run();
   };
 
   if (!editor) return null;
@@ -427,7 +327,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
                       </div>
-                      {isUploading && <div className="mt-2 h-0.5 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} /></div>}
                   </div>
               )}
 
@@ -458,34 +357,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold className="h-4 w-4" />} label="Bold" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic className="h-4 w-4" />} label="Italic" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon className="h-4 w-4" />} label="Underline" />
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
-                                <Baseline className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48 p-1 rounded-2xl border-slate-100 shadow-2xl bg-white">
-                            <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Text Color</DropdownMenuLabel>
-                            <div className="grid grid-cols-5 gap-1 p-2">
-                                {COLORS.map(c => (
-                                    <button 
-                                        key={c.value} 
-                                        onClick={() => editor.chain().focus().setColor(c.value === 'inherit' ? '' : c.value).run()}
-                                        className={cn(
-                                            "h-6 w-6 rounded-full border border-slate-100 flex items-center justify-center hover:scale-110 transition-transform shadow-sm",
-                                            editor.getAttributes('textStyle').color === c.value && "ring-2 ring-primary ring-offset-1"
-                                        )}
-                                        style={{ backgroundColor: c.value === 'inherit' ? 'transparent' : c.value }}
-                                        title={c.label}
-                                    >
-                                        {c.value === 'inherit' && <X className="h-3 w-3 text-slate-400" />}
-                                    </button>
-                                ))}
-                            </div>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
                       <ToolbarButton onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} icon={<Palette className="h-4 w-4" />} label="Highlight" />
                   </div>
                   
@@ -495,53 +366,17 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                       <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="Bullet List" />
                       <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Task List" />
                   </div>
-                  
-                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
-                  
-                  <div className="flex items-center gap-0.5 px-1 shrink-0">
-                      <ToolbarButton onClick={setLink} active={editor.isActive('link')} icon={<LinkIcon className="h-4 w-4" />} label="Insert Link" />
-                      <ToolbarButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} icon={isUploading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4" />} label="Attach Image" />
-                      
-                      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
-                      
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-slate-500 hover:bg-slate-100">
-                                  <Grid className="h-4 w-4" />
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 border-slate-100 shadow-2xl bg-white">
-                              <DropdownMenuLabel className="text-[10px] uppercase font-bold text-slate-400 p-2">Grid Control</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
-                                  <TableIcon className="h-4 w-4 text-primary" /> Insert 3x3 Table
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-slate-50" />
-                              <DropdownMenuItem onClick={() => editor.chain().focus().addRowAfter().run()} disabled={!editor.isActive('table')} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
-                                  <Rows className="h-4 w-4" /> Add Row After
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => editor.chain().focus().addColumnAfter().run()} disabled={!editor.isActive('table')} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer">
-                                  <Columns className="h-4 w-4" /> Add Column After
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-slate-50" />
-                              <DropdownMenuItem onClick={() => editor.chain().focus().deleteTable().run()} disabled={!editor.isActive('table')} className="gap-3 font-semibold text-xs py-2 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
-                                  <Trash2 className="h-4 w-4" /> Delete Table
-                              </DropdownMenuItem>
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
               </div>
 
               {showAiToolbar && (
                   <div className="w-full px-2 py-1.5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center gap-1.5 w-full overflow-x-auto scrollbar-none px-2">
-                        <div className="h-px w-4 bg-slate-100 shrink-0" />
                         <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
                         <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
-                        <div className="h-px flex-1 bg-slate-100 shrink-0 min-w-[20px]" />
                       </div>
                       <div className="flex items-center gap-2 px-2 pb-1 w-full">
-                          <Input placeholder="Type a custom goal..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1" />
+                          <Input placeholder="Custom instruction..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0" />
                           <Button disabled={!customGoal.trim()} onClick={() => callAiAssistant('custom', customGoal)} size="icon" className="h-9 w-9 rounded-xl shrink-0"><Send className="h-3.5 w-3.5" /></Button>
                       </div>
                   </div>
@@ -550,37 +385,23 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         </TooltipProvider>
       )}
 
-      {/* Image Bubble Menu for Resizing */}
-      {editor && (
-          <BubbleMenu editor={editor} shouldShow={({ editor }) => editor.isActive('image')}>
-            <Card className="flex items-center gap-1 p-1 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl rounded-2xl animate-in zoom-in-95 duration-200">
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('25%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">XS</Button>
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('50%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">MD</Button>
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('75%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">LG</Button>
-                <Button variant="ghost" size="sm" onClick={() => updateImageSize('100%')} className="h-8 rounded-lg text-[10px] font-black uppercase tracking-tight px-2">Full</Button>
-                <Separator orientation="vertical" className="h-4 mx-1" />
-                <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().deleteSelection().run()} className="h-8 w-8 text-red-500 rounded-lg hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
-            </Card>
-          </BubbleMenu>
-      )}
-
       {aiPreview && (
           <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500 w-[90%] sm:w-auto">
-              <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-4 sm:px-6 flex items-center justify-between sm:justify-start gap-3 sm:gap-6 border border-white/10">
+              <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-4 sm:px-6 flex items-center gap-6 border border-white/10">
                 <div className="flex items-center gap-3">
                     <div className="p-1.5 sm:p-2 rounded-full bg-primary/20 text-primary shrink-0"><Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>
                     <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Review changes</p>
                 </div>
-                <Separator orientation="vertical" className="h-4 bg-white/10 hidden sm:block" />
+                <Separator orientation="vertical" className="h-4 bg-white/10" />
                 <div className="flex items-center gap-2">
                     <Button onClick={acceptAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white"><Check className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
-                    <Button onClick={discardAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"><X className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+                    <Button onClick={discardAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-50 hover:text-white"><X className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
                 </div>
               </Card>
           </div>
       )}
 
-      <div className={cn("transition-opacity", (isAiProcessing && editor.isEmpty) ? "opacity-20" : "opacity-100")}>
+      <div className={cn("transition-opacity", (isAiProcessing && editor.isEmpty) ? "opacity-20" : "opacity-100")} onClick={() => editor?.commands.focus()}>
         <EditorContent editor={editor} />
       </div>
     </div>

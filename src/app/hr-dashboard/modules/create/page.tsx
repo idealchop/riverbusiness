@@ -36,7 +36,6 @@ import {
 import type { AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Editor } from '@/components/collaboration/Editor';
-import { cn } from '@/lib/utils';
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -145,7 +144,7 @@ export default function CreateModulePage() {
                                         <FormControl>
                                             <input 
                                                 placeholder="Enter Module Title..." 
-                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none placeholder:text-slate-100"
+                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none placeholder:text-slate-100 shadow-none ring-0"
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -164,7 +163,7 @@ export default function CreateModulePage() {
                                             <FormControl>
                                                 <input 
                                                     placeholder="e.g. Safety" 
-                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0" 
+                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0 shadow-none ring-0" 
                                                     {...field} 
                                                 />
                                             </FormControl>
@@ -205,7 +204,7 @@ export default function CreateModulePage() {
                                         <FormControl>
                                             <textarea 
                                                 placeholder="Enter a short overview of this module..." 
-                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed" 
+                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -229,13 +228,13 @@ export default function CreateModulePage() {
                             )}
 
                             {selectedType === 'article' && (
-                                <div className="space-y-6 pt-4">
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Full Documentation</FormLabel>
-                                    <div className="min-h-[500px]">
+                                <div className="pt-4">
+                                    <div className="min-h-[600px] bg-white border-none outline-none ring-0">
                                         <Editor 
                                             initialContent={form.getValues('textContent')} 
                                             onContentChange={(json) => form.setValue('textContent', json)}
                                             companyId={user?.companyId}
+                                            editable={true}
                                         />
                                     </div>
                                 </div>
