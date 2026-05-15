@@ -43,7 +43,9 @@ import {
     CheckCircle2,
     Palette,
     Tag,
-    Pencil
+    Pencil,
+    Copy,
+    ListFilter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,7 +69,7 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { SheetField, SheetRecord, SheetView, SheetFieldType } from '@/lib/types';
+import type { SheetField, SheetRecord, SheetView, SheetFieldType, SheetViewType } from '@/lib/types';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO } from 'date-fns';
@@ -105,6 +107,14 @@ const FIELD_ICONS: Record<SheetFieldType, React.ElementType> = {
     currency: DollarSign,
     status: Settings2,
     formula: FileText
+};
+
+const VIEW_ICONS: Record<SheetViewType, React.ElementType> = {
+    grid: Grid,
+    kanban: Layout,
+    calendar: CalendarIcon,
+    gallery: GalleryHorizontal,
+    list: ListFilter
 };
 
 const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
@@ -243,7 +253,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       toast({ title: 'Type conversion complete' });
   };
 
-  // Option Management Handlers
   const handleAddOption = (fieldId: string) => {
       const field = fields.find(f => f.id === fieldId);
       if (!field || !field.options) return;
@@ -268,7 +277,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       
       const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
       
-      // Migration: Update existing records that use this label
       const nextRecords = records.map(r => {
           if (r.values[fieldId] === oldLabel) {
               return { ...r, values: { ...r.values, [fieldId]: newLabel } };
@@ -288,7 +296,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       const nextOptions = field.options.filter(opt => opt.label !== label);
       const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
       
-      // Cleanup: Remove this value from records
       const nextRecords = records.map(r => {
           if (r.values[fieldId] === label) {
               const nextValues = { ...r.values };
@@ -307,6 +314,41 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const handleSwitchView = (id: string) => {
       setActiveViewId(id);
       sync(fields, records, views, id);
+  };
+
+  const handleCreateView = (type: SheetViewType) => {
+    const id = `v-${Date.now()}`;
+    const name = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    const newView: SheetView = { id, name, type };
+    const next = [...views, newView];
+    setViews(next);
+    setActiveViewId(id);
+    sync(fields, records, next, id);
+    toast({ title: 'Tab initialized', description: `New ${type} view has been added to your workspace.` });
+  };
+
+  const handleRenameView = (viewId: string) => {
+    const view = views.find(v => v.id === viewId);
+    if (!view) return;
+    const newName = window.prompt('Enter view name:', view.name);
+    if (newName && newName.trim()) {
+        const next = views.map(v => v.id === viewId ? { ...v, name: newName.trim() } : v);
+        setViews(next);
+        sync(fields, records, next, activeViewId);
+    }
+  };
+
+  const handleDeleteView = (viewId: string) => {
+    if (views.length <= 1) {
+        toast({ variant: 'destructive', title: 'Action Denied', description: 'At least one view must be maintained.' });
+        return;
+    }
+    const next = views.filter(v => v.id !== viewId);
+    const nextActive = activeViewId === viewId ? next[0].id : activeViewId;
+    setViews(next);
+    setActiveViewId(nextActive);
+    sync(fields, records, next, nextActive);
+    toast({ title: 'Tab removed' });
   };
 
   const addFilter = () => {
@@ -330,7 +372,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const filteredRecords = useMemo(() => {
     let list = [...records];
     
-    // Global Search
     if (searchTerm) {
         const s = searchTerm.toLowerCase().trim();
         list = list.filter(r => 
@@ -338,7 +379,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         );
     }
 
-    // Advanced Multi-Rule Filtering
     if (filters.length > 0) {
         list = list.filter(record => {
             return filters.every(filter => {
@@ -363,7 +403,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         });
     }
 
-    // Sorting
     if (sortConfig) {
         list.sort((a, b) => {
             const valA = String(a.values[sortConfig.fieldId] || '');
@@ -381,37 +420,80 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
   return (
     <div className="flex-1 flex flex-col bg-white overflow-hidden select-none h-full font-sans">
-        {/* Workspace Toolbar */}
+        {/* Workspace Toolbar - Tab Based Layout */}
         <div className="h-14 border-b flex items-center justify-between px-4 sm:px-6 bg-white shrink-0 z-30">
-            <div className="flex items-center gap-3">
+            {/* View Tabs - Left Side */}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pr-4">
+                {views.map(v => {
+                    const ViewIcon = VIEW_ICONS[v.type] || Grid;
+                    const isActive = v.id === activeViewId;
+                    return (
+                        <div key={v.id} className="group relative flex items-center shrink-0">
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => handleSwitchView(v.id)}
+                                className={cn(
+                                    "h-9 px-3 gap-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap",
+                                    isActive 
+                                        ? "bg-primary/10 text-primary border border-primary/20" 
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                                )}
+                            >
+                                <ViewIcon className={cn("h-3.5 w-3.5", isActive ? "text-primary" : "text-slate-400")} />
+                                {v.name}
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className={cn(
+                                        "h-5 w-5 ml-0.5 rounded-lg hover:bg-slate-100 flex items-center justify-center transition-all",
+                                        isActive ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-slate-300"
+                                    )}>
+                                        <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
+                                    <DropdownMenuItem onClick={() => handleRenameView(v.id)} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
+                                        <Edit className="h-3.5 w-3.5" /> Rename Tab
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleCreateView(v.type)} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
+                                        <Copy className="h-3.5 w-3.5" /> Duplicate View
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator className="bg-slate-50" />
+                                    <DropdownMenuItem onClick={() => handleDeleteView(v.id)} className="gap-2 text-xs font-semibold text-red-600 focus:text-red-600 py-2.5 rounded-lg cursor-pointer">
+                                        <Trash2 className="h-3.5 w-3.5" /> Remove Tab
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    );
+                })}
+
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-9 px-3 gap-2 rounded-xl bg-slate-50 border border-slate-100 font-bold text-xs">
-                            {activeView.type === 'grid' && <Grid className="h-4 w-4 text-blue-500" />}
-                            {activeView.type === 'kanban' && <Layout className="h-4 w-4 text-purple-500" />}
-                            {activeView.type === 'calendar' && <CalendarIcon className="h-4 w-4 text-green-500" />}
-                            {activeView.type === 'gallery' && <GalleryHorizontal className="h-4 w-4 text-amber-500" />}
-                            {activeView.name}
-                            <ChevronDown className="h-3.5 w-3.5 opacity-40" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl shrink-0 text-slate-300 hover:text-primary transition-colors ml-1">
+                            <Plus className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-64 rounded-2xl p-1 shadow-2xl border-slate-100">
-                        <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest">Workspace Views</DropdownMenuLabel>
-                        {views.map(v => (
-                            <DropdownMenuItem key={v.id} onClick={() => handleSwitchView(v.id)} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
-                                {v.type === 'grid' && <Grid className="h-4 w-4 text-blue-500" />}
-                                {v.type === 'kanban' && <Layout className="h-4 w-4 text-purple-500" />}
-                                {v.type === 'calendar' && <CalendarIcon className="h-4 w-4 text-green-500" />}
-                                {v.type === 'gallery' && <GalleryHorizontal className="h-4 w-4 text-amber-500" />}
-                                {v.name}
-                            </DropdownMenuItem>
-                        ))}
+                    <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl shadow-2xl border-slate-100">
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New Tab Logic</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleCreateView('grid')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <Grid className="h-4 w-4 text-blue-500" /> Spreadsheet Grid
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateView('kanban')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <Layout className="h-4 w-4 text-purple-500" /> Kanban Stacks
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateView('gallery')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <GalleryHorizontal className="h-4 w-4 text-amber-500" /> Visual Gallery
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateView('calendar')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <CalendarIcon className="h-4 w-4 text-green-500" /> Date Calendar
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
 
+            {/* Orchestration Tools - Right Side */}
             <div className="flex items-center gap-2">
-                {/* Expandable Search */}
                 <div className="flex items-center">
                     {isSearchExpanded ? (
                         <div className="relative flex items-center animate-in slide-in-from-right-2 duration-300">
@@ -883,7 +965,10 @@ function CellRenderer({ field, value, onChange, onExpand, editable, isExpanded =
                     value={localValue || ''}
                     onChange={(e) => setLocalValue(e.target.value)}
                     onBlur={handleBlur}
-                    onKeyDown={(e) => e.key === 'Enter' && handleBlur()}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleBlur();
+                        if (e.key === 'Escape') setIsEditing(false);
+                    }}
                     className={cn(
                         "w-full h-full bg-transparent px-3 text-sm font-semibold focus:outline-none transition-colors",
                         field.type === 'currency' && "pl-1"
