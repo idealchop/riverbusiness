@@ -157,9 +157,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<FilterRule[]>([]);
 
-  // Option & Rename Management States
+  // Management States
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [editingOptionsFieldId, setEditingOptionsFieldId] = useState<string | null>(null);
-  const [renamingField, setRenamingField] = useState<{ id: string, name: string } | null>(null);
 
   const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
 
@@ -226,15 +226,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     setRecords(nextRecords);
     sync(nextFields, nextRecords, views, activeViewId);
     toast({ title: 'Column purged' });
-  };
-
-  const finalizeRenameField = () => {
-    if (!renamingField || !renamingField.name.trim()) return;
-    const next = fields.map(f => f.id === renamingField.id ? { ...f, name: renamingField.name.trim() } : f);
-    setFields(next);
-    sync(next, records, views, activeViewId);
-    setRenamingField(null);
-    toast({ title: 'Column renamed' });
   };
 
   const changeFieldType = (fieldId: string, newType: SheetFieldType) => {
@@ -536,9 +527,36 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             </div>
                             {fields.map((field) => (
                                 <div key={field.id} style={{ width: field.width }} className="group h-10 border-r flex items-center justify-between px-3 shrink-0">
-                                    <div className="flex items-center gap-2 overflow-hidden">
+                                    <div className="flex items-center gap-2 overflow-hidden flex-1">
                                         {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3 w-3 text-slate-400 shrink-0" })}
-                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest truncate">{field.name}</span>
+                                        {editingFieldId === field.id ? (
+                                            <input 
+                                                autoFocus
+                                                className="text-[10px] font-black text-slate-900 uppercase tracking-widest bg-white border-none focus:ring-1 focus:ring-primary rounded px-1 h-7 w-full shadow-inner"
+                                                defaultValue={field.name}
+                                                onBlur={(e) => {
+                                                    const newName = e.target.value.trim();
+                                                    if (newName && newName !== field.name) {
+                                                        const next = fields.map(f => f.id === field.id ? { ...f, name: newName } : f);
+                                                        setFields(next);
+                                                        sync(next, records, views, activeViewId);
+                                                        toast({ title: 'Column renamed' });
+                                                    }
+                                                    setEditingFieldId(null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                                    if (e.key === 'Escape') setEditingFieldId(null);
+                                                }}
+                                            />
+                                        ) : (
+                                            <span 
+                                                onDoubleClick={() => setEditingFieldId(field.id)}
+                                                className="text-[10px] font-black text-slate-600 uppercase tracking-widest truncate flex-1 cursor-text"
+                                            >
+                                                {field.name}
+                                            </span>
+                                        )}
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -547,7 +565,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             </button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className="w-56 rounded-xl p-1 shadow-2xl border-slate-100">
-                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5" onClick={() => setRenamingField({ id: field.id, name: field.name })}>
+                                            <DropdownMenuItem className="gap-2 text-xs font-semibold rounded-lg cursor-pointer py-2.5" onClick={() => setEditingFieldId(field.id)}>
                                                 <Edit className="h-3.5 w-3.5" /> Rename Column
                                             </DropdownMenuItem>
                                             
@@ -715,39 +733,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </div>
             </div>
         )}
-
-        {/* Rename Field Dialog */}
-        <Dialog open={!!renamingField} onOpenChange={(open) => !open && setRenamingField(null)}>
-            <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-3xl">
-                <DialogHeader className="p-8 pb-4 bg-slate-50 border-b">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                            <Edit className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Rename Column</DialogTitle>
-                            <DialogDescription className="text-xs font-medium text-slate-500 uppercase tracking-widest">Update identification</DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
-                <div className="p-8 space-y-6">
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Column Label</Label>
-                        <Input 
-                            autoFocus
-                            value={renamingField?.name || ''} 
-                            onChange={(e) => setRenamingField(prev => prev ? { ...prev, name: e.target.value } : null)}
-                            onKeyDown={(e) => e.key === 'Enter' && finalizeRenameField()}
-                            className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-inner"
-                        />
-                    </div>
-                </div>
-                <DialogFooter className="p-8 pt-0 flex gap-3">
-                    <Button variant="ghost" onClick={() => setRenamingField(null)} className="rounded-xl font-bold text-xs px-6">Cancel</Button>
-                    <Button onClick={finalizeRenameField} disabled={!renamingField?.name.trim()} className="rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 flex-1">Apply Rename</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
 
         {/* Option Management Dialog */}
         <Dialog open={!!editingOptionsFieldId} onOpenChange={(open) => !open && setEditingOptionsFieldId(null)}>
