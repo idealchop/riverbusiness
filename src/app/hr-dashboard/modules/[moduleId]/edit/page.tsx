@@ -59,6 +59,11 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -326,7 +331,7 @@ export default function EditModulePage() {
                                         </div>
                                     )}
 
-                                    <div className="min-h-[500px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100 shadow-inner">
+                                    <div className="min-h-[500px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100">
                                         <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none" />
                                     </div>
                                 </div>
@@ -353,9 +358,3 @@ function ToolbarButton({ onClick, active, icon }: any) {
         </Button>
     );
 }
-
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';

@@ -59,6 +59,11 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -259,7 +264,7 @@ export default function CreateModulePage() {
                                     control={form.control}
                                     name="contentUrl"
                                     render={({ field }) => (
-                                        <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                        <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Source URL</FormLabel>
                                             <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl>
                                             <FormMessage />
@@ -304,7 +309,7 @@ export default function CreateModulePage() {
                                         </div>
                                     )}
 
-                                    <div className="min-h-[500px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100 shadow-inner">
+                                    <div className="min-h-[500px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100">
                                         <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none" />
                                     </div>
                                 </div>
@@ -331,9 +336,3 @@ function ToolbarButton({ onClick, active, icon }: any) {
         </Button>
     );
 }
-
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
