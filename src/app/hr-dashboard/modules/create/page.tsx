@@ -136,6 +136,11 @@ export default function CreateModulePage() {
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: 'Start typing your training documentation here...' }),
     ],
+    editorProps: {
+        attributes: {
+            class: 'prose prose-slate max-w-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none min-h-[500px] text-slate-700 leading-relaxed text-lg font-normal pb-40'
+        }
+    },
     onUpdate: ({ editor }) => {
       form.setValue('textContent', editor.getHTML(), { shouldDirty: true });
     },
@@ -214,7 +219,7 @@ export default function CreateModulePage() {
                                         <FormControl>
                                             <input 
                                                 placeholder="Enter Module Title..." 
-                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus:outline-none placeholder:text-slate-100"
+                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none placeholder:text-slate-100"
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -233,7 +238,7 @@ export default function CreateModulePage() {
                                             <FormControl>
                                                 <input 
                                                     placeholder="e.g. Safety" 
-                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0" 
+                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0" 
                                                     {...field} 
                                                 />
                                             </FormControl>
@@ -249,7 +254,7 @@ export default function CreateModulePage() {
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger className="h-10 rounded-none bg-transparent border-none focus:ring-0 focus:ring-offset-0 font-bold p-0 shadow-none">
+                                                    <SelectTrigger className="h-10 rounded-none bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-bold p-0 shadow-none">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                 </FormControl>
@@ -274,7 +279,7 @@ export default function CreateModulePage() {
                                         <FormControl>
                                             <textarea 
                                                 placeholder="Enter a short overview of this module..." 
-                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed" 
+                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -290,7 +295,7 @@ export default function CreateModulePage() {
                                     render={({ field }) => (
                                         <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
-                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs shadow-none focus:ring-0 focus-visible:ring-0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -343,10 +348,10 @@ export default function CreateModulePage() {
                                     )}
 
                                     <div 
-                                        className="min-h-[600px] transition-all cursor-text border-none outline-none ring-0"
+                                        className="min-h-[600px] transition-all cursor-text border-none outline-none ring-0 focus:ring-0 focus-visible:ring-0"
                                         onClick={() => editor?.commands.focus()}
                                     >
-                                        <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none outline-none ring-0 border-none" />
+                                        <EditorContent editor={editor} className="outline-none border-none ring-0 focus:ring-0 focus-visible:ring-0" />
                                     </div>
                                 </div>
                             )}
