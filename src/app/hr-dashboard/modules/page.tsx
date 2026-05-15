@@ -37,9 +37,9 @@ import Image from 'next/image';
 import type { HRLearningModule, AppUser } from '@/lib/types';
 
 const DEMO_MODULES: Partial<HRLearningModule>[] = [
-    { id: 'm1', title: 'Daily Sanitation Flow', description: 'Step-by-step guide for equipment maintenance.', category: 'Safety', contentType: 'video', contentUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-    { id: 'm2', title: 'Customer Interaction Protocols', description: 'Best practices for fleet-to-client communication.', category: 'Support', contentType: 'article', textContent: 'Standard protocols for all team members...' },
-    { id: 'm3', title: 'Emergency Leak Response', description: 'What to do when equipment failures occur.', category: 'Operational', contentType: 'image', contentUrl: 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FApp%20Image%2FRiver_v1.png?alt=media&token=dee32636-aaaf-4a4f-8780-cc43f54f8d27' },
+    { id: 'm1', title: 'Daily Equipment Cleaning', description: 'Step-by-step guide for keeping dispensers clean.', category: 'Safety', contentType: 'video', contentUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+    { id: 'm2', title: 'Talking to Customers', description: 'Best ways to communicate with our clients.', category: 'Support', contentType: 'article', textContent: 'Standard ways to talk to everyone on the team...' },
+    { id: 'm3', title: 'Fixing Water Leaks', description: 'What to do when equipment fails.', category: 'Operational', contentType: 'image', contentUrl: 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FApp%20Image%2FRiver_v1.png?alt=media&token=dee32636-aaaf-4a4f-8780-cc43f54f8d27' },
 ];
 
 export default function LearningHubPage() {
@@ -82,7 +82,7 @@ export default function LearningHubPage() {
     if (!firestore || companyId === 'default' || !isManager) return;
     try {
         await deleteDoc(doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId));
-        toast({ title: 'Module removed' });
+        toast({ title: 'Guide removed' });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Action failed' });
     }
@@ -94,17 +94,17 @@ export default function LearningHubPage() {
 
   const handleShareModule = (module: HRLearningModule) => {
       navigator.clipboard.writeText(`${window.location.origin}/hr-dashboard/modules/${module.id}`);
-      toast({ title: 'Link Copied', description: 'Training link copied to clipboard.' });
+      toast({ title: 'Link copied', description: 'Link copied to clipboard.' });
   };
 
-  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Synchronizing Hub..." />;
+  if (isAuthLoading || isUserDocLoading) return <FullScreenLoader text="Loading guides..." />;
 
   return (
     <div className="space-y-6 md:space-y-10 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 leading-none">Learning Hub</h1>
-          <p className="text-slate-500 font-medium text-xs md:text-sm">Design and Browse Training Materials.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 leading-none">Training Center</h1>
+          <p className="text-slate-500 font-medium text-xs md:text-sm">Create and find training guides for your team.</p>
         </div>
         {isManager && (
             <Button 
@@ -112,7 +112,7 @@ export default function LearningHubPage() {
                 className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10 w-full lg:w-auto"
             >
                 <Link href="/hr-dashboard/modules/create">
-                    <Plus className="mr-2 h-4 w-4" /> Create Module
+                    <Plus className="mr-2 h-4 w-4" /> Create New Guide
                 </Link>
             </Button>
         )}
@@ -122,7 +122,7 @@ export default function LearningHubPage() {
         <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
-                placeholder="Search modules..." 
+                placeholder="Search guides..." 
                 className="pl-10 h-11 bg-white border-slate-200 rounded-xl font-medium shadow-none focus-visible:ring-primary"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -161,33 +161,29 @@ export default function LearningHubPage() {
                         <CardTitle className="text-lg md:text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                             {module.title}
                         </CardTitle>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-50 shrink-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
-                                {isManager && (
-                                    <DropdownMenuItem asChild className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                        <Link href={`/hr-dashboard/modules/${module.id}/edit`}>
-                                            <Edit className="h-3.5 w-3.5" /> Edit
-                                        </Link>
-                                    </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                    <Share2 className="h-3.5 w-3.5" /> Share
-                                </DropdownMenuItem>
-                                {isManager && (
-                                    <>
-                                        <DropdownMenuSeparator className="bg-slate-50" />
-                                        <DropdownMenuItem onClick={() => handleDeleteModule(module.id!)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                                            <Trash2 className="h-3.5 w-3.5" /> Delete
-                                        </DropdownMenuItem>
-                                    </>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        {isManager && (
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-50 shrink-0">
+                                      <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
+                                  <DropdownMenuItem asChild className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
+                                      <Link href={`/hr-dashboard/modules/${module.id}/edit`}>
+                                          <Edit className="h-3.5 w-3.5" /> Edit
+                                      </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
+                                      <Share2 className="h-3.5 w-3.5" /> Share
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-50" />
+                                  <DropdownMenuItem onClick={() => handleDeleteModule(module.id!)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                                  </DropdownMenuItem>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                     </div>
                     <CardDescription className="text-xs md:text-sm font-medium text-slate-500 line-clamp-2 mt-2 leading-relaxed">
                         {module.description}
@@ -199,8 +195,8 @@ export default function LearningHubPage() {
                         <Clock className="h-3 w-3" /> 
                         {module.createdAt instanceof Timestamp ? format(module.createdAt.toDate(), 'MMM d') : 'Active'}
                     </div>
-                    <Button onClick={() => handleLaunchModule(module)} variant="ghost" className="rounded-xl font-bold text-[10px] md:text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors h-9 px-4">
-                        Open Training <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                    <Button onClick={() => handleLaunchModule(module)} variant="ghost" className="rounded-xl font-bold text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors h-9 px-4">
+                        View Guide <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                     </Button>
                 </CardFooter>
             </Card>

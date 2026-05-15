@@ -124,9 +124,9 @@ export default function ModuleDetailPage() {
     const targetModuleRef = doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId as string);
     try {
         await updateDoc(targetModuleRef, { assignedEmployeeId: employeeId });
-        toast({ title: 'Module Assigned', description: `Responsibilities have been delegated to ${teamMembers?.find(m => m.id === employeeId)?.name}.` });
+        toast({ title: 'Guide assigned', description: `${teamMembers?.find(m => m.id === employeeId)?.name} can now edit this guide.` });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Assignment Failed' });
+        toast({ variant: 'destructive', title: 'Assignment failed' });
     }
   };
 
@@ -134,7 +134,7 @@ export default function ModuleDetailPage() {
     if (!module || isAiProcessing) return;
     
     setIsAiProcessing(true);
-    toast({ title: 'AI Insights Active', description: 'Generating a high-fidelity summary of this training material.' });
+    toast({ title: 'AI is working', description: 'Generating a quick summary of this guide.' });
 
     try {
         const textToSummarize = module.textContent 
@@ -147,7 +147,7 @@ export default function ModuleDetailPage() {
             body: JSON.stringify({
                 text: textToSummarize,
                 action: 'summarize',
-                customGoal: 'Provide a professional executive summary with bullet points for this training module.'
+                customGoal: 'Provide a clear summary with bullet points for this training guide.'
             })
         });
 
@@ -155,7 +155,7 @@ export default function ModuleDetailPage() {
         const data = await response.json();
         setAiSummary(data.suggestedText);
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Intelligence Offline', description: 'Could not generate summary at this time.' });
+        toast({ variant: 'destructive', title: 'AI offline', description: 'Could not generate summary right now.' });
     } finally {
         setIsAiProcessing(false);
     }
@@ -179,7 +179,7 @@ export default function ModuleDetailPage() {
   }, [viewers]);
 
   if (isUserLoading || isUserDocLoading || (isModuleLoading && companyId)) {
-    return <FullScreenLoader text="Opening training material..." />;
+    return <FullScreenLoader text="Opening guide..." />;
   }
 
   if (!isUserDocLoading && !user) {
@@ -194,13 +194,13 @@ export default function ModuleDetailPage() {
                 <FileText className="h-16 w-16 text-slate-200" />
             </div>
             <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900">Document not found</h3>
+                <h3 className="text-xl font-bold text-slate-900">Guide not found</h3>
                 <p className="text-sm font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">
-                    This training asset may have been removed or moved to a different directory.
+                    This guide may have been removed or moved to a different folder.
                 </p>
             </div>
             <Button variant="outline" onClick={() => router.push('/hr-dashboard/modules')} className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white shadow-sm">
-                Return to Hub
+                Go Back
             </Button>
         </div>
     );
@@ -223,7 +223,7 @@ export default function ModuleDetailPage() {
     ? format(module.updatedAt.toDate(), 'MMM d, yyyy') 
     : module.createdAt instanceof Timestamp 
     ? format(module.createdAt.toDate(), 'MMM d, yyyy')
-    : 'Recent';
+    : 'Recently';
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
@@ -237,7 +237,7 @@ export default function ModuleDetailPage() {
                     className="h-9 px-2 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    <span className="hidden md:inline font-bold text-xs uppercase tracking-widest">Hub</span>
+                    <span className="hidden md:inline font-bold text-xs uppercase tracking-widest">Back</span>
                 </Button>
                 <ChevronRight className="h-3.5 w-3.5 text-slate-200 shrink-0" />
                 <div className="flex items-center gap-2 overflow-hidden">
@@ -287,7 +287,7 @@ export default function ModuleDetailPage() {
                         className="h-9 rounded-xl gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-primary hover:bg-primary/5"
                     >
                         {isAiProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                        <span className="hidden sm:inline">{aiSummary ? 'Regenerate' : 'AI Insights'}</span>
+                        <span className="hidden sm:inline">{aiSummary ? 'Regenerate' : 'AI Summary'}</span>
                     </Button>
 
                     {isManager && (
@@ -295,12 +295,12 @@ export default function ModuleDetailPage() {
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-9 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-50">
                                     <UserPlus className="h-3.5 w-3.5" />
-                                    <span className="hidden md:inline">{module.assignedEmployeeId ? 'Change Author' : 'Assign'}</span>
+                                    <span className="hidden md:inline">{module.assignedEmployeeId ? 'Change person' : 'Assign to'}</span>
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-64 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white overflow-hidden">
                                 <div className="p-4 bg-slate-50 border-b">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Delegate Authorship</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Assign this guide</p>
                                     <div className="relative mt-2">
                                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                                         <Input 
@@ -349,7 +349,7 @@ export default function ModuleDetailPage() {
                         >
                             <Link href={`/hr-dashboard/modules/${moduleId}/edit`}>
                                 <Edit className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Edit Module</span>
+                                <span className="hidden sm:inline">Edit Guide</span>
                             </Link>
                         </Button>
                     )}
@@ -364,7 +364,7 @@ export default function ModuleDetailPage() {
                     <div className="space-y-4 md:space-y-6">
                         <div className="flex items-center gap-3 text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
                             <Clock className="h-3.5 w-3.5" />
-                            Verified {formattedDate}
+                            Last updated {formattedDate}
                         </div>
                         <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-slate-900 leading-tight">
                             {module.title}
@@ -386,7 +386,7 @@ export default function ModuleDetailPage() {
                                         <div className="p-2 rounded-xl bg-primary/20 text-primary-light">
                                             <Sparkles className="h-5 w-5" />
                                         </div>
-                                        <h4 className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white">Executive Insights</h4>
+                                        <h4 className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white">Quick Summary</h4>
                                     </div>
                                     <button onClick={() => setAiSummary(null)} className="text-white/20 hover:text-white transition-colors">
                                         <X className="h-4 w-4" />
@@ -398,7 +398,7 @@ export default function ModuleDetailPage() {
                                     </p>
                                 </div>
                                 <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">AI Generated Intelligence</p>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Generated by AI</p>
                                     <History className="h-3 w-3 text-white/20" />
                                 </div>
                             </CardContent>
@@ -449,7 +449,7 @@ export default function ModuleDetailPage() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">
-                                Organizational Training Asset
+                                Team training guide
                             </p>
                             {module.assignedEmployeeId && (
                                 <p className="text-[9px] font-bold text-primary uppercase tracking-widest">

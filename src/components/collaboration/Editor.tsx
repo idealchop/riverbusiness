@@ -117,7 +117,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     if (!editor || !storage || !auth?.currentUser) return;
 
     if (!file.type.startsWith('image/')) {
-        toast({ variant: 'destructive', title: 'Invalid format', description: 'Please provide an image file.' });
+        toast({ variant: 'destructive', title: 'Wrong format', description: 'Please use an image file.' });
         return;
     }
 
@@ -134,11 +134,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       
       if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src: url }).run();
-          toast({ title: 'Asset synchronized' });
+          toast({ title: 'Image added' });
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      if (isMounted) toast({ variant: 'destructive', title: 'Synchronization failed' });
+      if (isMounted) toast({ variant: 'destructive', title: 'Failed to add image' });
     } finally {
       if (isMounted) {
         setIsUploading(false);
@@ -156,7 +156,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const acceptAiSuggestion = () => {
     if (!aiPreview || !editor) return;
     setAiPreview(null);
-    toast({ title: 'Suggestion accepted' });
+    toast({ title: 'Changes kept' });
   };
 
   const discardAiSuggestion = () => {
@@ -164,7 +164,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     const { from, to, originalText } = aiPreview;
     editor.chain().focus().deleteRange(from, to).insertContentAt(from, originalText).run();
     setAiPreview(null);
-    toast({ title: 'Suggestion discarded' });
+    toast({ title: 'Changes removed' });
   };
 
   const CustomImage = ImageExtension.extend({
@@ -201,7 +201,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         types: ['heading', 'paragraph'],
       }),
       Placeholder.configure({
-        placeholder: 'Architecture blueprint... Start typing or press "/" for commands.',
+        placeholder: 'Write your guide here... Type "/" for quick commands.',
       }),
       TaskList,
       TaskItem.configure({
@@ -258,7 +258,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {
         const streamDoc = async () => {
             setIsAiProcessing(true);
-            setAiStatus('Architecting content...');
+            setAiStatus('Writing...');
             try {
                 const response = await fetch('/api/ai/generate', {
                     method: 'POST',
@@ -267,7 +267,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 });
                 if (!response.body) throw new Error('Stream failed');
                 const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+                const decoder = new TextEncoder();
                 let accumulatedHtml = '';
                 while (true) {
                     const { done, value } = await reader.read();
@@ -280,11 +280,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 }
                 if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
-                    toast({ title: 'Draft finalized' });
+                    toast({ title: 'Draft ready' });
                 }
             } catch (error) {
                 console.error('Streaming error:', error);
-                if (isMounted) toast({ variant: 'destructive', title: 'Architecture error' });
+                if (isMounted) toast({ variant: 'destructive', title: 'Error writing guide' });
             } finally {
                 if (isMounted) {
                     setIsAiProcessing(false);
@@ -303,12 +303,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     const textToProcess = selectedText || editor.getText();
     const context = editor.getText();
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Selection required' });
+        toast({ variant: 'destructive', title: 'Select text first' });
         return;
     }
     setIsAiProcessing(true);
     setShowAiToolbar(false);
-    setAiStatus('Intelligence protocol active...');
+    setAiStatus('AI is working...');
     try {
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
@@ -326,10 +326,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
           }
-          toast({ title: 'Analysis complete' });
+          toast({ title: 'AI finished' });
       }
     } catch (error: any) {
-      if (isMounted) toast({ variant: 'destructive', title: 'Assistant error' });
+      if (isMounted) toast({ variant: 'destructive', title: 'AI error' });
     } finally {
       if (isMounted) {
           setIsAiProcessing(false);
@@ -365,8 +365,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
                   <div className="flex items-center gap-1 px-1 shrink-0">
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="Heading 1" />
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="Heading 2" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="Large Heading" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="Medium Heading" />
                   </div>
                   
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
@@ -389,8 +389,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
                   <div className="flex items-center gap-0.5 px-1 shrink-0">
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="Bullet List" />
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Task List" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List className="h-4 w-4" />} label="List" />
+                      <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<CheckSquare className="h-4 w-4" />} label="Checklist" />
                   </div>
               </div>
 
@@ -402,7 +402,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
                       </div>
                       <div className="flex items-center gap-2 px-2 pb-1 w-full">
-                          <Input placeholder="Custom instruction..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0" />
+                          <Input placeholder="Ask AI to do something..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0" />
                           <Button disabled={!customGoal.trim()} onClick={() => callAiAssistant('custom', customGoal)} size="icon" className="h-9 w-9 rounded-xl shrink-0"><Send className="h-3.5 w-3.5" /></Button>
                       </div>
                   </div>

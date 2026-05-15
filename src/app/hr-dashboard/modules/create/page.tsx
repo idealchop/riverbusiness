@@ -68,7 +68,7 @@ export default function CreateModulePage() {
   // Security Guard: Redirect non-managers
   useEffect(() => {
       if (!isUserLoading && !isUserDocLoading && user && !isManager) {
-          toast({ variant: 'destructive', title: 'Access Denied', description: 'Only managers can create training modules.' });
+          toast({ variant: 'destructive', title: 'Access denied', description: 'Only managers can create training guides.' });
           router.push('/hr-dashboard/modules');
       }
   }, [user, isUserLoading, isUserDocLoading, isManager, router, toast]);
@@ -99,11 +99,11 @@ export default function CreateModulePage() {
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: 'Module Published', description: 'Training asset is now active in the hub.' });
+      toast({ title: 'Guide saved', description: 'Your new training guide is now live.' });
       router.push('/hr-dashboard/modules');
     } catch (error) {
-      console.error("Error creating module:", error);
-      toast({ variant: 'destructive', title: 'Publication Failed' });
+      console.error("Error creating guide:", error);
+      toast({ variant: 'destructive', title: 'Could not save' });
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +111,7 @@ export default function CreateModulePage() {
 
   const selectedType = form.watch('contentType');
 
-  if (isUserLoading || isUserDocLoading || (user && !isManager)) return <FullScreenLoader text="Verifying credentials..." />;
+  if (isUserLoading || isUserDocLoading || (user && !isManager)) return <FullScreenLoader text="Loading..." />;
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
@@ -124,21 +124,21 @@ export default function CreateModulePage() {
                     className="h-9 px-2 md:px-3 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <X className="h-4 w-4" />
-                    <span className="hidden sm:inline font-bold text-[10px] md:text-xs uppercase tracking-widest">Discard</span>
+                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Cancel</span>
                 </Button>
                 <div className="h-4 w-px bg-slate-100" />
                 <div className="flex items-center gap-2">
                     <FilePlus className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-widest whitespace-nowrap">New Module</span>
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-widest whitespace-nowrap">New Guide</span>
                 </div>
             </div>
             <Button 
                 onClick={form.handleSubmit(onSubmit)} 
                 disabled={isSubmitting}
-                className="rounded-xl h-10 px-6 md:px-8 font-bold text-[10px] md:text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
+                className="rounded-xl h-10 px-6 md:px-8 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
             >
                 {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
-                Publish
+                Save
             </Button>
         </div>
 
@@ -154,7 +154,7 @@ export default function CreateModulePage() {
                                     <FormItem>
                                         <FormControl>
                                             <input 
-                                                placeholder="Enter Module Title..." 
+                                                placeholder="Enter title here..." 
                                                 className="w-full text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none placeholder:text-slate-100 shadow-none ring-0"
                                                 {...field} 
                                             />
@@ -170,7 +170,7 @@ export default function CreateModulePage() {
                                     name="category"
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Category</FormLabel>
+                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Category</FormLabel>
                                             <FormControl>
                                                 <input 
                                                     placeholder="e.g. Safety" 
@@ -187,7 +187,7 @@ export default function CreateModulePage() {
                                     name="contentType"
                                     render={({ field }) => (
                                         <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
+                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className="h-10 rounded-none bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-bold p-0 shadow-none">
@@ -211,10 +211,10 @@ export default function CreateModulePage() {
                                 name="description"
                                 render={({ field }) => (
                                     <FormItem className="space-y-1.5">
-                                        <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
                                         <FormControl>
                                             <textarea 
-                                                placeholder="Enter a short overview of this module..." 
+                                                placeholder="What is this guide about?" 
                                                 className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none text-base md:text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed shadow-none ring-0" 
                                                 {...field} 
                                             />
@@ -230,8 +230,8 @@ export default function CreateModulePage() {
                                     name="contentUrl"
                                     render={({ field }) => (
                                         <FormItem className="space-y-3">
-                                            <FormLabel className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
-                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-[10px] md:text-xs shadow-none focus:ring-0 focus-visible:ring-0" {...field} /></FormControl>
+                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
+                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs shadow-none focus:ring-0 focus-visible:ring-0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
