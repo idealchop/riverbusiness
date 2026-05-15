@@ -233,7 +233,7 @@ export default function EditModulePage() {
                                         <FormControl>
                                             <input 
                                                 placeholder="Module Title" 
-                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus:outline-none"
+                                                className="w-full text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 bg-transparent border-none focus:ring-0 focus:outline-none placeholder:text-slate-200"
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -242,14 +242,20 @@ export default function EditModulePage() {
                                 )}
                             />
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8 pt-4">
                                 <FormField
                                     control={form.control}
                                     name="category"
                                     render={({ field }) => (
-                                        <FormItem className="space-y-3">
+                                        <FormItem className="space-y-1.5">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Category</FormLabel>
-                                            <FormControl><Input className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-bold" {...field} /></FormControl>
+                                            <FormControl>
+                                                <input 
+                                                    placeholder="e.g. Safety" 
+                                                    className="w-full h-10 bg-transparent border-none focus:ring-0 focus:outline-none text-sm font-bold text-slate-900 p-0" 
+                                                    {...field} 
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -258,11 +264,13 @@ export default function EditModulePage() {
                                     control={form.control}
                                     name="contentType"
                                     render={({ field }) => (
-                                        <FormItem className="space-y-3">
+                                        <FormItem className="space-y-1.5">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Format</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-bold"><SelectValue /></SelectTrigger>
+                                                    <SelectTrigger className="h-10 rounded-none bg-transparent border-none focus:ring-0 focus:ring-offset-0 font-bold p-0 shadow-none">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent className="rounded-2xl">
                                                     <SelectItem value="article">Text Document</SelectItem>
@@ -280,11 +288,12 @@ export default function EditModulePage() {
                                 control={form.control}
                                 name="description"
                                 render={({ field }) => (
-                                    <FormItem className="space-y-3">
+                                    <FormItem className="space-y-1.5">
                                         <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
                                         <FormControl>
-                                            <Textarea 
-                                                className="rounded-3xl min-h-[80px] bg-slate-50 border-slate-100 text-lg font-medium leading-relaxed p-6 shadow-none" 
+                                            <textarea 
+                                                placeholder="Enter a short overview of this module..." 
+                                                className="w-full min-h-[60px] bg-transparent border-none focus:ring-0 focus:outline-none text-lg font-medium text-slate-500 resize-none p-0 leading-relaxed" 
                                                 {...field} 
                                             />
                                         </FormControl>
@@ -300,7 +309,7 @@ export default function EditModulePage() {
                                     render={({ field }) => (
                                         <FormItem className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Media URL</FormLabel>
-                                            <FormControl><Input className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="https://..." className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-mono text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -342,7 +351,7 @@ export default function EditModulePage() {
                                                 <DropdownMenuContent className="p-2 grid grid-cols-5 gap-1 rounded-xl bg-white border-slate-100 shadow-2xl">
                                                     {COLORS.map(c => (
                                                         <button key={c.value} type="button" onClick={() => editor.chain().focus().setColor(c.value === 'inherit' ? '' : c.value).run()} 
-                                                            className={cn("h-6 w-6 rounded-full border border-slate-100 flex items-center justify-center", editor.getAttributes('textStyle').color === c.value && "ring-2 ring-primary")} 
+                                                            className={cn("h-6 w-6 rounded-lg border border-slate-100 flex items-center justify-center", editor.getAttributes('textStyle').color === c.value && "ring-2 ring-primary")} 
                                                             style={{ backgroundColor: c.value === 'inherit' ? 'transparent' : c.value }}>
                                                             {c.value === 'inherit' && <X className="h-3 w-3 text-slate-400" />}
                                                         </button>
@@ -353,10 +362,10 @@ export default function EditModulePage() {
                                     )}
 
                                     <div 
-                                        className="min-h-[600px] p-10 rounded-[2.5rem] bg-slate-50/30 transition-all cursor-text focus-within:bg-white border-none"
+                                        className="min-h-[600px] transition-all cursor-text border-none outline-none ring-0"
                                         onClick={() => editor?.commands.focus()}
                                     >
-                                        <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none" />
+                                        <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none outline-none ring-0 border-none" />
                                     </div>
                                 </div>
                             )}
