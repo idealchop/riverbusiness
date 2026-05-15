@@ -170,7 +170,6 @@ export default function CreateModulePage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
-        {/* Creation Header */}
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
                 <Button 
@@ -179,8 +178,8 @@ export default function CreateModulePage() {
                     onClick={() => router.push('/hr-dashboard/modules')}
                     className="h-9 px-3 gap-2 rounded-xl text-slate-500 hover:text-slate-900 transition-colors"
                 >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Back</span>
+                    <X className="h-4 w-4" />
+                    <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest">Discard</span>
                 </Button>
                 <div className="h-4 w-px bg-slate-100 hidden sm:block" />
                 <div className="flex items-center gap-2">
@@ -259,7 +258,7 @@ export default function CreateModulePage() {
                                 name="description"
                                 render={({ field }) => (
                                     <FormItem className="space-y-3">
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Description</FormLabel>
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Brief Overview</FormLabel>
                                         <FormControl>
                                             <Textarea 
                                                 placeholder="Enter a short overview of this module..." 
@@ -290,7 +289,6 @@ export default function CreateModulePage() {
                                 <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
                                     <FormLabel className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Documentation Content</FormLabel>
                                     
-                                    {/* Tooltip-style Floating Toolbar */}
                                     {editor && (
                                         <div className="sticky top-20 z-40 w-full p-1.5 bg-white border border-slate-200 shadow-xl rounded-2xl flex flex-wrap items-center gap-1">
                                             <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} />
@@ -325,7 +323,10 @@ export default function CreateModulePage() {
                                         </div>
                                     )}
 
-                                    <div className="min-h-[600px] p-10 rounded-[2.5rem] bg-slate-50/50 border border-slate-100">
+                                    <div 
+                                        className="min-h-[600px] p-10 rounded-[2.5rem] bg-slate-50/30 transition-all cursor-text focus-within:bg-white border-none"
+                                        onClick={() => editor?.commands.focus()}
+                                    >
                                         <EditorContent editor={editor} className="prose prose-slate max-w-none focus:outline-none" />
                                     </div>
                                 </div>
