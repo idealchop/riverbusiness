@@ -25,24 +25,44 @@ export default function ModuleDetailPage() {
   const { moduleId } = useParams();
   const router = useRouter();
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
 
   const userDocRef = useMemoFirebase(
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
     [firestore, authUser]
   );
-  const { data: user } = useDoc<AppUser>(userDocRef);
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
-  const companyId = user?.companyId || user?.clientId || 'default';
+  const companyId = user?.companyId || user?.clientId || null;
 
   const moduleRef = useMemoFirebase(
-    () => (firestore && companyId !== 'default' && moduleId) ? doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId as string) : null,
+    () => (firestore && companyId && moduleId) ? doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId as string) : null,
     [firestore, companyId, moduleId]
   );
-  const { data: module, isLoading } = useDoc<HRLearningModule>(moduleRef);
+  const { data: module, isLoading: isModuleLoading } = useDoc<HRLearningModule>(moduleRef);
 
-  if (isLoading || !module) {
+  // Unified loading handler
+  if (isUserLoading || isUserDocLoading || (isModuleLoading && companyId)) {
     return <FullScreenLoader text="Opening training material..." />;
+  }
+
+  if (!module) {
+    return (
+        <div className="h-screen flex flex-col items-center justify-center bg-white space-y-6 text-center px-6">
+            <div className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100 shadow-inner opacity-40">
+                <FileText className="h-16 w-16 text-slate-200" />
+            </div>
+            <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-900">Document not found</h3>
+                <p className="text-sm font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">
+                    This training asset may have been removed or moved to a different directory.
+                </p>
+            </div>
+            <Button variant="outline" onClick={() => router.push('/hr-dashboard/modules')} className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest border-slate-200 bg-white shadow-sm">
+                Return to Hub
+            </Button>
+        </div>
+    );
   }
 
   const getEmbedUrl = (url: string) => {
@@ -63,10 +83,10 @@ export default function ModuleDetailPage() {
     : 'Recent';
 
   return (
-    <div className="min-h-full bg-white flex flex-col font-sans">
+    <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
         {/* Document Header Control */}
         <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 min-w-0">
                 <Button 
                     variant="ghost" 
                     size="sm" 
@@ -78,7 +98,7 @@ export default function ModuleDetailPage() {
                 </Button>
                 <div className="h-4 w-px bg-slate-100 hidden sm:block" />
                 <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-primary/5 text-primary border-none font-black text-[9px] uppercase tracking-widest h-5 px-2">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-none font-black text-[9px] uppercase tracking-widest h-5 px-2 whitespace-nowrap">
                         {module.category}
                     </Badge>
                 </div>
@@ -91,7 +111,7 @@ export default function ModuleDetailPage() {
         </div>
 
         <ScrollArea className="flex-1">
-            <div className="max-w-4xl mx-auto px-6 sm:px-12 py-12 pb-32">
+            <div className="max-w-4xl mx-auto px-6 sm:px-12 py-12 pb-40">
                 <div className="space-y-12">
                     {/* Module Identity */}
                     <div className="space-y-6">
