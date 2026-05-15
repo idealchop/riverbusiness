@@ -170,7 +170,7 @@ const NavItem = memo(({
             </div>
 
             {isExpanded && hasChildren && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                <div className="animate-in slide-in-from-top-1 duration-300">
                     {children.map(child => (
                         <NavItem 
                             key={child.id} 
@@ -251,7 +251,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
       <div className="p-6 shrink-0 space-y-6">
         <div className="flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-3">
-                <LogoBlack className="h-10 w-10" />
+                <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
                 <div className="flex flex-col">
                     <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Collab</span>
                     <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Documents</span>
@@ -310,7 +310,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </div>
             
             {isSearching && (
-                <div className="px-1 py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="px-1 py-1 animate-in slide-in-from-top-1 duration-200">
                     <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                         <Input 

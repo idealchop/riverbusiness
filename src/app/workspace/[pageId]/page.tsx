@@ -84,7 +84,7 @@ const EMOJI_LIST = [
 
 export function PageSkeleton() {
   return (
-    <div className="h-full flex flex-col bg-white animate-in fade-in duration-500">
+    <div className="h-full flex flex-col bg-white">
       <div className="sticky top-0 z-20 px-4 sm:px-8 py-3 flex items-center justify-between bg-white/95 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
@@ -98,7 +98,7 @@ export function PageSkeleton() {
         </div>
       </div>
       <div className="flex-1 flex flex-col">
-        <div className="h-[20vh] sm:h-[30vh] w-full bg-slate-50/50 animate-pulse" />
+        <div className="h-[20vh] sm:h-[30vh] w-full bg-slate-50/50" />
         <div className="max-w-4xl mx-auto px-4 sm:px-8 pt-10 space-y-6 w-full flex-1">
           <Skeleton className="h-12 w-12 rounded-2xl" />
           <Skeleton className="h-12 w-3/4 rounded-xl" />
@@ -190,7 +190,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
                     <Share2 className="h-4 w-4" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white animate-in zoom-in-95 duration-200">
+            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white">
                 <div className="p-6 space-y-6">
                     <div className="space-y-1">
                         <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Share Document</h4>
@@ -210,12 +210,12 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
                     </div>
 
                     {page.isPublic && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-6">
                             <div className="space-y-2">
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Shareable link</Label>
                                 <div className="flex gap-2">
-                                    <Input readOnly value={shareUrl} className="h-9 rounded-lg bg-slate-50 border-slate-100 font-mono text-[10px] shadow-inner truncate" />
-                                    <Button onClick={copyLink} variant="outline" className={cn("h-9 px-3 rounded-lg border-slate-100 shadow-sm font-bold text-xs shrink-0 transition-all", hasCopied ? "bg-green-50 text-green-700 border-green-100" : "bg-white")}>
+                                    <Input readOnly value={shareUrl} className="h-11 rounded-xl bg-slate-50 border-slate-100 font-mono text-[10px] shadow-inner truncate" />
+                                    <Button onClick={copyLink} variant="outline" className={cn("h-11 px-4 rounded-xl border-slate-100 shadow-sm font-bold text-xs shrink-0 transition-all", hasCopied ? "bg-green-50 text-green-700 border-green-100" : "bg-white")}>
                                         {hasCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                     </Button>
                                 </div>
@@ -248,7 +248,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
                                         <Switch checked={isPasswordEnabled} onCheckedChange={togglePassword} disabled={isUpdating} />
                                     </div>
                                     {isPasswordEnabled && (
-                                        <div className="flex gap-2 animate-in slide-in-from-right-2 duration-300">
+                                        <div className="flex gap-2">
                                             <Input placeholder="Access key..." value={password} onChange={(e) => setPassword(e.target.value)} className="h-9 rounded-lg bg-slate-50 border-slate-100 text-[11px] font-bold px-3" disabled={isUpdating} />
                                             <Button size="sm" onClick={savePassword} className="h-9 rounded-lg px-3 font-bold text-[9px] uppercase tracking-widest" disabled={isUpdating}>Set</Button>
                                         </div>
@@ -456,7 +456,7 @@ function PageEditorContent() {
                         </div>
                         
                         {typingCollaborators.length > 0 && (
-                            <div className="flex items-center gap-2 animate-in fade-in duration-500">
+                            <div className="flex items-center gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                                 <span className="text-[10px] font-bold text-primary leading-tight">
                                     Collaborating: {typingCollaborators[0].name?.split(' ')[0]} {typingCollaborators.length > 1 ? `+${typingCollaborators.length - 1}` : ''}
@@ -473,7 +473,7 @@ function PageEditorContent() {
                     </div>
                 )}
                 <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-3xl sm:text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
-                <div className="animate-in fade-in duration-1000 delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
+                <div className="delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
             </>
         )}
 
@@ -488,9 +488,9 @@ function PageEditorContent() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-white animate-in fade-in duration-700 relative overflow-hidden">
+    <div className="h-full flex flex-col bg-white relative overflow-hidden">
       {page.isTrashed && (
-          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-4 sm:px-8 animate-in slide-in-from-top duration-500 shrink-0">
+          <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-4 sm:px-8 shrink-0">
               <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 text-red-600 shrink-0" /><p className="text-[10px] sm:text-xs font-bold text-red-900 leading-none">Archived in Trash</p></div>
               <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('request-restore-collab-page', { detail: { pageId: page.id } }))} className="h-8 rounded-xl bg-white border-red-200 text-red-700 font-bold text-[9px] sm:text-[10px] gap-2 hover:bg-red-50">
@@ -549,7 +549,7 @@ function PageEditorContent() {
           
           <div className="hidden sm:flex w-20 justify-center">
             {isSaving ? (
-                <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95">
+                <div className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                     <span className="text-[9px] font-black text-primary">Syncing</span>
                 </div>

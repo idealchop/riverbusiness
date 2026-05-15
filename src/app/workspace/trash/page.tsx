@@ -55,7 +55,7 @@ export default function TrashPages() {
   };
 
   return (
-    <div className="min-h-full bg-white p-8 md:p-12 animate-in fade-in duration-700">
+    <div className="min-h-full bg-white p-8 md:p-12">
       <div className="max-w-4xl mx-auto space-y-10">
         <div className="space-y-4">
             <div className="flex items-center gap-4 mb-2">

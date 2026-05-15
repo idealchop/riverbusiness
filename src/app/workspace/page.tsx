@@ -74,7 +74,7 @@ export default function WorkspaceLandingPage() {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/30 overflow-hidden px-4">
-        <div className="max-w-5xl w-full flex flex-col items-center justify-center space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 -mt-20 sm:-mt-12">
+        <div className="max-w-5xl w-full flex flex-col items-center justify-center space-y-8 sm:space-y-12 -mt-20 sm:-mt-12">
             <div className="w-full text-center space-y-4">
                 <div className="flex justify-center mb-6 sm:mb-8">
                     <LogoBlack className="h-16 w-16 sm:h-20 sm:w-20" />
