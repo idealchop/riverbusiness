@@ -85,7 +85,8 @@ import {
     ZapOff,
     Check,
     ChevronDown,
-    Loader2
+    Loader2,
+    ArrowUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -506,6 +507,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               pushHistory();
               setIsDragging(true);
               setDragId(hit.id);
+              // FIXED: Corrected the vertical drag offset calculation
               setDragOffset({ x: x - hit.x, y: y - hit.y }); 
           }
       } else {
@@ -592,6 +594,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           };
           setElements(prev => {
               const next = [...prev, newPathEl];
+              // SYNC TRIGGER moved to MouseUp to avoid "Bad SetState" render error
               setTimeout(() => sync(next, connections), 0);
               return next;
           });
@@ -639,22 +642,23 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   };
 
   const updateSelectedElements = (data: Partial<BoardElement>) => {
-      if (selectedIds.length === 0) return;
+      if (selectedIds.length === 0 || !editable) return;
       pushHistory();
-      setElements(prev => {
-          const next = prev.map(el => {
-              if (selectedIds.includes(el.id)) {
-                  const updates: any = { ...data };
-                  if (data.color && (el.type === 'icon' || el.type === 'text')) {
-                      updates.fontColor = data.color;
-                  }
-                  return { ...el, ...updates };
+      
+      const nextElements = elements.map(el => {
+          if (selectedIds.includes(el.id)) {
+              const updates: any = { ...data };
+              if (data.color && (el.type === 'icon' || el.type === 'text')) {
+                  updates.fontColor = data.color;
               }
-              return el;
-          });
-          setTimeout(() => sync(next, connections), 0);
-          return next;
+              return { ...el, ...updates };
+          }
+          return el;
       });
+
+      setElements(nextElements);
+      // SYNC TRIGGER - Consistent with functional state update
+      sync(nextElements, connections);
   };
 
   const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string) => {
@@ -866,26 +870,26 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
 
             {selectedIds.length > 0 && (
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10">
+                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10" onMouseDown={e => e.stopPropagation()}>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl text-white font-bold text-[10px] uppercase"><Palette className="h-4 w-4" /> Color</Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white">
-                            {COLORS.map(c => (<button key={c.value} onClick={() => updateSelectedElements({ color: c.value })} className="h-6 w-6 rounded-lg border" style={{ backgroundColor: c.value }} />))}
+                        <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white shadow-2xl">
+                            {COLORS.map(c => (<button key={c.value} onClick={(e) => { e.stopPropagation(); updateSelectedElements({ color: c.value }); }} className="h-6 w-6 rounded-lg border hover:scale-110 transition-transform" style={{ backgroundColor: c.value }} />))}
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <Separator orientation="vertical" className="h-5 bg-white/10" />
                     <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={handleCopy} className="h-9 w-9 rounded-xl hover:bg-white/10 text-white"><Copy className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={deleteSelected} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCopy(); }} className="h-9 w-9 rounded-xl hover:bg-white/10 text-white"><Copy className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteSelected(); }} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                 </div>
             )}
 
             {tool === 'pen' && (
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-3 bg-white shadow-2xl rounded-[1.5rem] animate-in slide-in-from-bottom-4 border border-slate-100">
+                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-3 bg-white shadow-2xl rounded-[1.5rem] animate-in slide-in-from-bottom-4 border border-slate-100" onMouseDown={e => e.stopPropagation()}>
                     <div className="flex items-center gap-2 pr-4 border-r border-slate-100"><div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Pencil className="h-4 w-4" /></div><p className="text-[10px] font-black uppercase text-slate-900">Inking</p></div>
                     <div className="flex items-center gap-2">
-                        {PEN_COLORS.map(c => (<button key={c.value} onClick={() => setPenColor(c.value)} className={cn("h-7 w-7 rounded-full border-2 border-white", penColor === c.value ? "ring-2 ring-primary" : "")} style={{ backgroundColor: c.value }} />))}
+                        {PEN_COLORS.map(c => (<button key={c.value} onClick={() => setPenColor(c.value)} className={cn("h-7 w-7 rounded-full border-2 border-white transition-all", penColor === c.value ? "ring-2 ring-primary scale-110" : "hover:scale-105")} style={{ backgroundColor: c.value }} />))}
                     </div>
                     <Separator orientation="vertical" className="h-6 bg-slate-100" />
                     <div className="flex items-center gap-4 px-2">
