@@ -120,7 +120,7 @@ export default function SolarUpgradesPage() {
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
                     <div className="space-y-6">
                         <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed">
-                            The strategic hedge against rising Philippine energy costs.
+                            Protect your business from rising energy costs.
                         </p>
                         <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
                             <p>
@@ -265,9 +265,9 @@ export default function SolarUpgradesPage() {
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
                     Intelligent <br/>monitoring hub.
                   </h2>
-                  <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-md">
+                  <h2 className="text-lg text-slate-400 font-medium leading-relaxed max-w-md">
                     Visualize energy yield, cost savings, and hardware health in real-time. This module integrates directly into your workspace command center.
-                  </p>
+                  </h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8 opacity-60">
