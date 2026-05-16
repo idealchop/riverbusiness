@@ -42,7 +42,6 @@ import {
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { useMounted } from '@/hooks/use-mounted';
-import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
 
 interface BoardEditorProps {
@@ -74,7 +73,6 @@ const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 48];
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
-  const { toast } = useToast();
   
   const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
@@ -129,8 +127,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     setConnections(prevState.connections);
     
     onContentChange({ elements: prevState.elements, connections: prevState.connections });
-    toast({ title: 'Undo' });
-  }, [history, editable, onContentChange, toast]);
+  }, [history, editable, onContentChange]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -176,25 +173,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const selected = elements.find(el => el.id === selectedId);
       if (selected) {
           setClipboard({ ...selected });
-          toast({ title: 'Copied' });
       }
-  }, [elements, selectedId, toast]);
+  }, [elements, selectedId]);
 
   const handlePaste = useCallback(() => {
       if (!clipboard || !editable) return;
       const offset = 20;
       addElement(clipboard.type!, (clipboard.x || 0) + offset, (clipboard.y || 0) + offset, clipboard);
-      toast({ title: 'Pasted' });
-  }, [clipboard, editable, addElement, toast]);
+  }, [clipboard, editable, addElement]);
 
   const handleDuplicate = useCallback(() => {
       const selected = elements.find(el => el.id === selectedId);
       if (selected && editable) {
           const offset = 20;
           addElement(selected.type, selected.x + offset, selected.y + offset, selected);
-          toast({ title: 'Duplicated' });
       }
-  }, [elements, selectedId, editable, addElement, toast]);
+  }, [elements, selectedId, editable, addElement]);
 
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -205,7 +199,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               if (!isInput && selectedId) {
                   e.preventDefault();
                   deleteElement(selectedId);
-                  toast({ title: 'Deleted' });
               }
           }
           
@@ -251,7 +244,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 e.preventDefault();
                 const nextScale = viewport.scale === 1 ? 0.5 : 1;
                 setViewport(prev => ({ ...prev, scale: nextScale }));
-                toast({ title: `Zoom: ${Math.round(nextScale * 100)}%` });
             }
           }
 
@@ -263,7 +255,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, undo, toast, viewport.scale]);
+  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, undo, viewport.scale]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
@@ -345,7 +337,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                   type: 'curved' 
               };
               sync(elements, [...connections, newConn]);
-              toast({ title: 'Connected' });
           }
           setPendingConnFrom(null);
           setCurrentMouseCoords(null);
