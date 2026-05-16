@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Sun, ArrowLeft, Zap, ShieldCheck, BarChart3, Building2, Lock, ChevronRight, Globe, CheckCircle2, Factory, Store, Building, Info, HelpCircle, Landmark } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Globe, CheckCircle2, Factory, Store, Building, HelpCircle, Landmark, Zap, ShieldCheck, BarChart3, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import Image from 'next/image';
@@ -33,10 +33,6 @@ export default function SolarUpgradesPage() {
               <ArrowLeft className="h-5 w-5 text-slate-600" />
             </Link>
           </Button>
-          <div className="flex items-center gap-2">
-            <Sun className="h-5 w-5 text-slate-900" />
-            <span className="font-bold text-sm tracking-tight text-slate-900 pt-0.5">Solar Plus</span>
-          </div>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 font-bold text-[10px] hidden sm:flex h-7 px-3">
@@ -54,7 +50,7 @@ export default function SolarUpgradesPage() {
             <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="space-y-4">
                 <Badge className="bg-slate-900 text-white border-none font-bold text-[10px] px-4 h-7 mb-2">
-                  Industrial upgrade
+                  Industrial Upgrade
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
                   Sustainable energy <br/>for commercial <span className="text-slate-400">scale.</span>
@@ -71,7 +67,7 @@ export default function SolarUpgradesPage() {
                   </a>
                 </Button>
                 <Button asChild variant="outline" className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm border-slate-200 bg-white">
-                  <Link href="/dashboard">Back to core</Link>
+                  <Link href="/dashboard">Back to Core</Link>
                 </Button>
               </div>
 
@@ -144,7 +140,7 @@ export default function SolarUpgradesPage() {
                     <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 rounded-xl bg-slate-900 text-white"><Landmark className="h-5 w-5" /></div>
-                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Financial model</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Financial Model</p>
                         </div>
                         <div className="space-y-2">
                             <h4 className="text-lg font-black text-slate-900">Zero-Capex Solution</h4>
@@ -164,7 +160,7 @@ export default function SolarUpgradesPage() {
           <section className="space-y-12">
             <div className="text-center space-y-4 max-w-2xl mx-auto">
               <h2 className="text-4xl font-black tracking-tight text-slate-900">Installation Tiers</h2>
-              <p className="text-slate-400 font-bold text-[10px] tracking-widest uppercase">Engineered for performance</p>
+              <p className="text-slate-400 font-bold text-[10px] tracking-widest uppercase">Engineered for Performance</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -258,7 +254,7 @@ export default function SolarUpgradesPage() {
                     <div className="p-2 rounded-xl bg-white/10 text-slate-400">
                       <BarChart3 className="h-6 w-6" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Intelligence module</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Intelligence Module</span>
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
                     Intelligent <br/>monitoring hub.
@@ -299,7 +295,7 @@ export default function SolarUpgradesPage() {
                   </div>
 
                   <Button variant="outline" className="rounded-2xl border-white/20 text-white h-12 px-10 font-bold text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-slate-950 transition-all relative z-10">
-                    Inquire about monitoring
+                    Inquire about Monitoring
                   </Button>
                 </Card>
                 
@@ -321,7 +317,7 @@ export default function SolarUpgradesPage() {
                     className="opacity-10 grayscale"
                   />
               </div>
-              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Authorized infrastructure partner</p>
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Authorized Infrastructure Partner</p>
               <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Privacy</a>
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</a>
