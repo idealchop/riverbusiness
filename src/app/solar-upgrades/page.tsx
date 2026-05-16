@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Sun, ArrowLeft, Zap, ShieldCheck, BarChart3, Building2, Lock, ChevronRight, Globe, CheckCircle2, Factory, Store, Building, Info, HelpCircle, Landmark } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
