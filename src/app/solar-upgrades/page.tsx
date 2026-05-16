@@ -67,7 +67,7 @@ export default function SolarUpgradesPage() {
                   Industrial upgrade
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
-                  River energy <br/>architecture for <span className="text-slate-400">scale.</span>
+                  River energy architecture for <span className="text-slate-400">scale.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
                   Specializing in 100 kW to 200 kW industrial installations. Optimize your operational overhead with strategic energy architecture from Solar-Plus.ph.
@@ -88,15 +88,15 @@ export default function SolarUpgradesPage() {
               <div className="pt-8 grid grid-cols-3 gap-8 border-t border-slate-100">
                  <div className="space-y-1">
                     <p className="text-2xl font-black text-slate-900 tracking-tight">100kW+</p>
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Target Scale</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase text-[9px]">Target Scale</p>
                  </div>
                  <div className="space-y-1 border-l pl-8">
                     <p className="text-2xl font-black text-slate-900 tracking-tight">PPA</p>
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Financing</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase text-[9px]">Financing</p>
                  </div>
                  <div className="space-y-1 border-l pl-8">
                     <p className="text-2xl font-black text-slate-900 tracking-tight">Tier 1</p>
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Hardware</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase text-[9px]">Hardware</p>
                  </div>
               </div>
             </div>
@@ -116,8 +116,8 @@ export default function SolarUpgradesPage() {
 
           {/* Educational PPA section */}
           <section className="space-y-8">
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-slate-50 overflow-hidden">
-                <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <Card className="border-none shadow-xl shadow-slate-100 rounded-[2rem] md:rounded-[3rem] bg-slate-50 overflow-hidden">
+                <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
                     <div className="space-y-6">
                         <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed">
                             The strategic hedge against rising Philippine energy costs.
@@ -133,32 +133,30 @@ export default function SolarUpgradesPage() {
                                 You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
                             </p>
                         </div>
-                        <ul className="space-y-3">
+                    </div>
+                    <div className="space-y-8">
+                        <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
+                            <div className="space-y-2">
+                                <h4 className="text-lg font-black text-slate-900">Zero-Capex solution</h4>
+                                <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business expansion while benefiting from sustainable energy.</p>
+                            </div>
+                            <Separator />
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-[9px]">Available for</p>
+                                <p className="text-base font-bold text-slate-900">100 kW to 200 kW commercial scale</p>
+                            </div>
+                        </div>
+                        <ul className="space-y-3 px-2">
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Zero upfront capital required
+                                <CheckCircle2 className="h-4 w-4 text-slate-900 shrink-0" /> Zero upfront capital required
                             </li>
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Protection from volatile fuel surcharges
+                                <CheckCircle2 className="h-4 w-4 text-slate-900 shrink-0" /> Protection from volatile fuel surcharges
                             </li>
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Immediate reduction in monthly overhead
+                                <CheckCircle2 className="h-4 w-4 text-slate-900 shrink-0" /> Immediate reduction in monthly overhead
                             </li>
                         </ul>
-                    </div>
-                    <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2.5 rounded-xl bg-slate-900 text-white"><Landmark className="h-5 w-5" /></div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Financial architecture</p>
-                        </div>
-                        <div className="space-y-2">
-                            <h4 className="text-lg font-black text-slate-900">Zero-Capex solution</h4>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business expansion while benefiting from sustainable energy.</p>
-                        </div>
-                        <Separator />
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available for</p>
-                            <p className="text-base font-bold text-slate-900">100 kW to 200 kW commercial scale</p>
-                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -186,13 +184,13 @@ export default function SolarUpgradesPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-3">
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 100 kW - 200 kW range
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 100 kW - 200 kW range
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> PPA financing available
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> PPA financing available
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Industrial grade hardware
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Industrial grade hardware
                   </div>
                 </CardContent>
               </Card>
@@ -211,13 +209,13 @@ export default function SolarUpgradesPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-3">
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Multi-site aggregation
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Multi-site aggregation
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 50 kW (consideration)
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 50 kW (consideration)
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Net metering integration
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Net metering integration
                   </div>
                 </CardContent>
               </Card>
@@ -236,13 +234,13 @@ export default function SolarUpgradesPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-3">
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> ESG compliance ready
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> ESG compliance ready
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Full BMS integration
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Full BMS integration
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 100 kW+ standard
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 100 kW+ standard
                   </div>
                 </CardContent>
               </Card>
@@ -281,7 +279,7 @@ export default function SolarUpgradesPage() {
                   ].map(m => (
                     <div key={m.label} className="flex items-center gap-3">
                       <m.icon className="h-4 w-4 text-slate-500" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">{m.label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[9px]">{m.label}</span>
                     </div>
                   ))}
                 </div>
@@ -297,7 +295,7 @@ export default function SolarUpgradesPage() {
                   
                   <div className="space-y-3 relative z-10">
                     <h3 className="text-2xl font-black tracking-tight">Upgrade required</h3>
-                    <p className="text-sm text-slate-400 font-medium max-w-[220px] mx-auto leading-relaxed">
+                    <p className="text-sm text-slate-400 font-medium max-w-[220px] mx-auto leading-relaxed text-xs">
                       Real-time monitoring is activated upon successful system synchronization.
                     </p>
                   </div>
@@ -307,7 +305,6 @@ export default function SolarUpgradesPage() {
                   </Button>
                 </Card>
                 
-                {/* Decorative elements */}
                 <div className="absolute -bottom-10 -left-10 h-40 w-40 bg-slate-500/10 rounded-full blur-3xl animate-pulse" />
               </div>
             </div>
@@ -325,11 +322,11 @@ export default function SolarUpgradesPage() {
                     className="opacity-10 grayscale"
                   />
               </div>
-              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Authorized infrastructure partner</p>
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-[9px]">Authorized infrastructure partner</p>
               <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Privacy</a>
-                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</a>
-                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Contact</a>
+                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest text-[9px]">Privacy</a>
+                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest text-[9px]">Terms</a>
+                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest text-[9px]">Contact</a>
               </div>
             </div>
             <p className="text-[9px] font-medium text-slate-300">© 2025 Solar-Plus.ph • Strategic energy infrastructure for the Philippines</p>
