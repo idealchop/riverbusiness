@@ -34,6 +34,13 @@ import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@
 import { doc, collection, query, orderBy, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { AppUser, ChatMessage } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  Carousel, 
+  CarouselContent, 
+  CarouselItem, 
+  CarouselNext, 
+  CarouselPrevious 
+} from '@/components/ui/carousel';
 
 export default function SolarUpgradesPage() {
   const { toast } = useToast();
@@ -70,6 +77,45 @@ export default function SolarUpgradesPage() {
         toast({ variant: 'destructive', title: 'Message Failed', description: 'Could not send your message.' });
     }
   };
+
+  const industries = [
+    {
+      title: 'Manufacturing',
+      description: 'Designed for heavy production lines and continuous 24/7 cold storage demand.',
+      icon: Factory,
+      features: ['100 kW - 200 kW range', 'PPA financing available', 'Industrial grade hardware']
+    },
+    {
+      title: 'Commercial',
+      description: 'Optimized for retail chains, supermarkets, and decentralized site clusters.',
+      icon: Store,
+      features: ['Multi-site aggregation', '50 kW (consideration)', 'Net metering integration']
+    },
+    {
+      title: 'Corporate',
+      description: 'Sustainable energy architecture for high-rise offices and institutions.',
+      icon: Building,
+      features: ['ESG compliance ready', 'Full BMS integration', '100 kW+ standard']
+    },
+    {
+      title: 'Logistics',
+      description: 'Optimizing large-scale refrigeration and sorting center energy demands.',
+      icon: Warehouse,
+      features: ['150 kW - 250 kW range', 'Peak-load management', 'Fleet EV charging integration']
+    },
+    {
+      title: 'Hospitality',
+      description: 'Reducing costs for hotels and resorts with high amenity energy loads.',
+      icon: Hotel,
+      features: ['100 kW - 200 kW range', 'Daytime amenity coverage', 'Guest-facing sustainability']
+    },
+    {
+      title: 'Healthcare',
+      description: 'Specialized solutions for clinics requiring absolute energy reliability.',
+      icon: Activity,
+      features: ['50 kW - 100 kW range', 'Critical backup sync', 'High-purity energy feed']
+    }
+  ];
 
   return (
     <main className="min-h-screen bg-white font-sans overflow-hidden flex flex-col relative">
@@ -217,157 +263,38 @@ export default function SolarUpgradesPage() {
               <p className="text-slate-400 font-bold text-[10px] tracking-widest uppercase">Engineered for performance</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
-                      <Factory className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-black tracking-tight text-slate-900">Manufacturing</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Designed for heavy production lines and continuous 24/7 cold storage demand.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 100 kW - 200 kW range
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> PPA financing available
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Industrial grade hardware
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
-                      <Store className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-black tracking-tight text-slate-900">Commercial</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Optimized for retail chains, supermarkets, and decentralized site clusters.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Multi-site aggregation
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 50 kW (consideration)
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Net metering integration
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
-                      <Building className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-black tracking-tight text-slate-900">Corporate</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Sustainable energy architecture for high-rise offices and institutions.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> ESG compliance ready
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Full BMS integration
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 100 kW+ standard
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
-                      <Warehouse className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-black tracking-tight text-slate-900">Logistics</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Optimizing large-scale refrigeration and sorting center energy demands.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 150 kW - 250 kW range
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Peak-load management
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Fleet EV charging integration
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
-                      <Hotel className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-black tracking-tight text-slate-900">Hospitality</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Reducing costs for hotels and resorts with high amenity energy loads.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 100 kW - 200 kW range
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Daytime amenity coverage
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Guest-facing sustainability
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
-                      <Activity className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-black tracking-tight text-slate-900">Healthcare</CardTitle>
-                  </div>
-                  <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Specialized solutions for clinics requiring absolute energy reliability.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> 50 kW - 100 kW range
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> Critical backup sync
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> High-purity energy feed
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Carousel className="w-full">
+              <CarouselContent className="-ml-4">
+                {industries.map((industry, index) => (
+                  <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                    <Card className="h-full border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
+                      <CardHeader className="p-8">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="p-2 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
+                            <industry.icon className="h-5 w-5" />
+                          </div>
+                          <CardTitle className="text-lg font-black tracking-tight text-slate-900">{industry.title}</CardTitle>
+                        </div>
+                        <CardDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                          {industry.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-8 pt-0 space-y-3">
+                        {industry.features.map((feature, fIndex) => (
+                          <div key={fIndex} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-slate-900 shrink-0" /> {feature}
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="flex justify-center gap-4 mt-12">
+                <CarouselPrevious className="static translate-y-0 h-10 w-10 border-slate-200" />
+                <CarouselNext className="static translate-y-0 h-10 w-10 border-slate-200" />
+              </div>
+            </Carousel>
           </section>
 
           {/* Premium monitoring feature */}
