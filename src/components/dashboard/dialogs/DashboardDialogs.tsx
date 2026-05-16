@@ -85,7 +85,7 @@ export function DashboardDialogs({
       return;
     }
 
-    // Check for plan before allowing refill
+    // If no plan, redirect to the integrated onboarding flow
     if (!user.plan) {
         openDialog('subscriptionOnboarding');
         return;

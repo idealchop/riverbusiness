@@ -14,7 +14,7 @@ import { SaveLitersDialog } from '@/components/dashboard/dialogs/SaveLitersDialo
 import { ComplianceDialog } from '@/components/dashboard/dialogs/ComplianceDialog';
 import { AttachmentViewerDialog } from '@/components/dashboard/dialogs/AttachmentViewerDialog';
 import { RefillStatusDialog } from '@/components/dashboard/dialogs/RefillStatusDialog';
-import { NoPlanDialog } from '@/components/dashboard/dialogs/NoPlanDialog';
+import { SubscriptionOnboardingDialog } from '@/components/dashboard/dialogs/SubscriptionOnboardingDialog';
 import { Dialog } from '@/components/ui/dialog';
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ export function DashboardDialogs({
     refillStatus: false,
     partnerNotice: false,
     branches: false,
-    noPlan: false,
+    subscriptionOnboarding: false,
   });
 
   const [initialComplianceTab, setInitialComplianceTab] = useState<'compliance' | 'sanitation'>('compliance');
@@ -85,9 +85,9 @@ export function DashboardDialogs({
       return;
     }
 
-    // Check for plan before allowing refill
+    // If no plan, redirect to the integrated onboarding flow
     if (!user.plan) {
-        openDialog('noPlan');
+        openDialog('subscriptionOnboarding');
         return;
     }
     
@@ -125,7 +125,7 @@ export function DashboardDialogs({
       'open-update-schedule': () => openDialog('updateSchedule'),
       'open-request-refill': () => {
           if (!user?.plan) {
-              openDialog('noPlan');
+              openDialog('subscriptionOnboarding');
           } else {
               openDialog('requestRefill');
           }
@@ -234,7 +234,13 @@ export function DashboardDialogs({
       <AttachmentViewerDialog isOpen={!!attachmentToView} onOpenChange={() => setAttachmentToView(null)} attachmentUrl={attachmentToView} />
       <RefillStatusDialog isOpen={dialogState.refillStatus} onOpenChange={() => closeDialog('refillStatus')} activeRefillRequest={activeRefillRequest} />
       <BranchesDialog isOpen={dialogState.branches} onOpenChange={() => closeDialog('branches')} branchUsers={branchUsers} />
-      <NoPlanDialog isOpen={dialogState.noPlan} onOpenChange={() => closeDialog('noPlan')} />
+      
+      <SubscriptionOnboardingDialog 
+        isOpen={dialogState.subscriptionOnboarding} 
+        onOpenChange={() => closeDialog('subscriptionOnboarding')} 
+        user={user}
+      />
+
       <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
