@@ -38,7 +38,7 @@ const valueProps = [
   {
     icon: Smartphone,
     title: "Fully Digitalized",
-    description: "Every transaction, delivery receipt, and payment is tracked in real-time."
+    description: "Fully automated by schedule with hassle-free in-app invoicing."
   },
   {
     icon: Wrench,
