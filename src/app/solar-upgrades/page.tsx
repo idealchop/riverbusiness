@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -113,25 +113,28 @@ export default function SolarUpgradesPage() {
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-6">
                         <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed italic">
-                            A smart subscription for your building's power.
+                            The strategic hedge against rising Philippine energy costs.
                         </p>
                         <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
                             <p>
-                                A Power Purchase Agreement (PPA) lets you enjoy solar energy without the high cost of buying panels. SolarPlus installs and maintains the entire system on your roof for <span className="text-slate-900 font-bold">free</span>.
+                                With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
                             </p>
                             <p>
-                                You only pay for the clean electricity the panels generate—guaranteed at a lower rate than what you normally pay your current utility provider.
+                                A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. SolarPlus installs and maintains the industrial-grade system for <span className="text-slate-900 font-bold">free</span>.
+                            </p>
+                            <p>
+                                You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
                             </p>
                         </div>
                         <ul className="space-y-3">
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Zero initial investment required
+                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Zero upfront capital required
                             </li>
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Full maintenance and care included
+                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Protection from volatile fuel surcharges
                             </li>
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Immediate savings from day one
+                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Immediate reduction in monthly overhead
                             </li>
                         </ul>
                     </div>
