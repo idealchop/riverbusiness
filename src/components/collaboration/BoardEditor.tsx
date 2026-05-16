@@ -236,6 +236,24 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               }
           }
 
+          // Zoom Controls
+          if (!isInput) {
+            if (e.key === '=') {
+                e.preventDefault();
+                setViewport(prev => ({ ...prev, scale: Math.min(5, prev.scale + 0.1) }));
+            }
+            if (e.key === '-') {
+                e.preventDefault();
+                setViewport(prev => ({ ...prev, scale: Math.max(0.1, prev.scale - 0.1) }));
+            }
+            if (e.key === ' ') {
+                e.preventDefault();
+                // Toggle between 100% and 50% for quick context switching
+                setViewport(prev => ({ ...prev, scale: prev.scale === 1 ? 0.5 : 1 }));
+                toast({ title: `Zoom toggled to ${viewport.scale === 1 ? '50%' : '100%'}` });
+            }
+          }
+
           if (e.key === 'Escape') {
               setSelectedId(null);
               setTool('select');
@@ -244,7 +262,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, undo, toast]);
+  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, undo, toast, viewport.scale]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
