@@ -70,7 +70,7 @@ export default function SolarUpgradesPage() {
                   River solar power for <span className="text-slate-400">scale.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
-                  100 kW to 200 kW industrial solutions. Reduce your overhead with strategic energy from Solar-Plus.ph.
+                  100 kW to 200 kW industrial solutions. Reduce your overhead with strategic energy.
                 </p>
               </div>
               
