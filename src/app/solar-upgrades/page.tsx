@@ -128,7 +128,7 @@ export default function SolarUpgradesPage() {
            }} 
       />
 
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md px-6 h-16 flex items-center justify-between shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md px-6 h-16 flex items-center justify-between shadow-none">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100 transition-colors">
             <Link href="/dashboard">
@@ -162,7 +162,7 @@ export default function SolarUpgradesPage() {
               </div>
               
               <div className="space-y-6">
-                <Button className="w-full sm:w-auto h-14 rounded-2xl px-12 font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white border-none group transition-all active:scale-95">
+                <Button className="w-full sm:w-auto h-14 rounded-2xl px-12 font-black text-sm uppercase tracking-widest bg-slate-900 hover:bg-slate-800 text-white border-none group transition-all active:scale-95 shadow-none">
                   Refer and get lifetime commission <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
                 
@@ -202,7 +202,7 @@ export default function SolarUpgradesPage() {
               </div>
             </div>
 
-            <div className="relative aspect-square w-full rounded-[3rem] overflow-hidden animate-in fade-in zoom-in-95 duration-1000 group shadow-2xl">
+            <div className="relative aspect-square w-full rounded-[3rem] overflow-hidden animate-in fade-in zoom-in-95 duration-1000 group shadow-none">
               {solarImg && (
                 <Image 
                   src={solarImg.imageUrl}
@@ -216,7 +216,7 @@ export default function SolarUpgradesPage() {
           </section>
 
           <section className="space-y-8">
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-[2rem] md:rounded-[3rem] bg-slate-50 overflow-hidden">
+            <Card className="border-none shadow-none rounded-[2rem] md:rounded-[3rem] bg-slate-50 overflow-hidden">
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
                     <div className="space-y-6 text-slate-700 font-medium leading-relaxed">
                         <p className="text-xl md:text-2xl text-slate-900 font-bold">
@@ -233,7 +233,7 @@ export default function SolarUpgradesPage() {
                         </p>
                     </div>
                     <div className="space-y-8">
-                        <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
+                        <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-none flex flex-col gap-6">
                             <div className="space-y-2">
                                 <h4 className="text-xl font-black text-slate-900">Zero-Capex Solution</h4>
                                 <p className="text-sm text-slate-600 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business growth while benefiting from green energy.</p>
@@ -270,7 +270,7 @@ export default function SolarUpgradesPage() {
               <CarouselContent className="-ml-4">
                 {industries.map((industry, index) => (
                   <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                    <Card className="h-full border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500">
+                    <Card className="h-full border-none shadow-none rounded-[2.5rem] bg-white group transition-all duration-500 border border-slate-100">
                       <CardHeader className="p-8">
                         <div className="flex items-center gap-4 mb-4">
                           <div className="p-3 rounded-xl bg-slate-50 text-slate-900 transition-colors group-hover:bg-slate-100">
@@ -294,13 +294,13 @@ export default function SolarUpgradesPage() {
                 ))}
               </CarouselContent>
               <div className="flex justify-center gap-4 mt-12">
-                <CarouselPrevious className="static translate-y-0 h-12 w-12 border-slate-200" />
-                <CarouselNext className="static translate-y-0 h-12 w-12 border-slate-200" />
+                <CarouselPrevious className="static translate-y-0 h-12 w-12 border-slate-200 shadow-none" />
+                <CarouselNext className="static translate-y-0 h-12 w-12 border-slate-200 shadow-none" />
               </div>
             </Carousel>
           </section>
 
-          <section className="relative overflow-hidden rounded-[3rem] bg-slate-950 p-8 md:p-20 text-white group shadow-3xl">
+          <section className="relative overflow-hidden rounded-[3rem] bg-slate-950 p-8 md:p-20 text-white group shadow-none">
             <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
                <Globe className="h-60 w-60" />
             </div>
@@ -338,10 +338,10 @@ export default function SolarUpgradesPage() {
               </div>
 
               <div className="relative">
-                <Card className="border-none shadow-2xl rounded-[3rem] bg-white/5 backdrop-blur-xl border border-white/10 p-12 flex flex-col items-center justify-center text-center gap-8 relative overflow-hidden group/card">
+                <Card className="border-none shadow-none rounded-[3rem] bg-white/5 backdrop-blur-xl border border-white/10 p-12 flex flex-col items-center justify-center text-center gap-8 relative overflow-hidden group/card">
                   <div className="absolute inset-0 bg-gradient-to-br from-slate-500/10 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity" />
                   
-                  <div className="p-6 rounded-full bg-slate-800 text-slate-400 shadow-inner relative z-10 scale-110">
+                  <div className="p-6 rounded-full bg-slate-800 text-slate-400 shadow-none relative z-10 scale-110">
                     <Lock className="h-10 w-10" />
                   </div>
                   
@@ -352,7 +352,7 @@ export default function SolarUpgradesPage() {
                     </p>
                   </div>
 
-                  <Button className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200 h-12 px-10 font-black text-[10px] uppercase tracking-widest transition-all relative z-10 shadow-xl border-none">
+                  <Button className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200 h-12 px-10 font-black text-[10px] uppercase tracking-widest transition-all relative z-10 shadow-none border-none">
                     Inquire about monitoring
                   </Button>
                 </Card>
