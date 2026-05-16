@@ -28,7 +28,8 @@ import {
     Layout,
     Bold,
     Link as LinkIcon,
-    Copy
+    Copy,
+    Undo2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -77,6 +78,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
+  const [history, setHistory] = useState<{ elements: BoardElement[], connections: BoardConnection[] }[]>([]);
+  
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [clipboard, setClipboard] = useState<Partial<BoardElement> | null>(null);
@@ -108,6 +111,27 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       onContentChange({ elements: newElements, connections: newConnections });
   }, [onContentChange, editable]);
 
+  const pushHistory = useCallback(() => {
+    setHistory(prev => {
+        const next = [...prev, { elements: JSON.parse(JSON.stringify(elements)), connections: JSON.parse(JSON.stringify(connections)) }];
+        if (next.length > 50) return next.slice(1);
+        return next;
+    });
+  }, [elements, connections]);
+
+  const undo = useCallback(() => {
+    if (history.length === 0 || !editable) return;
+    
+    const prevState = history[history.length - 1];
+    setHistory(prev => prev.slice(0, -1));
+    
+    setElements(prevState.elements);
+    setConnections(prevState.connections);
+    
+    onContentChange({ elements: prevState.elements, connections: prevState.connections });
+    toast({ title: 'Undo successful' });
+  }, [history, editable, onContentChange, toast]);
+
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
       const rect = containerRef.current.getBoundingClientRect();
@@ -118,6 +142,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const addElement = (type: BoardElement['type'], x?: number, y?: number, data?: Partial<BoardElement>) => {
       if (!editable) return;
+      pushHistory();
       const id = `el-${Date.now()}`;
       const newEl: BoardElement = {
           id, 
@@ -140,17 +165,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const deleteElement = useCallback((id: string) => {
       if (!editable) return;
-      setElements(prev => {
-          const next = prev.filter(el => el.id !== id);
-          setConnections(cPrev => {
-              const nextConn = cPrev.filter(c => c.fromId !== id && c.toId !== id);
-              sync(next, nextConn);
-              return nextConn;
-          });
-          return next;
-      });
+      pushHistory();
+      const nextElements = elements.filter(el => el.id !== id);
+      const nextConnections = connections.filter(c => c.fromId !== id && c.toId !== id);
+      sync(nextElements, nextConnections);
       if (selectedId === id) setSelectedId(null);
-  }, [editable, selectedId, sync]);
+  }, [editable, selectedId, elements, connections, sync, pushHistory]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.find(el => el.id === selectedId);
@@ -165,7 +185,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const offset = 20;
       addElement(clipboard.type!, (clipboard.x || 0) + offset, (clipboard.y || 0) + offset, clipboard);
       toast({ title: 'Element replicated' });
-  }, [clipboard, editable, toast]);
+  }, [clipboard, editable, addElement, toast]);
 
   const handleDuplicate = useCallback(() => {
       const selected = elements.find(el => el.id === selectedId);
@@ -173,7 +193,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const offset = 20;
           addElement(selected.type, selected.x + offset, selected.y + offset, selected);
       }
-  }, [elements, selectedId, editable]);
+  }, [elements, selectedId, editable, addElement]);
 
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -209,6 +229,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               }
           }
 
+          if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+              if (!isInput) {
+                  e.preventDefault();
+                  undo();
+              }
+          }
+
           if (e.key === 'Escape') {
               setSelectedId(null);
               setTool('select');
@@ -217,7 +244,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, toast]);
+  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, undo, toast]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
@@ -241,6 +268,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (hit) {
           const handleSize = 12 / viewport.scale;
           if (x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize) {
+              pushHistory();
               setIsResizing(true);
               setDragId(hit.id);
           } else {
@@ -290,6 +318,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const targetHit = elements.find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
           
           if (targetHit && targetHit.id !== pendingConnFrom) {
+              pushHistory();
               const newConn: BoardConnection = { 
                   id: `conn-${Date.now()}`, 
                   fromId: pendingConnFrom, 
@@ -307,6 +336,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
 
       if (isDragging || isResizing) {
+          // If we drag or resize, we don't push history here because we pushed it on MouseDown
           sync(elements, connections);
       }
 
@@ -328,6 +358,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   };
 
   const updateElement = (id: string, data: Partial<BoardElement>) => {
+      pushHistory();
       const next = elements.map(el => el.id === id ? { ...el, ...data } : el);
       sync(next, connections);
   };
@@ -462,7 +493,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 <div className={cn("w-full h-full flex flex-col justify-center", el.type === 'diamond' && "-rotate-45")}>
                                     <textarea 
                                         value={el.text}
-                                        onChange={(e) => updateElement(el.id, { text: e.target.value })}
+                                        onChange={(e) => {
+                                            const next = elements.map(item => item.id === el.id ? { ...item, text: e.target.value } : item);
+                                            setElements(next);
+                                            // Don't push history for every keystroke, but sync to parent
+                                            onContentChange({ elements: next, connections });
+                                        }}
                                         className="bg-transparent border-none focus:ring-0 focus:outline-none resize-none w-full placeholder:text-slate-200"
                                         style={{ 
                                             fontSize: `${el.fontSize || 14}px`, 
@@ -592,6 +628,19 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     <span className="text-[10px] font-black w-10 text-center text-slate-700">{Math.round(viewport.scale * 100)}%</span>
                     <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.min(5, v.scale + 0.1) }))} className="h-8 w-8"><Plus className="h-4 w-4 text-slate-500" /></Button>
                  </div>
+                 
+                 <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shadow-lg">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={undo} 
+                        disabled={history.length === 0} 
+                        className="h-10 w-10 rounded-lg text-slate-500 disabled:opacity-30"
+                    >
+                        <Undo2 className="h-4 w-4" />
+                    </Button>
+                 </div>
+
                  <Button variant="outline" size="icon" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })} className="h-10 w-10 rounded-xl bg-white shadow-lg border-slate-200"><Zap className="h-4 w-4 text-primary" /></Button>
             </div>
         </div>
