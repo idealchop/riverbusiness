@@ -82,10 +82,11 @@ import {
     Anchor,
     Box,
     ShoppingBag,
-    Tool,
     Hammer,
     ZapOff,
-    Check
+    Check,
+    ChevronDown,
+    Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -203,7 +204,7 @@ const BLUEPRINTS = [
 const EMOJIS = [
     '🚀', '💡', '✅', '⚠️', '📊', '🏢', '💧', '🌊', '⭐', '🔥', '⚡', '🎨', '💬', '📍', '🎯', '💰', '🚛', '🏗️', '🛠️', '🛡️',
     '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆',
-    '🌈', '💎', '🔥', '🌍', '🏠', '🔔', '📢', '💼', '📦', '🖊️', '✒️', '📈', '📊', '💹', '⚙️', '🛠️', '⛏️', '🔧', '🔨'
+    '🌈', '💎', '🌍', '🏠', '🔔', '📢', '💼', '📦', '🖊️', '✒️', '📈', '📊', '💹', '⚙️', '⛏️', '🔧', '🔨'
 ];
 
 const ASSET_ICONS = [
@@ -259,6 +260,7 @@ const ASSET_ICONS = [
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
+  const { toast } = useToast();
   
   const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
@@ -544,9 +546,16 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           } : el));
       } else if (isDragging && dragId) {
           setElements(prev => {
-              const mainEl = prev.find(item => item.id === dragId)!;
-              const dx = (x - dragOffset.x) - mainEl.x;
-              const dy = (y - dragOffset.y) - mainEl.y;
+              const mainEl = prev.find(item => item.id === dragId);
+              if (!mainEl) return prev;
+              
+              const newMainX = x - dragOffset.x;
+              const newMainY = y - dragOffset.y;
+              const dx = newMainX - mainEl.x;
+              const dy = newMainY - mainEl.y;
+
+              if (dx === 0 && dy === 0) return prev;
+
               return prev.map(el => {
                   if (selectedIds.includes(el.id)) {
                       return { ...el, x: el.x + dx, y: el.y + dy };
@@ -568,7 +577,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           };
           setElements(prev => {
               const next = [...prev, newPathEl];
-              sync(next, connections);
+              // Perform synchronization as a side effect outside of functional state update
+              setTimeout(() => sync(next, connections), 0);
               return next;
           });
           setCurrentPath(null);
