@@ -31,7 +31,8 @@ import {
   Globe,
   Headset,
   Smartphone,
-  Wrench
+  Wrench,
+  Info
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
