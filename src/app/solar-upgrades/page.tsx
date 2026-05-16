@@ -218,21 +218,19 @@ export default function SolarUpgradesPage() {
           <section className="space-y-8">
             <Card className="border-none shadow-xl shadow-slate-100 rounded-[2rem] md:rounded-[3rem] bg-slate-50 overflow-hidden">
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-                    <div className="space-y-6">
-                        <p className="text-xl md:text-2xl text-slate-800 font-bold leading-relaxed">
+                    <div className="space-y-6 text-slate-700 font-medium leading-relaxed">
+                        <p className="text-xl md:text-2xl text-slate-900 font-bold">
                           Protect your business from rising energy costs.
                         </p>
-                        <div className="space-y-4 text-slate-700 font-medium leading-relaxed text-sm md:text-base">
-                            <p>
-                              With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
-                            </p>
-                            <p>
-                              A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for free.
-                            </p>
-                            <p>
-                              You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
-                            </p>
-                        </div>
+                        <p className="text-sm md:text-base">
+                          With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
+                        </p>
+                        <p className="text-sm md:text-base">
+                          A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for free.
+                        </p>
+                        <p className="text-sm md:text-base">
+                          You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
+                        </p>
                     </div>
                     <div className="space-y-8">
                         <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
@@ -348,13 +346,13 @@ export default function SolarUpgradesPage() {
                   </div>
                   
                   <div className="space-y-3 relative z-10">
-                    <h3 className="text-2xl font-black tracking-tight">Upgrade Required</h3>
-                    <p className="text-sm text-slate-300 font-medium max-w-[240px] mx-auto leading-relaxed">
+                    <h3 className="text-2xl font-black tracking-tight text-white uppercase">Upgrade Required</h3>
+                    <p className="text-sm text-slate-300 font-bold max-w-[240px] mx-auto leading-relaxed">
                       Real-time monitoring is activated upon successful system synchronization.
                     </p>
                   </div>
 
-                  <Button variant="outline" className="rounded-2xl border-white/20 text-white h-12 px-10 font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-slate-950 transition-all relative z-10 shadow-lg">
+                  <Button className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200 h-12 px-10 font-black text-[10px] uppercase tracking-widest transition-all relative z-10 shadow-xl border-none">
                     Inquire about monitoring
                   </Button>
                 </Card>
