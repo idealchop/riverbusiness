@@ -35,7 +35,13 @@ import {
     LayoutTemplate,
     Sparkles,
     FilePlus,
-    Binary
+    Binary,
+    GitCommit,
+    Trophy,
+    Split,
+    Network,
+    RotateCcw,
+    Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -109,6 +115,39 @@ const BLUEPRINTS = [
         ]
     },
     {
+        id: 'bp-roadmap',
+        name: 'Project Roadmap',
+        description: 'Multi-phase strategic milestones.',
+        icon: Trophy,
+        elements: [
+            { id: 'ph1', type: 'circle', x: 50, y: 100, width: 80, height: 80, text: 'Q1', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 't1', type: 'rect', x: 150, y: 80, width: 200, height: 120, text: 'Foundation & Research', color: '#ffffff', bold: true },
+            { id: 'ph2', type: 'circle', x: 400, y: 100, width: 80, height: 80, text: 'Q2', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 't2', type: 'rect', x: 500, y: 80, width: 200, height: 120, text: 'Infrastructure Build', color: '#ffffff', bold: true },
+            { id: 'ph3', type: 'circle', x: 750, y: 100, width: 80, height: 80, text: 'Q3', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 't3', type: 'rect', x: 850, y: 80, width: 200, height: 120, text: 'Scale & Launch', color: '#ffffff', bold: true }
+        ],
+        connections: [
+            { id: 'r1', fromId: 'ph1', toId: 'ph2', type: 'straight' },
+            { id: 'r2', fromId: 'ph2', toId: 'ph3', type: 'straight' }
+        ]
+    },
+    {
+        id: 'bp-priority',
+        name: 'Priority Matrix',
+        description: 'Impact vs Effort prioritization.',
+        icon: Activity,
+        elements: [
+            { id: 'lbl1', type: 'text', x: 400, y: 0, width: 200, height: 40, text: 'HIGH IMPACT', fontColor: '#ef4444', bold: true },
+            { id: 'lbl2', type: 'text', x: 0, y: 300, width: 100, height: 40, text: 'HIGH EFFORT', fontColor: '#64748b', bold: true, textAlign: 'left' },
+            { id: 'q1', type: 'rect', x: 100, y: 50, width: 400, height: 300, text: 'Quick Wins', color: '#dcfce7', bold: true, fontSize: 18 },
+            { id: 'q2', type: 'rect', x: 500, y: 50, width: 400, height: 300, text: 'Major Projects', color: '#dbeafe', bold: true, fontSize: 18 },
+            { id: 'q3', type: 'rect', x: 100, y: 350, width: 400, height: 300, text: 'Fill-ins', color: '#f1f5f9', bold: true, fontSize: 18 },
+            { id: 'q4', type: 'rect', x: 500, y: 350, width: 400, height: 300, text: 'Hard Slogs', color: '#fee2e2', bold: true, fontSize: 18 }
+        ],
+        connections: []
+    },
+    {
         id: 'bp-swot',
         name: 'Strategic SWOT',
         description: 'Analyze strengths and risks.',
@@ -124,7 +163,7 @@ const BLUEPRINTS = [
     {
         id: 'bp-brainstorm',
         name: 'Idea Storm',
-        description: 'divergent thinking hub.',
+        description: 'Divergent thinking hub.',
         icon: Sparkles,
         elements: [
             { id: 'hub', type: 'circle', x: 350, y: 300, width: 180, height: 180, text: 'CORE IDEA', color: '#fef08a', bold: true, fontSize: 18 },
@@ -139,6 +178,36 @@ const BLUEPRINTS = [
             { id: 'c3', fromId: 'hub', toId: 'idea3', type: 'curved' },
             { id: 'c4', fromId: 'hub', toId: 'idea4', type: 'curved' }
         ]
+    },
+    {
+        id: 'bp-decision-tree',
+        name: 'Logic Tree',
+        description: 'Map decisions and outcomes.',
+        icon: Split,
+        elements: [
+            { id: 'q', type: 'diamond', x: 400, y: 50, width: 180, height: 180, text: 'Primary Question?', color: '#f3e8ff', bold: true },
+            { id: 'y', type: 'rect', x: 200, y: 300, width: 200, height: 120, text: 'Outcome: Yes', color: '#dcfce7', bold: true },
+            { id: 'n', type: 'rect', x: 600, y: 300, width: 200, height: 120, text: 'Outcome: No', color: '#fee2e2', bold: true }
+        ],
+        connections: [
+            { id: 'd1', fromId: 'q', toId: 'y', type: 'step' },
+            { id: 'd2', fromId: 'q', toId: 'n', type: 'step' }
+        ]
+    },
+    {
+        id: 'bp-retro',
+        name: 'Team Retrospective',
+        description: 'Agile feedback structure.',
+        icon: RotateCcw,
+        elements: [
+            { id: 'head1', type: 'text', x: 50, y: 0, width: 250, height: 50, text: 'WHAT WENT WELL', fontColor: '#22c55e', bold: true },
+            { id: 'head2', type: 'text', x: 350, y: 0, width: 250, height: 50, text: 'TO IMPROVE', fontColor: '#f59e0b', bold: true },
+            { id: 'head3', type: 'text', x: 650, y: 0, width: 250, height: 50, text: 'ACTION ITEMS', fontColor: '#3b82f6', bold: true },
+            { id: 'col1', type: 'rect', x: 50, y: 60, width: 250, height: 600, text: '', color: '#f1f5f9' },
+            { id: 'col2', type: 'rect', x: 350, y: 60, width: 250, height: 600, text: '', color: '#f1f5f9' },
+            { id: 'col3', type: 'rect', x: 650, y: 60, width: 250, height: 600, text: '', color: '#f1f5f9' }
+        ],
+        connections: []
     }
 ];
 
@@ -179,8 +248,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
       if (!editable) return;
-      setElements(newElements);
-      setConnections(newConnections);
       onContentChange({ elements: newElements, connections: newConnections });
   }, [onContentChange, editable]);
 
@@ -201,8 +268,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     setElements(prevState.elements);
     setConnections(prevState.connections);
     
-    onContentChange({ elements: prevState.elements, connections: prevState.connections });
-  }, [history, editable, onContentChange]);
+    sync(prevState.elements, prevState.connections);
+  }, [history, editable, sync]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -232,7 +299,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           path: data?.path,
           strokeWidth: data?.strokeWidth
       };
-      sync([...elements, newEl], connections);
+      const nextElements = [...elements, newEl];
+      setElements(nextElements);
+      sync(nextElements, connections);
       setSelectedId(id);
       return id;
   };
@@ -246,7 +315,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       const newElements: BoardElement[] = blueprint.elements.map(el => ({
           ...el,
-          id: `${el.id}-${Date.now()}`,
+          id: `${el.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           x: el.x + offsetX,
           y: el.y + offsetY,
           type: el.type as any,
@@ -261,14 +330,18 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const toIdx = blueprint.elements.findIndex(e => e.id === conn.toId);
           return {
               ...conn,
-              id: `${conn.id}-${Date.now()}`,
+              id: `${conn.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               fromId: newElements[fromIdx].id,
               toId: newElements[toIdx].id,
               type: conn.type as any
           };
       });
 
-      sync([...elements, ...newElements], [...connections, ...newConnections]);
+      const nextElements = [...elements, ...newElements];
+      const nextConnections = [...connections, ...newConnections];
+      setElements(nextElements);
+      setConnections(nextConnections);
+      sync(nextElements, nextConnections);
   };
 
   const deleteElement = useCallback((id: string) => {
@@ -276,6 +349,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       pushHistory();
       const nextElements = elements.filter(el => el.id !== id);
       const nextConnections = connections.filter(c => c.fromId !== id && c.toId !== id);
+      setElements(nextElements);
+      setConnections(nextConnections);
       sync(nextElements, nextConnections);
       if (selectedId === id) setSelectedId(null);
   }, [editable, selectedId, elements, connections, sync, pushHistory]);
@@ -341,7 +416,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               }
           }
 
-          // Zoom Controls
           if (!isInput) {
             if (e.key === '=') {
                 e.preventDefault();
@@ -467,9 +541,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               strokeWidth: penSize
           };
           
-          const nextElements = [...elements, newPathEl];
-          setElements(nextElements);
-          onContentChange({ elements: nextElements, connections });
+          setElements(prev => {
+              const next = [...prev, newPathEl];
+              sync(next, connections);
+              return next;
+          });
           
           setCurrentPath(null);
           return;
@@ -490,7 +566,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                   toId: targetHit.id, 
                   type: 'curved' 
               };
-              sync(elements, [...connections, newConn]);
+              const nextConnections = [...connections, newConn];
+              setConnections(nextConnections);
+              sync(elements, nextConnections);
           }
           setPendingConnFrom(null);
           setCurrentMouseCoords(null);
@@ -520,6 +598,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const updateElement = (id: string, data: Partial<BoardElement>) => {
       pushHistory();
       const next = elements.map(el => el.id === id ? { ...el, ...data } : el);
+      setElements(next);
       sync(next, connections);
   };
 
@@ -554,7 +633,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   return (
     <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none font-sans h-full">
-        {/* Component Library Sidebar */}
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
             <div className="flex flex-col gap-5">
                 <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} label="Sticky" />
@@ -572,15 +650,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2">
                         <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Architecture Blueprints</DropdownMenuLabel>
-                        {BLUEPRINTS.map(bp => (
-                            <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
-                                <div className="flex items-center gap-2 w-full">
-                                    <bp.icon className="h-4 w-4 text-primary" />
-                                    <span className="font-bold text-sm text-slate-900">{bp.name}</span>
-                                </div>
-                                <p className="text-[10px] font-medium text-slate-400">{bp.description}</p>
-                            </DropdownMenuItem>
-                        ))}
+                        <ScrollArea className="h-[400px]">
+                            {BLUEPRINTS.map(bp => (
+                                <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
+                                    <div className="flex items-center gap-2 w-full">
+                                        <bp.icon className="h-4 w-4 text-primary" />
+                                        <span className="font-bold text-sm text-slate-900">{bp.name}</span>
+                                    </div>
+                                    <p className="text-[10px] font-medium text-slate-400">{bp.description}</p>
+                                </DropdownMenuItem>
+                            ))}
+                        </ScrollArea>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -607,7 +687,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
              }}
              ref={containerRef}>
             
-            {/* Design Grid */}
             <div className="absolute inset-0 z-0 opacity-[0.1] pointer-events-none" 
                  style={{ 
                      backgroundImage: `radial-gradient(circle, #538ec2 1.5px, transparent 1px)`, 
@@ -616,7 +695,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                  }} 
             />
 
-            {/* Canvas Rendering */}
             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
                 <svg className="absolute inset-0 overflow-visible w-full h-full">
                     <defs>
@@ -624,7 +702,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1" />
                         </marker>
                     </defs>
-                    {/* Existing Connections */}
                     {connections.map(conn => (
                         <path 
                             key={conn.id} 
@@ -635,7 +712,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             markerEnd="url(#arrowhead)"
                         />
                     ))}
-                    {/* Drag Preview Line */}
                     {pendingConnFrom && currentMouseCoords && (
                         <path 
                             d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y)} 
@@ -647,7 +723,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         />
                     )}
 
-                    {/* Render Paths (Pen tool) */}
                     {elements.filter(el => el.type === 'path').map(el => (
                         <path 
                             key={el.id} 
@@ -670,7 +745,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         />
                     ))}
                     
-                    {/* Active Path during drawing */}
                     {currentPath && (
                         <path 
                             d={currentPath} 
@@ -732,7 +806,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 )}
                             </div>
 
-                            {/* External Connect Buttons */}
                             {(isHovered || isSelected) && !isDragging && (
                                 <div className="absolute inset-0 pointer-events-none">
                                     <Port side="top" id={el.id} />
@@ -745,7 +818,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     );
                 })}
                 
-                {/* Empty State */}
                 {elements.length === 0 && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-6 animate-in fade-in duration-1000">
                         <div className="p-10 rounded-[3rem] bg-white border border-slate-100 shadow-inner opacity-40">
@@ -762,7 +834,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 )}
             </div>
 
-            {/* Contextual Style Bar - Element Specific */}
             {selectedElement && (
                 <div 
                     onMouseDown={(e) => e.stopPropagation()}
@@ -859,7 +930,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 </div>
             )}
 
-            {/* Pen Tool Contextual Bar */}
             {tool === 'pen' && (
                 <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-3 bg-white shadow-2xl rounded-[1.5rem] animate-in slide-in-from-bottom-4 duration-300 border border-slate-100">
                     <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
@@ -911,7 +981,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 </div>
             )}
 
-            {/* Viewport Controls */}
             <div className="absolute bottom-8 right-8 z-40 flex items-center gap-3">
                  <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shadow-lg">
                     <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.max(0.1, v.scale - 0.1) }))} className="h-8 w-8"><Minus className="h-4 w-4 text-slate-500" /></Button>
