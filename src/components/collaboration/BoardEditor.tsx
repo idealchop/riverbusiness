@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -96,7 +95,10 @@ import {
     DropdownMenuItem, 
     DropdownMenuTrigger,
     DropdownMenuLabel,
-    DropdownMenuSeparator
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { 
     Popover,
@@ -104,6 +106,7 @@ import {
     PopoverTrigger 
 } from '@/components/ui/popover';
 import { useMounted } from '@/hooks/use-mounted';
+import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
@@ -349,9 +352,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           strokeWidth: data?.strokeWidth,
           iconName: data?.iconName
       };
-      const nextElements = [...elements, newEl];
-      setElements(nextElements);
-      sync(nextElements, connections);
+      setElements(prev => {
+          const next = [...prev, newEl];
+          setTimeout(() => sync(next, connections), 0);
+          return next;
+      });
       setSelectedIds([id]);
       return id;
   };
@@ -386,23 +391,31 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           };
       });
 
-      const nextElements = [...elements, ...newElements];
-      const nextConnections = [...connections, ...newConnections];
-      setElements(nextElements);
-      setConnections(nextConnections);
-      sync(nextElements, nextConnections);
+      setElements(prev => {
+          const next = [...prev, ...newElements];
+          setConnections(prevConn => {
+              const nextConn = [...prevConn, ...newConnections];
+              setTimeout(() => sync(next, nextConn), 0);
+              return nextConn;
+          });
+          return next;
+      });
   };
 
   const deleteSelected = useCallback(() => {
       if (!editable || selectedIds.length === 0) return;
       pushHistory();
-      const nextElements = elements.filter(el => !selectedIds.includes(el.id));
-      const nextConnections = connections.filter(c => !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
-      setElements(nextElements);
-      setConnections(nextConnections);
-      sync(nextElements, nextConnections);
+      setElements(prev => {
+          const next = prev.filter(el => !selectedIds.includes(el.id));
+          setConnections(prevConn => {
+              const nextConn = prevConn.filter(c => !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
+              setTimeout(() => sync(next, nextConn), 0);
+              return nextConn;
+          });
+          return next;
+      });
       setSelectedIds([]);
-  }, [editable, selectedIds, elements, connections, sync, pushHistory]);
+  }, [editable, selectedIds, sync, pushHistory]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -419,11 +432,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           x: el.x + offset,
           y: el.y + offset
       }));
-      const nextElements = [...elements, ...newElements];
-      setElements(nextElements);
-      sync(nextElements, connections);
+      setElements(prev => {
+          const next = [...prev, ...newElements];
+          setTimeout(() => sync(next, connections), 0);
+          return next;
+      });
       setSelectedIds(newElements.map(el => el.id));
-  }, [clipboard, editable, elements, connections, sync, pushHistory]);
+  }, [clipboard, editable, connections, sync, pushHistory]);
 
   const handleDuplicate = useCallback(() => {
       if (selectedIds.length === 0 || !editable) return;
@@ -577,7 +592,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           };
           setElements(prev => {
               const next = [...prev, newPathEl];
-              // Perform synchronization as a side effect outside of functional state update
               setTimeout(() => sync(next, connections), 0);
               return next;
           });
@@ -594,9 +608,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
               const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnFrom, toId: targetHit.id, type: 'curved' };
-              const nextConnections = [...connections, newConn];
-              setConnections(nextConnections);
-              sync(elements, nextConnections);
+              setConnections(prev => {
+                  const next = [...prev, newConn];
+                  setTimeout(() => sync(elements, next), 0);
+                  return next;
+              });
           }
           setPendingConnFrom(null);
           setCurrentMouseCoords(null);
@@ -625,19 +641,20 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const updateSelectedElements = (data: Partial<BoardElement>) => {
       if (selectedIds.length === 0) return;
       pushHistory();
-      const next = elements.map(el => {
-          if (selectedIds.includes(el.id)) {
-              const updates: any = { ...data };
-              // Icons and text use fontColor for their primary appearance
-              if (data.color && (el.type === 'icon' || el.type === 'text')) {
-                  updates.fontColor = data.color;
+      setElements(prev => {
+          const next = prev.map(el => {
+              if (selectedIds.includes(el.id)) {
+                  const updates: any = { ...data };
+                  if (data.color && (el.type === 'icon' || el.type === 'text')) {
+                      updates.fontColor = data.color;
+                  }
+                  return { ...el, ...updates };
               }
-              return { ...el, ...updates };
-          }
-          return el;
+              return el;
+          });
+          setTimeout(() => sync(next, connections), 0);
+          return next;
       });
-      setElements(next);
-      sync(next, connections);
   };
 
   const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string) => {
@@ -795,6 +812,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             
             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
                 <svg className="absolute inset-0 overflow-visible w-full h-full">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1" />
+                        </marker>
+                    </defs>
                     {connections.map(conn => (
                         <path key={conn.id} d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} fill="none" stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" />
                     ))}
