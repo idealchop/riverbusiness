@@ -22,7 +22,8 @@ import {
   Hotel,
   Activity,
   Warehouse,
-  MessageSquare
+  MessageSquare,
+  ArrowUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -136,7 +137,7 @@ export default function SolarUpgradesPage() {
           </Button>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-bold text-[10px] hidden sm:flex h-7 px-3 uppercase tracking-wider">
+          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-bold text-xs hidden sm:flex h-7 px-3 uppercase tracking-wider">
             Expert consultation active
           </Badge>
           <AppLauncher />
@@ -149,7 +150,7 @@ export default function SolarUpgradesPage() {
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="space-y-4">
-                <Badge className="bg-slate-900 text-white border-none font-bold text-[11px] px-4 h-7 mb-2 uppercase tracking-widest">
+                <Badge className="bg-slate-900 text-white border-none font-bold text-xs px-4 h-7 mb-2 uppercase tracking-widest">
                   Industrial upgrade
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
@@ -173,13 +174,13 @@ export default function SolarUpgradesPage() {
                     chatMessages={chatMessages || []}
                     onMessageSubmit={handleMessageSubmit}
                   >
-                    <button className="text-xs font-black uppercase tracking-[0.15em] text-primary hover:text-primary-light transition-all flex items-center gap-2">
+                    <button className="text-sm font-black uppercase tracking-[0.15em] text-primary hover:text-primary-light transition-all flex items-center gap-2">
                         <MessageSquare className="h-4 w-4" />
                         Talk to our team
                     </button>
                   </LiveSupportDialog>
                   <Separator orientation="vertical" className="h-3 bg-slate-200" />
-                  <Link href="/dashboard" className="text-xs font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 transition-all">
+                  <Link href="/dashboard" className="text-sm font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 transition-all">
                       Back to Core
                   </Link>
                 </div>
@@ -313,7 +314,7 @@ export default function SolarUpgradesPage() {
                     <div className="p-2 rounded-xl bg-white/10 text-slate-400">
                       <BarChart3 className="h-6 w-6" />
                     </div>
-                    <span className="text-xs font-black uppercase tracking-[0.4em] text-slate-500">Intelligence Module</span>
+                    <span className="text-sm font-black uppercase tracking-[0.4em] text-slate-500">Intelligence Module</span>
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
                     Intelligent <br/>Monitoring Hub.
@@ -353,7 +354,7 @@ export default function SolarUpgradesPage() {
                     </p>
                   </div>
 
-                  <Button variant="outline" className="rounded-2xl border-white/20 text-white h-12 px-10 font-bold text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-slate-950 transition-all relative z-10">
+                  <Button variant="outline" className="rounded-2xl border-white/20 text-white h-12 px-10 font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-slate-950 transition-all relative z-10 shadow-lg">
                     Inquire about monitoring
                   </Button>
                 </Card>
@@ -374,7 +375,7 @@ export default function SolarUpgradesPage() {
                     className="opacity-10 grayscale"
                   />
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorized infrastructure partner</p>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Authorized infrastructure partner</p>
               <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Privacy</a>
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</a>
