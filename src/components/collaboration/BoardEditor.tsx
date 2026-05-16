@@ -315,7 +315,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               setSelectedId(hit.id);
               setIsDragging(true);
               setDragId(hit.id);
-              setDragOffset({ x: x - hit.x, y: y - dragOffset.y });
+              // Fix jumping issue: ensure Y offset calculation is based on current element Y
+              setDragOffset({ x: x - hit.x, y: y - hit.y });
           }
       } else {
           setSelectedId(null);
@@ -377,12 +378,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               strokeWidth: penSize
           };
           
-          // Use functional update to ensure we don't drop strokes during high-frequency saving
-          setElements(prev => {
-              const next = [...prev, newPathEl];
-              onContentChange({ elements: next, connections });
-              return next;
-          });
+          // Fix React warning: Call external onContentChange after state update, not inside functional updater
+          const nextElements = [...elements, newPathEl];
+          setElements(nextElements);
+          onContentChange({ elements: nextElements, connections });
           
           setCurrentPath(null);
           return;
