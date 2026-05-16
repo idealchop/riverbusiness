@@ -13,9 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  CheckCircle2, 
   MapPin, 
-  Droplets, 
   Smartphone, 
   Wrench, 
   Package, 
@@ -36,7 +34,7 @@ const valueProps = [
   {
     icon: ShieldCheck,
     title: "High-Quality Monitoring",
-    description: "Drinking water quality monitored 24/7 with deterministic lab testing."
+    description: "Drinking water quality monitored 24/7 with professional lab testing."
   },
   {
     icon: Smartphone,
@@ -46,12 +44,12 @@ const valueProps = [
   {
     icon: Wrench,
     title: "Monthly Sanitation",
-    description: "Professional cleaning of your dispensers and containers included."
+    description: "Professional cleaning of your dispensers and containers is included."
   },
   {
     icon: Package,
     title: "Premium Equipment",
-    description: "Free-to-use hot & cold dispensers and brand new reusable containers."
+    description: "Free hot & cold dispensers and brand new reusable containers for your team."
   }
 ];
 
@@ -63,14 +61,14 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
           {/* Left: Value Proposition */}
           <div className="flex-1 p-8 md:p-12 space-y-10">
             <div className="space-y-4">
-              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-black text-[10px] uppercase tracking-[0.2em] h-6 px-3">
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold text-[10px] uppercase tracking-widest h-6 px-3">
                 Subscription Required
               </Badge>
               <h2 className="text-3xl font-black tracking-tighter text-slate-900 leading-tight">
-                Unlock Intelligent <br/><span className="text-primary">Hydration Logistics.</span>
+                Unlock Smart <br/><span className="text-primary">Water Management.</span>
               </h2>
               <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
-                To request a refill, you need an active Smart Refill plan. Join our network for professional water management.
+                To request a refill, you need an active Smart Refill plan. Join our network for professional water management and reliable supply dispatches.
               </p>
             </div>
 
@@ -81,7 +79,7 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                     <prop.icon className="h-5 w-5" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{prop.title}</h4>
+                    <h4 className="text-sm font-bold text-slate-900">{prop.title}</h4>
                     <p className="text-xs font-medium text-slate-400 leading-snug">{prop.description}</p>
                   </div>
                 </div>
@@ -103,8 +101,8 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                             <MapPin className="h-5 w-5 text-white" />
                         </div>
                         <div className="space-y-0.5">
-                            <p className="text-xs font-black uppercase tracking-widest text-white">Logistics Hub</p>
-                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-tighter">Nearby Station Search</p>
+                            <p className="text-xs font-bold text-white">Logistics Hub</p>
+                            <p className="text-[10px] font-medium text-white/40 uppercase tracking-tight">Nearby Station Search</p>
                         </div>
                     </div>
                     
@@ -112,12 +110,12 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                         <div className="p-4 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">
                             <Globe className="h-8 w-8 text-white/20 group-hover:text-primary transition-colors" />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30 max-w-[150px]">
+                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest max-w-[150px]">
                             Map interface initializing...
                         </p>
                     </div>
 
-                    <Button className="w-full h-12 rounded-xl bg-white text-slate-950 hover:bg-slate-200 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl border-none">
+                    <Button className="w-full h-12 rounded-xl bg-white text-slate-950 hover:bg-slate-200 font-bold text-xs shadow-xl border-none">
                         Find Nearby Stations <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
@@ -126,25 +124,25 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
             <div className="relative z-10 pt-10">
                 <div className="flex items-center gap-2 mb-4">
                     <Zap className="h-3 w-3 text-amber-400" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40">Fulfillment Engine Alpha</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">Fulfillment Engine</span>
                 </div>
-                <p className="text-[10px] font-bold text-white/30 leading-relaxed">
-                    River Philippines utilizes an interconnected network of DOH-certified stations for seamless distribution.
+                <p className="text-[10px] font-medium text-white/30 leading-relaxed">
+                    River Philippines utilizes an interconnected network of DOH-certified stations to ensure consistent and high-quality distribution.
                 </p>
             </div>
           </div>
         </div>
 
         <DialogFooter className="p-8 pt-0 bg-white border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-300">Authored by River</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-slate-300">Authored by River</p>
             <div className="flex items-center gap-3 w-full sm:w-auto">
                 <DialogClose asChild>
-                    <Button variant="ghost" className="rounded-xl h-10 px-8 font-bold text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-900">
+                    <Button variant="ghost" className="rounded-xl h-10 px-8 font-bold text-xs text-slate-400 hover:text-slate-900">
                         Dismiss
                     </Button>
                 </DialogClose>
-                <Button className="flex-1 sm:flex-none rounded-xl h-10 px-10 font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20">
-                    Avail Subscription <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                <Button className="flex-1 sm:flex-none rounded-xl h-10 px-10 font-bold text-xs shadow-xl shadow-primary/20">
+                    Subscribe Now <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Button>
             </div>
         </DialogFooter>
