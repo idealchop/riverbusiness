@@ -27,7 +27,8 @@ import {
     Share2,
     Layout,
     Bold,
-    Link as LinkIcon
+    Link as LinkIcon,
+    Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -78,6 +79,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [clipboard, setClipboard] = useState<Partial<BoardElement> | null>(null);
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<'select' | 'hand' | 'arrow'>('select');
@@ -89,7 +91,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   
-  // Connection Dragging State
   const [pendingConnFrom, setPendingConnFrom] = useState<string | null>(null);
   const [currentMouseCoords, setCurrentMouseCoords] = useState<{ x: number, y: number } | null>(null);
 
@@ -115,25 +116,108 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       return { x, y };
   };
 
-  const addElement = (type: BoardElement['type'], x?: number, y?: number) => {
+  const addElement = (type: BoardElement['type'], x?: number, y?: number, data?: Partial<BoardElement>) => {
       if (!editable) return;
       const id = `el-${Date.now()}`;
       const newEl: BoardElement = {
-          id, type,
+          id, 
+          type: data?.type || type,
           x: x || (100 - viewport.x) / viewport.scale,
           y: y || (100 - viewport.y) / viewport.scale,
-          text: type === 'note' ? 'New Idea' : (type === 'text' ? 'Double click to edit' : 'Process Step'),
-          color: type === 'note' ? '#fef08a' : '#ffffff',
-          width: type === 'text' ? 200 : 150,
-          height: type === 'text' ? 40 : 150,
-          fontSize: 14,
-          fontColor: '#0f172a',
-          bold: true,
-          textAlign: 'center'
+          text: data?.text || (type === 'note' ? 'New Idea' : (type === 'text' ? 'Double click to edit' : 'Process Step')),
+          color: data?.color || (type === 'note' ? '#fef08a' : '#ffffff'),
+          width: data?.width || (type === 'text' ? 200 : 150),
+          height: data?.height || (type === 'text' ? 40 : 150),
+          fontSize: data?.fontSize || 14,
+          fontColor: data?.fontColor || '#0f172a',
+          bold: data?.bold ?? true,
+          textAlign: data?.textAlign || 'center'
       };
       sync([...elements, newEl], connections);
       setSelectedId(id);
+      return id;
   };
+
+  const deleteElement = useCallback((id: string) => {
+      if (!editable) return;
+      setElements(prev => {
+          const next = prev.filter(el => el.id !== id);
+          setConnections(cPrev => {
+              const nextConn = cPrev.filter(c => c.fromId !== id && c.toId !== id);
+              sync(next, nextConn);
+              return nextConn;
+          });
+          return next;
+      });
+      if (selectedId === id) setSelectedId(null);
+  }, [editable, selectedId, sync]);
+
+  const handleCopy = useCallback(() => {
+      const selected = elements.find(el => el.id === selectedId);
+      if (selected) {
+          setClipboard({ ...selected });
+          toast({ title: 'Copied to organizational clipboard' });
+      }
+  }, [elements, selectedId, toast]);
+
+  const handlePaste = useCallback(() => {
+      if (!clipboard || !editable) return;
+      const offset = 20;
+      addElement(clipboard.type!, (clipboard.x || 0) + offset, (clipboard.y || 0) + offset, clipboard);
+      toast({ title: 'Element replicated' });
+  }, [clipboard, editable, toast]);
+
+  const handleDuplicate = useCallback(() => {
+      const selected = elements.find(el => el.id === selectedId);
+      if (selected && editable) {
+          const offset = 20;
+          addElement(selected.type, selected.x + offset, selected.y + offset, selected);
+      }
+  }, [elements, selectedId, editable]);
+
+  useEffect(() => {
+      const handleGlobalKeyDown = (e: KeyboardEvent) => {
+          const activeElement = document.activeElement;
+          const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+          
+          if (e.key === 'Backspace' || e.key === 'Delete') {
+              if (!isInput && selectedId) {
+                  e.preventDefault();
+                  deleteElement(selectedId);
+                  toast({ title: 'Element removed' });
+              }
+          }
+          
+          if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+              if (!isInput && selectedId) {
+                  e.preventDefault();
+                  handleCopy();
+              }
+          }
+
+          if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+              if (!isInput) {
+                  e.preventDefault();
+                  handlePaste();
+              }
+          }
+
+          if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+              if (!isInput && selectedId) {
+                  e.preventDefault();
+                  handleDuplicate();
+              }
+          }
+
+          if (e.key === 'Escape') {
+              setSelectedId(null);
+              setTool('select');
+          }
+      };
+
+      window.addEventListener('keydown', handleGlobalKeyDown);
+      return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, toast]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
@@ -144,7 +228,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
-      // Check if we hit a port
       const target = e.target as HTMLElement;
       const portId = target.closest('[data-port-id]')?.getAttribute('data-port-id');
       if (portId) {
@@ -247,12 +330,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const updateElement = (id: string, data: Partial<BoardElement>) => {
       const next = elements.map(el => el.id === id ? { ...el, ...data } : el);
       sync(next, connections);
-  };
-
-  const deleteElement = (id: string) => {
-      sync(elements.filter(el => el.id !== id), connections.filter(c => c.fromId !== id && c.toId !== id));
-      if (selectedId === id) setSelectedId(null);
-      toast({ title: 'Element removed', description: 'The selected block and its connections have been deleted.' });
   };
 
   const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string) => {
@@ -497,9 +574,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
                     <Separator orientation="vertical" className="h-5 bg-white/10" />
 
-                    <Button variant="ghost" size="icon" onClick={() => deleteElement(selectedElement.id)} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={handleCopy} className="h-9 w-9 rounded-xl hover:bg-white/10 text-white">
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => deleteElement(selectedElement.id)} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
 
