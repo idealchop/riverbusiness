@@ -31,7 +31,8 @@ import {
     Link as LinkIcon,
     Copy,
     Undo2,
-    Pencil
+    Pencil,
+    CircleDot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -53,15 +54,27 @@ interface BoardEditorProps {
 }
 
 const COLORS = [
+    { name: 'Blue', value: '#3b82f6' },
+    { name: 'Red', value: '#ef4444' },
+    { name: 'Green', value: '#22c55e' },
     { name: 'Yellow', value: '#fef08a' },
-    { name: 'Green', value: '#dcfce7' },
-    { name: 'Blue', value: '#dbeafe' },
     { name: 'Pink', value: '#fce7f3' },
     { name: 'Purple', value: '#f3e8ff' },
     { name: 'Slate', value: '#f1f5f9' },
     { name: 'White', value: '#ffffff' },
     { name: 'Black', value: '#0f172a' }
 ];
+
+const PEN_COLORS = [
+    { name: 'Blue', value: '#3b82f6' },
+    { name: 'Red', value: '#ef4444' },
+    { name: 'Green', value: '#22c55e' },
+    { name: 'Amber', value: '#f59e0b' },
+    { name: 'Slate', value: '#64748b' },
+    { name: 'Black', value: '#0f172a' }
+];
+
+const PEN_SIZES = [2, 4, 8, 12];
 
 const TEXT_COLORS = [
     { name: 'Dark', value: '#0f172a' },
@@ -98,6 +111,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [currentMouseCoords, setCurrentMouseCoords] = useState<{ x: number, y: number } | null>(null);
   
   const [currentPath, setCurrentPath] = useState<string | null>(null);
+  const [penColor, setPenColor] = useState('#3b82f6');
+  const [penSize, setPenSize] = useState(2);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -158,7 +173,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           fontColor: data?.fontColor || '#0f172a',
           bold: data?.bold ?? true,
           textAlign: data?.textAlign || 'center',
-          path: data?.path
+          path: data?.path,
+          strokeWidth: data?.strokeWidth
       };
       sync([...elements, newEl], connections);
       setSelectedId(id);
@@ -355,9 +371,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               x: 0,
               y: 0,
               text: '',
-              color: '#3b82f6',
+              color: penColor,
               width: 0,
-              height: 0
+              height: 0,
+              strokeWidth: penSize
           };
           sync([...elements, newEl], connections);
           setCurrentPath(null);
@@ -523,7 +540,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             d={el.path} 
                             fill="none" 
                             stroke={el.color || '#3b82f6'} 
-                            strokeWidth="2" 
+                            strokeWidth={el.strokeWidth || 2} 
                             strokeLinecap="round" 
                             strokeLinejoin="round" 
                             className={cn(
@@ -544,8 +561,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         <path 
                             d={currentPath} 
                             fill="none" 
-                            stroke="#3b82f6" 
-                            strokeWidth="2" 
+                            stroke={penColor} 
+                            strokeWidth={penSize} 
                             strokeLinecap="round" 
                             strokeLinejoin="round" 
                         />
@@ -631,7 +648,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 )}
             </div>
 
-            {/* Contextual Style Bar - Integrated Event Stop */}
+            {/* Contextual Style Bar - Element Specific */}
             {selectedElement && (
                 <div 
                     onMouseDown={(e) => e.stopPropagation()}
@@ -646,7 +663,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white border-slate-100">
                             {COLORS.map(c => (
                                 <button key={c.value} onClick={() => updateElement(selectedElement.id, { color: c.value })}
-                                    className={cn("h-6 w-6 rounded-lg border", (selectedElement.type === 'path' ? selectedElement.color : selectedElement.color) === c.value && "ring-2 ring-primary ring-offset-1")}
+                                    className={cn("h-6 w-6 rounded-lg border", (selectedElement.color) === c.value && "ring-2 ring-primary ring-offset-1")}
                                     style={{ backgroundColor: c.value }} />
                             ))}
                         </DropdownMenuContent>
@@ -695,6 +712,26 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </>
                     )}
 
+                    {selectedElement.type === 'path' && (
+                        <>
+                             <Separator orientation="vertical" className="h-5 bg-white/10" />
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl text-white font-bold text-[10px] uppercase">
+                                        Size
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="center" className="flex flex-col gap-1 p-2 rounded-2xl bg-white border-slate-100">
+                                    {PEN_SIZES.map(s => (
+                                        <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { strokeWidth: s })} className="text-xs font-bold cursor-pointer">
+                                            {s}px
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </>
+                    )}
+
                     <Separator orientation="vertical" className="h-5 bg-white/10" />
 
                     <div className="flex items-center gap-1">
@@ -708,7 +745,59 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 </div>
             )}
 
-            {/* Controls */}
+            {/* Pen Tool Contextual Bar */}
+            {tool === 'pen' && (
+                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-3 bg-white shadow-2xl rounded-[1.5rem] animate-in slide-in-from-bottom-4 duration-300 border border-slate-100">
+                    <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
+                        <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                            <Pencil className="h-4 w-4" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Inking</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {PEN_COLORS.map(c => (
+                            <button 
+                                key={c.value} 
+                                onClick={() => setPenColor(c.value)}
+                                className={cn(
+                                    "h-7 w-7 rounded-full border-2 border-white shadow-sm transition-all hover:scale-110",
+                                    penColor === c.value ? "ring-2 ring-primary ring-offset-1" : "hover:ring-1 hover:ring-slate-200"
+                                )}
+                                style={{ backgroundColor: c.value }}
+                            />
+                        ))}
+                    </div>
+
+                    <Separator orientation="vertical" className="h-6 bg-slate-100" />
+
+                    <div className="flex items-center gap-1.5 px-2">
+                        {PEN_SIZES.map(s => (
+                            <button 
+                                key={s} 
+                                onClick={() => setPenSize(s)}
+                                className={cn(
+                                    "flex items-center justify-center h-8 w-8 rounded-lg transition-all",
+                                    penSize === s ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-400 hover:bg-slate-50"
+                                )}
+                            >
+                                <div style={{ width: s/1.5 + 2, height: s/1.5 + 2 }} className="rounded-full bg-current" />
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setTool('select')}
+                        className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+
+            {/* Viewport Controls */}
             <div className="absolute bottom-8 right-8 z-40 flex items-center gap-3">
                  <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shadow-lg">
                     <Button variant="ghost" size="icon" onClick={() => setViewport(v => ({ ...v, scale: Math.max(0.1, v.scale - 0.1) }))} className="h-8 w-8"><Minus className="h-4 w-4 text-slate-500" /></Button>

@@ -124,6 +124,7 @@ export interface BoardElement {
     textAlign?: 'left' | 'center' | 'right';
     url?: string; // For images
     path?: string; // For freehand drawing (Pen tool)
+    strokeWidth?: number; // Size for path elements
 }
 
 export interface BoardConnection {
