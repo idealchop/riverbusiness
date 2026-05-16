@@ -111,7 +111,7 @@ export type CollabPageType = 'doc' | 'sheet' | 'board';
 
 export interface BoardElement {
     id: string;
-    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image';
+    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image' | 'path';
     x: number;
     y: number;
     text: string;
@@ -123,6 +123,7 @@ export interface BoardElement {
     bold?: boolean;
     textAlign?: 'left' | 'center' | 'right';
     url?: string; // For images
+    path?: string; // For freehand drawing (Pen tool)
 }
 
 export interface BoardConnection {

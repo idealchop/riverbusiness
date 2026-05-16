@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -29,7 +30,8 @@ import {
     Bold,
     Link as LinkIcon,
     Copy,
-    Undo2
+    Undo2,
+    Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -83,7 +85,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [clipboard, setClipboard] = useState<Partial<BoardElement> | null>(null);
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
-  const [tool, setTool] = useState<'select' | 'hand' | 'arrow'>('select');
+  const [tool, setTool] = useState<'select' | 'hand' | 'arrow' | 'pen'>('select');
   
   const [isPanning, setIsPanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -94,6 +96,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [pendingConnFrom, setPendingConnFrom] = useState<string | null>(null);
   const [currentMouseCoords, setCurrentMouseCoords] = useState<{ x: number, y: number } | null>(null);
+  
+  const [currentPath, setCurrentPath] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -153,7 +157,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           fontSize: data?.fontSize || 14,
           fontColor: data?.fontColor || '#0f172a',
           bold: data?.bold ?? true,
-          textAlign: data?.textAlign || 'center'
+          textAlign: data?.textAlign || 'center',
+          path: data?.path
       };
       sync([...elements, newEl], connections);
       setSelectedId(id);
@@ -266,6 +271,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
+      if (tool === 'pen' && editable) {
+          setCurrentPath(`M ${x} ${y}`);
+          return;
+      }
+
       const target = e.target as HTMLElement;
       const portId = target.closest('[data-port-id]')?.getAttribute('data-port-id');
       if (portId) {
@@ -274,7 +284,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
-      const hit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
+      const hit = [...elements].reverse().find(el => {
+          if (el.type === 'path') return false; // Paths handled by direct click
+          return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
+      });
       
       if (hit) {
           const handleSize = 12 / viewport.scale;
@@ -286,7 +299,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               setSelectedId(hit.id);
               setIsDragging(true);
               setDragId(hit.id);
-              setDragOffset({ x: x - hit.x, y: y - hit.y });
+              setDragOffset({ x: x - hit.x, y: y - dragOffset.y });
           }
       } else {
           setSelectedId(null);
@@ -305,11 +318,19 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
+      if (tool === 'pen' && currentPath && editable) {
+          setCurrentPath(prev => `${prev} L ${x} ${y}`);
+          return;
+      }
+
       if (pendingConnFrom) {
           setCurrentMouseCoords({ x, y });
       }
 
-      const hoverHit = [...elements].reverse().find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
+      const hoverHit = [...elements].reverse().find(el => {
+          if (el.type === 'path') return false;
+          return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
+      });
       setHoveredId(hoverHit?.id || null);
 
       if (isResizing && dragId) {
@@ -324,9 +345,31 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
+      if (tool === 'pen' && currentPath && editable) {
+          pushHistory();
+          const id = `path-${Date.now()}`;
+          const newEl: BoardElement = {
+              id,
+              type: 'path',
+              path: currentPath,
+              x: 0,
+              y: 0,
+              text: '',
+              color: '#3b82f6',
+              width: 0,
+              height: 0
+          };
+          sync([...elements, newEl], connections);
+          setCurrentPath(null);
+          return;
+      }
+
       if (pendingConnFrom) {
           const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-          const targetHit = elements.find(el => (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height));
+          const targetHit = elements.find(el => {
+              if (el.type === 'path') return false;
+              return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
+          });
           
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
@@ -411,6 +454,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             <Separator className="w-8" />
             <div className="flex flex-col gap-2">
                 <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
+                <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
                 <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
             </div>
@@ -471,9 +515,44 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             markerEnd="url(#arrowhead)"
                         />
                     )}
+
+                    {/* Render Paths (Pen tool) */}
+                    {elements.filter(el => el.type === 'path').map(el => (
+                        <path 
+                            key={el.id} 
+                            d={el.path} 
+                            fill="none" 
+                            stroke={el.color || '#3b82f6'} 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            className={cn(
+                                "pointer-events-auto cursor-pointer transition-all",
+                                selectedId === el.id ? "stroke-primary" : ""
+                            )}
+                            onMouseDown={(e) => {
+                                if (tool === 'select') {
+                                    e.stopPropagation();
+                                    setSelectedId(el.id);
+                                }
+                            }}
+                        />
+                    ))}
+                    
+                    {/* Active Path during drawing */}
+                    {currentPath && (
+                        <path 
+                            d={currentPath} 
+                            fill="none" 
+                            stroke="#3b82f6" 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                        />
+                    )}
                 </svg>
 
-                {elements.map((el) => {
+                {elements.filter(el => el.type !== 'path').map((el) => {
                     const isSelected = selectedId === el.id;
                     const isHovered = hoveredId === el.id;
                     return (
@@ -502,7 +581,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         onChange={(e) => {
                                             const next = elements.map(item => item.id === el.id ? { ...item, text: e.target.value } : item);
                                             setElements(next);
-                                            // Don't push history for every keystroke, but sync to parent
                                             onContentChange({ elements: next, connections });
                                         }}
                                         className="bg-transparent border-none focus:ring-0 focus:outline-none resize-none w-full placeholder:text-slate-200"
@@ -568,51 +646,54 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white border-slate-100">
                             {COLORS.map(c => (
                                 <button key={c.value} onClick={() => updateElement(selectedElement.id, { color: c.value })}
-                                    className={cn("h-6 w-6 rounded-lg border", selectedElement.color === c.value && "ring-2 ring-primary ring-offset-1")}
+                                    className={cn("h-6 w-6 rounded-lg border", (selectedElement.type === 'path' ? selectedElement.color : selectedElement.color) === c.value && "ring-2 ring-primary ring-offset-1")}
                                     style={{ backgroundColor: c.value }} />
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
-                    <Separator orientation="vertical" className="h-5 bg-white/10" />
+                    {selectedElement.type !== 'path' && (
+                        <>
+                            <Separator orientation="vertical" className="h-5 bg-white/10" />
+                            <div className="flex items-center gap-0.5">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white"><CaseSensitive className="h-4 w-4" /></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="p-1 rounded-xl bg-white border-slate-100">
+                                        {FONT_SIZES.map(s => (
+                                            <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { fontSize: s })} className="text-xs font-bold cursor-pointer">
+                                                {s}px
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                
+                                <ToolbarButton 
+                                    onClick={() => updateElement(selectedElement.id, { bold: !selectedElement.bold })} 
+                                    active={!!selectedElement.bold} 
+                                    icon={<Bold className="h-4 w-4" />} 
+                                />
+                                
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white"><Palette className="h-4 w-4 opacity-50" /></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="grid grid-cols-5 p-2 rounded-xl bg-white border-slate-100">
+                                        {TEXT_COLORS.map(c => (
+                                            <button key={c.value} onClick={() => updateElement(selectedElement.id, { fontColor: c.value })}
+                                                className={cn("h-5 w-5 rounded-full border m-1", selectedElement.fontColor === c.value && "ring-2 ring-primary")}
+                                                style={{ backgroundColor: c.value }} />
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
 
-                    <div className="flex items-center gap-0.5">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white"><CaseSensitive className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="p-1 rounded-xl bg-white border-slate-100">
-                                {FONT_SIZES.map(s => (
-                                    <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { fontSize: s })} className="text-xs font-bold cursor-pointer">
-                                        {s}px
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        
-                        <ToolbarButton 
-                            onClick={() => updateElement(selectedElement.id, { bold: !selectedElement.bold })} 
-                            active={!!selectedElement.bold} 
-                            icon={<Bold className="h-4 w-4" />} 
-                        />
-                        
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white"><Palette className="h-4 w-4 opacity-50" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="grid grid-cols-5 p-2 rounded-xl bg-white border-slate-100">
-                                {TEXT_COLORS.map(c => (
-                                    <button key={c.value} onClick={() => updateElement(selectedElement.id, { fontColor: c.value })}
-                                        className={cn("h-5 w-5 rounded-full border m-1", selectedElement.fontColor === c.value && "ring-2 ring-primary")}
-                                        style={{ backgroundColor: c.value }} />
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'left' })} active={selectedElement.textAlign === 'left'} icon={<AlignLeft className="h-4 w-4" />} />
-                        <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'center' })} active={selectedElement.textAlign === 'center'} icon={<AlignCenter className="h-4 w-4" />} />
-                        <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'right' })} active={selectedElement.textAlign === 'right'} icon={<AlignRight className="h-4 w-4" />} />
-                    </div>
+                                <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'left' })} active={selectedElement.textAlign === 'left'} icon={<AlignLeft className="h-4 w-4" />} />
+                                <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'center' })} active={selectedElement.textAlign === 'center'} icon={<AlignCenter className="h-4 w-4" />} />
+                                <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'right' })} active={selectedElement.textAlign === 'right'} icon={<AlignRight className="h-4 w-4" />} />
+                            </div>
+                        </>
+                    )}
 
                     <Separator orientation="vertical" className="h-5 bg-white/10" />
 
