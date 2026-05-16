@@ -113,38 +113,36 @@ export default function SolarUpgradesPage() {
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-6">
                         <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed italic">
-                            Think of a PPA like a subscription for your energy.
+                            A smart subscription for your building's power.
                         </p>
                         <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
                             <p>
-                                A Power Purchase Agreement (PPA) is a smart way to go solar without buying any equipment. 
-                                We install the full solar system on your roof at <span className="text-slate-900 font-bold">zero upfront cost</span>.
+                                A Power Purchase Agreement (PPA) lets you enjoy solar energy without the high cost of buying panels. SolarPlus installs and maintains the entire system on your roof for <span className="text-slate-900 font-bold">free</span>.
                             </p>
                             <p>
-                                Instead of paying for panels, you simply buy the clean energy they produce. 
-                                We guarantee that this energy will be cheaper than what you normally pay your electric utility company.
+                                You only pay for the clean electricity the panels generate—guaranteed at a lower rate than what you normally pay your current utility provider.
                             </p>
                         </div>
                         <ul className="space-y-3">
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> No initial investment required
+                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Zero initial investment required
                             </li>
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Maintenance included for 25 years
+                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Full maintenance and care included
                             </li>
                             <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Immediate savings on your energy bill
+                                <CheckCircle2 className="h-4 w-4 text-slate-900" /> Immediate savings from day one
                             </li>
                         </ul>
                     </div>
                     <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 rounded-xl bg-slate-900 text-white"><Landmark className="h-5 w-5" /></div>
-                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Financial Model</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Financial architecture</p>
                         </div>
                         <div className="space-y-2">
                             <h4 className="text-lg font-black text-slate-900">Zero-Capex Solution</h4>
-                            <p className="text-sm text-slate-500 font-medium">Perfect for companies that want to keep their capital for business growth while benefiting from green energy.</p>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business expansion while benefiting from sustainable energy.</p>
                         </div>
                         <Separator />
                         <div className="space-y-1">
