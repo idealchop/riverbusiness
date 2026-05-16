@@ -11,7 +11,6 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   MapPin, 
   Smartphone, 
@@ -23,7 +22,6 @@ import {
   ChevronRight,
   Headset
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface NoPlanDialogProps {
   isOpen: boolean;
@@ -66,9 +64,6 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
           {/* Left: Value Proposition */}
           <div className="flex-1 p-8 md:p-14 space-y-12">
             <div className="space-y-4">
-              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold text-[10px] uppercase tracking-[0.1em] h-6 px-3">
-                Subscription required
-              </Badge>
               <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
                 Unlock smart <br/><span className="text-primary">water management.</span>
               </h2>
