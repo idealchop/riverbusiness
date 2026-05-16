@@ -24,22 +24,17 @@ import {
     AlignRight,
     Zap,
     CornerRightUp,
-    Share2,
     Layout,
     Bold,
     Link as LinkIcon,
     Copy,
     Undo2,
     Pencil,
-    CircleDot,
     LayoutTemplate,
     Sparkles,
-    FilePlus,
     Binary,
-    GitCommit,
     Trophy,
     Split,
-    Network,
     RotateCcw,
     Activity
 } from 'lucide-react';
@@ -159,55 +154,6 @@ const BLUEPRINTS = [
             { id: 't', type: 'note', x: 380, y: 380, width: 250, height: 250, text: 'THREATS', color: '#fef3c7', bold: true }
         ],
         connections: []
-    },
-    {
-        id: 'bp-brainstorm',
-        name: 'Idea Storm',
-        description: 'Divergent thinking hub.',
-        icon: Sparkles,
-        elements: [
-            { id: 'hub', type: 'circle', x: 350, y: 300, width: 180, height: 180, text: 'CORE IDEA', color: '#fef08a', bold: true, fontSize: 18 },
-            { id: 'idea1', type: 'note', x: 100, y: 100, width: 150, height: 150, text: 'Concept A', color: '#ffffff' },
-            { id: 'idea2', type: 'note', x: 600, y: 100, width: 150, height: 150, text: 'Concept B', color: '#ffffff' },
-            { id: 'idea3', type: 'note', x: 100, y: 500, width: 150, height: 150, text: 'Concept C', color: '#ffffff' },
-            { id: 'idea4', type: 'note', x: 600, y: 500, width: 150, height: 150, text: 'Concept D', color: '#ffffff' }
-        ],
-        connections: [
-            { id: 'c1', fromId: 'hub', toId: 'idea1', type: 'curved' },
-            { id: 'c2', fromId: 'hub', toId: 'idea2', type: 'curved' },
-            { id: 'c3', fromId: 'hub', toId: 'idea3', type: 'curved' },
-            { id: 'c4', fromId: 'hub', toId: 'idea4', type: 'curved' }
-        ]
-    },
-    {
-        id: 'bp-decision-tree',
-        name: 'Logic Tree',
-        description: 'Map decisions and outcomes.',
-        icon: Split,
-        elements: [
-            { id: 'q', type: 'diamond', x: 400, y: 50, width: 180, height: 180, text: 'Primary Question?', color: '#f3e8ff', bold: true },
-            { id: 'y', type: 'rect', x: 200, y: 300, width: 200, height: 120, text: 'Outcome: Yes', color: '#dcfce7', bold: true },
-            { id: 'n', type: 'rect', x: 600, y: 300, width: 200, height: 120, text: 'Outcome: No', color: '#fee2e2', bold: true }
-        ],
-        connections: [
-            { id: 'd1', fromId: 'q', toId: 'y', type: 'step' },
-            { id: 'd2', fromId: 'q', toId: 'n', type: 'step' }
-        ]
-    },
-    {
-        id: 'bp-retro',
-        name: 'Team Retrospective',
-        description: 'Agile feedback structure.',
-        icon: RotateCcw,
-        elements: [
-            { id: 'head1', type: 'text', x: 50, y: 0, width: 250, height: 50, text: 'WHAT WENT WELL', fontColor: '#22c55e', bold: true },
-            { id: 'head2', type: 'text', x: 350, y: 0, width: 250, height: 50, text: 'TO IMPROVE', fontColor: '#f59e0b', bold: true },
-            { id: 'head3', type: 'text', x: 650, y: 0, width: 250, height: 50, text: 'ACTION ITEMS', fontColor: '#3b82f6', bold: true },
-            { id: 'col1', type: 'rect', x: 50, y: 60, width: 250, height: 600, text: '', color: '#f1f5f9' },
-            { id: 'col2', type: 'rect', x: 350, y: 60, width: 250, height: 600, text: '', color: '#f1f5f9' },
-            { id: 'col3', type: 'rect', x: 650, y: 60, width: 250, height: 600, text: '', color: '#f1f5f9' }
-        ],
-        connections: []
     }
 ];
 
@@ -218,9 +164,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
   const [history, setHistory] = useState<{ elements: BoardElement[], connections: BoardConnection[] }[]>([]);
   
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [clipboard, setClipboard] = useState<Partial<BoardElement> | null>(null);
+  const [clipboard, setClipboard] = useState<BoardElement[]>([]);
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<'select' | 'hand' | 'arrow' | 'pen'>('select');
@@ -228,6 +174,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [isPanning, setIsPanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isSelectingMarquee, setIsSelectingMarquee] = useState(false);
+  const [marqueeBox, setMarqueeBox] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null);
+  
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
@@ -237,7 +186,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [penColor, setPenColor] = useState('#3b82f6');
-  const [penSize, setPenSize] = useState(2);
+  const [penSize, setPenSize] = useState(4);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -302,7 +251,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const nextElements = [...elements, newEl];
       setElements(nextElements);
       sync(nextElements, connections);
-      setSelectedId(id);
+      setSelectedIds([id]);
       return id;
   };
 
@@ -344,37 +293,53 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       sync(nextElements, nextConnections);
   };
 
-  const deleteElement = useCallback((id: string) => {
-      if (!editable) return;
+  const deleteSelected = useCallback(() => {
+      if (!editable || selectedIds.length === 0) return;
       pushHistory();
-      const nextElements = elements.filter(el => el.id !== id);
-      const nextConnections = connections.filter(c => c.fromId !== id && c.toId !== id);
+      const nextElements = elements.filter(el => !selectedIds.includes(el.id));
+      const nextConnections = connections.filter(c => !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
       setElements(nextElements);
       setConnections(nextConnections);
       sync(nextElements, nextConnections);
-      if (selectedId === id) setSelectedId(null);
-  }, [editable, selectedId, elements, connections, sync, pushHistory]);
+      setSelectedIds([]);
+  }, [editable, selectedIds, elements, connections, sync, pushHistory]);
 
   const handleCopy = useCallback(() => {
-      const selected = elements.find(el => el.id === selectedId);
-      if (selected) {
-          setClipboard({ ...selected });
+      const selected = elements.filter(el => selectedIds.includes(el.id));
+      if (selected.length > 0) {
+          setClipboard([...selected]);
       }
-  }, [elements, selectedId]);
+  }, [elements, selectedIds]);
 
   const handlePaste = useCallback(() => {
-      if (!clipboard || !editable) return;
-      const offset = 20;
-      addElement(clipboard.type!, (clipboard.x || 0) + offset, (clipboard.y || 0) + offset, clipboard);
-  }, [clipboard, editable, addElement]);
+      if (clipboard.length === 0 || !editable) return;
+      pushHistory();
+      const offset = 40;
+      const idMap: Record<string, string> = {};
+      
+      const newElements = clipboard.map(el => {
+          const newId = `el-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+          idMap[el.id] = newId;
+          return {
+              ...el,
+              id: newId,
+              x: el.x + offset,
+              y: el.y + offset
+          };
+      });
+
+      const newIds = newElements.map(el => el.id);
+      const nextElements = [...elements, ...newElements];
+      setElements(nextElements);
+      sync(nextElements, connections);
+      setSelectedIds(newIds);
+  }, [clipboard, editable, elements, connections, sync, pushHistory]);
 
   const handleDuplicate = useCallback(() => {
-      const selected = elements.find(el => el.id === selectedId);
-      if (selected && editable) {
-          const offset = 20;
-          addElement(selected.type, selected.x + offset, selected.y + offset, selected);
-      }
-  }, [elements, selectedId, editable, addElement]);
+      if (selectedIds.length === 0 || !editable) return;
+      handleCopy();
+      handlePaste();
+  }, [selectedIds, editable, handleCopy, handlePaste]);
 
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -382,14 +347,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
           
           if (e.key === 'Backspace' || e.key === 'Delete') {
-              if (!isInput && selectedId) {
+              if (!isInput && selectedIds.length > 0) {
                   e.preventDefault();
-                  deleteElement(selectedId);
+                  deleteSelected();
               }
           }
           
           if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-              if (!isInput && selectedId) {
+              if (!isInput && selectedIds.length > 0) {
                   e.preventDefault();
                   handleCopy();
               }
@@ -403,7 +368,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           }
 
           if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-              if (!isInput && selectedId) {
+              if (!isInput && selectedIds.length > 0) {
                   e.preventDefault();
                   handleDuplicate();
               }
@@ -433,14 +398,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           }
 
           if (e.key === 'Escape') {
-              setSelectedId(null);
+              setSelectedIds([]);
               setTool('select');
           }
       };
 
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedId, deleteElement, handleCopy, handlePaste, handleDuplicate, undo, viewport.scale]);
+  }, [selectedIds, deleteSelected, handleCopy, handlePaste, handleDuplicate, undo, viewport.scale]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
@@ -471,19 +436,30 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       
       if (hit) {
           const handleSize = 12 / viewport.scale;
-          if (x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize) {
+          const isResizingHit = x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize;
+
+          if (isResizingHit) {
               pushHistory();
               setIsResizing(true);
               setDragId(hit.id);
           } else {
-              setSelectedId(hit.id);
+              if (e.shiftKey) {
+                  setSelectedIds(prev => prev.includes(hit.id) ? prev.filter(id => id !== hit.id) : [...prev, hit.id]);
+              } else if (!selectedIds.includes(hit.id)) {
+                  setSelectedIds([hit.id]);
+              }
+              
+              pushHistory();
               setIsDragging(true);
               setDragId(hit.id);
-              setDragOffset({ x: x - hit.x, y: y - hit.y });
+              setDragOffset({ x: x, y: y }); 
           }
       } else {
-          setSelectedId(null);
-          setPendingConnFrom(null);
+          if (!e.shiftKey) {
+              setSelectedIds([]);
+          }
+          setIsSelectingMarquee(true);
+          setMarqueeBox({ x1: x, y1: y, x2: x, y2: y });
       }
   };
 
@@ -503,6 +479,23 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
+      if (isSelectingMarquee && marqueeBox) {
+          setMarqueeBox({ ...marqueeBox, x2: x, y2: y });
+          
+          const xMin = Math.min(marqueeBox.x1, x);
+          const xMax = Math.max(marqueeBox.x1, x);
+          const yMin = Math.min(marqueeBox.y1, y);
+          const yMax = Math.max(marqueeBox.y1, y);
+
+          const inBox = elements.filter(el => {
+              if (el.type === 'path') return false;
+              return el.x < xMax && el.x + el.width > xMin && el.y < yMax && el.y + el.height > yMin;
+          }).map(el => el.id);
+          
+          setSelectedIds(inBox);
+          return;
+      }
+
       if (pendingConnFrom) {
           setCurrentMouseCoords({ x, y });
       }
@@ -519,14 +512,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               width: Math.max(50, x - el.x), 
               height: Math.max(40, y - el.y) 
           } : el));
-      } else if (isDragging && dragId) {
-          setElements(prev => prev.map(el => el.id === dragId ? { ...el, x: x - dragOffset.x, y: y - dragOffset.y } : el));
+      } else if (isDragging) {
+          const dx = x - dragOffset.x;
+          const dy = y - dragOffset.y;
+          setDragOffset({ x, y });
+          
+          setElements(prev => prev.map(el => {
+              if (selectedIds.includes(el.id)) {
+                  return { ...el, x: el.x + dx, y: el.y + dy };
+              }
+              return el;
+          }));
       }
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
       if (tool === 'pen' && currentPath && editable) {
-          pushHistory();
           const id = `path-${Date.now()}`;
           const newPathEl: BoardElement = {
               id,
@@ -581,6 +582,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       setIsPanning(false);
       setIsDragging(false);
       setIsResizing(false);
+      setIsSelectingMarquee(false);
+      setMarqueeBox(null);
       setDragId(null);
   };
 
@@ -595,9 +598,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
   };
 
-  const updateElement = (id: string, data: Partial<BoardElement>) => {
+  const updateSelectedElements = (data: Partial<BoardElement>) => {
+      if (selectedIds.length === 0) return;
       pushHistory();
-      const next = elements.map(el => el.id === id ? { ...el, ...data } : el);
+      const next = elements.map(el => selectedIds.includes(el.id) ? { ...el, ...data } : el);
       setElements(next);
       sync(next, connections);
   };
@@ -628,8 +632,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   };
 
   if (!isMounted) return null;
-
-  const selectedElement = elements.find(e => e.id === selectedId);
 
   return (
     <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none font-sans h-full">
@@ -734,12 +736,16 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             strokeLinejoin="round" 
                             className={cn(
                                 "pointer-events-auto cursor-pointer transition-all",
-                                selectedId === el.id ? "stroke-primary" : ""
+                                selectedIds.includes(el.id) ? "stroke-primary" : ""
                             )}
                             onMouseDown={(e) => {
                                 if (tool === 'select') {
                                     e.stopPropagation();
-                                    setSelectedId(el.id);
+                                    if (e.shiftKey) {
+                                        setSelectedIds(prev => prev.includes(el.id) ? prev.filter(id => id !== el.id) : [...prev, el.id]);
+                                    } else {
+                                        setSelectedIds([el.id]);
+                                    }
                                 }
                             }}
                         />
@@ -758,7 +764,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 </svg>
 
                 {elements.filter(el => el.type !== 'path').map((el) => {
-                    const isSelected = selectedId === el.id;
+                    const isSelected = selectedIds.includes(el.id);
                     const isHovered = hoveredId === el.id;
                     return (
                         <div 
@@ -799,14 +805,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     />
                                 </div>
                                 
-                                {isSelected && (
+                                {isSelected && selectedIds.length === 1 && (
                                     <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white">
                                         <CornerRightUp className="h-2 w-2 rotate-90" />
                                     </div>
                                 )}
                             </div>
 
-                            {(isHovered || isSelected) && !isDragging && (
+                            {(isHovered || isSelected) && !isDragging && !isSelectingMarquee && (
                                 <div className="absolute inset-0 pointer-events-none">
                                     <Port side="top" id={el.id} />
                                     <Port side="right" id={el.id} />
@@ -817,6 +823,18 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </div>
                     );
                 })}
+
+                {marqueeBox && (
+                    <div 
+                        className="absolute border-2 border-primary bg-primary/10 rounded-sm pointer-events-none"
+                        style={{
+                            left: Math.min(marqueeBox.x1, marqueeBox.x2),
+                            top: Math.min(marqueeBox.y1, marqueeBox.y2),
+                            width: Math.abs(marqueeBox.x2 - marqueeBox.x1),
+                            height: Math.abs(marqueeBox.y2 - marqueeBox.y1)
+                        }}
+                    />
+                )}
                 
                 {elements.length === 0 && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-6 animate-in fade-in duration-1000">
@@ -834,7 +852,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 )}
             </div>
 
-            {selectedElement && (
+            {selectedIds.length > 0 && (
                 <div 
                     onMouseDown={(e) => e.stopPropagation()}
                     className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10"
@@ -847,14 +865,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white border-slate-100">
                             {COLORS.map(c => (
-                                <button key={c.value} onClick={() => updateElement(selectedElement.id, { color: c.value })}
-                                    className={cn("h-6 w-6 rounded-lg border", (selectedElement.color) === c.value && "ring-2 ring-primary ring-offset-1")}
+                                <button key={c.value} onClick={() => updateSelectedElements({ color: c.value })}
+                                    className="h-6 w-6 rounded-lg border"
                                     style={{ backgroundColor: c.value }} />
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
-                    {selectedElement.type !== 'path' && (
+                    {selectedIds.length === 1 && elements.find(e => e.id === selectedIds[0])?.type !== 'path' && (
                         <>
                             <Separator orientation="vertical" className="h-5 bg-white/10" />
                             <div className="flex items-center gap-0.5">
@@ -864,7 +882,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent className="p-1 rounded-xl bg-white border-slate-100">
                                         {FONT_SIZES.map(s => (
-                                            <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { fontSize: s })} className="text-xs font-bold cursor-pointer">
+                                            <DropdownMenuItem key={s} onClick={() => updateSelectedElements({ fontSize: s })} className="text-xs font-bold cursor-pointer">
                                                 {s}px
                                             </DropdownMenuItem>
                                         ))}
@@ -872,8 +890,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 </DropdownMenu>
                                 
                                 <ToolbarButton 
-                                    onClick={() => updateElement(selectedElement.id, { bold: !selectedElement.bold })} 
-                                    active={!!selectedElement.bold} 
+                                    onClick={() => {
+                                        const el = elements.find(e => e.id === selectedIds[0]);
+                                        updateSelectedElements({ bold: !el?.bold });
+                                    }} 
+                                    active={!!elements.find(e => e.id === selectedIds[0])?.bold} 
                                     icon={<Bold className="h-4 w-4" />} 
                                 />
                                 
@@ -883,37 +904,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent className="grid grid-cols-5 p-2 rounded-xl bg-white border-slate-100">
                                         {TEXT_COLORS.map(c => (
-                                            <button key={c.value} onClick={() => updateElement(selectedElement.id, { fontColor: c.value })}
-                                                className={cn("h-5 w-5 rounded-full border m-1", selectedElement.fontColor === c.value && "ring-2 ring-primary")}
+                                            <button key={c.value} onClick={() => updateSelectedElements({ fontColor: c.value })}
+                                                className={cn("h-5 w-5 rounded-full border m-1", elements.find(e => e.id === selectedIds[0])?.fontColor === c.value && "ring-2 ring-primary")}
                                                 style={{ backgroundColor: c.value }} />
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
 
-                                <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'left' })} active={selectedElement.textAlign === 'left'} icon={<AlignLeft className="h-4 w-4" />} />
-                                <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'center' })} active={selectedElement.textAlign === 'center'} icon={<AlignCenter className="h-4 w-4" />} />
-                                <ToolbarButton onClick={() => updateElement(selectedElement.id, { textAlign: 'right' })} active={selectedElement.textAlign === 'right'} icon={<AlignRight className="h-4 w-4" />} />
+                                <ToolbarButton onClick={() => updateSelectedElements({ textAlign: 'left' })} active={elements.find(e => e.id === selectedIds[0])?.textAlign === 'left'} icon={<AlignLeft className="h-4 w-4" />} />
+                                <ToolbarButton onClick={() => updateSelectedElements({ textAlign: 'center' })} active={elements.find(e => e.id === selectedIds[0])?.textAlign === 'center'} icon={<AlignCenter className="h-4 w-4" />} />
+                                <ToolbarButton onClick={() => updateSelectedElements({ textAlign: 'right' })} active={elements.find(e => e.id === selectedIds[0])?.textAlign === 'right'} icon={<AlignRight className="h-4 w-4" />} />
                             </div>
-                        </>
-                    )}
-
-                    {selectedElement.type === 'path' && (
-                        <>
-                             <Separator orientation="vertical" className="h-5 bg-white/10" />
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl text-white font-bold text-[10px] uppercase">
-                                        Size
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="center" className="flex flex-col gap-1 p-2 rounded-2xl bg-white border-slate-100">
-                                    {PEN_SIZES.map(s => (
-                                        <DropdownMenuItem key={s} onClick={() => updateElement(selectedElement.id, { strokeWidth: s })} className="text-xs font-bold cursor-pointer">
-                                            {s}px
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
                         </>
                     )}
 
@@ -923,7 +924,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         <Button variant="ghost" size="icon" onClick={handleCopy} className="h-9 w-9 rounded-xl hover:bg-white/10 text-white">
                             <Copy className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteElement(selectedElement.id)} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400">
+                        <Button variant="ghost" size="icon" onClick={deleteSelected} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400">
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
