@@ -30,7 +30,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LiveSupportDialog } from '@/components/dashboard/dialogs/LiveSupportDialog';
+import { LiveSupportDialog } from '@/components/dashboard/layout/LiveSupportDialog';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { AppUser, ChatMessage } from '@/lib/types';
@@ -120,7 +120,6 @@ export default function SolarUpgradesPage() {
 
   return (
     <main className="min-h-screen bg-white font-sans overflow-hidden flex flex-col relative">
-      {/* Grid background atmosphere */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
            style={{ 
              backgroundImage: `linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)`,
@@ -128,7 +127,6 @@ export default function SolarUpgradesPage() {
            }} 
       />
 
-      {/* Navigation header */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md px-6 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100 transition-colors">
@@ -148,7 +146,6 @@ export default function SolarUpgradesPage() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="container mx-auto max-w-6xl px-6 py-12 md:py-24 space-y-24">
           
-          {/* Hero section */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="space-y-4">
@@ -217,7 +214,6 @@ export default function SolarUpgradesPage() {
             </div>
           </section>
 
-          {/* Educational PPA section */}
           <section className="space-y-8">
             <Card className="border-none shadow-xl shadow-slate-100 rounded-[2rem] md:rounded-[3rem] bg-slate-50 overflow-hidden">
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
@@ -265,7 +261,6 @@ export default function SolarUpgradesPage() {
             </Card>
           </section>
 
-          {/* Industry solutions section */}
           <section className="space-y-12">
             <div className="text-center space-y-4 max-w-2xl mx-auto">
               <h2 className="text-4xl font-black tracking-tight text-slate-900">Installation Tiers</h2>
@@ -306,7 +301,6 @@ export default function SolarUpgradesPage() {
             </Carousel>
           </section>
 
-          {/* Premium monitoring feature */}
           <section className="relative overflow-hidden rounded-[3rem] bg-slate-950 p-8 md:p-20 text-white group shadow-3xl">
             <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
                <Globe className="h-60 w-60" />
@@ -369,7 +363,6 @@ export default function SolarUpgradesPage() {
             </div>
           </section>
 
-          {/* Footer section */}
           <footer className="pt-24 pb-12 border-t border-slate-100 flex flex-col items-center text-center gap-10">
             <div className="space-y-6">
               <div className="flex justify-center mb-4">
