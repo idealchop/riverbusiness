@@ -19,7 +19,6 @@ import {
   Package, 
   ArrowRight,
   ShieldCheck,
-  Zap,
   Globe,
   ChevronRight
 } from 'lucide-react';
@@ -88,7 +87,7 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
           </div>
 
           {/* Right: Map Placeholder / Search */}
-          <div className="w-full md:w-[45%] bg-slate-950 text-white p-10 flex flex-col justify-between relative overflow-hidden shrink-0">
+          <div className="w-full md:w-[45%] bg-slate-950 text-white p-10 flex flex-col justify-center relative overflow-hidden shrink-0">
             {/* Background Decor */}
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #fff 1px, transparent 0)', backgroundSize: '24px 24px' }} />
@@ -119,16 +118,6 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                         Find Nearby Stations <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
-            </div>
-
-            <div className="relative z-10 pt-10">
-                <div className="flex items-center gap-2 mb-4">
-                    <Zap className="h-3 w-3 text-amber-400" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">Fulfillment Engine</span>
-                </div>
-                <p className="text-[10px] font-medium text-white/30 leading-relaxed">
-                    River Philippines utilizes an interconnected network of DOH-certified stations to ensure consistent and high-quality distribution.
-                </p>
             </div>
           </div>
         </div>
