@@ -710,6 +710,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} label="Process" />
                 <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} label="Event" />
                 <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
+                <DraggableTool icon={<Type className="h-5 w-5 text-slate-500" />} type="text" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} label="Text" />
             </div>
             <Separator className="w-8" />
             <div className="flex flex-col gap-3">
@@ -755,7 +756,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 const type = e.dataTransfer.getData('elType') as BoardElement['type'];
                 if (type) {
                     const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-                    addElement(type, x - 75, y - 75);
+                    addElement(type, x - 75, y - (type === 'text' ? 20 : 75));
                 }
              }}
              ref={containerRef}>
@@ -853,9 +854,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     el.type === 'rect' && "border-2 border-slate-900 rounded-xl",
                                     el.type === 'circle' && "border-2 border-slate-900 rounded-full items-center justify-center text-center",
                                     el.type === 'diamond' && "border-2 border-slate-900 flex items-center justify-center text-center rotate-45",
-                                    el.type === 'text' && "bg-transparent border-none p-0"
+                                    el.type === 'text' && "bg-transparent border-none p-0 shadow-none"
                                 )}
-                                style={{ backgroundColor: el.color }}
+                                style={{ backgroundColor: el.type === 'text' ? 'transparent' : el.color }}
                             >
                                 <div className={cn("w-full h-full flex flex-col justify-center", el.type === 'diamond' && "-rotate-45")}>
                                     <textarea 
@@ -1135,4 +1136,3 @@ function Port({ side, id }: { side: 'top' | 'right' | 'bottom' | 'left', id: str
         </div>
     );
 }
-
