@@ -68,7 +68,7 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                 Unlock smart <br/><span className="text-primary">water management.</span>
               </h2>
               <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
-                To request a refill, you need an active Smart Refill plan. Join our network for reliable supply dispatches and high-fidelity quality monitoring.
+                To request a refill, you need an active Smart Refill plan. Join our network of customers who enjoy high quality water for the Philippine workforce.
               </p>
             </div>
 
