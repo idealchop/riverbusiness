@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sun, ArrowLeft, Zap, ShieldCheck, BarChart3, Building2, Home as HomeIcon, Lock, ChevronRight, Globe, CheckCircle2 } from 'lucide-react';
+import { Sun, ArrowLeft, Zap, ShieldCheck, BarChart3, Building2, Lock, ChevronRight, Globe, CheckCircle2, Factory, Store, Building } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import Image from 'next/image';
@@ -38,8 +38,8 @@ export default function SolarUpgradesPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px] uppercase tracking-widest hidden sm:flex h-7 px-3">
-            Expert Online
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px] hidden sm:flex h-7 px-3">
+            Expert online
           </Badge>
           <AppLauncher />
         </div>
@@ -52,14 +52,14 @@ export default function SolarUpgradesPage() {
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="space-y-4">
-                <Badge className="bg-slate-900 text-white border-none font-bold text-[10px] uppercase tracking-[0.2em] px-4 h-7 mb-2">
+                <Badge className="bg-slate-900 text-white border-none font-bold text-[10px] px-4 h-7 mb-2">
                   Upgrade today
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.9]">
-                  Zero Peso <br/><span className="text-amber-500">Electric Bills.</span>
+                  Zero Peso <br/><span className="text-amber-500">Electric bills.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
-                  Power your home or business with high-fidelity solar solutions from SolarPlus.ph. Engineered for reliability in the Philippines.
+                  Transition your industry to high-fidelity energy solutions from SolarPlus.ph. Engineered for reliability and scale in the Philippines.
                 </p>
               </div>
               
@@ -70,22 +70,22 @@ export default function SolarUpgradesPage() {
                   </a>
                 </Button>
                 <Button asChild variant="outline" className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm border-slate-200 bg-white">
-                  <Link href="/dashboard">Back to dashboard</Link>
+                  <Link href="/dashboard">Back to core</Link>
                 </Button>
               </div>
 
               <div className="pt-8 grid grid-cols-3 gap-8 border-t border-slate-100">
                  <div className="space-y-1">
                     <p className="text-2xl font-black text-slate-900 tracking-tight">0%</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Downpayment</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest">Downpayment</p>
                  </div>
                  <div className="space-y-1 border-l pl-8">
-                    <p className="text-2xl font-black text-slate-900 tracking-tight">25Y</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Warranty</p>
+                    <p className="text-2xl font-black text-slate-900 tracking-tight">25y</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest">Warranty</p>
                  </div>
                  <div className="space-y-1 border-l pl-8">
                     <p className="text-2xl font-black text-slate-900 tracking-tight">Tier 1</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hardware</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest">Hardware</p>
                  </div>
               </div>
             </div>
@@ -104,47 +104,66 @@ export default function SolarUpgradesPage() {
             </div>
           </section>
 
-          {/* Solutions Section */}
+          {/* Industry Solutions Section */}
           <section className="space-y-12">
             <div className="text-center space-y-4 max-w-2xl mx-auto">
-              <h2 className="text-4xl font-black tracking-tight text-slate-900">Solutions</h2>
-              <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Built for scale and performance</p>
+              <h2 className="text-4xl font-black tracking-tight text-slate-900">Industry solutions</h2>
+              <p className="text-slate-400 font-bold text-[10px] tracking-widest">Built for scale and performance</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-12 pb-0">
+                <CardHeader className="p-8 pb-0">
                   <div className="p-4 rounded-2xl bg-blue-50 text-primary w-fit mb-6">
-                    <HomeIcon className="h-8 w-8" />
+                    <Factory className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-3xl font-black tracking-tight text-slate-900">Residential</CardTitle>
-                  <CardDescription className="text-base font-medium text-slate-500 pt-2 leading-relaxed">
-                    Reduce your monthly energy costs and power your appliances with clean energy.
+                  <CardTitle className="text-xl font-black tracking-tight text-slate-900">Manufacturing</CardTitle>
+                  <CardDescription className="text-sm font-medium text-slate-500 pt-2 leading-relaxed">
+                    Heavy-duty solutions for production lines and cold storage facilities.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-12 pt-8 space-y-4">
-                  {['Grid-tie systems', 'Hybrid battery backup', 'Net metering ready'].map(f => (
-                    <div key={f} className="flex items-center gap-3 text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" /> {f}
+                <CardContent className="p-8 pt-6 space-y-3">
+                  {['Grid-tie systems', 'Industrial grade panels', 'ROI in 3 to 4 years'].map(f => (
+                    <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> {f}
                     </div>
                   ))}
                 </CardContent>
               </Card>
 
               <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-white group hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="p-12 pb-0">
+                <CardHeader className="p-8 pb-0">
                   <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 w-fit mb-6">
-                    <Building2 className="h-8 w-8" />
+                    <Store className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-3xl font-black tracking-tight text-slate-900">Commercial</CardTitle>
-                  <CardDescription className="text-base font-medium text-slate-500 pt-2 leading-relaxed">
-                    Optimize operational expenses for factories, offices, and multi-site locations.
+                  <CardTitle className="text-xl font-black tracking-tight text-slate-900">Commercial</CardTitle>
+                  <CardDescription className="text-sm font-medium text-slate-500 pt-2 leading-relaxed">
+                    Cost optimization for retail hubs, storefronts, and site chains.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-12 pt-8 space-y-4">
-                  {['Industrial grade panels', 'Zero-capital leasing', 'ROI in 4 to 5 years'].map(f => (
-                    <div key={f} className="flex items-center gap-3 text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" /> {f}
+                <CardContent className="p-8 pt-6 space-y-3">
+                  {['Net metering ready', 'Zero-capital leasing', 'Peak-hour shaving'].map(f => (
+                    <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> {f}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-white group hover:shadow-2xl transition-all duration-500">
+                <CardHeader className="p-8 pb-0">
+                  <div className="p-4 rounded-2xl bg-slate-100 text-slate-600 w-fit mb-6">
+                    <Building className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-xl font-black tracking-tight text-slate-900">Corporate</CardTitle>
+                  <CardDescription className="text-sm font-medium text-slate-500 pt-2 leading-relaxed">
+                    Sustainable energy architecture for offices and institutional buildings.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 pt-6 space-y-3">
+                  {['BMS integration', 'ESG compliance ready', 'Full site monitoring'].map(f => (
+                    <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> {f}
                     </div>
                   ))}
                 </CardContent>
@@ -168,7 +187,7 @@ export default function SolarUpgradesPage() {
                     <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary-light">Intelligence module</span>
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
-                    Intelligent <br/>Monitoring Hub
+                    Intelligent <br/>monitoring hub
                   </h2>
                   <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-md">
                     Visualize energy yield, cost savings, and hardware health in real-time. Full integration with your operational dashboard.
@@ -199,7 +218,7 @@ export default function SolarUpgradesPage() {
                   </div>
                   
                   <div className="space-y-3 relative z-10">
-                    <h3 className="text-2xl font-black tracking-tight">Access Locked</h3>
+                    <h3 className="text-2xl font-black tracking-tight">Access locked</h3>
                     <p className="text-sm text-slate-400 font-medium max-w-[220px] mx-auto leading-relaxed">
                       Upgrade to solar infrastructure to activate real-time monitoring.
                     </p>
@@ -229,14 +248,14 @@ export default function SolarUpgradesPage() {
                     className="opacity-10 grayscale"
                   />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-300">Authorized Infrastructure Partner</p>
+              <p className="text-[10px] font-bold text-slate-300">Authorized infrastructure partner</p>
               <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 hover:text-primary transition-colors">Privacy</a>
-                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 hover:text-primary transition-colors">Terms</a>
-                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 hover:text-primary transition-colors">Contact</a>
+                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-primary transition-colors">Privacy</a>
+                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-primary transition-colors">Terms</a>
+                <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-primary transition-colors">Contact</a>
               </div>
             </div>
-            <p className="text-[9px] font-medium text-slate-300 uppercase tracking-widest">© 2025 SolarPlus.ph • Strategic Energy for the Philippines</p>
+            <p className="text-[9px] font-medium text-slate-300">© 2025 SolarPlus.ph • Strategic Energy for the Philippines</p>
           </footer>
         </div>
       </ScrollArea>
