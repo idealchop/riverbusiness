@@ -22,7 +22,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  Globe
+  Globe,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
