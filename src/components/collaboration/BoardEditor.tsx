@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -32,7 +31,11 @@ import {
     Copy,
     Undo2,
     Pencil,
-    CircleDot
+    CircleDot,
+    LayoutTemplate,
+    Sparkles,
+    FilePlus,
+    Binary
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -46,6 +49,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useMounted } from '@/hooks/use-mounted';
 import type { BoardElement, BoardConnection } from '@/lib/types';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface BoardEditorProps {
   initialData: any;
@@ -85,6 +89,58 @@ const TEXT_COLORS = [
 ];
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 48];
+
+const BLUEPRINTS = [
+    {
+        id: 'bp-workflow',
+        name: 'Standard Workflow',
+        description: 'Linear process from start to finish.',
+        icon: ArrowRight,
+        elements: [
+            { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: 'START', color: '#f1f5f9', bold: true },
+            { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: 'Process Step 1', color: '#ffffff', bold: true },
+            { id: 'decision', type: 'diamond', x: 540, y: 175, width: 150, height: 150, text: 'Validation Check', color: '#f3e8ff', bold: true },
+            { id: 'end', type: 'circle', x: 800, y: 200, width: 100, height: 100, text: 'FINISH', color: '#f1f5f9', bold: true }
+        ],
+        connections: [
+            { id: 'c1', fromId: 'start', toId: 'step1', type: 'curved' },
+            { id: 'c2', fromId: 'step1', toId: 'decision', type: 'curved' },
+            { id: 'c3', fromId: 'decision', toId: 'end', type: 'curved' }
+        ]
+    },
+    {
+        id: 'bp-swot',
+        name: 'Strategic SWOT',
+        description: 'Analyze strengths and risks.',
+        icon: Binary,
+        elements: [
+            { id: 's', type: 'note', x: 100, y: 100, width: 250, height: 250, text: 'STRENGTHS', color: '#dcfce7', bold: true },
+            { id: 'w', type: 'note', x: 380, y: 100, width: 250, height: 250, text: 'WEAKNESSES', color: '#fee2e2', bold: true },
+            { id: 'o', type: 'note', x: 100, y: 380, width: 250, height: 250, text: 'OPPORTUNITIES', color: '#dbeafe', bold: true },
+            { id: 't', type: 'note', x: 380, y: 380, width: 250, height: 250, text: 'THREATS', color: '#fef3c7', bold: true }
+        ],
+        connections: []
+    },
+    {
+        id: 'bp-brainstorm',
+        name: 'Idea Storm',
+        description: 'divergent thinking hub.',
+        icon: Sparkles,
+        elements: [
+            { id: 'hub', type: 'circle', x: 350, y: 300, width: 180, height: 180, text: 'CORE IDEA', color: '#fef08a', bold: true, fontSize: 18 },
+            { id: 'idea1', type: 'note', x: 100, y: 100, width: 150, height: 150, text: 'Concept A', color: '#ffffff' },
+            { id: 'idea2', type: 'note', x: 600, y: 100, width: 150, height: 150, text: 'Concept B', color: '#ffffff' },
+            { id: 'idea3', type: 'note', x: 100, y: 500, width: 150, height: 150, text: 'Concept C', color: '#ffffff' },
+            { id: 'idea4', type: 'note', x: 600, y: 500, width: 150, height: 150, text: 'Concept D', color: '#ffffff' }
+        ],
+        connections: [
+            { id: 'c1', fromId: 'hub', toId: 'idea1', type: 'curved' },
+            { id: 'c2', fromId: 'hub', toId: 'idea2', type: 'curved' },
+            { id: 'c3', fromId: 'hub', toId: 'idea3', type: 'curved' },
+            { id: 'c4', fromId: 'hub', toId: 'idea4', type: 'curved' }
+        ]
+    }
+];
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
@@ -179,6 +235,40 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       sync([...elements, newEl], connections);
       setSelectedId(id);
       return id;
+  };
+
+  const applyBlueprint = (blueprint: typeof BLUEPRINTS[0]) => {
+      if (!editable) return;
+      pushHistory();
+      
+      const offsetX = (100 - viewport.x) / viewport.scale;
+      const offsetY = (100 - viewport.y) / viewport.scale;
+
+      const newElements: BoardElement[] = blueprint.elements.map(el => ({
+          ...el,
+          id: `${el.id}-${Date.now()}`,
+          x: el.x + offsetX,
+          y: el.y + offsetY,
+          type: el.type as any,
+          text: el.text || '',
+          color: el.color || '#ffffff',
+          width: el.width || 150,
+          height: el.height || 150
+      }));
+
+      const newConnections: BoardConnection[] = blueprint.connections.map(conn => {
+          const fromIdx = blueprint.elements.findIndex(e => e.id === conn.fromId);
+          const toIdx = blueprint.elements.findIndex(e => e.id === conn.toId);
+          return {
+              ...conn,
+              id: `${conn.id}-${Date.now()}`,
+              fromId: newElements[fromIdx].id,
+              toId: newElements[toIdx].id,
+              type: conn.type as any
+          };
+      });
+
+      sync([...elements, ...newElements], [...connections, ...newConnections]);
   };
 
   const deleteElement = useCallback((id: string) => {
@@ -301,7 +391,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
 
       const hit = [...elements].reverse().find(el => {
-          if (el.type === 'path') return false; // Paths handled by direct click
+          if (el.type === 'path') return false; 
           return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
       });
       
@@ -315,7 +405,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               setSelectedId(hit.id);
               setIsDragging(true);
               setDragId(hit.id);
-              // Fix jumping issue: ensure Y offset calculation is based on current element Y
               setDragOffset({ x: x - hit.x, y: y - hit.y });
           }
       } else {
@@ -378,7 +467,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               strokeWidth: penSize
           };
           
-          // Fix React warning: Call external onContentChange after state update, not inside functional updater
           const nextElements = [...elements, newPathEl];
           setElements(nextElements);
           onContentChange({ elements: nextElements, connections });
@@ -475,7 +563,27 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
             </div>
             <Separator className="w-8" />
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-all">
+                            <LayoutTemplate className="h-5 w-5" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="right" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2">
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Architecture Blueprints</DropdownMenuLabel>
+                        {BLUEPRINTS.map(bp => (
+                            <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
+                                <div className="flex items-center gap-2 w-full">
+                                    <bp.icon className="h-4 w-4 text-primary" />
+                                    <span className="font-bold text-sm text-slate-900">{bp.name}</span>
+                                </div>
+                                <p className="text-[10px] font-medium text-slate-400">{bp.description}</p>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
                 <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
                 <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
