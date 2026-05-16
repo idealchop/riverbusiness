@@ -14,10 +14,8 @@ import {
     Plus,
     X,
     Maximize2,
-    Minus,
     Type,
     ArrowRight,
-    CaseSensitive,
     PlusCircle,
     Diamond,
     AlignLeft,
@@ -26,25 +24,18 @@ import {
     Zap,
     CornerRightUp,
     Layout,
-    Bold,
-    Link as LinkIcon,
     Copy,
-    Undo2,
+    Link as LinkIcon,
     Pencil,
     LayoutTemplate,
     Sparkles,
     Binary,
     Trophy,
-    Split,
     RotateCcw,
     Activity,
-    Layers,
-    ListTodo,
-    ArrowDownRight,
-    GitBranch,
-    Network,
     Workflow,
     User,
+    Users,
     Settings,
     Mail,
     Phone,
@@ -58,7 +49,43 @@ import {
     Cloud,
     Database,
     Cpu,
-    Search
+    Search,
+    Landmark,
+    Briefcase,
+    BarChart,
+    Rocket,
+    Globe,
+    Lock,
+    Server,
+    Target,
+    Award,
+    Heart,
+    Star,
+    Smile,
+    MessageSquare,
+    Save,
+    Archive,
+    Download,
+    Upload,
+    Share2,
+    Eye,
+    CheckCircle,
+    AlertTriangle,
+    Info,
+    HelpCircle,
+    Smartphone,
+    Terminal,
+    Key,
+    ShieldCheck,
+    Repeat,
+    Flag,
+    Anchor,
+    Box,
+    ShoppingBag,
+    Tool,
+    Hammer,
+    ZapOff,
+    Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -106,16 +133,6 @@ const PEN_COLORS = [
     { name: 'Slate', value: '#64748b' },
     { name: 'Black', value: '#0f172a' }
 ];
-
-const TEXT_COLORS = [
-    { name: 'Dark', value: '#0f172a' },
-    { name: 'Slate', value: '#64748b' },
-    { name: 'Blue', value: '#3b82f6' },
-    { name: 'Red', value: '#ef4444' },
-    { name: 'White', value: '#ffffff' }
-];
-
-const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 48];
 
 const BLUEPRINTS = [
     {
@@ -185,11 +202,13 @@ const BLUEPRINTS = [
 
 const EMOJIS = [
     '🚀', '💡', '✅', '⚠️', '📊', '🏢', '💧', '🌊', '⭐', '🔥', '⚡', '🎨', '💬', '📍', '🎯', '💰', '🚛', '🏗️', '🛠️', '🛡️',
-    '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆'
+    '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆',
+    '🌈', '💎', '🔥', '🌍', '🏠', '🔔', '📢', '💼', '📦', '🖊️', '✒️', '📈', '📊', '💹', '⚙️', '🛠️', '⛏️', '🔧', '🔨'
 ];
 
 const ASSET_ICONS = [
     { name: 'User', icon: User },
+    { name: 'Users', icon: Users },
     { name: 'Settings', icon: Settings },
     { name: 'Mail', icon: Mail },
     { name: 'Phone', icon: Phone },
@@ -202,7 +221,40 @@ const ASSET_ICONS = [
     { name: 'HardDrive', icon: HardDrive },
     { name: 'Cloud', icon: Cloud },
     { name: 'Database', icon: Database },
-    { name: 'Cpu', icon: Cpu }
+    { name: 'Cpu', icon: Cpu },
+    { name: 'Landmark', icon: Landmark },
+    { name: 'Briefcase', icon: Briefcase },
+    { name: 'BarChart', icon: BarChart },
+    { name: 'Rocket', icon: Rocket },
+    { name: 'Globe', icon: Globe },
+    { name: 'Lock', icon: Lock },
+    { name: 'Server', icon: Server },
+    { name: 'Target', icon: Target },
+    { name: 'Award', icon: Award },
+    { name: 'Heart', icon: Heart },
+    { name: 'Star', icon: Star },
+    { name: 'Smile', icon: Smile },
+    { name: 'MessageSquare', icon: MessageSquare },
+    { name: 'Save', icon: Save },
+    { name: 'Archive', icon: Archive },
+    { name: 'Download', icon: Download },
+    { name: 'Upload', icon: Upload },
+    { name: 'Share2', icon: Share2 },
+    { name: 'Eye', icon: Eye },
+    { name: 'CheckCircle', icon: CheckCircle },
+    { name: 'AlertTriangle', icon: AlertTriangle },
+    { name: 'Info', icon: Info },
+    { name: 'HelpCircle', icon: HelpCircle },
+    { name: 'Smartphone', icon: Smartphone },
+    { name: 'Terminal', icon: Terminal },
+    { name: 'Key', icon: Key },
+    { name: 'ShieldCheck', icon: ShieldCheck },
+    { name: 'Repeat', icon: Repeat },
+    { name: 'Flag', icon: Flag },
+    { name: 'Anchor', icon: Anchor },
+    { name: 'Box', icon: Box },
+    { name: 'ShoppingBag', icon: ShoppingBag },
+    { name: 'Hammer', icon: Hammer }
 ];
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
@@ -259,13 +311,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const undo = useCallback(() => {
     if (history.length === 0 || !editable) return;
-    
     const prevState = history[history.length - 1];
     setHistory(prev => prev.slice(0, -1));
-    
     setElements(prevState.elements);
     setConnections(prevState.connections);
-    
     sync(prevState.elements, prevState.connections);
   }, [history, editable, sync]);
 
@@ -308,7 +357,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const applyBlueprint = (blueprint: typeof BLUEPRINTS[0]) => {
       if (!editable) return;
       pushHistory();
-      
       const offsetX = (100 - viewport.x) / viewport.scale;
       const offsetY = (100 - viewport.y) / viewport.scale;
 
@@ -356,9 +404,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
-      if (selected.length > 0) {
-          setClipboard([...selected]);
-      }
+      if (selected.length > 0) setClipboard([...selected]);
   }, [elements, selectedIds]);
 
   const handlePaste = useCallback(() => {
@@ -387,28 +433,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           const activeElement = document.activeElement;
           const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
-          
           if (!isInput) {
-            if (e.key === 'Backspace' || e.key === 'Delete') {
-                e.preventDefault();
-                deleteSelected();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-                e.preventDefault();
-                handleCopy();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-                e.preventDefault();
-                handlePaste();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-                e.preventDefault();
-                handleDuplicate();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-                e.preventDefault();
-                undo();
-            }
+            if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteSelected(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c') { e.preventDefault(); handleCopy(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v') { e.preventDefault(); handlePaste(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') { e.preventDefault(); handleDuplicate(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
           }
       };
       window.addEventListener('keydown', handleGlobalKeyDown);
@@ -456,16 +486,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               } else if (!selectedIds.includes(hit.id)) {
                   setSelectedIds([hit.id]);
               }
-              
               pushHistory();
               setIsDragging(true);
               setDragId(hit.id);
               setDragOffset({ x: x - hit.x, y: y - hit.y }); 
           }
       } else {
-          if (!e.shiftKey) {
-              setSelectedIds([]);
-          }
+          if (!e.shiftKey) setSelectedIds([]);
           setIsSelectingMarquee(true);
           setMarqueeBox({ x1: x, y1: y, x2: x, y2: y });
       }
@@ -515,19 +542,18 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               width: Math.max(50, x - el.x), 
               height: Math.max(40, y - el.y) 
           } : el));
-      } else if (isDragging) {
-          setElements(prev => prev.map(el => {
-              if (selectedIds.includes(el.id)) {
-                  // Maintain drag offset correctly for multi-select
-                  if (el.id === dragId) return { ...el, x: x - dragOffset.x, y: y - dragOffset.y };
-                  // Shift others by same delta
-                  const mainEl = prev.find(item => item.id === dragId)!;
-                  const dx = (x - dragOffset.x) - mainEl.x;
-                  const dy = (y - dragOffset.y) - mainEl.y;
-                  return { ...el, x: el.x + dx, y: el.y + dy };
-              }
-              return el;
-          }));
+      } else if (isDragging && dragId) {
+          setElements(prev => {
+              const mainEl = prev.find(item => item.id === dragId)!;
+              const dx = (x - dragOffset.x) - mainEl.x;
+              const dy = (y - dragOffset.y) - mainEl.y;
+              return prev.map(el => {
+                  if (selectedIds.includes(el.id)) {
+                      return { ...el, x: el.x + dx, y: el.y + dy };
+                  }
+                  return el;
+              });
+          });
       }
   };
 
@@ -567,7 +593,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
 
       if (isDragging || isResizing) sync(elements, connections);
-
       setIsPanning(false);
       setIsDragging(false);
       setIsResizing(false);
@@ -590,7 +615,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const updateSelectedElements = (data: Partial<BoardElement>) => {
       if (selectedIds.length === 0) return;
       pushHistory();
-      const next = elements.map(el => selectedIds.includes(el.id) ? { ...el, ...data } : el);
+      const next = elements.map(el => {
+          if (selectedIds.includes(el.id)) {
+              const updates: any = { ...data };
+              // Icons and text use fontColor for their primary appearance
+              if (data.color && (el.type === 'icon' || el.type === 'text')) {
+                  updates.fontColor = data.color;
+              }
+              return { ...el, ...updates };
+          }
+          return el;
+      });
       setElements(next);
       sync(next, connections);
   };
@@ -603,10 +638,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       let x2 = toX, y2 = toY;
       if (toId) {
           const to = elements.find(e => e.id === toId);
-          if (to) {
-              x2 = to.x + to.width / 2;
-              y2 = to.y + to.height / 2;
-          }
+          if (to) { x2 = to.x + to.width / 2; y2 = to.y + to.height / 2; }
       }
       const cp1x = x1 + (x2 - x1) / 2, cp1y = y1, cp2x = x1 + (x2 - x1) / 2, cp2y = y2;
       return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
@@ -822,6 +854,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     <div className="flex items-center gap-2 pr-4 border-r border-slate-100"><div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Pencil className="h-4 w-4" /></div><p className="text-[10px] font-black uppercase text-slate-900">Inking</p></div>
                     <div className="flex items-center gap-2">
                         {PEN_COLORS.map(c => (<button key={c.value} onClick={() => setPenColor(c.value)} className={cn("h-7 w-7 rounded-full border-2 border-white", penColor === c.value ? "ring-2 ring-primary" : "")} style={{ backgroundColor: c.value }} />))}
+                    </div>
+                    <Separator orientation="vertical" className="h-6 bg-slate-100" />
+                    <div className="flex items-center gap-4 px-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-black text-slate-400 uppercase">Weight</span>
+                            <input type="range" min="1" max="20" value={penSize} onChange={(e) => setPenSize(parseInt(e.target.value))} className="w-20" />
+                        </div>
                     </div>
                     <Separator orientation="vertical" className="h-6 bg-slate-100" />
                     <Button variant="ghost" size="icon" onClick={() => setTool('select')} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-4 w-4" /></Button>
