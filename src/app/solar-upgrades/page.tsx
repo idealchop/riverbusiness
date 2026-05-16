@@ -16,7 +16,7 @@ export default function SolarUpgradesPage() {
 
   return (
     <main className="min-h-screen bg-white font-sans overflow-hidden flex flex-col relative">
-      {/* High-Fidelity Grid Background */}
+      {/* High-fidelity grid background */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
            style={{ 
              backgroundImage: `linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)`,
@@ -24,7 +24,7 @@ export default function SolarUpgradesPage() {
            }} 
       />
 
-      {/* Navigation Header */}
+      {/* Navigation header */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md px-6 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100">
@@ -48,7 +48,7 @@ export default function SolarUpgradesPage() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="container mx-auto max-w-6xl px-6 py-12 md:py-24 space-y-24">
           
-          {/* Hero Section */}
+          {/* Hero section */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="space-y-4">
@@ -56,7 +56,7 @@ export default function SolarUpgradesPage() {
                   Upgrade today
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.9]">
-                  Zero Peso <br/><span className="text-amber-500">Electric bills.</span>
+                  Zero peso <br/><span className="text-amber-500">electric bills.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
                   Transition your industry to high-fidelity energy solutions from SolarPlus.ph. Engineered for reliability and scale in the Philippines.
@@ -104,7 +104,7 @@ export default function SolarUpgradesPage() {
             </div>
           </section>
 
-          {/* Industry Solutions Section */}
+          {/* Industry solutions section */}
           <section className="space-y-12">
             <div className="text-center space-y-4 max-w-2xl mx-auto">
               <h2 className="text-4xl font-black tracking-tight text-slate-900">Industry solutions</h2>
@@ -114,18 +114,18 @@ export default function SolarUpgradesPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-white group hover:shadow-2xl transition-all duration-500">
                 <CardHeader className="p-8 pb-0">
-                  <div className="p-4 rounded-2xl bg-blue-50 text-primary w-fit mb-6">
-                    <Factory className="h-6 w-6" />
+                  <div className="flex items-center gap-4 mb-6">
+                    <Factory className="h-7 w-7 text-slate-900 shrink-0" />
+                    <CardTitle className="text-xl font-black tracking-tight text-slate-900">Manufacturing</CardTitle>
                   </div>
-                  <CardTitle className="text-xl font-black tracking-tight text-slate-900">Manufacturing</CardTitle>
-                  <CardDescription className="text-sm font-medium text-slate-500 pt-2 leading-relaxed">
+                  <CardDescription className="text-sm font-medium text-slate-500 pt-1 leading-relaxed">
                     Heavy-duty solutions for production lines and cold storage facilities.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 pt-6 space-y-3">
                   {['Grid-tie systems', 'Industrial grade panels', 'ROI in 3 to 4 years'].map(f => (
                     <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> {f}
+                      <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> {f}
                     </div>
                   ))}
                 </CardContent>
@@ -133,18 +133,18 @@ export default function SolarUpgradesPage() {
 
               <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-white group hover:shadow-2xl transition-all duration-500">
                 <CardHeader className="p-8 pb-0">
-                  <div className="p-4 rounded-2xl bg-amber-50 text-amber-600 w-fit mb-6">
-                    <Store className="h-6 w-6" />
+                  <div className="flex items-center gap-4 mb-6">
+                    <Store className="h-7 w-7 text-slate-900 shrink-0" />
+                    <CardTitle className="text-xl font-black tracking-tight text-slate-900">Commercial</CardTitle>
                   </div>
-                  <CardTitle className="text-xl font-black tracking-tight text-slate-900">Commercial</CardTitle>
-                  <CardDescription className="text-sm font-medium text-slate-500 pt-2 leading-relaxed">
+                  <CardDescription className="text-sm font-medium text-slate-500 pt-1 leading-relaxed">
                     Cost optimization for retail hubs, storefronts, and site chains.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 pt-6 space-y-3">
                   {['Net metering ready', 'Zero-capital leasing', 'Peak-hour shaving'].map(f => (
                     <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> {f}
+                      <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> {f}
                     </div>
                   ))}
                 </CardContent>
@@ -152,18 +152,18 @@ export default function SolarUpgradesPage() {
 
               <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-white group hover:shadow-2xl transition-all duration-500">
                 <CardHeader className="p-8 pb-0">
-                  <div className="p-4 rounded-2xl bg-slate-100 text-slate-600 w-fit mb-6">
-                    <Building className="h-6 w-6" />
+                  <div className="flex items-center gap-4 mb-6">
+                    <Building className="h-7 w-7 text-slate-900 shrink-0" />
+                    <CardTitle className="text-xl font-black tracking-tight text-slate-900">Corporate</CardTitle>
                   </div>
-                  <CardTitle className="text-xl font-black tracking-tight text-slate-900">Corporate</CardTitle>
-                  <CardDescription className="text-sm font-medium text-slate-500 pt-2 leading-relaxed">
+                  <CardDescription className="text-sm font-medium text-slate-500 pt-1 leading-relaxed">
                     Sustainable energy architecture for offices and institutional buildings.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 pt-6 space-y-3">
                   {['BMS integration', 'ESG compliance ready', 'Full site monitoring'].map(f => (
                     <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> {f}
+                      <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> {f}
                     </div>
                   ))}
                 </CardContent>
@@ -171,7 +171,7 @@ export default function SolarUpgradesPage() {
             </div>
           </section>
 
-          {/* Premium Monitoring Feature */}
+          {/* Premium monitoring feature */}
           <section className="relative overflow-hidden rounded-[3rem] bg-slate-900 p-8 md:p-20 text-white group shadow-3xl">
             <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
                <Globe className="h-60 w-60" />
@@ -203,7 +203,7 @@ export default function SolarUpgradesPage() {
                   ].map(m => (
                     <div key={m.label} className="flex items-center gap-3">
                       <m.icon className="h-5 w-5 text-slate-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">{m.label}</span>
                     </div>
                   ))}
                 </div>
@@ -229,14 +229,14 @@ export default function SolarUpgradesPage() {
                   </Button>
                 </Card>
                 
-                {/* Decorative Elements */}
+                {/* Decorative elements */}
                 <div className="absolute -bottom-10 -left-10 h-40 w-40 bg-primary/20 rounded-full blur-3xl animate-pulse" />
                 <div className="absolute -top-10 -right-10 h-40 w-40 bg-amber-500/10 rounded-full blur-3xl animate-pulse delay-700" />
               </div>
             </div>
           </section>
 
-          {/* Footer Section */}
+          {/* Footer section */}
           <footer className="pt-24 pb-12 border-t border-slate-100 flex flex-col items-center text-center gap-10">
             <div className="space-y-6">
               <div className="flex justify-center mb-4">
@@ -255,7 +255,7 @@ export default function SolarUpgradesPage() {
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-primary transition-colors">Contact</a>
               </div>
             </div>
-            <p className="text-[9px] font-medium text-slate-300">© 2025 SolarPlus.ph • Strategic Energy for the Philippines</p>
+            <p className="text-[9px] font-medium text-slate-300">© 2025 SolarPlus.ph • Strategic energy for the Philippines</p>
           </footer>
         </div>
       </ScrollArea>
