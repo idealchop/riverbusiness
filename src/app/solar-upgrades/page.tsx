@@ -67,10 +67,10 @@ export default function SolarUpgradesPage() {
                   Industrial upgrade
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
-                  River energy architecture for <span className="text-slate-400">scale.</span>
+                  River solar power for <span className="text-slate-400">scale.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
-                  Specializing in 100 kW to 200 kW industrial installations. Optimize your operational overhead with strategic energy architecture from Solar-Plus.ph.
+                  100 kW to 200 kW industrial solutions. Reduce your overhead with strategic energy from Solar-Plus.ph.
                 </p>
               </div>
               
