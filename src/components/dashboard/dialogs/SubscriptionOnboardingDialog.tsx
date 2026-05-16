@@ -32,7 +32,9 @@ import {
   Headset,
   Smartphone,
   Wrench,
-  Info
+  Info,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -465,7 +467,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 5 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Your onboarding sequence is being finalized. Here is the fulfillment roadmap for {formData.businessName}:
+                                            Your subscription is ready for initialization. Here is your professional activation timeline:
                                         </p>
 
                                         <div className="relative pl-6 space-y-12">
@@ -474,24 +476,30 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="relative z-10 flex items-start gap-6 group">
                                                 <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg">1</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Account Sync</p>
-                                                    <p className="text-xs font-medium text-slate-400">Digital infrastructure and billing established instantly.</p>
+                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Account preparing</p>
+                                                    <p className="text-xs font-medium text-slate-400">Digital footprint and multi-tenant isolation established.</p>
                                                 </div>
                                             </div>
 
                                             <div className="relative z-10 flex items-start gap-6 group">
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Infrastructure Prep</p>
-                                                    <p className="text-xs font-medium text-slate-400">{formData.estimatedDispensers} Dispensers sanitized and {Math.ceil(formData.monthlyLiters / 19)} containers allocated.</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Email confirmation and requirements</p>
+                                                        <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                                    </div>
+                                                    <p className="text-xs font-medium text-slate-400">Verification of logistics access and physical delivery prerequisites.</p>
                                                 </div>
                                             </div>
 
                                             <div className="relative z-10 flex items-start gap-6 group">
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">First Dispatch</p>
-                                                    <p className="text-xs font-medium text-slate-400">Targeting arrival within 24-48 hours of authorization.</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">First dispatch 24-36 hrs</p>
+                                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4">Priority</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-medium text-slate-400">Logistics coordination initiated for immediate supply fulfillment.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -502,22 +510,32 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                     </ScrollArea>
 
                     <DialogFooter className="p-8 bg-slate-50/50 border-t shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900">
-                                <ChevronLeft className="mr-2 h-4 w-4" /> Back
-                            </Button>
+                        <div className="flex items-center gap-3">
+                            <div className={cn("h-2.5 w-2.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
+                            <div className={cn("h-2.5 w-2.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step} of {STEPS.length - 1}</span>
                         </div>
 
                         <div className="flex items-center gap-3 w-full sm:w-auto">
                             {step < STEPS.length - 1 ? (
-                                <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
-                                    Continue <ChevronRight className="ml-2 h-4 w-4" />
-                                </Button>
+                                <>
+                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900">
+                                        <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                    </Button>
+                                    <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
+                                        Continue <ChevronRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </>
                             ) : (
-                                <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90">
-                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                                    {isSubmitting ? 'Authorizing...' : 'Authorize Subscription'}
-                                </Button>
+                                <>
+                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900">
+                                        <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                    </Button>
+                                    <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90">
+                                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                                        {isSubmitting ? 'Authorizing...' : 'Authorize Subscription'}
+                                    </Button>
+                                </>
                             )}
                         </div>
                     </DialogFooter>
