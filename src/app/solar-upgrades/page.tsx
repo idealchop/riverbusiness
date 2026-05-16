@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -53,7 +53,7 @@ export default function SolarUpgradesPage() {
                   Industrial Upgrade
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
-                  Sustainable energy <br/>for commercial <span className="text-slate-400">scale.</span>
+                  River energy <br/>architecture for <span className="text-slate-400">scale.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
                   Specializing in 100 kW to 200 kW industrial installations. Optimize your operational overhead with strategic energy architecture from SolarPlus.ph.
