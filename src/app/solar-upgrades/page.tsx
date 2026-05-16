@@ -21,7 +21,8 @@ import {
   Truck,
   Hotel,
   Activity,
-  Warehouse
+  Warehouse,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -162,21 +163,29 @@ export default function SolarUpgradesPage() {
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <LiveSupportDialog 
-                  isOpen={isLiveSupportOpen}
-                  onOpenChange={setIsLiveSupportOpen}
-                  user={user || null}
-                  chatMessages={chatMessages || []}
-                  onMessageSubmit={handleMessageSubmit}
-                >
-                  <Button className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm shadow-xl shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white border-none">
-                    Talk to our sales team <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </LiveSupportDialog>
-                <Button asChild variant="outline" className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm border-slate-200 bg-white">
-                  <Link href="/dashboard">Back to Core</Link>
+              <div className="space-y-6">
+                <Button className="w-full sm:w-auto h-14 rounded-2xl px-12 font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white border-none group transition-all active:scale-95">
+                  Refer and get lifetime commission <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
+                
+                <div className="flex items-center gap-6 px-1">
+                  <LiveSupportDialog 
+                    isOpen={isLiveSupportOpen}
+                    onOpenChange={setIsLiveSupportOpen}
+                    user={user || null}
+                    chatMessages={chatMessages || []}
+                    onMessageSubmit={handleMessageSubmit}
+                  >
+                    <button className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-primary-light transition-all flex items-center gap-2">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Talk to our team
+                    </button>
+                  </LiveSupportDialog>
+                  <Separator orientation="vertical" className="h-3 bg-slate-200" />
+                  <Link href="/dashboard" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-all">
+                      Back to Core
+                  </Link>
+                </div>
               </div>
 
               <div className="pt-8 grid grid-cols-3 gap-8 border-t border-slate-100">
@@ -232,11 +241,11 @@ export default function SolarUpgradesPage() {
                         <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
                             <div className="space-y-2">
                                 <h4 className="text-lg font-black text-slate-900">Zero-Capex Solution</h4>
-                                <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business growth while benefiting from green energy.</p>
+                                <p className="text-sm text-slate-500 font-medium">Perfect for companies that want to keep their capital for business growth while benefiting from green energy.</p>
                             </div>
                             <Separator />
                             <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-[9px]">Available for</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available for</p>
                                 <p className="text-base font-bold text-slate-900">100 kW to 200 kW commercial scale</p>
                             </div>
                         </div>
