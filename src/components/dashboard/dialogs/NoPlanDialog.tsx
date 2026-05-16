@@ -80,8 +80,8 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
             <div className="grid gap-8">
               {valueProps.map((prop, idx) => (
                 <div key={idx} className="flex gap-5 group">
-                  <div className="p-3 rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all shrink-0 shadow-sm border border-white">
-                    <prop.icon className="h-5 w-5" />
+                  <div className="py-1 text-slate-400 group-hover:text-primary transition-all shrink-0">
+                    <prop.icon className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-900">{prop.title}</h4>
@@ -102,8 +102,8 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
             <div className="relative z-10 space-y-8">
                 <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl space-y-8 shadow-2xl">
                     <div className="flex items-center gap-4">
-                        <div className="h-11 w-11 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                            <MapPin className="h-5 w-5 text-white" />
+                        <div className="flex items-center justify-center">
+                            <MapPin className="h-6 w-6 text-primary" />
                         </div>
                         <div className="space-y-0.5">
                             <p className="text-xs font-bold text-white">Logistics hub</p>
@@ -112,8 +112,8 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                     </div>
                     
                     <div className="aspect-square rounded-[2rem] bg-slate-900/50 border border-white/5 flex flex-col items-center justify-center p-8 text-center gap-5 group cursor-default shadow-inner">
-                        <div className="p-5 rounded-full bg-white/5 group-hover:bg-white/10 transition-all duration-500 hover:scale-110">
-                            <Globe className="h-10 w-10 text-white/10 group-hover:text-primary transition-colors" />
+                        <div className="flex items-center justify-center transition-all duration-500 hover:scale-110">
+                            <Globe className="h-12 w-12 text-white/10 group-hover:text-primary transition-colors" />
                         </div>
                         <div className="space-y-2">
                             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
