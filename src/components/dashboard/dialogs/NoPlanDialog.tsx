@@ -20,7 +20,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Globe,
-  ChevronRight
+  ChevronRight,
+  Headset
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,23 +33,28 @@ interface NoPlanDialogProps {
 const valueProps = [
   {
     icon: ShieldCheck,
-    title: "High-Quality Monitoring",
+    title: "High-quality monitoring",
     description: "Drinking water quality monitored 24/7 with professional lab testing."
   },
   {
     icon: Smartphone,
-    title: "Fully Digitalized",
-    description: "Fully automated by schedule with hassle-free in-app invoicing."
+    title: "Fully digitalized",
+    description: "Fully automated, by schedule and hassle free invoicing in app."
   },
   {
     icon: Wrench,
-    title: "Monthly Sanitation",
+    title: "Monthly sanitation",
     description: "Professional cleaning of your dispensers and containers is included."
   },
   {
     icon: Package,
-    title: "Premium Equipment",
-    description: "Free hot & cold dispensers and brand new reusable containers for your team."
+    title: "Premium equipment",
+    description: "Free use of hot & cold dispensers and brand new reusable containers."
+  },
+  {
+    icon: Headset,
+    title: "24/7 quality support",
+    description: "Our dedicated team is available around the clock to assist your team."
   }
 ];
 
@@ -56,7 +62,7 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-none shadow-3xl rounded-[2.5rem] bg-white">
-        <div className="flex flex-col md:flex-row min-h-[500px]">
+        <div className="flex flex-col md:flex-row min-h-[600px]">
           {/* Left: Value Proposition */}
           <div className="flex-1 p-8 md:p-12 space-y-10">
             <div className="space-y-4">
