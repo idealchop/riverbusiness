@@ -14,6 +14,7 @@ import { SaveLitersDialog } from '@/components/dashboard/dialogs/SaveLitersDialo
 import { ComplianceDialog } from '@/components/dashboard/dialogs/ComplianceDialog';
 import { AttachmentViewerDialog } from '@/components/dashboard/dialogs/AttachmentViewerDialog';
 import { RefillStatusDialog } from '@/components/dashboard/dialogs/RefillStatusDialog';
+import { NoPlanDialog } from '@/components/dashboard/dialogs/NoPlanDialog';
 import { Dialog } from '@/components/ui/dialog';
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ export function DashboardDialogs({
     refillStatus: false,
     partnerNotice: false,
     branches: false,
+    noPlan: false,
   });
 
   const [initialComplianceTab, setInitialComplianceTab] = useState<'compliance' | 'sanitation'>('compliance');
@@ -81,6 +83,12 @@ export function DashboardDialogs({
     if (!user || !firestore || !authUser) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
       return;
+    }
+
+    // Check for plan before allowing refill
+    if (!user.plan) {
+        openDialog('noPlan');
+        return;
     }
     
     setIsRefillRequesting(true);
@@ -115,7 +123,13 @@ export function DashboardDialogs({
       'open-delivery-history': () => openDialog('deliveryHistory'),
       'open-consumption-history': () => openDialog('consumptionHistory'),
       'open-update-schedule': () => openDialog('updateSchedule'),
-      'open-request-refill': () => openDialog('requestRefill'),
+      'open-request-refill': () => {
+          if (!user?.plan) {
+              openDialog('noPlan');
+          } else {
+              openDialog('requestRefill');
+          }
+      },
       'open-save-liters': () => openDialog('saveLiters'),
       'open-compliance': (e) => {
           const detail = (e as CustomEvent).detail;
@@ -140,7 +154,7 @@ export function DashboardDialogs({
         window.removeEventListener(eventName, eventListeners[eventName]);
       });
     };
-  }, [handleOneClickRefill]);
+  }, [handleOneClickRefill, user?.plan]);
 
   const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
@@ -220,6 +234,7 @@ export function DashboardDialogs({
       <AttachmentViewerDialog isOpen={!!attachmentToView} onOpenChange={() => setAttachmentToView(null)} attachmentUrl={attachmentToView} />
       <RefillStatusDialog isOpen={dialogState.refillStatus} onOpenChange={() => closeDialog('refillStatus')} activeRefillRequest={activeRefillRequest} />
       <BranchesDialog isOpen={dialogState.branches} onOpenChange={() => closeDialog('branches')} branchUsers={branchUsers} />
+      <NoPlanDialog isOpen={dialogState.noPlan} onOpenChange={() => closeDialog('noPlan')} />
       <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
