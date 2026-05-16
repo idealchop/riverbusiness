@@ -364,7 +364,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (tool === 'pen' && currentPath && editable) {
           pushHistory();
           const id = `path-${Date.now()}`;
-          const newEl: BoardElement = {
+          const newPathEl: BoardElement = {
               id,
               type: 'path',
               path: currentPath,
@@ -376,7 +376,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               height: 0,
               strokeWidth: penSize
           };
-          sync([...elements, newEl], connections);
+          
+          // Use functional update to ensure we don't drop strokes during high-frequency saving
+          setElements(prev => {
+              const next = [...prev, newPathEl];
+              onContentChange({ elements: next, connections });
+              return next;
+          });
+          
           setCurrentPath(null);
           return;
       }
