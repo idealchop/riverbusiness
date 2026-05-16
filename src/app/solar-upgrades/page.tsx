@@ -64,7 +64,7 @@ export default function SolarUpgradesPage() {
             <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="space-y-4">
                 <Badge className="bg-slate-900 text-white border-none font-bold text-[10px] px-4 h-7 mb-2">
-                  Industrial Upgrade
+                  Industrial upgrade
                 </Badge>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
                   River energy <br/>architecture for <span className="text-slate-400">scale.</span>
@@ -114,15 +114,8 @@ export default function SolarUpgradesPage() {
             </div>
           </section>
 
-          {/* Educational PPA Section */}
+          {/* Educational PPA section */}
           <section className="space-y-8">
-            <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-slate-50 text-slate-900 border border-slate-100">
-                    <HelpCircle className="h-6 w-6" />
-                </div>
-                <h2 className="text-3xl font-black tracking-tight text-slate-900">Understanding PPA</h2>
-            </div>
-            
             <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-slate-50 overflow-hidden">
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-6">
@@ -134,7 +127,7 @@ export default function SolarUpgradesPage() {
                                 With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
                             </p>
                             <p>
-                                A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for <span className="text-slate-900 font-bold">free</span>.
+                                A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for free.
                             </p>
                             <p>
                                 You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
@@ -158,7 +151,7 @@ export default function SolarUpgradesPage() {
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Financial architecture</p>
                         </div>
                         <div className="space-y-2">
-                            <h4 className="text-lg font-black text-slate-900">Zero-Capex Solution</h4>
+                            <h4 className="text-lg font-black text-slate-900">Zero-Capex solution</h4>
                             <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business expansion while benefiting from sustainable energy.</p>
                         </div>
                         <Separator />
@@ -174,8 +167,8 @@ export default function SolarUpgradesPage() {
           {/* Industry solutions section */}
           <section className="space-y-12">
             <div className="text-center space-y-4 max-w-2xl mx-auto">
-              <h2 className="text-4xl font-black tracking-tight text-slate-900">Installation Tiers</h2>
-              <p className="text-slate-400 font-bold text-[10px] tracking-widest uppercase">Engineered for Performance</p>
+              <h2 className="text-4xl font-black tracking-tight text-slate-900">Installation tiers</h2>
+              <p className="text-slate-400 font-bold text-[10px] tracking-widest uppercase">Engineered for performance</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -193,13 +186,13 @@ export default function SolarUpgradesPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-3">
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 100 kW - 200 kW Range
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 100 kW - 200 kW range
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> PPA Financing Available
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> PPA financing available
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Industrial Grade Hardware
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Industrial grade hardware
                   </div>
                 </CardContent>
               </Card>
@@ -218,13 +211,13 @@ export default function SolarUpgradesPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-3">
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Multi-site Aggregation
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Multi-site aggregation
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 50 kW (Consideration)
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 50 kW (consideration)
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Net Metering Integration
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Net metering integration
                   </div>
                 </CardContent>
               </Card>
@@ -243,13 +236,13 @@ export default function SolarUpgradesPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-3">
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> ESG Compliance Ready
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> ESG compliance ready
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Full BMS Integration
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> Full BMS integration
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-bold text-slate-700 tracking-wide">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 100 kW+ Standard
+                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-900" /> 100 kW+ standard
                   </div>
                 </CardContent>
               </Card>
@@ -269,7 +262,7 @@ export default function SolarUpgradesPage() {
                     <div className="p-2 rounded-xl bg-white/10 text-slate-400">
                       <BarChart3 className="h-6 w-6" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Intelligence Module</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Intelligence module</span>
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
                     Intelligent <br/>monitoring hub.
@@ -303,14 +296,14 @@ export default function SolarUpgradesPage() {
                   </div>
                   
                   <div className="space-y-3 relative z-10">
-                    <h3 className="text-2xl font-black tracking-tight">Upgrade Required</h3>
+                    <h3 className="text-2xl font-black tracking-tight">Upgrade required</h3>
                     <p className="text-sm text-slate-400 font-medium max-w-[220px] mx-auto leading-relaxed">
                       Real-time monitoring is activated upon successful system synchronization.
                     </p>
                   </div>
 
                   <Button variant="outline" className="rounded-2xl border-white/20 text-white h-12 px-10 font-bold text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-slate-950 transition-all relative z-10">
-                    Inquire about Monitoring
+                    Inquire about monitoring
                   </Button>
                 </Card>
                 
@@ -332,7 +325,7 @@ export default function SolarUpgradesPage() {
                     className="opacity-10 grayscale"
                   />
               </div>
-              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Authorized Infrastructure Partner</p>
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Authorized infrastructure partner</p>
               <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Privacy</a>
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</a>
