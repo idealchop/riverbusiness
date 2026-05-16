@@ -36,7 +36,13 @@ import {
     Trophy,
     Split,
     RotateCcw,
-    Activity
+    Activity,
+    Layers,
+    ListTodo,
+    ArrowDownRight,
+    GitBranch,
+    Network,
+    Workflow
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -96,7 +102,7 @@ const BLUEPRINTS = [
         id: 'bp-workflow',
         name: 'Standard Workflow',
         description: 'Linear process from start to finish.',
-        icon: ArrowRight,
+        icon: Workflow,
         elements: [
             { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: 'START', color: '#f1f5f9', bold: true },
             { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: 'Process Step 1', color: '#ffffff', bold: true },
@@ -154,6 +160,69 @@ const BLUEPRINTS = [
             { id: 't', type: 'note', x: 380, y: 380, width: 250, height: 250, text: 'THREATS', color: '#fef3c7', bold: true }
         ],
         connections: []
+    },
+    {
+        id: 'bp-retro',
+        name: 'Team Retrospective',
+        description: 'Start, Stop, Continue columns.',
+        icon: ListTodo,
+        elements: [
+            { id: 'c1', type: 'rect', x: 50, y: 50, width: 300, height: 600, text: 'START', color: '#dcfce7', bold: true },
+            { id: 'c2', type: 'rect', x: 370, y: 50, width: 300, height: 600, text: 'STOP', color: '#fee2e2', bold: true },
+            { id: 'c3', type: 'rect', x: 690, y: 50, width: 300, height: 600, text: 'CONTINUE', color: '#dbeafe', bold: true }
+        ],
+        connections: []
+    },
+    {
+        id: 'bp-decision',
+        name: 'Logic Decision Tree',
+        description: 'Branching logical outcomes.',
+        icon: GitBranch,
+        elements: [
+            { id: 'root', type: 'diamond', x: 400, y: 50, width: 150, height: 150, text: 'Initial Condition', color: '#ffffff', bold: true },
+            { id: 'res1', type: 'rect', x: 200, y: 250, width: 150, height: 100, text: 'Path A', color: '#dcfce7' },
+            { id: 'res2', type: 'rect', x: 600, y: 250, width: 150, height: 100, text: 'Path B', color: '#fee2e2' }
+        ],
+        connections: [
+            { id: 'd1', fromId: 'root', toId: 'res1', type: 'straight' },
+            { id: 'd2', fromId: 'root', toId: 'res2', type: 'straight' }
+        ]
+    },
+    {
+        id: 'bp-org',
+        name: 'Strategic Org Chart',
+        description: 'Hierarchical reporting lines.',
+        icon: Network,
+        elements: [
+            { id: 'ceo', type: 'rect', x: 400, y: 0, width: 200, height: 80, text: 'Executive Leadership', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 'm1', type: 'rect', x: 150, y: 150, width: 180, height: 80, text: 'Operations Manager', color: '#ffffff' },
+            { id: 'm2', type: 'rect', x: 410, y: 150, width: 180, height: 80, text: 'Strategy Lead', color: '#ffffff' },
+            { id: 'm3', type: 'rect', x: 670, y: 150, width: 180, height: 80, text: 'Customer Success', color: '#ffffff' }
+        ],
+        connections: [
+            { id: 'o1', fromId: 'ceo', toId: 'm1', type: 'step' },
+            { id: 'o2', fromId: 'ceo', toId: 'm2', type: 'step' },
+            { id: 'o3', fromId: 'ceo', toId: 'm3', type: 'step' }
+        ]
+    },
+    {
+        id: 'bp-value',
+        name: 'Value Chain Map',
+        description: 'Operational sequence of value.',
+        icon: Layers,
+        elements: [
+            { id: 'v1', type: 'rect', x: 50, y: 100, width: 150, height: 100, text: 'Input', color: '#f1f5f9', bold: true },
+            { id: 'v2', type: 'rect', x: 250, y: 100, width: 150, height: 100, text: 'Refining', color: '#ffffff' },
+            { id: 'v3', type: 'rect', x: 450, y: 100, width: 150, height: 100, text: 'Quality', color: '#ffffff' },
+            { id: 'v4', type: 'rect', x: 650, y: 100, width: 150, height: 100, text: 'Dispatch', color: '#ffffff' },
+            { id: 'v5', type: 'rect', x: 850, y: 100, width: 150, height: 100, text: 'Customer', color: '#dcfce7', bold: true }
+        ],
+        connections: [
+            { id: 'vc1', fromId: 'v1', toId: 'v2', type: 'straight' },
+            { id: 'vc2', fromId: 'v2', toId: 'v3', type: 'straight' },
+            { id: 'vc3', fromId: 'v3', toId: 'v4', type: 'straight' },
+            { id: 'vc4', fromId: 'v4', toId: 'v5', type: 'straight' }
+        ]
     }
 ];
 
@@ -452,7 +521,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               pushHistory();
               setIsDragging(true);
               setDragId(hit.id);
-              setDragOffset({ x: x, y: y }); 
+              setDragOffset({ x, y }); 
           }
       } else {
           if (!e.shiftKey) {
@@ -659,7 +728,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2">
                         <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Architecture Blueprints</DropdownMenuLabel>
-                        <ScrollArea className="h-[400px]">
+                        <ScrollArea className="h-[500px]">
                             {BLUEPRINTS.map(bp => (
                                 <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
                                     <div className="flex items-center gap-2 w-full">
@@ -1066,3 +1135,4 @@ function Port({ side, id }: { side: 'top' | 'right' | 'bottom' | 'left', id: str
         </div>
     );
 }
+
