@@ -644,9 +644,16 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
             <Separator className="w-8" />
             <div className="flex flex-col gap-3">
+                <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
+                <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
+                <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
+                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
+            </div>
+
+            <div className="mt-auto">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-all">
+                        <button className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 transition-all">
                             <LayoutTemplate className="h-5 w-5" />
                         </button>
                     </DropdownMenuTrigger>
@@ -665,11 +672,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </ScrollArea>
                     </DropdownMenuContent>
                 </DropdownMenu>
-
-                <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
-                <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
-                <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
-                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
             </div>
         </aside>
 
