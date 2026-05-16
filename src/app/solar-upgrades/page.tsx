@@ -4,7 +4,21 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ChevronRight, Globe, CheckCircle2, Factory, Store, Building, HelpCircle, Landmark, Zap, ShieldCheck, BarChart3, Lock } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ChevronRight, 
+  Globe, 
+  CheckCircle2, 
+  Factory, 
+  Store, 
+  Building, 
+  HelpCircle, 
+  Landmark, 
+  Zap, 
+  ShieldCheck, 
+  BarChart3, 
+  Lock 
+} from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import Image from 'next/image';
@@ -17,7 +31,7 @@ export default function SolarUpgradesPage() {
 
   return (
     <main className="min-h-screen bg-white font-sans overflow-hidden flex flex-col relative">
-      {/* High-fidelity grid background */}
+      {/* Grid background atmosphere */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
            style={{ 
              backgroundImage: `linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)`,
@@ -56,7 +70,7 @@ export default function SolarUpgradesPage() {
                   River energy <br/>architecture for <span className="text-slate-400">scale.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-lg">
-                  Specializing in 100 kW to 200 kW industrial installations. Optimize your operational overhead with strategic energy architecture from SolarPlus.ph.
+                  Specializing in 100 kW to 200 kW industrial installations. Optimize your operational overhead with strategic energy architecture from Solar-Plus.ph.
                 </p>
               </div>
               
@@ -112,7 +126,7 @@ export default function SolarUpgradesPage() {
             <Card className="border-none shadow-xl shadow-slate-100 rounded-[3rem] bg-slate-50 overflow-hidden">
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-6">
-                        <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed italic">
+                        <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed">
                             The strategic hedge against rising Philippine energy costs.
                         </p>
                         <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
@@ -120,7 +134,7 @@ export default function SolarUpgradesPage() {
                                 With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
                             </p>
                             <p>
-                                A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. SolarPlus installs and maintains the industrial-grade system for <span className="text-slate-900 font-bold">free</span>.
+                                A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for <span className="text-slate-900 font-bold">free</span>.
                             </p>
                             <p>
                                 You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
@@ -325,7 +339,7 @@ export default function SolarUpgradesPage() {
                 <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Contact</a>
               </div>
             </div>
-            <p className="text-[9px] font-medium text-slate-300">© 2025 SolarPlus.ph • Strategic energy infrastructure for the Philippines</p>
+            <p className="text-[9px] font-medium text-slate-300">© 2025 Solar-Plus.ph • Strategic energy infrastructure for the Philippines</p>
           </footer>
         </div>
       </ScrollArea>
