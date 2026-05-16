@@ -129,7 +129,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     setConnections(prevState.connections);
     
     onContentChange({ elements: prevState.elements, connections: prevState.connections });
-    toast({ title: 'Undo successful' });
+    toast({ title: 'Undo' });
   }, [history, editable, onContentChange, toast]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
@@ -176,7 +176,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const selected = elements.find(el => el.id === selectedId);
       if (selected) {
           setClipboard({ ...selected });
-          toast({ title: 'Copied to organizational clipboard' });
+          toast({ title: 'Copied' });
       }
   }, [elements, selectedId, toast]);
 
@@ -184,7 +184,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (!clipboard || !editable) return;
       const offset = 20;
       addElement(clipboard.type!, (clipboard.x || 0) + offset, (clipboard.y || 0) + offset, clipboard);
-      toast({ title: 'Element replicated' });
+      toast({ title: 'Pasted' });
   }, [clipboard, editable, addElement, toast]);
 
   const handleDuplicate = useCallback(() => {
@@ -192,8 +192,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (selected && editable) {
           const offset = 20;
           addElement(selected.type, selected.x + offset, selected.y + offset, selected);
+          toast({ title: 'Duplicated' });
       }
-  }, [elements, selectedId, editable, addElement]);
+  }, [elements, selectedId, editable, addElement, toast]);
 
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -204,7 +205,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               if (!isInput && selectedId) {
                   e.preventDefault();
                   deleteElement(selectedId);
-                  toast({ title: 'Element removed' });
+                  toast({ title: 'Deleted' });
               }
           }
           
@@ -248,9 +249,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             }
             if (e.key === ' ') {
                 e.preventDefault();
-                // Toggle between 100% and 50% for quick context switching
-                setViewport(prev => ({ ...prev, scale: prev.scale === 1 ? 0.5 : 1 }));
-                toast({ title: `Zoom toggled to ${viewport.scale === 1 ? '50%' : '100%'}` });
+                const nextScale = viewport.scale === 1 ? 0.5 : 1;
+                setViewport(prev => ({ ...prev, scale: nextScale }));
+                toast({ title: `Zoom: ${Math.round(nextScale * 100)}%` });
             }
           }
 
@@ -344,17 +345,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                   type: 'curved' 
               };
               sync(elements, [...connections, newConn]);
-              toast({ 
-                  title: 'Logical node connected', 
-                  description: 'Flow sequence has been successfully established.' 
-              });
+              toast({ title: 'Connected' });
           }
           setPendingConnFrom(null);
           setCurrentMouseCoords(null);
       }
 
       if (isDragging || isResizing) {
-          // If we drag or resize, we don't push history here because we pushed it on MouseDown
           sync(elements, connections);
       }
 
