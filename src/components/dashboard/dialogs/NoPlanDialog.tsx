@@ -57,6 +57,11 @@ const valueProps = [
 ];
 
 export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
+  const handleSubscribe = () => {
+    onOpenChange(false);
+    window.dispatchEvent(new CustomEvent('open-subscription-onboarding'));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-[2.5rem] bg-white">
@@ -68,7 +73,7 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                 Unlock smart <br/><span className="text-primary">water management.</span>
               </h2>
               <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
-                To request a refill, you need an active Smart Refill plan. Join our network of customers who enjoy high quality water for the Philippine workforce.
+                To request a refill, you need an active Smart Refill plan. Join our network of customers who enjoy high-quality water for the Philippine workforce.
               </p>
             </div>
 
@@ -138,7 +143,10 @@ export function NoPlanDialog({ isOpen, onOpenChange }: NoPlanDialogProps) {
                         Dismiss
                     </Button>
                 </DialogClose>
-                <Button className="flex-1 sm:flex-none rounded-xl h-11 px-10 font-bold text-xs shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90">
+                <Button 
+                    onClick={handleSubscribe}
+                    className="flex-1 sm:flex-none rounded-xl h-11 px-10 font-bold text-xs shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
+                >
                     Subscribe now <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Button>
             </div>
