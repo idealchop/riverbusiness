@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -25,9 +25,47 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { LiveSupportDialog } from '@/components/dashboard/dialogs/LiveSupportDialog';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, orderBy, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import type { AppUser, ChatMessage } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SolarUpgradesPage() {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user: authUser } = useUser();
+  const [isLiveSupportOpen, setIsLiveSupportOpen] = useState(false);
+
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: user } = useDoc<AppUser>(userDocRef);
+
+  const chatMessagesQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, 'users', authUser.uid, 'chatMessages'), orderBy('timestamp', 'asc'));
+  }, [firestore, authUser]);
+  const { data: chatMessages } = useCollection<ChatMessage>(chatMessagesQuery);
+
   const solarImg = PlaceHolderImages.find(p => p.id === 'solar-promotion');
+
+  const handleMessageSubmit = async (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    if (!firestore || !authUser || !userDocRef) return;
+
+    const messagesCollection = collection(firestore, 'users', authUser.uid, 'chatMessages');
+    const finalPayload = { ...messagePayload, timestamp: serverTimestamp() };
+
+    try {
+        await addDoc(messagesCollection, finalPayload);
+        await updateDoc(userDocRef, {
+            lastChatMessage: messagePayload.text || 'Attachment',
+            lastChatTimestamp: serverTimestamp(),
+            hasUnreadUserMessages: true
+        });
+    } catch(error) {
+        console.error("Error sending chat message:", error);
+        toast({ variant: 'destructive', title: 'Message Failed', description: 'Could not send your message.' });
+    }
+  };
 
   return (
     <main className="min-h-screen bg-white font-sans overflow-hidden flex flex-col relative">
@@ -75,11 +113,17 @@ export default function SolarUpgradesPage() {
               </div>
               
               <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Button asChild className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm shadow-xl shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white border-none">
-                  <a href="https://solarplus.ph/" target="_blank" rel="noopener noreferrer">
-                    Get a free quote <ChevronRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
+                <LiveSupportDialog 
+                  isOpen={isLiveSupportOpen}
+                  onOpenChange={setIsLiveSupportOpen}
+                  user={user || null}
+                  chatMessages={chatMessages || []}
+                  onMessageSubmit={handleMessageSubmit}
+                >
+                  <Button className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm shadow-xl shadow-slate-200 bg-slate-900 hover:bg-slate-800 text-white border-none">
+                    Talk to our sales team <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </LiveSupportDialog>
                 <Button asChild variant="outline" className="w-full sm:w-auto h-14 rounded-2xl px-10 font-bold text-sm border-slate-200 bg-white">
                   <Link href="/dashboard">Back to Core</Link>
                 </Button>
@@ -120,25 +164,25 @@ export default function SolarUpgradesPage() {
                 <CardContent className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
                     <div className="space-y-6">
                         <p className="text-lg md:text-xl text-slate-700 font-bold leading-relaxed">
-                            Protect your business from rising energy costs.
+                          Protect your business from rising energy costs.
                         </p>
                         <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
                             <p>
-                                With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
+                              With electricity rates in the Philippines among the highest in Asia and rising fuel costs driving constant inflation, upgrading to solar is a critical business decision. 
                             </p>
                             <p>
-                                A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for free.
+                              A Power Purchase Agreement (PPA) allows your organization to lock in lower energy rates without the burden of equipment ownership. Solar-Plus installs and maintains the industrial-grade system for free.
                             </p>
                             <p>
-                                You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
+                              You only pay for the power you use—guaranteed at a significantly lower rate than your current utility provider, providing immediate relief to your operational overhead.
                             </p>
                         </div>
                     </div>
                     <div className="space-y-8">
                         <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-inner flex flex-col gap-6">
                             <div className="space-y-2">
-                                <h4 className="text-lg font-black text-slate-900">Zero-Capex solution</h4>
-                                <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business expansion while benefiting from sustainable energy.</p>
+                                <h4 className="text-lg font-black text-slate-900">Zero-Capex Solution</h4>
+                                <p className="text-sm text-slate-500 font-medium leading-relaxed">Perfect for companies that want to keep their capital for business growth while benefiting from green energy.</p>
                             </div>
                             <Separator />
                             <div className="space-y-1">
@@ -165,7 +209,7 @@ export default function SolarUpgradesPage() {
           {/* Industry solutions section */}
           <section className="space-y-12">
             <div className="text-center space-y-4 max-w-2xl mx-auto">
-              <h2 className="text-4xl font-black tracking-tight text-slate-900">Installation tiers</h2>
+              <h2 className="text-4xl font-black tracking-tight text-slate-900">Installation Tiers</h2>
               <p className="text-slate-400 font-bold text-[10px] tracking-widest uppercase">Engineered for performance</p>
             </div>
 
@@ -260,10 +304,10 @@ export default function SolarUpgradesPage() {
                     <div className="p-2 rounded-xl bg-white/10 text-slate-400">
                       <BarChart3 className="h-6 w-6" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Intelligence module</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Intelligence Module</span>
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
-                    Intelligent <br/>monitoring hub.
+                    Intelligent <br/>Monitoring Hub.
                   </h2>
                   <h2 className="text-lg text-slate-400 font-medium leading-relaxed max-w-md">
                     Visualize energy yield, cost savings, and hardware health in real-time. This module integrates directly into your workspace command center.
@@ -294,7 +338,7 @@ export default function SolarUpgradesPage() {
                   </div>
                   
                   <div className="space-y-3 relative z-10">
-                    <h3 className="text-2xl font-black tracking-tight">Upgrade required</h3>
+                    <h3 className="text-2xl font-black tracking-tight">Upgrade Required</h3>
                     <p className="text-sm text-slate-400 font-medium max-w-[220px] mx-auto leading-relaxed text-xs">
                       Real-time monitoring is activated upon successful system synchronization.
                     </p>
