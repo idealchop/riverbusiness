@@ -214,6 +214,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             {isIntroStep ? (
                 /* Step 0: Value Proposition (No Plan View) */
                 <div className="flex flex-col md:flex-row min-h-[600px] animate-in fade-in duration-500">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Smart Refill Introduction</DialogTitle>
+                        <DialogDescription>Discover the benefits of professional water management for your team.</DialogDescription>
+                    </DialogHeader>
                     <div className="flex-1 p-8 md:p-14 space-y-12">
                         <div className="space-y-4">
                             <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">

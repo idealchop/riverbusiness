@@ -154,6 +154,12 @@ export function InfoCards() {
           </Card>
         </DialogTrigger>
         <DialogContent className="sm:max-w-4xl rounded-[2rem] md:rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white max-h-[92vh] sm:max-h-[85vh] flex flex-col">
+          <DialogHeader className="sr-only">
+            <DialogTitle>App Features Guide</DialogTitle>
+            <DialogDescription>
+              Explore the different modules available in the River ecosystem.
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Left Side: Image Showcase */}
             <div className="w-full md:w-[40%] bg-slate-50 flex items-center justify-center p-8 md:p-12 relative overflow-hidden shrink-0">

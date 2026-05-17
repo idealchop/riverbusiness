@@ -33,6 +33,11 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden shadow-none rounded-2xl border-none">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Request a Water Refill</DialogTitle>
+          <DialogDescription>Schedule a new water replenishment for your office location.</DialogDescription>
+        </DialogHeader>
+
         {/* Responsive Branding Header */}
         <div className="relative aspect-video w-full">
            <Image 

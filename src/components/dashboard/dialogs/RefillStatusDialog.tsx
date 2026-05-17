@@ -150,6 +150,11 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
         onOpenChange(open);
     }}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden shadow-none rounded-2xl border-none">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Refill Status Tracker</DialogTitle>
+          <DialogDescription>Track the real-time progress of your water replenishment requests.</DialogDescription>
+        </DialogHeader>
+        
         {/* Responsive Branding Header */}
         <div className="relative aspect-video w-full">
            <Image 
