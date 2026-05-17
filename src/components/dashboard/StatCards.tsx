@@ -354,13 +354,14 @@ export function StatCards({
               <div className="space-y-4">
                 <div className={cn(
                     "p-3 rounded-xl border flex flex-col gap-1 transition-all relative overflow-hidden",
-                    autoRefill ? "bg-blue-50 border-blue-100" : "bg-slate-100 border-slate-200 opacity-60"
+                    autoRefill ? "bg-blue-50 border-blue-100 shadow-inner" : "bg-slate-100 border-slate-200 opacity-60"
                 )}>
                    {/* Water Wave Animation Background */}
                    {autoRefill && (
-                        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-                            <div className="water-wave-layer opacity-100" />
-                            <div className="water-wave-layer-2 opacity-100" />
+                        <div className="absolute inset-0 pointer-events-none z-0">
+                            <div className="water-wave-layer water-wave-back" />
+                            <div className="water-wave-layer water-wave-mid" />
+                            <div className="water-wave-layer water-wave-main" />
                         </div>
                    )}
                    
