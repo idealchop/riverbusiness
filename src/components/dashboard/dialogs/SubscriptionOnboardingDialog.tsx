@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -39,7 +38,9 @@ import {
   Hourglass,
   History,
   CheckCircle,
-  Zap
+  Zap,
+  Lock,
+  Locate
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -97,6 +98,7 @@ const valueProps = [
 export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: SubscriptionOnboardingDialogProps) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -108,6 +110,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
     serviceAddress: '',
     contactName: '',
     contactNumber: '',
+    latitude: 0 as number | null,
+    longitude: 0 as number | null,
     teamSize: 20,
     estimatedDispensers: 2,
     monthlyLiters: 400,
@@ -131,6 +135,35 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
   const nextStep = () => setStep(s => Math.min(STEPS.length - 1, s + 1));
   const prevStep = () => setStep(s => Math.max(0, s - 1));
 
+  const handleCaptureLocation = () => {
+    if (!navigator.geolocation) {
+        toast({ variant: 'destructive', title: 'GPS unavailable', description: 'Your browser does not support geolocation.' });
+        return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            setFormData(prev => ({
+                ...prev,
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude
+            }));
+            setIsLocating(false);
+            toast({ title: 'Coordinates Captured', description: 'Precise delivery anchor has been set.' });
+        },
+        (err) => {
+            setIsLocating(false);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Access Denied', 
+                description: 'Please enable location permissions in your browser to pin your office.' 
+            });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   const handleFinalize = async () => {
     if (!firestore || !user) return;
     setIsSubmitting(true);
@@ -144,6 +177,12 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
         };
 
         await updateDoc(userRef, {
+            businessName: formData.businessName,
+            address: formData.serviceAddress,
+            name: formData.contactName,
+            contactNumber: formData.contactNumber,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
             plan,
             subscriptionStatus: 'pending_activation',
             updatedAt: serverTimestamp(),
@@ -195,7 +234,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 "h-6 w-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-lg transition-all",
                                 (user?.subscriptionStatus === 'pending_activation' || user?.subscriptionStatus === 'discovery_call') ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
                             )}>
-                                <Check className="h-3 w-3" />
+                                <CheckCircle className="h-3 w-3" />
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-black text-slate-900 uppercase tracking-tight">1. Activation Receive</p>
@@ -422,7 +461,27 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             </div>
                                             <div className="sm:col-span-2 space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Primary service address</Label>
-                                                <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
+                                                <div className="relative group">
+                                                    <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12" placeholder="Street, Building, Floor..." />
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleCaptureLocation}
+                                                        disabled={isLocating}
+                                                        className={cn(
+                                                            "absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                                                            formData.latitude ? "bg-primary text-white" : "bg-white text-slate-400 hover:text-primary hover:bg-primary/5"
+                                                        )}
+                                                        title="Pin point exact location"
+                                                    >
+                                                        {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                                                    </button>
+                                                </div>
+                                                {formData.latitude && (
+                                                    <p className="text-[9px] font-bold text-green-600 uppercase tracking-widest flex items-center gap-1.5 mt-1 animate-in fade-in">
+                                                        <CheckCircle2 className="h-3 w-3" />
+                                                        Precision anchor set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business contact number</Label>
