@@ -135,6 +135,15 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
   const nextStep = () => setStep(s => Math.min(STEPS.length - 1, s + 1));
   const prevStep = () => setStep(s => Math.max(0, s - 1));
 
+  const updateTeamSize = (newSize: number) => {
+    setFormData(prev => ({
+        ...prev,
+        teamSize: newSize,
+        // Automated estimate: 20L per person per month
+        monthlyLiters: newSize * 20 
+    }));
+  };
+
   const handleCaptureLocation = () => {
     if (!navigator.geolocation) {
         toast({ variant: 'destructive', title: 'GPS unavailable', description: 'Your browser does not support geolocation.' });
@@ -430,7 +439,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 <>
                     <header className="p-8 md:p-12 pb-6 flex items-center justify-between border-b border-slate-50 shrink-0">
                         <div className="space-y-1">
-                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-[0.2em] text-primary border-primary/20 mb-2">
+                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-0.2em text-primary border-primary/20 mb-2">
                                 Configuration Phase {step} of {STEPS.length - 1}
                             </Badge>
                             <DialogTitle className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
@@ -513,12 +522,34 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
-                                                        <button onClick={() => setFormData({...formData, teamSize: Math.max(1, formData.teamSize - 1)})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">-</button>
+                                                        <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">-</button>
                                                         <span className="text-2xl font-black tabular-nums w-12 text-center">{formData.teamSize}</span>
-                                                        <button onClick={() => setFormData({...formData, teamSize: formData.teamSize + 1})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">+</button>
+                                                        <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">+</button>
                                                     </div>
                                                 </div>
+                                                
                                                 <Separator className="bg-slate-200/50" />
+                                                
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                            <Droplets className="h-6 w-6" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Estimated Volume</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Based on team size</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-2xl font-black text-primary tabular-nums leading-none">
+                                                            {formData.monthlyLiters} <span className="text-xs">L</span>
+                                                        </p>
+                                                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Liters per month</p>
+                                                    </div>
+                                                </div>
+
+                                                <Separator className="bg-slate-200/50" />
+                                                
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-4">
                                                         <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
