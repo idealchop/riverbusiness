@@ -131,14 +131,6 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
     });
   }, [rawHistory]);
 
-  const isWeekendRequest = React.useMemo(() => {
-    if (!activeRefillRequest?.requestedAt) return false;
-    const requestedAtDate = toSafeDate(activeRefillRequest.requestedAt);
-    if (!requestedAtDate) return false;
-    const dayOfWeek = requestedAtDate.getDay(); 
-    return dayOfWeek === 0 || dayOfWeek === 6;
-  }, [activeRefillRequest]);
-
   const currentStatus = activeRefillRequest?.status || 'Requested';
   const config = statusConfig[currentStatus];
   const Icon = config.icon;
@@ -239,15 +231,6 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
                         })}
                     </div>
                 </div>
-
-                {isWeekendRequest && currentStatus === 'Requested' && (
-                    <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-1">
-                        <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                        <p className="text-[10px] font-bold uppercase tracking-tight text-amber-800/80 leading-relaxed">
-                            Hydration Note: We don't dispatch on weekends. Your request will be processed for Monday delivery.
-                        </p>
-                    </div>
-                )}
               </div>
             ) : (
               <div className="py-16 flex flex-col items-center justify-center gap-4 text-center px-10">
