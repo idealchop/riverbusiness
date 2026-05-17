@@ -190,8 +190,9 @@ export function StatCards({
     setIsConfirmingToggle(true);
   };
 
+  const hasActivePlan = !!user?.plan;
   const planDetails = user?.customPlanDetails || {};
-  const autoRefill = planDetails?.autoRefillEnabled ?? true;
+  const autoRefill = hasActivePlan ? (planDetails?.autoRefillEnabled ?? true) : false;
   const nextRefillDay = planDetails?.deliveryDay || 'Not set';
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
@@ -285,11 +286,18 @@ export function StatCards({
               <div className="flex items-center gap-6">
                 <WaterTankVisual 
                     percentage={remainingBalancePercentage} 
-                    isUnlimited={isFlowPlan || isBranchAccount} 
+                    isUnlimited={(isFlowPlan || isBranchAccount) && hasActivePlan} 
                 />
                 
                 <div className="flex-1 space-y-4">
-                    {isFlowPlan || isBranchAccount ? (
+                    {!hasActivePlan ? (
+                        <div>
+                            <p className="text-2xl font-black text-slate-900 tracking-tight">System Locked</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                Setup required to initialize credits.
+                            </p>
+                        </div>
+                    ) : (isFlowPlan || isBranchAccount) ? (
                         <div>
                             <p className="text-3xl font-black text-slate-900 tracking-tight">Drinking Water</p>
                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
@@ -371,7 +379,7 @@ export function StatCards({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
+                <Switch checked={autoRefill} onCheckedChange={onSwitchChange} disabled={!hasActivePlan} />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -394,17 +402,27 @@ export function StatCards({
                 <div className="space-y-1">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Scheduled Dispatch</p>
                     <p className={cn("text-base font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>
-                        {autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}
+                        {autoRefill ? `Every ${nextRefillDay}` : "Manual Mode Only"}
                     </p>
                 </div>
 
                 {autoRefill ? (
-                    <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest rounded-xl border-slate-200" onClick={onUpdateScheduleClick}>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full h-8 text-[10px] font-bold uppercase tracking-widest rounded-xl border-slate-200" 
+                        onClick={onUpdateScheduleClick}
+                    >
                         <Edit className="mr-2 h-3 w-3" /> Customize Delivery
                     </Button>
                 ) : (
-                    <Button variant="default" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl" onClick={onRequestRefillClick}>
-                        <CalendarIcon className="mr-2 h-4 w-4" /> Schedule One-Time
+                    <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl" 
+                        onClick={hasActivePlan ? onRequestRefillClick : () => window.dispatchEvent(new CustomEvent('open-subscription-onboarding'))}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" /> {hasActivePlan ? 'Schedule One-Time' : 'Setup Required'}
                     </Button>
                 )}
               </div>
