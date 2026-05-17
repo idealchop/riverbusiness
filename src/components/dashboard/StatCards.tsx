@@ -356,7 +356,15 @@ export function StatCards({
                     "p-3 rounded-xl border flex flex-col gap-1 transition-all relative overflow-hidden",
                     autoRefill ? "bg-blue-50 border-blue-100" : "bg-slate-100 border-slate-200 opacity-60"
                 )}>
-                   <div className="flex items-center justify-between">
+                   {/* Water Wave Animation Background */}
+                   {autoRefill && (
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                            <div className="water-wave-layer opacity-100" />
+                            <div className="water-wave-layer-2 opacity-100" />
+                        </div>
+                   )}
+                   
+                   <div className="flex items-center justify-between relative z-10">
                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{autoRefill ? "Next Dispatch" : "Service Paused"}</p>
                        {autoRefill && (
                           <span className="relative flex h-2 w-2">
@@ -365,7 +373,7 @@ export function StatCards({
                           </span>
                        )}
                    </div>
-                   <p className={cn("text-sm font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>{autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}</p>
+                   <p className={cn("text-sm font-extrabold relative z-10", autoRefill ? "text-slate-900" : "text-slate-400")}>{autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}</p>
                 </div>
                 {autoRefill ? (
                     <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest rounded-xl border-slate-200" onClick={onUpdateScheduleClick}>
