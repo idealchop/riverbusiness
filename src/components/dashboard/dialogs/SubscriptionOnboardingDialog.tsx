@@ -55,22 +55,22 @@ interface SubscriptionOnboardingDialogProps {
 
 const STEPS = [
   { id: 'overview', title: 'Smart Refill', icon: ShieldCheck },
-  { id: 'profile', title: 'Business Profile', icon: Building },
-  { id: 'team', title: 'Team Logistics', icon: Users },
-  { id: 'plan', title: 'Consumption Tier', icon: Droplets },
-  { id: 'payment', title: 'Settlement Setup', icon: CreditCard },
-  { id: 'timeline', title: 'Activation', icon: Clock }
+  { id: 'profile', title: 'Corporate Identity', icon: Building },
+  { id: 'team', title: 'Workforce Dynamics', icon: Users },
+  { id: 'plan', title: 'Hydration Tier', icon: Droplets },
+  { id: 'payment', title: 'Financial Protocol', icon: CreditCard },
+  { id: 'timeline', title: 'Service Activation', icon: Clock }
 ];
 
 const valueProps = [
   {
     icon: ShieldCheck,
-    title: "High-quality hydration",
-    description: "Professional-grade drinking water monitored 24/7 with strict laboratory standards."
+    title: "Professional-Grade Hydration",
+    description: "Standardized drinking water monitored 24/7 with strict laboratory compliance."
   },
   {
     icon: Smartphone,
-    title: "Automated logistics",
+    title: "Autonomous Fulfillment Logic",
     description: "End-to-end digital scheduling and hassle-free, automated in-app invoicing."
   },
   {
@@ -80,12 +80,12 @@ const valueProps = [
   },
   {
     icon: Package,
-    title: "Infrastructure support",
-    description: "Complimentary use of premium hot and cold dispensers and brand-new containers."
+    title: "Infrastructure Provisioning",
+    description: "Authorized use of premium hot and cold dispensers and high-fidelity containers."
   },
   {
     icon: Headset,
-    title: "Expert assistance",
+    title: "Executive Support Access",
     description: "Dedicated quality officers available around the clock to support your organization."
   }
 ];
@@ -146,7 +146,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             'customPlanDetails.dispenserQuantity': formData.estimatedDispensers
         });
 
-        toast({ title: "Welcome to the Network", description: "Your Smart Refill subscription is now active." });
+        toast({ title: "System Ready", description: "Your Smart Refill subscription is now active." });
         onOpenChange(false);
         setStep(0);
     } catch (error) {
@@ -215,16 +215,16 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 /* Step 0: Value Proposition (No Plan View) */
                 <div className="flex flex-col md:flex-row min-h-[600px] animate-in fade-in duration-500">
                     <DialogHeader className="sr-only">
-                        <DialogTitle>Smart Refill Introduction</DialogTitle>
-                        <DialogDescription>Discover the benefits of professional water management for your team.</DialogDescription>
+                        <DialogTitle>Smart Refill Overview</DialogTitle>
+                        <DialogDescription>Analyze the advantages of standardized water management.</DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 p-8 md:p-14 space-y-12">
                         <div className="space-y-4">
                             <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
-                                Unlock smart <br/><span className="text-primary">water management.</span>
+                                Unlock Intelligent <br/><span className="text-primary">Hydration Infrastructure.</span>
                             </h2>
                             <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
-                                Join our network of customers who enjoy high-quality water for the Philippine workforce.
+                                Join a professional network of high-fidelity operations utilizing premium resources for the workforce.
                             </p>
                         </div>
 
@@ -252,7 +252,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 onClick={nextStep}
                                 className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
                             >
-                                Subscribe now <ArrowRight className="ml-2 h-4 w-4" />
+                                Activate Membership <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>
@@ -289,7 +289,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 </div>
 
                                 <Button className="w-full h-12 rounded-2xl bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs border-none shadow-xl transition-all active:scale-95">
-                                    Find nearby stations <ChevronRight className="ml-1 h-4 w-4" />
+                                    Analyze nearby stations <ChevronRight className="ml-1 h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
@@ -302,7 +302,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                     <header className="p-8 md:p-12 pb-6 flex items-center justify-between border-b border-slate-50 shrink-0">
                         <div className="space-y-1">
                             <Badge variant="outline" className="text-[9px] font-black uppercase tracking-[0.2em] text-primary border-primary/20 mb-2">
-                                Setup Phase {step} of {STEPS.length - 1}
+                                Configuration Phase {step} of {STEPS.length - 1}
                             </Badge>
                             <DialogTitle className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
                                 {STEPS[step].title}
@@ -319,23 +319,23 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 1 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Verify your corporate identity. These details will be used for delivery routing and official tax-compliant invoicing.
+                                            Establish your corporate identity. These records are utilized for logistics routing and tax-compliant financial documentation.
                                         </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business name</Label>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business entity name</Label>
                                                 <Input value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Contact representative</Label>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Authorized representative</Label>
                                                 <Input value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                             <div className="sm:col-span-2 space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Physical service address</Label>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Primary service address</Label>
                                                 <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Direct contact number</Label>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business contact number</Label>
                                                 <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                         </div>
@@ -345,7 +345,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 2 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Tell us about your team. This allows the system to recommend an optimized liter allocation for zero operational downtime.
+                                            Specify your operational workforce. This enables the system to compute an optimized allocation for zero-friction supply replenishment.
                                         </p>
                                         <div className="grid gap-6">
                                             <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-8 space-y-8">
@@ -356,7 +356,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-bold text-slate-900">Total Workforce</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active members</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active directory count</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
@@ -372,8 +372,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Package className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900">Dispensers Required</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Strategic placement</p>
+                                                            <p className="text-sm font-bold text-slate-900">Infrastructure Nodes</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dispensers required</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
@@ -390,7 +390,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 3 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Based on your team of {formData.teamSize}, we recommend the **Flow Plan**. Pay only for what you consume with zero waste.
+                                            Based on your workforce metrics, the **Flow Plan** is recommended. This tier provides maximum flexibility with usage-based financial logic.
                                         </p>
                                         
                                         <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-primary-light text-white p-8 relative overflow-hidden group">
@@ -409,18 +409,18 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="pt-6 border-t border-white/10 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No hidden fees</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No hidden overhead</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">Real-time tracking</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest">Real-time analysis</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </Card>
 
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Estimated monthly consumption (Liters)</Label>
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Projected monthly consumption (Liters)</Label>
                                             <Input 
                                                 type="number" 
                                                 value={formData.monthlyLiters} 
@@ -429,7 +429,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             />
                                             <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2 pt-1">
                                                 <Info className="h-3 w-3" />
-                                                Estimated cost: ₱{(formData.monthlyLiters * 3).toLocaleString()} / mo
+                                                Operational estimate: ₱{(formData.monthlyLiters * 3).toLocaleString()} / mo
                                             </p>
                                         </div>
                                     </div>
@@ -438,7 +438,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 4 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            River Business is fully digital. Settle your dispatches via GCash, Maya, or Bank Transfer directly through the command center.
+                                            River Business utilized a fully digital settlement architecture. Settle your accounts via accredited channels directly through the command center.
                                         </p>
                                         
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -462,7 +462,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-4">
                                             <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                                             <p className="text-[10px] font-bold text-blue-900 leading-relaxed uppercase tracking-tight">
-                                                Payment is triggered monthly based on verified consumption records. No advanced credits required.
+                                                Financial settlement is triggered monthly based on verified consumption logs. Advanced credit provisioning is not required.
                                             </p>
                                         </div>
                                     </div>
@@ -471,7 +471,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 5 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Your subscription is ready for initialization. Here is your professional activation timeline:
+                                            Your organizational profile is ready for initialization. Review the professional activation timeline below:
                                         </p>
 
                                         <div className="relative pl-6 space-y-12">
@@ -480,8 +480,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="relative z-10 flex items-start gap-6 group">
                                                 <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg">1</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Account preparing</p>
-                                                    <p className="text-xs font-medium text-slate-400">Digital footprint and multi-tenant isolation established.</p>
+                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Digital footprint established</p>
+                                                    <p className="text-xs font-medium text-slate-400">Secure multi-tenant data isolation and role assignment.</p>
                                                 </div>
                                             </div>
 
@@ -489,10 +489,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Email confirmation and requirements</p>
+                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Requirement Verification</p>
                                                         <Mail className="h-3.5 w-3.5 text-slate-400" />
                                                     </div>
-                                                    <p className="text-xs font-medium text-slate-400">Verification of logistics access and physical delivery prerequisites.</p>
+                                                    <p className="text-xs font-medium text-slate-400">Authentication of logistics prerequisites and site access protocols.</p>
                                                 </div>
                                             </div>
 
@@ -500,10 +500,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">First dispatch 24-36 hrs</p>
+                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Initial Fulfillment (24-36 hrs)</p>
                                                         <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4">Priority</Badge>
                                                     </div>
-                                                    <p className="text-xs font-medium text-slate-400">Logistics coordination initiated for immediate supply fulfillment.</p>
+                                                    <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -524,10 +524,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                             {step < STEPS.length - 1 ? (
                                 <>
                                     <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900">
-                                        <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                        <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                                     </Button>
                                     <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
-                                        Continue <ChevronRight className="ml-2 h-4 w-4" />
+                                        Next phase <ChevronRight className="ml-2 h-4 w-4" />
                                     </Button>
                                 </>
                             ) : (
@@ -537,7 +537,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                     </Button>
                                     <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90">
                                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                                        {isSubmitting ? 'Authorizing...' : 'Authorize Subscription'}
+                                        {isSubmitting ? 'Synchronizing...' : 'Authorize Setup'}
                                     </Button>
                                 </>
                             )}
