@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar, Building } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar, Building, Zap, Hourglass, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -67,6 +68,7 @@ export function OverviewTab({
     const { toast } = useToast();
     const [newNotifEmail, setNewNotifEmail] = useState('');
     const [isUpdatingEmails, setIsUpdatingEmails] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     const planDetails = user.customPlanDetails || {};
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
@@ -76,6 +78,24 @@ export function OverviewTab({
     const availableLiters = totalAllocation - consumedLitersThisMonth;
 
     const isAutoRefill = planDetails.autoRefillEnabled ?? true;
+
+    const handleUpdateSubStatus = async (status: AppUser['subscriptionStatus']) => {
+        if (!firestore) return;
+        setIsUpdatingStatus(true);
+        try {
+            const userRef = doc(firestore, 'users', user.id);
+            const updates: any = { subscriptionStatus: status };
+            if (status === 'activated') {
+                updates.onboardingComplete = true;
+            }
+            await updateDoc(userRef, updates);
+            toast({ title: 'Protocol Updated', description: `Client moved to ${status?.replace('_', ' ')} phase.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Update Failed' });
+        } finally {
+            setIsUpdatingStatus(false);
+        }
+    };
 
     const handleAddNotifEmail = async () => {
         if (!newNotifEmail || !newNotifEmail.includes('@') || !firestore) {
@@ -172,6 +192,74 @@ export function OverviewTab({
                                 </CardContent>
                             </Card>
 
+                            {/* Subscription Workflow Controller (New) */}
+                            <Card className="flex flex-col border-none shadow-sm bg-slate-900 text-white overflow-hidden relative">
+                                <CardHeader className="pb-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 rounded-lg bg-white/10">
+                                                <Zap className="h-4 w-4 text-primary-light" />
+                                            </div>
+                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Subscription Workflow</CardTitle>
+                                        </div>
+                                        <Badge variant="outline" className="border-white/20 text-white uppercase text-[9px]">{user.subscriptionStatus || 'Standard'}</Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-2 flex-1">
+                                    <div className="space-y-3">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-white/40">Manual Status Override</Label>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                disabled={isUpdatingStatus}
+                                                onClick={() => handleUpdateSubStatus('pending_activation')}
+                                                className={cn(
+                                                    "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                                    user.subscriptionStatus === 'pending_activation' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
+                                                )}
+                                            >
+                                                <Hourglass className="mr-3 h-3.5 w-3.5" /> 1. Activation Received
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                disabled={isUpdatingStatus}
+                                                onClick={() => handleUpdateSubStatus('discovery_call')}
+                                                className={cn(
+                                                    "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                                    user.subscriptionStatus === 'discovery_call' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
+                                                )}
+                                            >
+                                                <Phone className="mr-3 h-3.5 w-3.5" /> 2. Discovery Call
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                disabled={isUpdatingStatus}
+                                                onClick={() => handleUpdateSubStatus('activated')}
+                                                className={cn(
+                                                    "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                                    user.subscriptionStatus === 'activated' ? "bg-primary text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
+                                                )}
+                                            >
+                                                <CheckCircle2 className="mr-3 h-3.5 w-3.5" /> 3. Water Refill Activated
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                                <CardFooter className="pt-2 bg-white/5 rounded-b-lg">
+                                    <p className="text-[9px] text-white/30 font-medium italic">Advancing status triggers a real-time update to the client's progress tracker.</p>
+                                </CardFooter>
+                                <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                                    <Shield className="h-40 w-40" />
+                                </div>
+                            </Card>
+                        </div>
+                    </CarouselItem>
+
+                    <CarouselItem>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {/* Monthly Snapshot Card */}
                             <Card className="flex flex-col border-none shadow-sm bg-gradient-to-br from-blue-50 to-white">
                                 <CardHeader className="pb-2">
@@ -187,7 +275,7 @@ export function OverviewTab({
                                         <div className="space-y-3">
                                             <div>
                                                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Water Credits</Label>
-                                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? (
+                                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' || user.isPrepaid ? (
                                                     <p className="text-xl font-bold mt-1">Unlimited</p>
                                                 ) : (
                                                     <div className="mt-1">
@@ -206,7 +294,7 @@ export function OverviewTab({
                                                     consumptionComparison.changeType === 'increase' && 'text-red-500',
                                                     consumptionComparison.changeType === 'decrease' && 'text-green-500',
                                                 )}>
-                                                    {consumptionComparison.changeType === 'increase' ? <ArrowUp className="h-3 w-3 mr-0.5" /> : <ArrowDown className="h-3 w-3 mr-0.5" />}
+                                                    {consumptionComparison.changeType === 'increase' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
                                                     <span>{consumptionComparison.percentageChange.toFixed(0)}% vs last month</span>
                                                 </div>
                                             </div>
@@ -219,13 +307,9 @@ export function OverviewTab({
                                     </Button>
                                 </CardFooter>
                             </Card>
-                        </div>
-                    </CarouselItem>
 
-                    <CarouselItem>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
-                            {/* Logistics & Automation Card */}
-                            <Card className="flex flex-col border-none shadow-sm">
+                             {/* Logistics & Automation Card */}
+                             <Card className="flex flex-col border-none shadow-sm">
                                 <CardHeader className="pb-4 bg-muted/10">
                                     <div className="flex items-center gap-2">
                                         <div className="p-2 rounded-lg bg-primary/10">
@@ -265,11 +349,12 @@ export function OverviewTab({
                                         </div>
                                     </div>
                                 </CardContent>
-                                <CardFooter className="pt-2 bg-slate-50/50 rounded-b-lg">
-                                    <p className="text-[9px] text-slate-400 font-medium italic">Fulfillment cycles are triggered based on this operational window.</p>
-                                </CardFooter>
                             </Card>
+                        </div>
+                    </CarouselItem>
 
+                    <CarouselItem>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {/* Plan & Station Management */}
                             <Card className="border-none shadow-sm flex flex-col">
                                 <CardHeader className="flex flex-row items-center justify-between pb-4">
@@ -305,11 +390,7 @@ export function OverviewTab({
                                     </div>
                                 </CardContent>
                             </Card>
-                        </div>
-                    </CarouselItem>
 
-                    <CarouselItem>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {/* Email Automation Recipients */}
                             <Card className="flex flex-col border-none shadow-sm">
                                 <CardHeader className="pb-4">
@@ -370,7 +451,11 @@ export function OverviewTab({
                                     <p className="text-[10px] text-muted-foreground leading-relaxed">Adding recipients here replaces the primary login email for all automated broadcast triggers.</p>
                                 </CardFooter>
                             </Card>
+                        </div>
+                    </CarouselItem>
 
+                    <CarouselItem>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {/* Contract Management Card */}
                             <Card className="border-none shadow-sm overflow-hidden flex flex-col">
                                 <CardHeader className="bg-primary/5 pb-6">

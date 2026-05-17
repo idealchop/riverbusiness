@@ -24,6 +24,7 @@ export interface AppUser {
     createdAt: any;
     lastBilledDate?: any;
     onboardingComplete?: boolean;
+    subscriptionStatus?: 'pending_activation' | 'discovery_call' | 'activated';
     plan?: {
         name: string;
         price: number;

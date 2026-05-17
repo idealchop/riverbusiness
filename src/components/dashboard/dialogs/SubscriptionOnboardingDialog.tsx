@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -34,7 +35,11 @@ import {
   Wrench,
   Info,
   Mail,
-  Loader2
+  Loader2,
+  Hourglass,
+  History,
+  CheckCircle,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -56,9 +61,8 @@ interface SubscriptionOnboardingDialogProps {
 const STEPS = [
   { id: 'overview', title: 'Smart Refill', icon: ShieldCheck },
   { id: 'profile', title: 'Corporate Identity', icon: Building },
-  { id: 'team', title: 'Workforce Dynamics', icon: Users },
+  { id: 'team', title: 'Team Size', icon: Users },
   { id: 'plan', title: 'Hydration Tier', icon: Droplets },
-  { id: 'payment', title: 'Financial Protocol', icon: CreditCard },
   { id: 'timeline', title: 'Service Activation', icon: Clock }
 ];
 
@@ -95,6 +99,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
   const [isSubmitting, setIsSubmitting] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const isPendingApproval = user?.subscriptionStatus && user.subscriptionStatus !== 'activated';
 
   // Onboarding Form State
   const [formData, setFormData] = useState({
@@ -139,18 +145,17 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
         await updateDoc(userRef, {
             plan,
-            onboardingComplete: true,
+            subscriptionStatus: 'pending_activation',
             updatedAt: serverTimestamp(),
             'customPlanDetails.deliveryDay': formData.preferredDay,
             'customPlanDetails.autoRefillEnabled': true,
             'customPlanDetails.dispenserQuantity': formData.estimatedDispensers
         });
 
-        toast({ title: "System Ready", description: "Your Smart Refill subscription is now active." });
-        onOpenChange(false);
+        toast({ title: "Activation Initiated", description: "Your setup request has been received by our administration." });
         setStep(0);
     } catch (error) {
-        toast({ variant: 'destructive', title: "System Error", description: "Could not finalize subscription." });
+        toast({ variant: 'destructive', title: "System Error", description: "Could not initialize activation." });
     } finally {
         setIsSubmitting(false);
     }
@@ -158,6 +163,91 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
   const progress = ((step + 1) / STEPS.length) * 100;
   const isIntroStep = step === 0;
+
+  if (isPendingApproval) {
+      return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
+                <DialogHeader className="sr-only">
+                    <DialogTitle>Subscription Approval Tracker</DialogTitle>
+                    <DialogDescription>Track the progress of your Smart Refill activation.</DialogDescription>
+                </DialogHeader>
+                <div className="p-8 space-y-8">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                            <Hourglass className="h-6 w-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">Activation Status</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Ref: {user?.id.substring(0,8).toUpperCase()}</p>
+                        </div>
+                    </div>
+
+                    <div className="relative pl-6 space-y-12">
+                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
+                        
+                        {/* Step 1: Activation Receive */}
+                        <div className={cn(
+                            "relative z-10 flex items-start gap-6 transition-all duration-500",
+                            user?.subscriptionStatus === 'pending_activation' || user?.subscriptionStatus === 'discovery_call' ? "opacity-100" : "opacity-30"
+                        )}>
+                            <div className={cn(
+                                "h-6 w-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-lg transition-all",
+                                (user?.subscriptionStatus === 'pending_activation' || user?.subscriptionStatus === 'discovery_call') ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
+                            )}>
+                                <Check className="h-3 w-3" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">1. Activation Receive</p>
+                                <p className="text-[10px] font-medium text-slate-400">Digital footprint established and isolate data routing active.</p>
+                            </div>
+                        </div>
+
+                        {/* Step 2: Discovery Call */}
+                        <div className={cn(
+                            "relative z-10 flex items-start gap-6 transition-all duration-500",
+                            user?.subscriptionStatus === 'discovery_call' ? "opacity-100" : "opacity-30"
+                        )}>
+                            <div className={cn(
+                                "h-6 w-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-lg transition-all",
+                                user?.subscriptionStatus === 'discovery_call' ? "bg-primary text-white scale-110" : "bg-slate-100 text-slate-400"
+                            )}>
+                                {user?.subscriptionStatus === 'discovery_call' ? <Zap className="h-3 w-3 animate-pulse" /> : <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />}
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">2. Discovery Call</p>
+                                <p className="text-[10px] font-medium text-slate-400">Logistics prerequisite verification and protocol sync.</p>
+                            </div>
+                        </div>
+
+                        {/* Step 3: Water Refill Activated */}
+                        <div className="relative z-10 flex items-start gap-6 opacity-30">
+                            <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center ring-4 ring-white shadow-lg">
+                                <Lock className="h-3 w-3 text-slate-400" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">3. Water Refill Activated</p>
+                                <p className="text-[10px] font-medium text-slate-400">Authorized replenishment cycles initiated.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-4">
+                        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <p className="text-[10px] font-bold text-blue-900 leading-relaxed uppercase tracking-tight">
+                            Our administration team is currently processing your setup. You will receive an automated broadcast once the next phase is authorized.
+                        </p>
+                    </div>
+                </div>
+                <DialogFooter className="p-6 bg-slate-50 border-t">
+                    <DialogClose asChild>
+                        <Button variant="outline" className="w-full rounded-xl h-12 font-black uppercase tracking-widest text-[10px] shadow-sm bg-white">Close Tracker</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -194,7 +284,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                               )}>
                                   {isCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                               </div>
-                              <span className="text-xs font-bold uppercase tracking-widest">{s.title}</span>
+                              <span className="text-xs font-bold uppercase tracking-widest whitespace-nowrap">{s.title}</span>
                           </div>
                       )
                   })}
@@ -297,7 +387,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                     </div>
                 </div>
             ) : (
-                /* Steps 1-5: Onboarding Form */
+                /* Steps 1-4: Onboarding Form */
                 <>
                     <header className="p-8 md:p-12 pb-6 flex items-center justify-between border-b border-slate-50 shrink-0">
                         <div className="space-y-1">
@@ -338,6 +428,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business contact number</Label>
                                                 <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Active system identity</Label>
+                                                <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4" />
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -345,7 +439,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 2 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Specify your operational workforce. This enables the system to compute an optimized allocation for zero-friction supply replenishment.
+                                            Specify your operational workforce size. This enables the system to compute an optimized allocation for zero-friction supply replenishment.
                                         </p>
                                         <div className="grid gap-6">
                                             <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-8 space-y-8">
@@ -355,8 +449,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Users className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900">Total Workforce</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active directory count</p>
+                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Team size</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Active directory count</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
@@ -372,8 +466,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Package className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900">Infrastructure Nodes</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dispensers required</p>
+                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Infrastructure Nodes</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensers required</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
@@ -438,39 +532,6 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {step === 4 && (
                                     <div className="space-y-8">
                                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            River Business utilized a fully digital settlement architecture. Settle your accounts via accredited channels directly through the command center.
-                                        </p>
-                                        
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {['GCash', 'Bank Transfer (BPI)', 'Maya', 'Corporate Billing'].map((method) => (
-                                                <div 
-                                                    key={method}
-                                                    onClick={() => setFormData({...formData, paymentMethod: method})}
-                                                    className={cn(
-                                                        "p-6 rounded-2xl border-2 transition-all cursor-pointer group flex items-center justify-between",
-                                                        formData.paymentMethod === method ? "border-primary bg-primary/5" : "border-slate-50 bg-white hover:border-slate-200"
-                                                    )}
-                                                >
-                                                    <span className={cn("text-sm font-bold uppercase tracking-tight", formData.paymentMethod === method ? "text-primary" : "text-slate-500")}>
-                                                        {method}
-                                                    </span>
-                                                    {formData.paymentMethod === method && <CheckCircle2 className="h-5 w-5 text-primary" />}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        
-                                        <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-4">
-                                            <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                                            <p className="text-[10px] font-bold text-blue-900 leading-relaxed uppercase tracking-tight">
-                                                Financial settlement is triggered monthly based on verified consumption logs. Advanced credit provisioning is not required.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {step === 5 && (
-                                    <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
                                             Your organizational profile is ready for initialization. Review the professional activation timeline below:
                                         </p>
 
@@ -480,8 +541,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="relative z-10 flex items-start gap-6 group">
                                                 <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg">1</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Digital footprint established</p>
-                                                    <p className="text-xs font-medium text-slate-400">Secure multi-tenant data isolation and role assignment.</p>
+                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Activation Receive</p>
+                                                    <p className="text-xs font-medium text-slate-400">Digital footprint established and secure data routing active.</p>
                                                 </div>
                                             </div>
 
@@ -489,10 +550,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Requirement Verification</p>
-                                                        <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Discovery Call</p>
+                                                        <Phone className="h-3.5 w-3.5 text-slate-400" />
                                                     </div>
-                                                    <p className="text-xs font-medium text-slate-400">Authentication of logistics prerequisites and site access protocols.</p>
+                                                    <p className="text-xs font-medium text-slate-400">Logistics prerequisite verification and protocol sync via authorized officer.</p>
                                                 </div>
                                             </div>
 
@@ -500,7 +561,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Initial Fulfillment (24-36 hrs)</p>
+                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Water Refill Activated</p>
                                                         <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4">Priority</Badge>
                                                     </div>
                                                     <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
