@@ -40,7 +40,7 @@ import {
   CheckCircle,
   Zap,
   Lock,
-  Locate
+  Phone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -368,7 +368,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
                         <div className="grid gap-8">
                             {valueProps.map((prop, idx) => (
-                                <div key={idx} className="flex gap-5 group">
+                                <div className="flex gap-5 group" key={idx}>
                                     <div className="py-1 text-slate-400 group-hover:text-primary transition-all shrink-0">
                                         <prop.icon className="h-6 w-6" />
                                     </div>
