@@ -384,17 +384,17 @@
   /* High-fidelity sinusoidal seamless path */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,0 150,120 300,60 C450,0 450,120 600,60 V120 H0 Z' fill='%233b82f6' fill-opacity='0.15'%3E%3C/path%3E%3C/svg%3E");
   background-size: 25% 65px;
-  animation: wave-horizontal 15s cubic-bezier(0.445, 0.05, 0.55, 0.95) infinite;
+  animation: wave-horizontal 25s cubic-bezier(0.445, 0.05, 0.55, 0.95) infinite;
 }
 
 .water-wave-mid {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,0 150,120 300,60 C450,0 450,120 600,60 V120 H0 Z' fill='%233b82f6' fill-opacity='0.08'%3E%3C/path%3E%3C/svg%3E");
   background-size: 25% 55px;
-  animation: wave-horizontal 22s cubic-bezier(0.445, 0.05, 0.55, 0.95) -2s infinite reverse;
+  animation: wave-horizontal 35s cubic-bezier(0.445, 0.05, 0.55, 0.95) -2s infinite reverse;
 }
 
 .water-wave-back {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,0 150,120 300,60 C450,0 450,120 600,60 V120 H0 Z' fill='%233b82f6' fill-opacity='0.05'%3E%3C/path%3E%3C/svg%3E");
   background-size: 25% 45px;
-  animation: wave-horizontal 35s cubic-bezier(0.445, 0.05, 0.55, 0.95) -5s infinite;
+  animation: wave-horizontal 45s cubic-bezier(0.445, 0.05, 0.55, 0.95) -5s infinite;
 }

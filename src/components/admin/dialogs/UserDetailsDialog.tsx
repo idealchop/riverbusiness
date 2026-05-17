@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -28,6 +27,7 @@ import { SanitationHistoryDialog } from './user-details/SanitationHistoryDialog'
 import { ProofViewerDialog } from './user-details/ProofViewerDialog';
 import { YearlyConsumptionDialog } from './user-details/YearlyConsumptionDialog';
 import { BranchDeliveriesTab } from './user-details/BranchDeliveriesTab';
+import { ChangePlanDialog } from './user-details/ChangePlanDialog';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -73,6 +73,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
     const [isYearlyConsumptionOpen, setIsYearlyConsumptionOpen] = useState(false);
+    const [isChangePlanOpen, setIsChangePlanOpen] = useState(false);
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -94,7 +95,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             const deliveryDate = toSafeDate(d.date);
             return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
         });
-        return deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        return deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
     }, [userDeliveriesData]);
     
     const consumptionComparison = useMemo(() => {
@@ -109,7 +110,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 const deliveryDate = toSafeDate(d.date);
                 return deliveryDate ? isWithinInterval(deliveryDate, { start: lastMonthStart, end: lastMonthEnd }) : false;
             })
-            .reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+            .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
     
         if (consumedLitersLastMonth === 0) {
             return { percentageChange: consumedLitersThisMonth > 0 ? 100 : 0, changeType: consumedLitersThisMonth > 0 ? 'increase' : 'same' };
@@ -168,6 +169,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         toast({ title: "Station Assigned" });
     };
 
+    const handleAssignParent = async (parentId: string) => {
+        if (!userDocRef) return;
+        await updateDoc(userDocRef, { parentId: parentId });
+        toast({ title: "Parent Account Assigned" });
+    };
+
     const handleContractUpload = async () => {
         if (!contractFile || !auth?.currentUser || !storage || !userDocRef) return;
         setIsUploadingContract(true);
@@ -199,12 +206,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="p-6 pb-4">
                         <DialogTitle>User Account Management</DialogTitle>
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 min-h-0">
+                    <ScrollArea className="flex-1 px-6 min-h-0">
                         <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
                              <TabsList>
                                 {isParent ? (
@@ -237,6 +244,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
+                                    onAssignParent={handleAssignParent}
+                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
@@ -276,9 +285,9 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
+                    <div className="border-t p-4 flex justify-end items-center bg-background">
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 
@@ -321,6 +330,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 isOpen={isSanitationHistoryOpen}
                 onOpenChange={setIsSanitationHistoryOpen}
                 visit={selectedSanitationVisit}
+                isAdmin={isAdmin}
             />
             <ProofViewerDialog
                 isOpen={!!proofToViewUrl}
@@ -331,6 +341,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 isOpen={isYearlyConsumptionOpen}
                 onOpenChange={setIsYearlyConsumptionOpen}
                 deliveries={userDeliveriesData}
+                user={user}
+            />
+            <ChangePlanDialog
+                isOpen={isChangePlanOpen}
+                onOpenChange={setIsChangePlanOpen}
                 user={user}
             />
         </>

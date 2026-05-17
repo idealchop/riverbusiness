@@ -15,7 +15,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -173,7 +173,12 @@ export function StatCards({
     if (toggleTargetState === null || !user?.id || !firestore) return;
     const userRef = doc(firestore, 'users', user.id);
     updateDoc(userRef, { 'customPlanDetails.autoRefillEnabled': toggleTargetState }).then(() => {
-        toast({ title: toggleTargetState ? "Auto-Refill Active" : "Auto-Refill Paused" });
+        toast({ 
+            title: toggleTargetState ? "Auto-Refill Active" : "Auto-Refill Paused",
+            description: toggleTargetState 
+                ? "Your scheduled water replenishment cycles have been resumed." 
+                : "Automatic dispatches are stopped. You must manually request refills."
+        });
     }).finally(() => {
         setIsConfirmingToggle(false);
         setToggleTargetState(null);
@@ -351,18 +356,20 @@ export function StatCards({
                 <div className="flex items-center gap-2">
                   <Repeat className="h-4 w-4 text-primary" />
                   <span>Auto-Refill Status</span>
-                  <Tooltip>
-                      <TooltipTrigger asChild>
-                          <button className="text-slate-300 hover:text-primary transition-colors cursor-help outline-none">
-                              <HelpCircle className="h-3.5 w-3.5" />
-                          </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="rounded-xl p-3 border-slate-100 shadow-xl bg-white max-w-[220px]">
-                          <p className="text-[10px] font-bold text-slate-900 leading-relaxed uppercase tracking-tight">
-                              Automated Logistics: No more manual orders or follow-up calls. Our team monitors your supply and handles everything automatically.
-                          </p>
-                      </TooltipContent>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button className="text-slate-300 hover:text-primary transition-colors cursor-help outline-none">
+                                <HelpCircle className="h-3.5 w-3.5" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="rounded-xl p-3 border-slate-100 shadow-xl bg-white max-w-[220px]">
+                            <p className="text-[10px] font-bold text-slate-900 leading-relaxed uppercase tracking-tight">
+                                Automated Logistics: No more manual orders or follow-up calls. Our team monitors your supply and handles everything automatically.
+                            </p>
+                        </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
               </CardTitle>
@@ -375,7 +382,7 @@ export function StatCards({
                 )}>
                    {/* Water Wave Animation Background */}
                     <div className={cn(
-                        "absolute inset-0 pointer-events-none z-0",
+                        "absolute inset-0 pointer-events-none z-0 transition-all duration-700",
                         !autoRefill && "grayscale opacity-40"
                     )}>
                         <div className="water-wave-layer water-wave-back" />
