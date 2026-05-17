@@ -15,6 +15,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -347,7 +348,22 @@ export function StatCards({
           <Card className="border-none shadow-sm col-span-1 bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                <span className="flex items-center gap-2"><Repeat className="h-4 w-4 text-primary" />Auto-Refill Status</span>
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-primary" />
+                  <span>Auto-Refill Status</span>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <button className="text-slate-300 hover:text-primary transition-colors cursor-help outline-none">
+                              <HelpCircle className="h-3.5 w-3.5" />
+                          </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="rounded-xl p-3 border-slate-100 shadow-xl bg-white max-w-[220px]">
+                          <p className="text-[10px] font-bold text-slate-900 leading-relaxed uppercase tracking-tight">
+                              Automated Logistics: No more manual orders or follow-up calls. Our team monitors your supply and handles everything automatically.
+                          </p>
+                      </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
               </CardTitle>
             </CardHeader>
@@ -367,18 +383,9 @@ export function StatCards({
                    )}
                    
                    <div className="flex items-center gap-3 relative z-10">
-                       <Badge variant="outline" className={cn(
-                           "h-6 px-3 border-none font-black text-[9px] uppercase tracking-[0.2em] shadow-sm",
-                           autoRefill ? "bg-white text-primary" : "bg-slate-200 text-slate-400"
-                       )}>
-                           {autoRefill ? "Service Active" : "Service Paused"}
-                       </Badge>
-                       {autoRefill && (
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                          </span>
-                       )}
+                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">
+                           {autoRefill ? "Flow Active" : "Paused"}
+                       </span>
                    </div>
                 </div>
 
@@ -398,13 +405,6 @@ export function StatCards({
                         <CalendarIcon className="mr-2 h-4 w-4" /> Schedule One-Time
                     </Button>
                 )}
-
-                <div className="flex items-start gap-2 pt-1 opacity-70">
-                    <HelpCircle className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <p className="text-[9px] font-medium leading-relaxed text-slate-500">
-                        Auto-refill: no more texts or calls. Our team handles your water refill logistics automatically.
-                    </p>
-                </div>
               </div>
             </CardContent>
           </Card>
