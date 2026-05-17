@@ -362,18 +362,17 @@
   100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
 }
 
-/* Water Wave Animation */
+/* Water Wave Animation - Seamless Logic */
 @keyframes wave-horizontal {
-  0% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(-25%, 3px, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
 }
 
 .water-wave-layer {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 200%;
+  width: 400%; /* Triple-width for seamless overlap */
   height: 100%;
   background-repeat: repeat-x;
   background-position: 0 bottom;
@@ -382,19 +381,20 @@
 }
 
 .water-wave-main {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,120V50c150-30,300,30,450,0c150-30,300,30,450,0c150-30,300,30,450,0V120H0z' fill='%233b82f6' fill-opacity='0.12'%3E%3C/path%3E%3C/svg%3E");
-  background-size: 50% 65px;
-  animation: wave-horizontal 12s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+  /* High-fidelity sinusoidal seamless path */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,0 150,120 300,60 C450,0 450,120 600,60 V120 H0 Z' fill='%233b82f6' fill-opacity='0.15'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 25% 65px;
+  animation: wave-horizontal 8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 .water-wave-mid {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,120V50c150-30,300,30,450,0c150-30,300,30,450,0c150-30,300,30,450,0V120H0z' fill='%233b82f6' fill-opacity='0.07'%3E%3C/path%3E%3C/svg%3E");
-  background-size: 50% 55px;
-  animation: wave-horizontal 18s cubic-bezier(0.36, 0.45, 0.63, 0.53) -2s infinite reverse;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,0 150,120 300,60 C450,0 450,120 600,60 V120 H0 Z' fill='%233b82f6' fill-opacity='0.08'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 25% 55px;
+  animation: wave-horizontal 12s cubic-bezier(0.45, 0.05, 0.55, 0.95) -2s infinite reverse;
 }
 
 .water-wave-back {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,120V50c150-30,300,30,450,0c150-30,300,30,450,0c150-30,300,30,450,0V120H0z' fill='%233b82f6' fill-opacity='0.04'%3E%3C/path%3E%3C/svg%3E");
-  background-size: 50% 45px;
-  animation: wave-horizontal 25s cubic-bezier(0.36, 0.45, 0.63, 0.53) -5s infinite;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C150,0 150,120 300,60 C450,0 450,120 600,60 V120 H0 Z' fill='%233b82f6' fill-opacity='0.05'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 25% 45px;
+  animation: wave-horizontal 20s cubic-bezier(0.45, 0.05, 0.55, 0.95) -5s infinite;
 }
