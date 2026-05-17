@@ -351,9 +351,9 @@ export function StatCards({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div className={cn(
-                    "p-3 rounded-xl border flex flex-col gap-1 transition-all relative overflow-hidden",
+                    "h-16 rounded-xl border flex items-center justify-center transition-all relative overflow-hidden",
                     autoRefill ? "bg-blue-50 border-blue-100 shadow-inner" : "bg-slate-100 border-slate-200 opacity-60"
                 )}>
                    {/* Water Wave Animation Background */}
@@ -365,8 +365,13 @@ export function StatCards({
                         </div>
                    )}
                    
-                   <div className="flex items-center justify-between relative z-10">
-                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{autoRefill ? "Next Dispatch" : "Service Paused"}</p>
+                   <div className="flex items-center gap-3 relative z-10">
+                       <Badge variant="outline" className={cn(
+                           "h-6 px-3 border-none font-black text-[9px] uppercase tracking-[0.2em] shadow-sm",
+                           autoRefill ? "bg-white text-primary" : "bg-slate-200 text-slate-400"
+                       )}>
+                           {autoRefill ? "Service Active" : "Service Paused"}
+                       </Badge>
                        {autoRefill && (
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -374,8 +379,15 @@ export function StatCards({
                           </span>
                        )}
                    </div>
-                   <p className={cn("text-sm font-extrabold relative z-10", autoRefill ? "text-slate-900" : "text-slate-400")}>{autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}</p>
                 </div>
+
+                <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Scheduled Dispatch</p>
+                    <p className={cn("text-base font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>
+                        {autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}
+                    </p>
+                </div>
+
                 {autoRefill ? (
                     <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest rounded-xl border-slate-200" onClick={onUpdateScheduleClick}>
                         <Edit className="mr-2 h-3 w-3" /> Customize Delivery
@@ -385,6 +397,13 @@ export function StatCards({
                         <CalendarIcon className="mr-2 h-4 w-4" /> Schedule One-Time
                     </Button>
                 )}
+
+                <div className="flex items-start gap-2 pt-1 opacity-70">
+                    <HelpCircle className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <p className="text-[9px] font-medium leading-relaxed text-slate-500">
+                        Auto-refill: no more texts or calls. Our team handles your water refill logistics automatically.
+                    </p>
+                </div>
               </div>
             </CardContent>
           </Card>
