@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
