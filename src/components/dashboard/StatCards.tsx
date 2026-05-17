@@ -169,6 +169,8 @@ export function StatCards({
   }, [user, deliveries]);
 
 
+  const hasActivePlan = !!user?.plan;
+
   const handleToggleConfirmation = () => {
     if (toggleTargetState === null || !user?.id || !firestore) return;
     const userRef = doc(firestore, 'users', user.id);
@@ -186,11 +188,18 @@ export function StatCards({
   };
 
   const onSwitchChange = (checked: boolean) => {
+    if (!hasActivePlan) {
+        toast({
+            variant: "destructive",
+            title: "Active Subscription Required",
+            description: "Please complete your workspace setup to authorize automated replenishment cycles.",
+        });
+        return;
+    }
     setToggleTargetState(checked);
     setIsConfirmingToggle(true);
   };
 
-  const hasActivePlan = !!user?.plan;
   const planDetails = user?.customPlanDetails || {};
   const autoRefill = hasActivePlan ? (planDetails?.autoRefillEnabled ?? true) : false;
   const nextRefillDay = planDetails?.deliveryDay || 'Not set';
@@ -379,7 +388,7 @@ export function StatCards({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Switch checked={autoRefill} onCheckedChange={onSwitchChange} disabled={!hasActivePlan} />
+                <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
               </CardTitle>
             </CardHeader>
             <CardContent>
