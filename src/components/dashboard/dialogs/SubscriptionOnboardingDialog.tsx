@@ -75,7 +75,7 @@ const valueProps = [
   },
   {
     icon: Wrench,
-    title: "Regular maintenance",
+    title: "Regular Maintanance",
     description: "Scheduled professional cleaning of your dispensers and containers is included."
   },
   {
