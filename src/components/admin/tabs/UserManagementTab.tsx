@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserPlus, BellRing, Search, AlertTriangle, Filter, MoreHorizontal, ChevronRight, Building } from 'lucide-react';
+import { UserPlus, BellRing, Search, AlertTriangle, Filter, MoreHorizontal, ChevronRight, Building, Repeat, Clock, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -260,30 +260,50 @@ export function UserManagementTab({
                                     <Table>
                                         <TableHeader className="bg-muted/30">
                                             <TableRow>
-                                                <TableHead className="pl-6">Client ID</TableHead>
-                                                <TableHead>Business Entity</TableHead>
-                                                <TableHead>Tier</TableHead>
-                                                <TableHead>Fulfillment Status</TableHead>
-                                                <TableHead className="text-right pr-6">Management</TableHead>
+                                                <TableHead className="pl-6">Business Entity</TableHead>
+                                                <TableHead>Refill Mode</TableHead>
+                                                <TableHead>Dispatch Window</TableHead>
+                                                <TableHead>Fulfillment Tier</TableHead>
+                                                <TableHead className="text-right pr-6">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {paginatedUsers.map((user) => {
                                                 const paymentStatus = paymentStatusesByUser[user.id];
+                                                const details = user.customPlanDetails || {};
+                                                const isAuto = details.autoRefillEnabled ?? true;
+                                                const schedule = details.deliveryDay ? `${details.deliveryFrequency || 'Weekly'} - ${details.deliveryDay}` : 'On Demand';
+
                                                 return (
                                                     <TableRow key={user.id} onClick={() => onUserClick(user)} className="group cursor-pointer hover:bg-muted/30 transition-colors">
-                                                        <TableCell className="pl-6 font-mono text-[10px] text-muted-foreground uppercase">{user.clientId}</TableCell>
-                                                        <TableCell className="font-bold text-sm text-slate-900">{user.businessName}</TableCell>
+                                                        <TableCell className="pl-6 py-4">
+                                                            <div className="font-bold text-sm text-slate-900">{user.businessName}</div>
+                                                            <div className="font-mono text-[9px] text-muted-foreground uppercase">{user.clientId}</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline" className={cn(
+                                                                "text-[9px] font-black uppercase tracking-[0.1em] px-2 h-5 border shadow-none",
+                                                                isAuto ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-50 text-slate-400 border-slate-200"
+                                                            )}>
+                                                                <Repeat className="h-2.5 w-2.5 mr-1" />
+                                                                {isAuto ? 'Auto' : 'Manual'}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="h-3 w-3 text-slate-400" />
+                                                                <span className="text-xs font-semibold text-slate-600">{schedule}</span>
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell>
                                                             <Badge variant="outline" className={cn(
                                                                 "text-[10px] uppercase tracking-wide px-2 h-5",
                                                                 user.accountType === 'Parent' ? 'border-primary text-primary bg-primary/5' :
                                                                 user.accountType === 'Branch' ? 'border-purple-300 text-purple-700 bg-purple-50' : 'text-muted-foreground'
                                                             )}>
-                                                                {user.accountType || 'Single'}
+                                                                {user.plan?.name || 'No Plan'}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground font-medium">{user.plan?.name || 'No Plan'}</TableCell>
                                                         <TableCell className="text-right pr-6">
                                                             <div className="flex items-center justify-end gap-2">
                                                                 {paymentStatus?.overdue > 0 ? (
@@ -412,4 +432,3 @@ export function UserManagementTab({
         </>
     );
 }
-

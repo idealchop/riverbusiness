@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -74,6 +74,8 @@ export function OverviewTab({
     const rolloverLiters = user.customPlanDetails?.lastMonthRollover || 0;
     const totalAllocation = monthlyPlanLiters + bonusLiters + rolloverLiters;
     const availableLiters = totalAllocation - consumedLitersThisMonth;
+
+    const isAutoRefill = planDetails.autoRefillEnabled ?? true;
 
     const handleAddNotifEmail = async () => {
         if (!newNotifEmail || !newNotifEmail.includes('@') || !firestore) {
@@ -222,6 +224,92 @@ export function OverviewTab({
 
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
+                            {/* Logistics & Automation Card */}
+                            <Card className="flex flex-col border-none shadow-sm">
+                                <CardHeader className="pb-4 bg-muted/10">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-lg bg-primary/10">
+                                            <Repeat className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Logistics & Refill</CardTitle>
+                                            <CardDescription className="text-xs">Fulfillment mode and automation status.</CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-6 flex-1">
+                                    <div className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50 shadow-inner">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Automation Protocol</p>
+                                            <p className={cn("text-lg font-black uppercase tracking-tight", isAutoRefill ? "text-primary" : "text-slate-400")}>
+                                                {isAutoRefill ? 'Auto-Refill Active' : 'Manual Mode Only'}
+                                            </p>
+                                        </div>
+                                        {isAutoRefill ? <CheckCircle2 className="h-6 w-6 text-primary" /> : <XCircle className="h-6 w-6 text-slate-300" />}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
+                                            <div className="flex items-center gap-2 text-slate-400">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Frequency</p>
+                                            </div>
+                                            <p className="text-xs font-bold text-slate-900">{planDetails.deliveryFrequency || 'As Requested'}</p>
+                                        </div>
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
+                                            <div className="flex items-center gap-2 text-slate-400">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Window</p>
+                                            </div>
+                                            <p className="text-xs font-bold text-slate-900">{planDetails.deliveryDay || 'N/A'} {planDetails.deliveryTime ? `@ ${planDetails.deliveryTime}` : ''}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                                <CardFooter className="pt-2 bg-slate-50/50 rounded-b-lg">
+                                    <p className="text-[9px] text-slate-400 font-medium italic">Fulfillment cycles are triggered based on this operational window.</p>
+                                </CardFooter>
+                            </Card>
+
+                            {/* Plan & Station Management */}
+                            <Card className="border-none shadow-sm flex flex-col">
+                                <CardHeader className="flex flex-row items-center justify-between pb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-lg bg-primary/10">
+                                            <Building className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <CardTitle className="text-sm font-bold uppercase tracking-wider">Plan & Fulfillment</CardTitle>
+                                    </div>
+                                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => onSetIsChangePlanOpen(true)}>
+                                        Immediate Switch
+                                    </Button>
+                                </CardHeader>
+                                <CardContent className="space-y-6 flex-1">
+                                    <div className="p-3 rounded-lg border bg-background">
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Active Plan</Label>
+                                        <p className="font-bold text-sm mt-1">{user.plan?.name || 'Manual Plan Selection Required'}</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{user.plan?.isConsumptionBased ? 'Consumption-based pricing' : 'Set monthly allocation'}</p>
+                                    </div>
+                                    <div className="space-y-2 pt-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned Fulfillment Station</Label>
+                                        <Select onValueChange={onAssignStation} defaultValue={user.assignedWaterStationId}>
+                                            <SelectTrigger className="w-full bg-background">
+                                                <SelectValue placeholder="Assign a station..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {(waterStations || []).map(station => (
+                                                    <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-muted-foreground italic">Fulfillment station updates are applied instantly to the next delivery dispatch.</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </CarouselItem>
+
+                    <CarouselItem>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {/* Email Automation Recipients */}
                             <Card className="flex flex-col border-none shadow-sm">
                                 <CardHeader className="pb-4">
@@ -283,48 +371,8 @@ export function OverviewTab({
                                 </CardFooter>
                             </Card>
 
-                            {/* Plan & Station Management */}
-                            <Card className="border-none shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-primary/10">
-                                            <Repeat className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <CardTitle className="text-sm font-bold uppercase tracking-wider">Plan & Fulfillment</CardTitle>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => onSetIsChangePlanOpen(true)}>
-                                        Immediate Switch
-                                    </Button>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="p-3 rounded-lg border bg-background">
-                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Active Plan</Label>
-                                        <p className="font-bold text-sm mt-1">{user.plan?.name || 'Manual Plan Selection Required'}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{user.plan?.isConsumptionBased ? 'Consumption-based pricing' : 'Set monthly allocation'}</p>
-                                    </div>
-                                    <div className="space-y-2 pt-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned Fulfillment Station</Label>
-                                        <Select onValueChange={onAssignStation} defaultValue={user.assignedWaterStationId}>
-                                            <SelectTrigger className="w-full bg-background">
-                                                <SelectValue placeholder="Assign a station..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {(waterStations || []).map(station => (
-                                                    <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-[10px] text-muted-foreground italic">Fulfillment station updates are applied instantly to the next delivery dispatch.</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </CarouselItem>
-
-                    <CarouselItem>
-                        <div className="grid grid-cols-1 gap-6 p-1">
                             {/* Contract Management Card */}
-                            <Card className="border-none shadow-sm overflow-hidden">
+                            <Card className="border-none shadow-sm overflow-hidden flex flex-col">
                                 <CardHeader className="bg-primary/5 pb-6">
                                     <div className="flex items-center gap-2">
                                         <div className="p-2 rounded-lg bg-primary/10">
@@ -332,13 +380,13 @@ export function OverviewTab({
                                         </div>
                                         <div>
                                             <CardTitle className="text-base font-bold">Partnership Contract</CardTitle>
-                                            <CardDescription>Legal agreement and terms of service documentation.</CardDescription>
+                                            <CardDescription className="text-xs">Authorized legal documentation.</CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="pt-6">
-                                    <div className="flex flex-col md:flex-row items-center gap-6">
-                                        <div className="flex-1 w-full p-6 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col items-center justify-center text-center gap-3">
+                                <CardContent className="pt-6 flex-1">
+                                    <div className="flex flex-col items-center gap-6">
+                                        <div className="w-full p-6 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col items-center justify-center text-center gap-3">
                                             {user.currentContractUrl ? (
                                                 <>
                                                     <div className="p-3 rounded-full bg-green-50 text-green-600 shadow-sm border border-green-100">
@@ -359,11 +407,11 @@ export function OverviewTab({
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="flex-1 w-full space-y-4">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Upload Signed Contract</Label>
+                                        <div className="w-full space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
                                                 <div className="flex gap-2">
-                                                    <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" className="h-9 text-xs bg-muted/5 border-muted-foreground/20" />
+                                                    <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} accept=".pdf,image/*" className="h-9 text-[10px] bg-muted/5 border-muted-foreground/20" />
                                                     <Button onClick={onContractUpload} disabled={!contractFile || isUploadingContract} size="sm" className="h-9 shadow-sm">
                                                         {isUploadingContract ? 'Processing...' : 'Upload'}
                                                     </Button>
@@ -375,12 +423,6 @@ export function OverviewTab({
                                                     <p className="text-[10px] text-right font-medium text-primary uppercase tracking-widest">{uploadProgress.toFixed(0)}% uploaded</p>
                                                 </div>
                                             )}
-                                            <div className="p-4 rounded-lg bg-amber-50/50 border border-amber-100/50 flex gap-3 items-start">
-                                                <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                                                <p className="text-[10px] text-amber-800/80 leading-relaxed font-medium uppercase tracking-tight">
-                                                    Ensure the document includes the company seal and wet signatures of both authorized representatives for legal compliance.
-                                                </p>
-                                            </div>
                                         </div>
                                     </div>
                                 </CardContent>
