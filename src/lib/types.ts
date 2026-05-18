@@ -333,6 +333,8 @@ export interface WaterStation {
   id:string;
   name: string;
   location: string;
+  email?: string;
+  contactNumber?: string;
   partnershipAgreementUrl?: string;
   status: 'Operational' | 'Under Maintenance';
   statusMessage?: string;
