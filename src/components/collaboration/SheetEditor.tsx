@@ -75,7 +75,7 @@ import { cn } from '@/lib/utils';
 import type { SheetField, SheetRecord, SheetView, SheetFieldType, SheetViewType } from '@/lib/types';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, parseISO, addDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, addDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -176,7 +176,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
                 <DropdownMenuTrigger asChild>
                     <button className="w-full h-full px-3 flex items-center justify-between group/cell outline-none">
                         {value ? (
-                            <Badge className={cn("text-[9px] font-bold uppercase tracking-widest border-none shadow-none", option?.color || 'bg-slate-100 text-slate-700')}>
+                            <Badge className={cn("text-[10px] font-bold uppercase tracking-widest border-none shadow-none", option?.color || 'bg-slate-100 text-slate-700')}>
                                 {value}
                             </Badge>
                         ) : <span className="text-slate-200 text-xs italic">Select...</span>}
@@ -748,7 +748,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                                <ArrowUpDown className="h-3 w-3" /> 
+                                <ArrowUpDown className="h-3.5 w-3.5" /> 
                                 <span className="hidden sm:inline">Sort</span>
                             </Button>
                         </DropdownMenuTrigger>
@@ -777,7 +777,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
-                                <Filter className="h-3 w-3" /> 
+                                <Filter className="h-3.5 w-3.5" /> 
                                 <span className="hidden sm:inline">Filter</span>
                                 {filters.length > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{filters.length}</Badge>}
                             </Button>
@@ -1209,7 +1209,7 @@ function CalendarView({ fields, records, onRecordClick }: any) {
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white transition-all" onClick={() => setViewDate(addMonths(viewDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setViewDate(n Date())} className="h-10 rounded-xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm bg-white">Today</Button>
+                <Button variant="outline" size="sm" onClick={() => setViewDate(new Date())} className="h-10 rounded-xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm bg-white">Today</Button>
             </div>
             <ScrollArea className="flex-1">
                 <div className="grid grid-cols-7 border-l border-t">
