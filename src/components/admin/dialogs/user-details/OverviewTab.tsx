@@ -9,7 +9,28 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar, Building, Zap, Hourglass, Phone, Shield } from 'lucide-react';
+import { 
+    FileText, 
+    Eye, 
+    ArrowUp, 
+    ArrowDown, 
+    Repeat, 
+    Plus, 
+    Trash2, 
+    Mail, 
+    ShieldCheck, 
+    Info, 
+    Clock, 
+    CheckCircle2, 
+    XCircle, 
+    Calendar, 
+    Building, 
+    Zap, 
+    Hourglass, 
+    Phone, 
+    Shield, 
+    Check 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -78,6 +99,8 @@ export function OverviewTab({
 
     const isAutoRefill = planDetails.autoRefillEnabled ?? true;
 
+    const showWorkflow = user.subscriptionStatus !== 'activated';
+
     const handleUpdateSubStatus = async (status: AppUser['subscriptionStatus']) => {
         if (!firestore) return;
         setIsUpdatingStatus(true);
@@ -135,7 +158,7 @@ export function OverviewTab({
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {/* Identity Card */}
-                            <Card className="border-none shadow-sm bg-muted/20">
+                            <Card className={cn("border-none shadow-sm bg-muted/20 transition-all", !showWorkflow && "lg:col-span-2")}>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Client Profile</CardTitle>
                                     <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'} className="shadow-sm">
@@ -153,18 +176,18 @@ export function OverviewTab({
                                             <p className="text-sm text-muted-foreground mt-1.5">{user.name} • <span className="font-mono text-xs">{user.clientId}</span></p>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 gap-y-3 text-sm">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
                                         <div className="flex flex-col gap-1">
                                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Business Contact</span>
                                             <p className="font-medium">{user.email}</p>
                                             <p className="text-muted-foreground">{user.contactNumber}</p>
                                         </div>
-                                        <div className="flex flex-col gap-1 pt-1">
+                                        <div className="flex flex-col gap-1">
                                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Service Address</span>
                                             <p className="text-muted-foreground line-clamp-2">{user.address}</p>
                                         </div>
                                         {user.accountType === 'Branch' && (
-                                            <div className="pt-2 border-t mt-2">
+                                            <div className="pt-2 border-t mt-2 md:col-span-2">
                                                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Linked Parent Account</Label>
                                                 {user.parentId ? (
                                                     <p className="font-bold text-primary flex items-center gap-1 mt-1">
@@ -192,68 +215,84 @@ export function OverviewTab({
                             </Card>
 
                             {/* Subscription Workflow Controller */}
-                            <Card className="flex flex-col border-none shadow-sm bg-slate-900 text-white overflow-hidden relative">
-                                <CardHeader className="pb-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-2 rounded-lg bg-white/10">
-                                                <Zap className="h-4 w-4 text-primary-light" />
+                            {showWorkflow && (
+                                <Card className="flex flex-col border-none shadow-sm bg-slate-900 text-white overflow-hidden relative animate-in fade-in zoom-in-95 duration-500">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-2 rounded-lg bg-white/10">
+                                                    <Zap className="h-4 w-4 text-primary-light" />
+                                                </div>
+                                                <CardTitle className="text-sm font-bold uppercase tracking-wider">Subscription Workflow</CardTitle>
                                             </div>
-                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Subscription Workflow</CardTitle>
+                                            <Badge variant="outline" className="border-white/20 text-white uppercase text-[9px]">{user.subscriptionStatus || 'In Progress'}</Badge>
                                         </div>
-                                        <Badge variant="outline" className="border-white/20 text-white uppercase text-[9px]">{user.subscriptionStatus || 'Standard'}</Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-6 pt-2 flex-1">
-                                    <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-white/40">Manual Status Override</Label>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                disabled={isUpdatingStatus}
-                                                onClick={() => handleUpdateSubStatus('pending_activation')}
-                                                className={cn(
-                                                    "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
-                                                    user.subscriptionStatus === 'pending_activation' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
-                                                )}
-                                            >
-                                                <Hourglass className="mr-3 h-3.5 w-3.5" /> 1. Activation Received
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                disabled={isUpdatingStatus}
-                                                onClick={() => handleUpdateSubStatus('discovery_call')}
-                                                className={cn(
-                                                    "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
-                                                    user.subscriptionStatus === 'discovery_call' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
-                                                )}
-                                            >
-                                                <Phone className="mr-3 h-3.5 w-3.5" /> 2. Discovery Call
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                disabled={isUpdatingStatus}
-                                                onClick={() => handleUpdateSubStatus('activated')}
-                                                className={cn(
-                                                    "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
-                                                    user.subscriptionStatus === 'activated' ? "bg-primary text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
-                                                )}
-                                            >
-                                                <CheckCircle2 className="mr-3 h-3.5 w-3.5" /> 3. Water Refill Activated
-                                            </Button>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 pt-2 flex-1">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn("p-1.5 rounded-lg", user.onboardingComplete ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40")}>
+                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    </div>
+                                                    <span className={cn("text-[10px] font-black uppercase tracking-tight", user.onboardingComplete && "line-through opacity-40")}>
+                                                        1. Account Onboarding
+                                                    </span>
+                                                </div>
+                                                {user.onboardingComplete && <Check className="h-3 w-3 text-green-400" />}
+                                            </div>
+
+                                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn("p-1.5 rounded-lg", user.plan ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40")}>
+                                                        <FileText className="h-3.5 w-3.5" />
+                                                    </div>
+                                                    <span className={cn("text-[10px] font-black uppercase tracking-tight", user.plan && "line-through opacity-40")}>
+                                                        2. Plan Selection
+                                                    </span>
+                                                </div>
+                                                {user.plan && <Check className="h-3 w-3 text-green-400" />}
+                                            </div>
                                         </div>
+
+                                        <div className="space-y-3 pt-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-white/40">Protocol Controls</Label>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    disabled={isUpdatingStatus}
+                                                    onClick={() => handleUpdateSubStatus('discovery_call')}
+                                                    className={cn(
+                                                        "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                                        user.subscriptionStatus === 'discovery_call' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
+                                                    )}
+                                                >
+                                                    <Phone className="mr-3 h-3.5 w-3.5" />
+                                                    <span className={cn((user.subscriptionStatus === 'discovery_call' || user.subscriptionStatus === 'activated') && "line-through opacity-40")}>
+                                                        3. Discovery Call Completed
+                                                    </span>
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    disabled={isUpdatingStatus || !user.plan}
+                                                    onClick={() => handleUpdateSubStatus('activated')}
+                                                    className={cn(
+                                                        "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                                        user.subscriptionStatus === 'activated' ? "bg-primary text-white" : "bg-primary/20 text-primary-light hover:bg-primary/30"
+                                                    )}
+                                                >
+                                                    <CheckCircle2 className="mr-3 h-3.5 w-3.5" /> 4. Authorize Activation
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                                        <Shield className="h-40 w-40" />
                                     </div>
-                                </CardContent>
-                                <CardFooter className="pt-2 bg-white/5 rounded-b-lg">
-                                    <p className="text-[9px] text-white/30 font-medium italic">Advancing status triggers a real-time update to the client's progress tracker.</p>
-                                </CardFooter>
-                                <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                                    <Shield className="h-40 w-40" />
-                                </div>
-                            </Card>
+                                </Card>
+                            )}
                         </div>
                     </CarouselItem>
 
@@ -493,7 +532,7 @@ export function OverviewTab({
                                         </div>
                                         <div className="w-full space-y-4">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
+                                                <Label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
                                                 <div className="flex gap-2">
                                                     <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} accept=".pdf,image/*" className="h-9 text-[10px] bg-muted/5 border-muted-foreground/20" />
                                                     <Button onClick={onContractUpload} disabled={!contractFile || isUploadingContract} size="sm" className="h-9 shadow-sm">
