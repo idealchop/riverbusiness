@@ -23,6 +23,7 @@ import {
     AlertDialogTitle, 
     AlertDialogFooter 
 } from "@/components/ui/alert-dialog";
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -457,7 +458,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                                                 <Label htmlFor="agreement-upload" className="block text-center sm:text-right text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-light cursor-pointer transition-colors">
                                                                     Upload signed PDF
                                                                 </Label>
-                                                                <Input id="agreement-upload" type="file" onChange={handleAgreementFileChange} disabled={isUploading} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                                                                <input id="agreement-upload" type="file" onChange={handleAgreementFileChange} disabled={isUploading} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
                                                                 {isUploading && (
                                                                     <div className="space-y-1">
                                                                         <Progress value={uploadProgress} className="h-1 bg-slate-100" />
