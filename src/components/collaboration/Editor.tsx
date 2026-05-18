@@ -48,7 +48,10 @@ import {
     Layout,
     ChevronDown,
     MoreHorizontal,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Maximize,
+    Minimize2,
+    Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -71,6 +74,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription,
+    DialogFooter,
+    DialogClose 
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { useMounted } from '@/hooks/use-mounted';
 import { SheetEditor } from './SheetEditor';
 import { BoardEditor } from './BoardEditor';
@@ -78,17 +91,27 @@ import { BoardEditor } from './BoardEditor';
 // --- Custom Interactive Blocks ---
 
 const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
+    const [isFullSize, setIsFullSize] = useState(false);
+
     return (
-        <NodeViewWrapper className="my-10 relative group/block border-y md:border-x border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white">
-            <div className="absolute top-4 right-4 z-50 flex items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-opacity">
-                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Embedded Sheet</Badge>
+        <NodeViewWrapper className="my-10 relative group/block border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white transition-all">
+            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Sheet</Badge>
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900 hover:bg-white"
+                    onClick={() => setIsFullSize(true)}
+                >
+                    <Maximize className="h-4 w-4" />
+                </Button>
                 <Button 
                     variant="destructive" 
                     size="icon" 
-                    className="h-6 w-6 rounded-full shadow-lg"
+                    className="h-8 w-8 rounded-xl shadow-lg"
                     onClick={() => deleteNode()}
                 >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
             <div className="h-[500px]">
@@ -98,22 +121,57 @@ const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any
                     editable={extension.options.editable}
                 />
             </div>
+
+            <Dialog open={isFullSize} onOpenChange={setIsFullSize}>
+                <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 overflow-hidden border-none shadow-3xl rounded-[2.5rem] bg-white flex flex-col">
+                    <div className="h-14 border-b px-6 flex items-center justify-between shrink-0 bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-xl bg-white shadow-sm text-green-600">
+                                <Grid className="h-4 w-4" />
+                            </div>
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Full-Screen Workspace</h4>
+                        </div>
+                        <DialogClose asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                                <X className="h-5 w-5 text-slate-400" />
+                            </Button>
+                        </DialogClose>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                        <SheetEditor 
+                            initialData={node.attrs.data} 
+                            onContentChange={(data) => updateAttributes({ data })}
+                            editable={extension.options.editable}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
         </NodeViewWrapper>
     );
 };
 
 const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
+    const [isFullSize, setIsFullSize] = useState(false);
+
     return (
-        <NodeViewWrapper className="my-10 relative group/block border-y md:border-x border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white">
-            <div className="absolute top-4 right-4 z-50 flex items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-opacity">
-                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Embedded Canvas</Badge>
+        <NodeViewWrapper className="my-10 relative group/block border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white transition-all">
+            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Canvas</Badge>
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900 hover:bg-white"
+                    onClick={() => setIsFullSize(true)}
+                >
+                    <Maximize className="h-4 w-4" />
+                </Button>
                 <Button 
                     variant="destructive" 
                     size="icon" 
-                    className="h-6 w-6 rounded-full shadow-lg"
+                    className="h-8 w-8 rounded-xl shadow-lg"
                     onClick={() => deleteNode()}
                 >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
             <div className="h-[600px]">
@@ -123,6 +181,31 @@ const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => 
                     editable={extension.options.editable}
                 />
             </div>
+
+            <Dialog open={isFullSize} onOpenChange={setIsFullSize}>
+                <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 overflow-hidden border-none shadow-3xl rounded-[2.5rem] bg-white flex flex-col">
+                    <div className="h-14 border-b px-6 flex items-center justify-between shrink-0 bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-xl bg-white shadow-sm text-purple-600">
+                                <Layout className="h-4 w-4" />
+                            </div>
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Full-Screen Workspace</h4>
+                        </div>
+                        <DialogClose asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                                <X className="h-5 w-5 text-slate-400" />
+                            </Button>
+                        </DialogClose>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                        <BoardEditor 
+                            initialData={node.attrs.data} 
+                            onContentChange={(data) => updateAttributes({ data })}
+                            editable={extension.options.editable}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
         </NodeViewWrapper>
     );
 };
