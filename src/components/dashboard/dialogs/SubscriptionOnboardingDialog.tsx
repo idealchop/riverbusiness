@@ -426,165 +426,159 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             ) : (
                 /* Steps 1-4: Onboarding Form */
                 <>
-                    <header className="p-8 md:p-12 pb-6 flex items-center justify-between border-b border-slate-50 shrink-0">
-                        <div className="space-y-1">
-                            <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-primary border-primary/20 mb-2">
-                                Configuration Phase {step} of {STEPS.length - 1}
-                            </Badge>
-                            <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
-                                {STEPS[step].title}
-                            </DialogTitle>
+                    <header className="p-8 md:p-12 pb-8 flex flex-col border-b border-slate-50 shrink-0">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="space-y-1">
+                                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-primary border-primary/20">
+                                    Configuration Phase {step} of {STEPS.length - 1}
+                                </Badge>
+                                <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+                                    {STEPS[step].title}
+                                </DialogTitle>
+                            </div>
+                            <div className="md:hidden">
+                                <Progress value={progress} className="w-20 h-1" />
+                            </div>
                         </div>
-                        <div className="md:hidden">
-                            <Progress value={progress} className="w-20 h-1" />
-                        </div>
+                        <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed max-w-xl">
+                            {step === 1 && "Please provide your business details. This ensures accurate deliveries and billing."}
+                            {step === 2 && "Enter your total staff count. We use this to estimate your weekly water and equipment needs."}
+                            {step === 3 && "Select your consumption tier. Our Flow Plan scales with your business so you only pay for what you use."}
+                            {step === 4 && "Your profile is ready. Review the timeline below for starting your service."}
+                        </DialogDescription>
                     </header>
 
                     <ScrollArea className="flex-1">
                         <div className="p-8 md:p-12 pt-6">
                             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                                 {step === 1 && (
-                                    <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Establish your corporate identity. These records are utilized for logistics routing and tax-compliant financial documentation.
-                                        </p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Business entity name</Label>
-                                                <Input value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Business entity name</Label>
+                                            <Input value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Authorized representative</Label>
+                                            <Input value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
+                                        </div>
+                                        <div className="sm:col-span-2 space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Primary service address</Label>
+                                            <div className="relative group">
+                                                <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12 shadow-none" placeholder="Street, Building, Floor..." />
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleCaptureLocation}
+                                                    disabled={isLocating}
+                                                    className={cn(
+                                                        "absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center transition-all shadow-sm",
+                                                        formData.latitude ? "bg-primary text-white" : "bg-white text-slate-400 hover:text-primary hover:bg-primary/5 border"
+                                                    )}
+                                                    title="Pin point exact location"
+                                                >
+                                                    {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                                                </button>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Authorized representative</Label>
-                                                <Input value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
-                                            </div>
-                                            <div className="sm:col-span-2 space-y-2">
-                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Primary service address</Label>
-                                                <div className="relative group">
-                                                    <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12 shadow-none" placeholder="Street, Building, Floor..." />
-                                                    <button 
-                                                        type="button"
-                                                        onClick={handleCaptureLocation}
-                                                        disabled={isLocating}
-                                                        className={cn(
-                                                            "absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center transition-all shadow-sm",
-                                                            formData.latitude ? "bg-primary text-white" : "bg-white text-slate-400 hover:text-primary hover:bg-primary/5 border"
-                                                        )}
-                                                        title="Pin point exact location"
-                                                    >
-                                                        {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-                                                    </button>
-                                                </div>
-                                                {formData.latitude && (
-                                                    <p className="text-[10px] font-bold text-green-600 flex items-center gap-1.5 mt-1 animate-in fade-in">
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                        Precision anchor set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Business contact number</Label>
-                                                <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Verified account identity</Label>
-                                                <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4 opacity-70" />
-                                            </div>
+                                            {formData.latitude && (
+                                                <p className="text-[10px] font-bold text-green-600 flex items-center gap-1.5 mt-1 animate-in fade-in">
+                                                    <CheckCircle2 className="h-3 w-3" />
+                                                    Precision anchor set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Business contact number</Label>
+                                            <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Verified account identity</Label>
+                                            <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4 opacity-70" />
                                         </div>
                                     </div>
                                 )}
 
                                 {step === 2 && (
-                                    <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Specify your operational workforce size. This enables the system to compute an optimized allocation for zero-friction supply replenishment.
-                                        </p>
-                                        <div className="grid gap-6">
-                                            <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-8 space-y-8">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
-                                                            <Users className="h-6 w-6" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-900 leading-none">Workforce count</p>
-                                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Total active employees</p>
-                                                        </div>
+                                    <div className="grid gap-6">
+                                        <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-8 space-y-8">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                        <Users className="h-6 w-6" />
                                                     </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
-                                                        <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.teamSize}</span>
-                                                        <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-900 leading-none">Workforce count</p>
+                                                        <p className="text-[10px] font-medium text-slate-400 mt-1">Total active employees</p>
                                                     </div>
                                                 </div>
-                                                
-                                                <Separator className="bg-slate-200/50" />
-                                                
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
-                                                            <Droplets className="h-6 w-6" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-900 leading-none">Consumption volume</p>
-                                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Projected weekly replenishment</p>
-                                                        </div>
+                                                <div className="flex items-center gap-4">
+                                                    <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
+                                                    <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.teamSize}</span>
+                                                    <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
+                                                </div>
+                                            </div>
+                                            
+                                            <Separator className="bg-slate-200/50" />
+                                            
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                        <Droplets className="h-6 w-6" />
                                                     </div>
-                                                    <div className="w-32">
-                                                        <Select 
-                                                            value={formData.estimatedWeeklyVolumeRange} 
-                                                            onValueChange={(val) => setFormData({...formData, estimatedWeeklyVolumeRange: val})}
-                                                        >
-                                                            <SelectTrigger className="h-10 rounded-xl bg-white border-slate-100 shadow-sm font-bold text-xs">
-                                                                <SelectValue placeholder="Select" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="rounded-xl">
-                                                                <SelectItem value="10-20">10-20 units</SelectItem>
-                                                                <SelectItem value="20-50">20-50 units</SelectItem>
-                                                                <SelectItem value="50-100">50-100 units</SelectItem>
-                                                                <SelectItem value="100-200">100-200 units</SelectItem>
-                                                                <SelectItem value="300+">300+ more</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-900 leading-none">Consumption volume</p>
+                                                        <p className="text-[10px] font-medium text-slate-400 mt-1">Projected weekly replenishment</p>
                                                     </div>
                                                 </div>
+                                                <div className="w-32">
+                                                    <Select 
+                                                        value={formData.estimatedWeeklyVolumeRange} 
+                                                        onValueChange={(val) => setFormData({...formData, estimatedWeeklyVolumeRange: val})}
+                                                    >
+                                                        <SelectTrigger className="h-10 rounded-xl bg-white border-slate-100 shadow-sm font-bold text-xs">
+                                                            <SelectValue placeholder="Select" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
+                                                            <SelectItem value="10-20">10-20 units</SelectItem>
+                                                            <SelectItem value="20-50">20-50 units</SelectItem>
+                                                            <SelectItem value="50-100">50-100 units</SelectItem>
+                                                            <SelectItem value="100-200">100-200 units</SelectItem>
+                                                            <SelectItem value="300+">300+ more</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
 
-                                                <Separator className="bg-slate-200/50" />
-                                                
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
-                                                            <Package className="h-6 w-6" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-900 leading-none">Equipment deployment</p>
-                                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Planned dispensers</p>
-                                                        </div>
+                                            <Separator className="bg-slate-200/50" />
+                                            
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                        <Package className="h-6 w-6" />
                                                     </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <button onClick={() => setFormData({...formData, estimatedDispensers: Math.max(1, formData.estimatedDispensers - 1)})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
-                                                        <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.estimatedDispensers}</span>
-                                                        <button onClick={() => setFormData({...formData, estimatedDispensers: formData.estimatedDispensers + 1})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-900 leading-none">Equipment deployment</p>
+                                                        <p className="text-[10px] font-medium text-slate-400 mt-1">Planned dispensers</p>
                                                     </div>
                                                 </div>
+                                                <div className="flex items-center gap-4">
+                                                    <button onClick={() => setFormData({...formData, estimatedDispensers: Math.max(1, formData.estimatedDispensers - 1)})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
+                                                    <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.estimatedDispensers}</span>
+                                                    <button onClick={() => setFormData({...formData, estimatedDispensers: formData.estimatedDispensers + 1})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
+                                                </div>
+                                            </div>
 
-                                                <Separator className="bg-slate-200/50" />
-                                                <div className="flex items-center gap-2 pt-2 px-1 opacity-60">
-                                                    <ShieldCheck className="h-3 w-3 text-green-600" />
-                                                    <p className="text-[10px] font-bold text-slate-500">
-                                                        Security active <span className="mx-1 text-slate-300 font-normal">|</span> System identity verified via protocol
-                                                    </p>
-                                                </div>
-                                            </Card>
-                                        </div>
+                                            <Separator className="bg-slate-200/50" />
+                                            <div className="flex items-center gap-2 pt-2 px-1 opacity-60">
+                                                <ShieldCheck className="h-3 w-3 text-green-600" />
+                                                <p className="text-[10px] font-bold text-slate-500">
+                                                    Security active <span className="mx-1 text-slate-300 font-normal">|</span> System identity verified via protocol
+                                                </p>
+                                            </div>
+                                        </Card>
                                     </div>
                                 )}
 
                                 {step === 3 && (
                                     <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Based on your workforce metrics, the Flow Plan is recommended. This tier provides maximum flexibility with usage-based financial logic.
-                                        </p>
-                                        
                                         <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-primary-light text-white p-8 relative overflow-hidden group">
                                             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                                                 <Droplets className="h-24 w-24" />
@@ -628,42 +622,36 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 )}
 
                                 {step === 4 && (
-                                    <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Your organizational profile is ready for initialization. Review the professional activation timeline below:
-                                        </p>
-
-                                        <div className="relative pl-6 space-y-12">
-                                            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
-                                            
-                                            <div className="relative z-10 flex items-start gap-6 group">
-                                                <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg">1</div>
-                                                <div className="space-y-1">
-                                                    <p className="text-sm font-bold text-slate-900 tracking-tight">Activation received</p>
-                                                    <p className="text-xs font-medium text-slate-400">Digital footprint established and secure data routing active.</p>
-                                                </div>
+                                    <div className="relative pl-6 space-y-12">
+                                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
+                                        
+                                        <div className="relative z-10 flex items-start gap-6 group">
+                                            <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg">1</div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-bold text-slate-900 tracking-tight">Request received</p>
+                                                <p className="text-xs font-medium text-slate-400">We're setting up your workspace and secure data routing.</p>
                                             </div>
+                                        </div>
 
-                                            <div className="relative z-10 flex items-start gap-6 group">
-                                                <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-bold text-slate-900 tracking-tight">Discovery call</p>
-                                                        <Phone className="h-3.5 w-3.5 text-slate-400" />
-                                                    </div>
-                                                    <p className="text-xs font-medium text-slate-400">Logistics prerequisite verification and protocol sync via authorized officer.</p>
+                                        <div className="relative z-10 flex items-start gap-6 group">
+                                            <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-bold text-slate-900 tracking-tight">Verification call</p>
+                                                    <Phone className="h-3.5 w-3.5 text-slate-400" />
                                                 </div>
+                                                <p className="text-xs font-medium text-slate-400">A specialist will call to verify your delivery spot and schedule.</p>
                                             </div>
+                                        </div>
 
-                                            <div className="relative z-10 flex items-start gap-6 group">
-                                                <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-bold text-slate-900 tracking-tight">Water refill activated</p>
-                                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4 uppercase font-bold shadow-none">Priority</Badge>
-                                                    </div>
-                                                    <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
+                                        <div className="relative z-10 flex items-start gap-6 group">
+                                            <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-bold text-slate-900 tracking-tight">Service active</p>
+                                                    <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4 uppercase font-bold shadow-none">Priority</Badge>
                                                 </div>
+                                                <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
                                             </div>
                                         </div>
                                     </div>
