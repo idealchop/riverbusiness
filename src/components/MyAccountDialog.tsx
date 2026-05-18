@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, limit } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
-import type { AppUser, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
+import type { AppUser, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ImagePlaceholder } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -813,6 +813,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+  const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
   const paymentOptions: PaymentOption[] = [
       { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
@@ -1438,7 +1439,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
-    dispatch({ type: 'SET_INVOICE_DETAIL_DIALOG', payload: open });
+    dispatch({ type: 'SET_INVOICE_DETAIL_DIALOG', payload: true });
   };
   
   const handleDownloadInvoice = async (invoice: Payment) => {
@@ -1512,6 +1513,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         setIsSubmittingTopUp(false);
     }
   };
+
+  const displayPhoto = user?.photoURL;
   
   return (
     <AlertDialog>
