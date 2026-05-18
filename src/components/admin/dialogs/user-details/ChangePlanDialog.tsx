@@ -20,6 +20,8 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 
+const LITER_RATIO = 19.5;
+
 const planChangeSchema = z.object({
   clientType: z.string().min(1),
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
@@ -51,11 +53,17 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
 
     useEffect(() => {
         if (user && isOpen) {
+            // Conversion logic for display:
+            // if consumption, displayed price is stored_liter_price * 19.5
+            const priceToDisplay = user.plan?.isConsumptionBased 
+                ? user.plan.price * LITER_RATIO 
+                : user.plan?.price || 0;
+
             form.reset({
                 clientType: user.clientType || '',
                 plan: user.plan,
                 isPrepaid: user.isPrepaid || false,
-                planPrice: user.plan?.price || 0,
+                planPrice: priceToDisplay,
                 customPlanDetails: user.customPlanDetails || {},
             });
         }
@@ -92,9 +100,13 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
                 const plans = getPlansForType(value.clientType!);
                 const newPlan = (plans.length > 0 ? plans[0] : null);
                 form.setValue('plan', newPlan);
-                if (newPlan) form.setValue('planPrice', newPlan.price || 0);
-            } else if (name === 'plan' && value.plan && form.getValues('planPrice') !== value.plan.price) {
-                form.setValue('planPrice', value.plan.price || 0);
+                if (newPlan) {
+                    const price = newPlan.isConsumptionBased ? (newPlan.price * LITER_RATIO) : (newPlan.price || 0);
+                    form.setValue('planPrice', price);
+                }
+            } else if (name === 'plan' && value.plan) {
+                const price = value.plan.isConsumptionBased ? (value.plan.price * LITER_RATIO) : (value.plan.price || 0);
+                form.setValue('planPrice', price);
             }
         });
         return () => subscription.unsubscribe();
@@ -108,6 +120,13 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
     
         try {
             const newIsConsumptionBased = values.plan.isConsumptionBased || false;
+            
+            // Internal Conversion: If consumption, the entered price is per container.
+            // Divide by 19.5 to save the "Per Liter" price.
+            const priceToSave = newIsConsumptionBased 
+                ? values.planPrice / LITER_RATIO 
+                : values.planPrice;
+
             const newCustomDetails = {
                 ...user.customPlanDetails,
                 ...values.customPlanDetails,
@@ -118,26 +137,22 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
                 isPrepaid: values.isPrepaid,
                 plan: {
                     name: values.plan.name,
-                    price: values.planPrice,
+                    price: priceToSave,
                     isConsumptionBased: newIsConsumptionBased,
                 },
-                // Reset pending plan changes if any
                 pendingPlan: deleteField(),
                 planChangeEffectiveDate: deleteField(),
             };
     
             if (newIsConsumptionBased) {
-                // If switching TO consumption plan, reset liter balance.
                 updatePayload.totalConsumptionLiters = 0;
                 delete newCustomDetails.litersPerMonth;
                 delete newCustomDetails.bonusLiters;
                 newCustomDetails.lastMonthRollover = 0;
             } else {
-                // If switching TO a fixed plan, set the initial balance.
                 const newLiters = newCustomDetails.litersPerMonth || 0;
                 const newBonus = newCustomDetails.bonusLiters || 0;
                 updatePayload.totalConsumptionLiters = newLiters + newBonus;
-                // When an admin makes an immediate change, rollover from a previous plan doesn't apply.
                 newCustomDetails.lastMonthRollover = 0; 
             }
     
@@ -206,12 +221,25 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
                                 <FormField control={form.control} name="plan" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Select Plan</FormLabel>
-                                        <Select onValueChange={(value) => { const selected = planOptions.find(p => p.name === value); field.onChange(selected); if (selected) form.setValue('planPrice', selected.price || 0); }} value={field.value?.name}>
+                                        <Select onValueChange={(value) => { const selected = planOptions.find(p => p.name === value); field.onChange(selected); }} value={field.value?.name}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select a plan..." >{selectedPlan?.name || "Select a plan..."}</SelectValue></SelectTrigger></FormControl>
                                             <SelectContent>{planOptions.map(plan => (<SelectItem key={plan.name} value={plan.name}>{plan.name}</SelectItem>))}</SelectContent>
                                         </Select><FormMessage />
                                     </FormItem>)}/>
-                                {selectedPlan && ( <FormField control={form.control} name="planPrice" render={({ field }) => (<FormItem><FormLabel>{selectedPlan.isConsumptionBased ? "Price per Liter (PHP)" : "Monthly Price (PHP)"}</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>)}
+                                {selectedPlan && ( 
+                                    <FormField control={form.control} name="planPrice" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                {selectedPlan.isConsumptionBased ? "Price per Container (₱)" : "Monthly Price (₱)"}
+                                            </FormLabel>
+                                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                            {selectedPlan.isConsumptionBased && (
+                                                <FormDescription>Saved as ₱{(parseFloat(field.value) / LITER_RATIO).toFixed(4)} per liter.</FormDescription>
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                )}
                             </div>
                         )}
                         

@@ -26,7 +26,6 @@ import {
     Calendar, 
     Building, 
     Zap, 
-    Hourglass, 
     Phone, 
     Shield, 
     Check,
@@ -39,6 +38,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { format } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+
+const LITER_RATIO = 19.5;
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -91,14 +92,24 @@ export function OverviewTab({
     const [newNotifEmail, setNewNotifEmail] = useState('');
     const [isUpdatingEmails, setIsUpdatingEmails] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-    const [localPrice, setLocalPrice] = useState(user.plan?.price?.toString() || '0');
+    
+    // We display and allow editing by "Container Price" (amount)
+    // and convert to "Liter Price" internally.
+    const initialPriceValue = user.plan?.isConsumptionBased 
+        ? (user.plan?.price * LITER_RATIO).toFixed(2)
+        : (user.plan?.price || 0).toString();
+
+    const [localPrice, setLocalPrice] = useState(initialPriceValue);
     const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
 
     useEffect(() => {
         if (user.plan?.price !== undefined) {
-            setLocalPrice(user.plan.price.toString());
+            const val = user.plan?.isConsumptionBased 
+                ? (user.plan.price * LITER_RATIO).toFixed(2)
+                : user.plan.price.toString();
+            setLocalPrice(val);
         }
-    }, [user.plan?.price]);
+    }, [user.plan?.price, user.plan?.isConsumptionBased]);
 
     const planDetails = user.customPlanDetails || {};
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
@@ -112,14 +123,23 @@ export function OverviewTab({
     const showWorkflow = user.subscriptionStatus !== 'activated';
 
     const handleUpdatePrice = async () => {
-        const priceNum = parseFloat(localPrice);
-        if (isNaN(priceNum) || !firestore) return;
+        const enteredAmount = parseFloat(localPrice);
+        if (isNaN(enteredAmount) || !firestore) return;
         
+        // If consumption based, the entered amount is "Per Container". 
+        // We divide by 19.5 to save the "Per Liter" price to DB.
+        const priceToSave = user.plan?.isConsumptionBased 
+            ? enteredAmount / LITER_RATIO 
+            : enteredAmount;
+
         setIsUpdatingPrice(true);
         try {
             const userRef = doc(firestore, 'users', user.id);
-            await updateDoc(userRef, { 'plan.price': priceNum });
-            toast({ title: 'Price updated', description: `The rate has been adjusted to ₱${priceNum.toFixed(2)}.` });
+            await updateDoc(userRef, { 'plan.price': priceToSave });
+            toast({ 
+                title: 'Price updated', 
+                description: `The rate has been adjusted to ₱${enteredAmount.toFixed(2)} per ${user.plan?.isConsumptionBased ? 'container' : 'month'}.` 
+            });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Update failed' });
         } finally {
@@ -429,7 +449,7 @@ export function OverviewTab({
                 
                 <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {user.plan?.isConsumptionBased ? 'Rate per Liter (PHP)' : 'Monthly Subscription (PHP)'}
+                        {user.plan?.isConsumptionBased ? 'Price per Container (₱)' : 'Monthly Subscription (₱)'}
                     </Label>
                     <div className="flex gap-2">
                         <div className="relative flex-1">
@@ -447,11 +467,16 @@ export function OverviewTab({
                             size="sm" 
                             className="h-9 px-3 shrink-0" 
                             onClick={handleUpdatePrice}
-                            disabled={isUpdatingPrice || parseFloat(localPrice) === user.plan?.price}
+                            disabled={isUpdatingPrice}
                         >
                             {isUpdatingPrice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                         </Button>
                     </div>
+                    {user.plan?.isConsumptionBased && (
+                        <p className="text-[9px] font-bold text-slate-400 uppercase italic">
+                            Saved as ₱{(parseFloat(localPrice) / LITER_RATIO).toFixed(4)} per liter.
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-2 pt-1">

@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 
+const LITER_RATIO = 19.5;
+
 const planDetailsSchema = z.object({
     litersPerMonth: z.coerce.number().optional(),
     bonusLiters: z.coerce.number().optional(),
@@ -138,19 +140,24 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
             
             const { plan, planPrice, initialTopUp, parentId, ...rest } = values;
 
-            // Infrastructure alignment: Set default hrRole and companyId
+            // Internal Conversion: If consumption, the entered price is per container.
+            // Divide by 19.5 to save the "Per Liter" price to DB.
+            const finalPricePerLiter = plan.isConsumptionBased 
+                ? planPrice / LITER_RATIO 
+                : planPrice;
+
             const profileData: any = {
                 ...rest, 
                 clientId: normalizedClientId,
                 plan: {
                     name: plan.name,
-                    price: planPrice,
+                    price: finalPricePerLiter,
                     isConsumptionBased: plan.isConsumptionBased || false,
                 },
                 isPrepaid: values.isPrepaid,
                 customPlanDetails: { ...values.customPlanDetails },
-                hrRole: 'owner', // Default to owner for the claiming client
-                companyId: normalizedClientId, // Link everything to this client ID
+                hrRole: 'owner',
+                companyId: normalizedClientId,
                 accountStatus: 'Active',
                 totalConsumptionLiters: (selectedAccountType !== 'Parent' && !plan.isConsumptionBased) ? (values.customPlanDetails?.litersPerMonth || 0) : 0,
                 topUpBalanceCredits: selectedAccountType === 'Parent' ? (initialTopUp || 0) : 0,
@@ -201,16 +208,20 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                 const plans = getPlansForType(value.clientType!);
                 const newPlan = (plans.length > 0 ? plans[0] : null);
                 newUserForm.setValue('plan', newPlan);
-                if (newPlan) newUserForm.setValue('planPrice', newPlan.price || 0);
-            } else if (name === 'plan' && value.plan && newUserForm.getValues('planPrice') !== value.plan.price) {
-                newUserForm.setValue('planPrice', value.plan.price || 0);
+                if (newPlan) {
+                    const initialPrice = newPlan.isConsumptionBased ? (newPlan.price * LITER_RATIO) : (newPlan.price || 0);
+                    newUserForm.setValue('planPrice', initialPrice);
+                }
+            } else if (name === 'plan' && value.plan) {
+                const price = value.plan.isConsumptionBased ? (value.plan.price * LITER_RATIO) : (value.plan.price || 0);
+                newUserForm.setValue('planPrice', price);
             } else if (name === 'accountType') {
                 if(value.accountType === 'Parent') {
                     const parentPlan = enterprisePlans.find(p => p.isParentPlan);
                     if (parentPlan) {
                         newUserForm.setValue('clientType', 'Enterprise');
                         newUserForm.setValue('plan', parentPlan);
-                        newUserForm.setValue('planPrice', parentPlan.price);
+                        newUserForm.setValue('planPrice', parentPlan.price * LITER_RATIO);
                         newUserForm.setValue('isPrepaid', true);
                     }
                 } else {
@@ -297,7 +308,14 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                     {selectedAccountType === 'Parent' ? (
                                         <Card>
                                             <CardHeader><CardTitle>Parent Account Plan</CardTitle><CardDescription>Set the rate for branch consumption deductions.</CardDescription></CardHeader>
-                                            <CardContent><FormField control={newUserForm.control} name="planPrice" render={({ field }) => (<FormItem><FormLabel>Consumption Rate (PHP per Liter)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} /></CardContent>
+                                            <CardContent><FormField control={newUserForm.control} name="planPrice" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Consumption Rate (PHP per Container)</FormLabel>
+                                                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                                    <FormDescription>Saved as ₱{(parseFloat(field.value) / LITER_RATIO).toFixed(4)} per liter.</FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>)} />
+                                            </CardContent>
                                         </Card>
                                     ) : (
                                         <>
@@ -315,7 +333,19 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                             <FormField control={newUserForm.control} name="clientType" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Plan Type</FormLabel>
-                                                    <FormControl><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">{clientTypes.map(type => { const image = PlaceHolderImages.find(p => p.id === type.imageId); return (<Card key={type.name} onClick={() => { field.onChange(type.name); }} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>{image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}<CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></CardHeader></Card>)})}</div></FormControl>
+                                                    <FormControl>
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                                                            {clientTypes.map(type => { 
+                                                                const image = PlaceHolderImages.find(p => p.id === type.imageId); 
+                                                                return (
+                                                                    <Card key={type.name} onClick={() => { field.onChange(type.name); }} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>
+                                                                        {image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                        <CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></CardHeader>
+                                                                    </Card>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>)}/>
                                             {selectedClientType && (
@@ -323,12 +353,22 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                                 <FormField control={newUserForm.control} name="plan" render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Select Plan</FormLabel>
-                                                        <Select onValueChange={(value) => { const selected = planOptions.find(p => p.name === value); field.onChange(selected); if (selected) newUserForm.setValue('planPrice', selected.price || 0); }} value={field.value?.name}>
-                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a plan..."><span>{selectedPlan?.name}</span></SelectValue></SelectTrigger></FormControl>
+                                                        <Select onValueChange={(value) => { const selected = planOptions.find(p => p.name === value); field.onChange(selected); }} value={field.value?.name}>
+                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a plan..." ><span>{selectedPlan?.name}</span></SelectValue></SelectTrigger></FormControl>
                                                             <SelectContent>{planOptions.map(plan => (<SelectItem key={plan.name} value={plan.name}>{plan.name}</SelectItem>))}</SelectContent>
                                                         </Select><FormMessage />
                                                     </FormItem>)}/>
-                                                {selectedPlan && ( <FormField control={newUserForm.control} name="planPrice" render={({ field }) => (<FormItem><FormLabel>{selectedPlan.isConsumptionBased ? "Price per Liter (PHP)" : "Monthly Price (PHP)"}</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>)}
+                                                {selectedPlan && ( 
+                                                    <FormField control={newUserForm.control} name="planPrice" render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>{selectedPlan.isConsumptionBased ? "Price per Container (PHP)" : "Monthly Price (PHP)"}</FormLabel>
+                                                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                                            {selectedPlan.isConsumptionBased && (
+                                                                <FormDescription>Saved as ₱{(parseFloat(field.value) / LITER_RATIO).toFixed(4)} per liter.</FormDescription>
+                                                            )}
+                                                            <FormMessage />
+                                                        </FormItem>)}/>
+                                                )}
                                             </div>)}
                                             {selectedPlan && !selectedPlan.isConsumptionBased && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
