@@ -113,7 +113,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                                 <Tag className="h-6 w-6 text-primary-light" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">App Pricing Command</DialogTitle>
+                                <DialogTitle className="text-2xl font-black tracking-tight">Global Pricing Control</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
                                     Global replenishment rate configuration
                                 </DialogDescription>
@@ -126,7 +126,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10">
                             <div className="space-y-6">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Current Rate Protocol</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Active rate protocol</h4>
                                 <Card className="border-none shadow-sm rounded-3xl bg-slate-50 p-6 flex items-center justify-between">
                                     <div className="space-y-1">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active container price</p>
@@ -139,7 +139,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                             </div>
 
                             <div className="space-y-6">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Update & Propagate</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Adjust pricing tier</h4>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold text-slate-600 ml-1">New price per container (PHP)</Label>
@@ -158,7 +158,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                                     <div className="p-5 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 space-y-3">
                                         <div className="flex items-center gap-2 text-amber-600">
                                             <AlertTriangle className="h-4 w-4" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Security Override Notice</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Security override notice</p>
                                         </div>
                                         <p className="text-xs font-medium text-amber-800/70 leading-relaxed">
                                             Applying this change will instantly update the rate for **{allActiveUsers.length} active client profiles**. All future consumption logic will use the new synchronized value.
@@ -172,7 +172,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                     <aside className="w-full md:w-72 bg-slate-50/50 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col shrink-0">
                         <div className="p-6 border-b border-slate-100 bg-white">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
-                                <History className="h-3.5 w-3.5" /> Change Log
+                                <History className="h-3.5 w-3.5" /> Change log
                             </h4>
                         </div>
                         <ScrollArea className="flex-1">
@@ -204,7 +204,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                 <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
                     <div className="hidden md:flex items-center gap-2 opacity-30">
                         <ShieldCheck className="h-3 w-3" />
-                        <p className="text-[8px] font-black uppercase tracking-[0.4em]">Authorized Protocol</p>
+                        <p className="text-[8px] font-black uppercase tracking-[0.4em]">Authorized protocol</p>
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <DialogClose asChild>
