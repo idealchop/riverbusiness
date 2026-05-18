@@ -132,11 +132,6 @@ const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any
                             </div>
                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Full-Screen Workspace</h4>
                         </div>
-                        <DialogClose asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
-                                <X className="h-5 w-5 text-slate-400" />
-                            </Button>
-                        </DialogClose>
                     </div>
                     <div className="flex-1 overflow-hidden">
                         <SheetEditor 
@@ -192,11 +187,6 @@ const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => 
                             </div>
                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Full-Screen Workspace</h4>
                         </div>
-                        <DialogClose asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
-                                <X className="h-5 w-5 text-slate-400" />
-                            </Button>
-                        </DialogClose>
                     </div>
                     <div className="flex-1 overflow-hidden">
                         <BoardEditor 
@@ -554,11 +544,18 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   
                   <div className="flex items-center px-1 shrink-0">
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group">
-                                <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                            </Button>
-                        </DropdownMenuTrigger>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group">
+                                        <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent className="rounded-xl font-bold text-[9px] uppercase tracking-widest bg-slate-900 text-white border-none px-3 py-1.5 shadow-2xl">
+                                Insert Asset
+                            </TooltipContent>
+                        </Tooltip>
                         <DropdownMenuContent align="center" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
                             <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New block asset</DropdownMenuLabel>
                             <DropdownMenuItem onClick={handleInsertSpreadsheet} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">

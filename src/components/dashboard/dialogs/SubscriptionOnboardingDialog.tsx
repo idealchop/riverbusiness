@@ -397,7 +397,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                         </div>
 
                         <div className="relative z-10 space-y-8">
-                            <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl space-y-8 shadow-2xl">
+                            <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-md border border-white/30 space-y-8 shadow-2xl">
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center justify-center">
                                         <MapPin className="h-6 w-6 text-primary" />
