@@ -30,9 +30,9 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, writeBatch, doc, collectionGroup, where, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import type { AppUser, PricingHistory } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -82,22 +82,46 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                 updatedByName: adminUser.name
             });
 
-            // 2. Push to all active users
+            // 2. Push to all active users (Future pricing)
             allActiveUsers.forEach(user => {
                 const userRef = doc(firestore, 'users', user.id);
                 batch.update(userRef, { 'plan.price': literPrice });
             });
 
+            // 3. Retroactive Sync: Update current month deliveries
+            const now = new Date();
+            const startOfCurrentMonth = startOfMonth(now);
+            
+            // Search across the entire system for deliveries this month
+            const deliveriesQuery = query(
+                collectionGroup(firestore, 'deliveries'),
+                where('date', '>=', startOfCurrentMonth.toISOString())
+            );
+            
+            const deliveriesSnap = await getDocs(deliveriesQuery);
+            
+            deliveriesSnap.docs.forEach(deliveryDoc => {
+                const deliveryData = deliveryDoc.data();
+                const liters = deliveryData.liters || (deliveryData.volumeContainers * LITER_RATIO);
+                const newAmount = liters * literPrice;
+                
+                batch.update(deliveryDoc.ref, {
+                    amount: newAmount,
+                    updatedAt: serverTimestamp(),
+                    adminPricingSync: true
+                });
+            });
+
             await batch.commit();
             
             toast({ 
-                title: 'Pricing Propagated', 
-                description: `Successfully applied ₱${price.toFixed(2)} rate to ${allActiveUsers.length} active clients.` 
+                title: 'Pricing Protocol Synchronized', 
+                description: `Applied ₱${price.toFixed(2)} rate to ${allActiveUsers.length} clients and updated ${deliveriesSnap.docs.length} current-month delivery records.` 
             });
             onOpenChange(false);
         } catch (error) {
             console.error("Pricing update error:", error);
-            toast({ variant: 'destructive', title: 'Action failed' });
+            toast({ variant: 'destructive', title: 'Action failed', description: 'Could not propagate pricing update.' });
         } finally {
             setIsUpdating(false);
         }
@@ -113,9 +137,9 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                                 <Tag className="h-6 w-6 text-primary-light" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight">Global Pricing Control</DialogTitle>
+                                <DialogTitle className="text-2xl font-black tracking-tight uppercase">Global Pricing Control</DialogTitle>
                                 <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                                    Global replenishment rate configuration
+                                    Strategic rate synchronization protocol
                                 </DialogDescription>
                             </div>
                         </div>
@@ -150,18 +174,18 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                                                 step="0.01"
                                                 value={newPrice}
                                                 onChange={(e) => setNewPrice(e.target.value)}
-                                                className="h-14 rounded-2xl bg-slate-50 border-slate-100 pl-8 font-black text-lg focus:ring-primary"
+                                                className="h-14 rounded-2xl bg-slate-50 border-slate-100 pl-8 font-black text-lg focus:ring-primary shadow-none"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="p-5 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 space-y-3">
-                                        <div className="flex items-center gap-2 text-amber-600">
-                                            <AlertTriangle className="h-4 w-4" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Security override notice</p>
+                                    <div className="p-5 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 space-y-3">
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <TrendingUp className="h-4 w-4" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Retroactive Sync Protocol</p>
                                         </div>
-                                        <p className="text-xs font-medium text-amber-800/70 leading-relaxed">
-                                            Applying this change will instantly update the rate for **{allActiveUsers.length} active client profiles**. All future consumption logic will use the new synchronized value.
+                                        <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                                            Authorizing this change will instantly update the rate for **{allActiveUsers.length} active clients** and automatically recalculate all delivery overhead for the **current month**.
                                         </p>
                                     </div>
                                 </div>
@@ -172,7 +196,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                     <aside className="w-full md:w-72 bg-slate-50/50 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col shrink-0">
                         <div className="p-6 border-b border-slate-100 bg-white">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
-                                <History className="h-3.5 w-3.5" /> Change log
+                                <History className="h-3.5 w-3.5" /> Rate History
                             </h4>
                         </div>
                         <ScrollArea className="flex-1">
@@ -216,7 +240,7 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                             className="flex-1 md:flex-none rounded-2xl h-12 px-10 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20"
                         >
                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Apply & Push Update
+                            Authorize & Sync
                         </Button>
                     </div>
                 </DialogFooter>
