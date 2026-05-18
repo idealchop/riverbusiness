@@ -146,10 +146,10 @@ const BLUEPRINTS = [
         description: 'Linear process from start to finish.',
         icon: Workflow,
         elements: [
-            { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: 'START', color: '#f1f5f9', bold: true },
-            { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: 'Process Step 1', color: '#ffffff', bold: true },
-            { id: 'decision', type: 'diamond', x: 540, y: 175, width: 150, height: 150, text: 'Validation Check', color: '#f3e8ff', bold: true },
-            { id: 'end', type: 'circle', x: 800, y: 200, width: 100, height: 100, text: 'FINISH', color: '#f1f5f9', bold: true }
+            { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: '', color: '#f1f5f9', bold: true },
+            { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: '', color: '#ffffff', bold: true },
+            { id: 'decision', type: 'diamond', x: 540, y: 175, width: 150, height: 150, text: '', color: '#f3e8ff', bold: true },
+            { id: 'end', type: 'circle', x: 800, y: 200, width: 100, height: 100, text: '', color: '#f1f5f9', bold: true }
         ],
         connections: [
             { id: 'c1', fromId: 'start', toId: 'step1', type: 'curved' },
@@ -163,12 +163,12 @@ const BLUEPRINTS = [
         description: 'Multi-phase strategic milestones.',
         icon: Trophy,
         elements: [
-            { id: 'ph1', type: 'circle', x: 50, y: 100, width: 80, height: 80, text: 'Q1', color: '#3b82f6', fontColor: '#ffffff', bold: true },
-            { id: 't1', type: 'rect', x: 150, y: 80, width: 200, height: 120, text: 'Foundation & Research', color: '#ffffff', bold: true },
-            { id: 'ph2', type: 'circle', x: 400, y: 100, width: 80, height: 80, text: 'Q2', color: '#3b82f6', fontColor: '#ffffff', bold: true },
-            { id: 't2', type: 'rect', x: 500, y: 80, width: 200, height: 120, text: 'Infrastructure Build', color: '#ffffff', bold: true },
-            { id: 'ph3', type: 'circle', x: 750, y: 100, width: 80, height: 80, text: 'Q3', color: '#3b82f6', fontColor: '#ffffff', bold: true },
-            { id: 't3', type: 'rect', x: 850, y: 80, width: 200, height: 120, text: 'Scale & Launch', color: '#ffffff', bold: true }
+            { id: 'ph1', type: 'circle', x: 50, y: 100, width: 80, height: 80, text: '', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 't1', type: 'rect', x: 150, y: 80, width: 200, height: 120, text: '', color: '#ffffff', bold: true },
+            { id: 'ph2', type: 'circle', x: 400, y: 100, width: 80, height: 80, text: '', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 't2', type: 'rect', x: 500, y: 80, width: 200, height: 120, text: '', color: '#ffffff', bold: true },
+            { id: 'ph3', type: 'circle', x: 750, y: 100, width: 80, height: 80, text: '', color: '#3b82f6', fontColor: '#ffffff', bold: true },
+            { id: 't3', type: 'rect', x: 850, y: 80, width: 200, height: 120, text: '', color: '#ffffff', bold: true }
         ],
         connections: [
             { id: 'r1', fromId: 'ph1', toId: 'ph2', type: 'straight' },
@@ -181,25 +181,10 @@ const BLUEPRINTS = [
         description: 'Impact vs Effort prioritization.',
         icon: Activity,
         elements: [
-            { id: 'lbl1', type: 'text', x: 400, y: 0, width: 200, height: 40, text: 'HIGH IMPACT', fontColor: '#ef4444', bold: true },
-            { id: 'lbl2', type: 'text', x: 0, y: 300, width: 100, height: 40, text: 'HIGH EFFORT', fontColor: '#64748b', bold: true, textAlign: 'left' },
-            { id: 'q1', type: 'rect', x: 100, y: 50, width: 400, height: 300, text: 'Quick Wins', color: '#dcfce7', bold: true, fontSize: 18 },
-            { id: 'q2', type: 'rect', x: 500, y: 50, width: 400, height: 300, text: 'Major Projects', color: '#dbeafe', bold: true, fontSize: 18 },
-            { id: 'q3', type: 'rect', x: 100, y: 350, width: 400, height: 300, text: 'Fill-ins', color: '#f1f5f9', bold: true, fontSize: 18 },
-            { id: 'q4', type: 'rect', x: 500, y: 350, width: 400, height: 300, text: 'Hard Slogs', color: '#fee2e2', bold: true, fontSize: 18 }
-        ],
-        connections: []
-    },
-    {
-        id: 'bp-swot',
-        name: 'Strategic SWOT',
-        description: 'Analyze strengths and risks.',
-        icon: Binary,
-        elements: [
-            { id: 's', type: 'note', x: 100, y: 100, width: 250, height: 250, text: 'STRENGTHS', color: '#dcfce7', bold: true },
-            { id: 'w', type: 'note', x: 380, y: 100, width: 250, height: 250, text: 'WEAKNESSES', color: '#fee2e2', bold: true },
-            { id: 'o', type: 'note', x: 100, y: 380, width: 250, height: 250, text: 'OPPORTUNITIES', color: '#dbeafe', bold: true },
-            { id: 't', type: 'note', x: 380, y: 380, width: 250, height: 250, text: 'THREATS', color: '#fef3c7', bold: true }
+            { id: 'q1', type: 'rect', x: 100, y: 50, width: 400, height: 300, text: '', color: '#dcfce7', bold: true, fontSize: 18 },
+            { id: 'q2', type: 'rect', x: 500, y: 50, width: 400, height: 300, text: '', color: '#dbeafe', bold: true, fontSize: 18 },
+            { id: 'q3', type: 'rect', x: 100, y: 350, width: 400, height: 300, text: '', color: '#f1f5f9', bold: true, fontSize: 18 },
+            { id: 'q4', type: 'rect', x: 500, y: 350, width: 400, height: 300, text: '', color: '#fee2e2', bold: true, fontSize: 18 }
         ],
         connections: []
     }
@@ -341,7 +326,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           type: data?.type || type,
           x: x || (100 - viewport.x) / viewport.scale,
           y: y || (100 - viewport.y) / viewport.scale,
-          text: data?.text || (type === 'note' ? 'New Idea' : (type === 'text' ? 'Annotation' : '')),
+          text: data?.text || '',
           color: data?.color || (type === 'note' ? '#fef08a' : '#ffffff'),
           width: data?.width || (type === 'text' ? 200 : 150),
           height: data?.height || (type === 'text' ? 40 : 150),
@@ -507,7 +492,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               pushHistory();
               setIsDragging(true);
               setDragId(hit.id);
-              // FIXED: Corrected the vertical drag offset calculation
               setDragOffset({ x: x - hit.x, y: y - hit.y }); 
           }
       } else {
@@ -594,7 +578,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           };
           setElements(prev => {
               const next = [...prev, newPathEl];
-              // SYNC TRIGGER moved to MouseUp to avoid "Bad SetState" render error
               setTimeout(() => sync(next, connections), 0);
               return next;
           });
@@ -657,7 +640,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       });
 
       setElements(nextElements);
-      // SYNC TRIGGER - Consistent with functional state update
       sync(nextElements, connections);
   };
 
@@ -683,14 +665,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   if (!isMounted) return null;
 
   return (
-    <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none font-sans h-full">
+    <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none h-full font-sans">
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
             <div className="flex flex-col gap-5">
                 <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} label="Sticky" />
                 <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} label="Process" />
                 <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} label="Event" />
                 <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
-                <DraggableTool icon={<Type className="h-5 w-5 text-slate-500" />} type="text" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} label="Text" />
                 
                 <Popover onOpenChange={() => setAssetSearch('')}>
                     <PopoverTrigger asChild>
@@ -845,17 +826,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                             <IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} />
                                         </div>
                                     ) : (
-                                        <textarea 
-                                            value={el.text}
-                                            readOnly={!editable || el.type === 'path'}
-                                            onChange={(e) => {
-                                                const next = elements.map(item => item.id === el.id ? { ...item, text: e.target.value } : item);
-                                                setElements(next);
-                                                onContentChange({ elements: next, connections });
-                                            }}
-                                            className="bg-transparent border-none focus:ring-0 focus:outline-none resize-none w-full placeholder:text-slate-200"
+                                        <div 
+                                            className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none"
                                             style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}
-                                        />
+                                        >
+                                            {el.text}
+                                        </div>
                                     )}
                                 </div>
                                 {isSelected && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
@@ -918,7 +894,6 @@ function DraggableTool({ icon, type, onDragStart, label }: any) {
     return (
         <div draggable onDragStart={onDragStart} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-105 transition-all group relative">
             {icon}
-            <div className="absolute left-14 bg-slate-900 text-white text-[8px] font-black uppercase px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap shadow-2xl z-[60] transition-opacity">{label}</div>
         </div>
     );
 }
