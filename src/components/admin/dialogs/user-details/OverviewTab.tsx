@@ -151,407 +151,420 @@ export function OverviewTab({
         }
     };
 
+    // Card Components for re-ordering
+    const identityCard = (
+        <Card key="identity" className="border-none shadow-sm bg-muted/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Client Profile</CardTitle>
+                <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'} className="shadow-sm">
+                    {user.accountType || 'Single Account'}
+                </Badge>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16 border-2 border-background shadow-sm">
+                        <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                        <AvatarFallback className="text-xl font-bold">{user.businessName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <h3 className="text-lg font-bold leading-none">{user.businessName}</h3>
+                        <p className="text-sm text-muted-foreground mt-1.5">{user.name} • <span className="font-mono text-xs">{user.clientId}</span></p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Business Contact</span>
+                        <p className="font-medium">{user.email}</p>
+                        <p className="text-muted-foreground">{user.contactNumber}</p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Service Address</span>
+                        <p className="text-muted-foreground line-clamp-2">{user.address}</p>
+                    </div>
+                    {user.accountType === 'Branch' && (
+                        <div className="pt-2 border-t mt-2 md:col-span-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Linked Parent Account</Label>
+                            {user.parentId ? (
+                                <p className="font-bold text-primary flex items-center gap-1 mt-1">
+                                    <ShieldCheck className="h-3 w-3" />
+                                    {allUsers.find(u => u.id === user.parentId)?.businessName || 'Parent Account'}
+                                </p>
+                            ) : (
+                                <div className="flex items-center gap-2 mt-2">
+                                    <Select onValueChange={onAssignParent}>
+                                        <SelectTrigger className="w-full h-8 text-xs bg-background">
+                                            <SelectValue placeholder="Assign a Parent..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {allUsers.filter(u => u.accountType === 'Parent').map(parent => (
+                                                <SelectItem key={parent.id} value={parent.id}>{parent.businessName} ({parent.clientId})</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    const workflowCard = (
+        <Card key="workflow" className="flex flex-col border-none shadow-sm bg-slate-900 text-white overflow-hidden relative">
+            <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-white/10">
+                            <Zap className="h-4 w-4 text-primary-light" />
+                        </div>
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider">Subscription Workflow</CardTitle>
+                    </div>
+                    <Badge variant="outline" className="border-white/20 text-white uppercase text-[9px]">{user.subscriptionStatus || 'In Progress'}</Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-2 flex-1">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all">
+                        <div className="flex items-center gap-3">
+                            <div className={cn("p-1.5 rounded-lg", user.onboardingComplete ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40")}>
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                            </div>
+                            <span className={cn("text-[10px] font-black uppercase tracking-tight", user.onboardingComplete && "line-through opacity-40")}>
+                                1. Account Onboarding
+                            </span>
+                        </div>
+                        {user.onboardingComplete && <Check className="h-3 w-3 text-green-400" />}
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all">
+                        <div className="flex items-center gap-3">
+                            <div className={cn("p-1.5 rounded-lg", user.plan ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40")}>
+                                <FileText className="h-3.5 w-3.5" />
+                            </div>
+                            <span className={cn("text-[10px] font-black uppercase tracking-tight", user.plan && "line-through opacity-40")}>
+                                2. Plan Selection
+                            </span>
+                        </div>
+                        {user.plan && <Check className="h-3 w-3 text-green-400" />}
+                    </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-white/40">Protocol Controls</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={isUpdatingStatus}
+                            onClick={() => handleUpdateSubStatus('discovery_call')}
+                            className={cn(
+                                "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                user.subscriptionStatus === 'discovery_call' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
+                            )}
+                        >
+                            <Phone className="mr-3 h-3.5 w-3.5" />
+                            <span className={cn((user.subscriptionStatus === 'discovery_call' || user.subscriptionStatus === 'activated') && "line-through opacity-40")}>
+                                3. Discovery Call Completed
+                            </span>
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={isUpdatingStatus || !user.plan}
+                            onClick={() => handleUpdateSubStatus('activated')}
+                            className={cn(
+                                "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
+                                user.subscriptionStatus === 'activated' ? "bg-primary text-white" : "bg-primary/20 text-primary-light hover:bg-primary/30"
+                            )}
+                        >
+                            <CheckCircle2 className="mr-3 h-3.5 w-3.5" /> 4. Authorize Activation
+                        </Button>
+                    </div>
+                </div>
+            </CardContent>
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                <Shield className="h-40 w-40" />
+            </div>
+        </Card>
+    );
+
+    const activityLogCard = (
+        <Card key="activity" className="flex flex-col border-none shadow-sm bg-gradient-to-br from-blue-50 to-white">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Monthly Activity Log</CardTitle>
+                <CardDescription className="text-xs">Live usage and estimated overhead.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 flex-1">
+                <div className="p-4 rounded-xl bg-white/60 border border-white shadow-sm">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estimated Overhead ({format(new Date(), 'MMMM')})</Label>
+                    <p className="text-3xl font-extrabold text-blue-900 mt-1">₱{currentMonthInvoice?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-6 pt-2">
+                    <div className="space-y-3">
+                        <div>
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Water Credits</Label>
+                            {user.plan?.isConsumptionBased || user.accountType === 'Branch' || user.isPrepaid ? (
+                                <p className="text-xl font-bold mt-1">Unlimited</p>
+                            ) : (
+                                <div className="mt-1">
+                                    <p className="text-xl font-bold">{availableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-medium text-muted-foreground">L</span></p>
+                                    <Progress value={(availableLiters / totalAllocation) * 100} className="h-1 mt-2 bg-blue-100" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <div>
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Liters Consumed</Label>
+                            <p className="text-xl font-bold mt-1">{consumedLitersThisMonth.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-medium text-muted-foreground">L</span></p>
+                            <div className={cn(
+                                "flex items-center text-[10px] font-bold uppercase mt-1",
+                                consumptionComparison.changeType === 'increase' && 'text-red-500',
+                                consumptionComparison.changeType === 'decrease' && 'text-green-500',
+                            )}>
+                                {consumptionComparison.changeType === 'increase' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
+                                <span>{consumptionComparison.percentageChange.toFixed(0)}% vs last month</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter className="pt-0">
+                 <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-white/50 hover:bg-white transition-colors shadow-sm" onClick={() => onSetIsYearlyConsumptionOpen(true)}>
+                    Full Consumption History
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+
+    const logisticsCard = (
+        <Card key="logistics" className="flex flex-col border-none shadow-sm">
+            <CardHeader className="pb-4 bg-muted/10">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                        <Repeat className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider">Logistics & Refill</CardTitle>
+                        <CardDescription className="text-xs">Fulfillment mode and automation status.</CardDescription>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6 flex-1">
+                <div className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50 shadow-inner">
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Automation Protocol</p>
+                        <p className={cn("text-lg font-black uppercase tracking-tight", isAutoRefill ? "text-primary" : "text-slate-400")}>
+                            {isAutoRefill ? 'Auto-Refill Active' : 'Manual Mode Only'}
+                        </p>
+                    </div>
+                    {isAutoRefill ? <CheckCircle2 className="h-6 w-6 text-primary" /> : <XCircle className="h-6 w-6 text-slate-300" />}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
+                        <div className="flex items-center gap-2 text-slate-400">
+                            <Calendar className="h-3.5 w-3.5" />
+                            <p className="text-[9px] font-black uppercase tracking-widest leading-none">Frequency</p>
+                        </div>
+                        <p className="text-xs font-bold text-slate-900">{planDetails.deliveryFrequency || 'As Requested'}</p>
+                    </div>
+                    <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
+                        <div className="flex items-center gap-2 text-slate-400">
+                            <Clock className="h-3.5 w-3.5" />
+                            <p className="text-[9px] font-black uppercase tracking-widest leading-none">Window</p>
+                        </div>
+                        <p className="text-xs font-bold text-slate-900">{planDetails.deliveryDay || 'N/A'} {planDetails.deliveryTime ? `@ ${planDetails.deliveryTime}` : ''}</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    const planCard = (
+        <Card key="plan" className="border-none shadow-sm flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                        <Building className="h-4 w-4 text-primary" />
+                    </div>
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider">Plan & Fulfillment</CardTitle>
+                </div>
+                <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => onSetIsChangePlanOpen(true)}>
+                    Immediate Switch
+                </Button>
+            </CardHeader>
+            <CardContent className="space-y-6 flex-1">
+                <div className="p-3 rounded-lg border bg-background">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Active Plan</Label>
+                    <p className="font-bold text-sm mt-1">{user.plan?.name || 'Manual Plan Selection Required'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{user.plan?.isConsumptionBased ? 'Consumption-based pricing' : 'Set monthly allocation'}</p>
+                </div>
+                <div className="space-y-2 pt-1">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned Fulfillment Station</Label>
+                    <Select onValueChange={onAssignStation} defaultValue={user.assignedWaterStationId}>
+                        <SelectTrigger className="w-full bg-background">
+                            <SelectValue placeholder="Assign a station..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {(waterStations || []).map(station => (
+                                <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    const recipientsCard = (
+        <Card key="recipients" className="flex flex-col border-none shadow-sm">
+            <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                        <Mail className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider">Automation Recipients</CardTitle>
+                        <CardDescription className="text-xs">Recipients for billing and delivery alerts.</CardDescription>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4 flex-1">
+                <div className="flex gap-2">
+                    <Input 
+                        placeholder="accounting@client.com" 
+                        value={newNotifEmail}
+                        onChange={(e) => setNewNotifEmail(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddNotifEmail()}
+                        disabled={isUpdatingEmails}
+                        className="h-9 text-sm"
+                    />
+                    <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleAddNotifEmail} disabled={isUpdatingEmails || !newNotifEmail}>
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Broadcasters</Label>
+                    <div className="rounded-lg border bg-muted/10 max-h-40 overflow-y-auto scrollbar-thin">
+                        {user.notificationEmails && user.notificationEmails.length > 0 ? (
+                            <ul className="divide-y">
+                                {user.notificationEmails.map((email) => (
+                                    <li key={email} className="flex items-center justify-between p-2.5 text-sm group hover:bg-muted/30 transition-colors">
+                                        <span className="truncate font-medium">{email}</span>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => handleRemoveNotifEmail(email)}
+                                            disabled={isUpdatingEmails}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="p-8 flex flex-col items-center justify-center text-center gap-2 opacity-50">
+                                <Info className="h-6 w-6" />
+                                <p className="text-[10px] font-medium leading-relaxed">No specific recipients set.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    const contractCard = (
+        <Card key="contract" className="border-none shadow-sm overflow-hidden flex flex-col">
+            <CardHeader className="bg-primary/5 pb-6">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-base font-bold">Partnership Contract</CardTitle>
+                        <CardDescription className="text-xs">Authorized legal documentation.</CardDescription>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="pt-6 flex-1">
+                <div className="flex flex-col items-center gap-6">
+                    <div className="w-full p-6 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col items-center justify-center text-center gap-3">
+                        {user.currentContractUrl ? (
+                            <>
+                                <div className="p-3 rounded-full bg-green-50 text-green-600 shadow-sm border border-green-100">
+                                    <ShieldCheck className="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-sm">Contract Verified & Active</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Uploaded: {user.contractUploadedDate ? format(toSafeDate(user.contractUploadedDate)!, 'PPP') : 'N/A'}</p>
+                                </div>
+                                <Button asChild variant="outline" size="sm" className="mt-2 h-8 px-6 text-xs uppercase font-bold tracking-widest bg-white">
+                                    <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4" /> Open Document</a>
+                                </Button>
+                            </>
+                        ) : (
+                            <div className="py-4">
+                                <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No Contract on File</p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="w-full space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
+                            <div className="flex gap-2">
+                                <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} accept=".pdf,image/*" className="h-9 text-[10px] bg-muted/5" />
+                                <Button onClick={onContractUpload} disabled={!contractFile || isUploadingContract} size="sm" className="h-9 shadow-sm">
+                                    {isUploadingContract ? 'Processing...' : 'Upload'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     return (
         <div className="relative px-8">
             <Carousel className="w-full">
                 <CarouselContent>
+                    {/* Item 1: Profile + [Workflow OR Activity] */}
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
-                            {/* Identity Card */}
-                            <Card className={cn("border-none shadow-sm bg-muted/20 transition-all", !showWorkflow && "lg:col-span-2")}>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Client Profile</CardTitle>
-                                    <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'} className="shadow-sm">
-                                        {user.accountType || 'Single Account'}
-                                    </Badge>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-16 w-16 border-2 border-background shadow-sm">
-                                            <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-                                            <AvatarFallback className="text-xl font-bold">{user.businessName?.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <h3 className="text-lg font-bold leading-none">{user.businessName}</h3>
-                                            <p className="text-sm text-muted-foreground mt-1.5">{user.name} • <span className="font-mono text-xs">{user.clientId}</span></p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Business Contact</span>
-                                            <p className="font-medium">{user.email}</p>
-                                            <p className="text-muted-foreground">{user.contactNumber}</p>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Service Address</span>
-                                            <p className="text-muted-foreground line-clamp-2">{user.address}</p>
-                                        </div>
-                                        {user.accountType === 'Branch' && (
-                                            <div className="pt-2 border-t mt-2 md:col-span-2">
-                                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Linked Parent Account</Label>
-                                                {user.parentId ? (
-                                                    <p className="font-bold text-primary flex items-center gap-1 mt-1">
-                                                        <ShieldCheck className="h-3 w-3" />
-                                                        {allUsers.find(u => u.id === user.parentId)?.businessName || 'Parent Account'}
-                                                    </p>
-                                                ) : (
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <Select onValueChange={onAssignParent}>
-                                                            <SelectTrigger className="w-full h-8 text-xs bg-background">
-                                                                <SelectValue placeholder="Assign a Parent..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {allUsers.filter(u => u.accountType === 'Parent').map(parent => (
-                                                                    <SelectItem key={parent.id} value={parent.id}>{parent.businessName} ({parent.clientId})</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Subscription Workflow Controller */}
-                            {showWorkflow && (
-                                <Card className="flex flex-col border-none shadow-sm bg-slate-900 text-white overflow-hidden relative animate-in fade-in zoom-in-95 duration-500">
-                                    <CardHeader className="pb-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-2 rounded-lg bg-white/10">
-                                                    <Zap className="h-4 w-4 text-primary-light" />
-                                                </div>
-                                                <CardTitle className="text-sm font-bold uppercase tracking-wider">Subscription Workflow</CardTitle>
-                                            </div>
-                                            <Badge variant="outline" className="border-white/20 text-white uppercase text-[9px]">{user.subscriptionStatus || 'In Progress'}</Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 pt-2 flex-1">
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={cn("p-1.5 rounded-lg", user.onboardingComplete ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40")}>
-                                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                                    </div>
-                                                    <span className={cn("text-[10px] font-black uppercase tracking-tight", user.onboardingComplete && "line-through opacity-40")}>
-                                                        1. Account Onboarding
-                                                    </span>
-                                                </div>
-                                                {user.onboardingComplete && <Check className="h-3 w-3 text-green-400" />}
-                                            </div>
-
-                                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={cn("p-1.5 rounded-lg", user.plan ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40")}>
-                                                        <FileText className="h-3.5 w-3.5" />
-                                                    </div>
-                                                    <span className={cn("text-[10px] font-black uppercase tracking-tight", user.plan && "line-through opacity-40")}>
-                                                        2. Plan Selection
-                                                    </span>
-                                                </div>
-                                                {user.plan && <Check className="h-3 w-3 text-green-400" />}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3 pt-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-white/40">Protocol Controls</Label>
-                                            <div className="grid grid-cols-1 gap-2">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    disabled={isUpdatingStatus}
-                                                    onClick={() => handleUpdateSubStatus('discovery_call')}
-                                                    className={cn(
-                                                        "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
-                                                        user.subscriptionStatus === 'discovery_call' ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
-                                                    )}
-                                                >
-                                                    <Phone className="mr-3 h-3.5 w-3.5" />
-                                                    <span className={cn((user.subscriptionStatus === 'discovery_call' || user.subscriptionStatus === 'activated') && "line-through opacity-40")}>
-                                                        3. Discovery Call Completed
-                                                    </span>
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    disabled={isUpdatingStatus || !user.plan}
-                                                    onClick={() => handleUpdateSubStatus('activated')}
-                                                    className={cn(
-                                                        "w-full justify-start h-10 rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all",
-                                                        user.subscriptionStatus === 'activated' ? "bg-primary text-white" : "bg-primary/20 text-primary-light hover:bg-primary/30"
-                                                    )}
-                                                >
-                                                    <CheckCircle2 className="mr-3 h-3.5 w-3.5" /> 4. Authorize Activation
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                                        <Shield className="h-40 w-40" />
-                                    </div>
-                                </Card>
-                            )}
+                            {identityCard}
+                            {showWorkflow ? workflowCard : activityLogCard}
                         </div>
                     </CarouselItem>
 
+                    {/* Item 2: [Activity OR Logistics] + [Logistics OR Plan] */}
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
-                            {/* Monthly Snapshot Card */}
-                            <Card className="flex flex-col border-none shadow-sm bg-gradient-to-br from-blue-50 to-white">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Monthly Activity Log</CardTitle>
-                                    <CardDescription className="text-xs">Live usage and estimated overhead.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6 flex-1">
-                                    <div className="p-4 rounded-xl bg-white/60 border border-white shadow-sm">
-                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estimated Overhead ({format(new Date(), 'MMMM')})</Label>
-                                        <p className="text-3xl font-extrabold text-blue-900 mt-1">₱{currentMonthInvoice?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-6 pt-2">
-                                        <div className="space-y-3">
-                                            <div>
-                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Water Credits</Label>
-                                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' || user.isPrepaid ? (
-                                                    <p className="text-xl font-bold mt-1">Unlimited</p>
-                                                ) : (
-                                                    <div className="mt-1">
-                                                        <p className="text-xl font-bold">{availableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-medium text-muted-foreground">L</span></p>
-                                                        <Progress value={(availableLiters / totalAllocation) * 100} className="h-1 mt-2 bg-blue-100" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Liters Consumed</Label>
-                                                <p className="text-xl font-bold mt-1">{consumedLitersThisMonth.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-medium text-muted-foreground">L</span></p>
-                                                <div className={cn(
-                                                    "flex items-center text-[10px] font-bold uppercase mt-1",
-                                                    consumptionComparison.changeType === 'increase' && 'text-red-500',
-                                                    consumptionComparison.changeType === 'decrease' && 'text-green-500',
-                                                )}>
-                                                    {consumptionComparison.changeType === 'increase' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                                                    <span>{consumptionComparison.percentageChange.toFixed(0)}% vs last month</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="pt-0">
-                                     <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-white/50 hover:bg-white transition-colors shadow-sm" onClick={() => onSetIsYearlyConsumptionOpen(true)}>
-                                        Full Consumption History
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-
-                             {/* Logistics & Automation Card */}
-                             <Card className="flex flex-col border-none shadow-sm">
-                                <CardHeader className="pb-4 bg-muted/10">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-primary/10">
-                                            <Repeat className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Logistics & Refill</CardTitle>
-                                            <CardDescription className="text-xs">Fulfillment mode and automation status.</CardDescription>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-6 pt-6 flex-1">
-                                    <div className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50 shadow-inner">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Automation Protocol</p>
-                                            <p className={cn("text-lg font-black uppercase tracking-tight", isAutoRefill ? "text-primary" : "text-slate-400")}>
-                                                {isAutoRefill ? 'Auto-Refill Active' : 'Manual Mode Only'}
-                                            </p>
-                                        </div>
-                                        {isAutoRefill ? <CheckCircle2 className="h-6 w-6 text-primary" /> : <XCircle className="h-6 w-6 text-slate-300" />}
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
-                                            <div className="flex items-center gap-2 text-slate-400">
-                                                <Calendar className="h-3.5 w-3.5" />
-                                                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Frequency</p>
-                                            </div>
-                                            <p className="text-xs font-bold text-slate-900">{planDetails.deliveryFrequency || 'As Requested'}</p>
-                                        </div>
-                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
-                                            <div className="flex items-center gap-2 text-slate-400">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Window</p>
-                                            </div>
-                                            <p className="text-xs font-bold text-slate-900">{planDetails.deliveryDay || 'N/A'} {planDetails.deliveryTime ? `@ ${planDetails.deliveryTime}` : ''}</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            {showWorkflow ? activityLogCard : logisticsCard}
+                            {showWorkflow ? logisticsCard : planCard}
                         </div>
                     </CarouselItem>
 
+                    {/* Item 3: [Plan OR Recipients] + [Recipients OR Contract] */}
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
-                            {/* Plan & Station Management */}
-                            <Card className="border-none shadow-sm flex flex-col">
-                                <CardHeader className="flex flex-row items-center justify-between pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-primary/10">
-                                            <Building className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <CardTitle className="text-sm font-bold uppercase tracking-wider">Plan & Fulfillment</CardTitle>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => onSetIsChangePlanOpen(true)}>
-                                        Immediate Switch
-                                    </Button>
-                                </CardHeader>
-                                <CardContent className="space-y-6 flex-1">
-                                    <div className="p-3 rounded-lg border bg-background">
-                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Active Plan</Label>
-                                        <p className="font-bold text-sm mt-1">{user.plan?.name || 'Manual Plan Selection Required'}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{user.plan?.isConsumptionBased ? 'Consumption-based pricing' : 'Set monthly allocation'}</p>
-                                    </div>
-                                    <div className="space-y-2 pt-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned Fulfillment Station</Label>
-                                        <Select onValueChange={onAssignStation} defaultValue={user.assignedWaterStationId}>
-                                            <SelectTrigger className="w-full bg-background">
-                                                <SelectValue placeholder="Assign a station..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {(waterStations || []).map(station => (
-                                                    <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-[10px] text-muted-foreground italic">Fulfillment station updates are applied instantly to the next delivery dispatch.</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Email Automation Recipients */}
-                            <Card className="flex flex-col border-none shadow-sm">
-                                <CardHeader className="pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-primary/10">
-                                            <Mail className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Automation Recipients</CardTitle>
-                                            <CardDescription className="text-xs">Recipients for billing and delivery alerts.</CardDescription>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-4 flex-1">
-                                    <div className="flex gap-2">
-                                        <Input 
-                                            placeholder="accounting@client.com" 
-                                            value={newNotifEmail}
-                                            onChange={(e) => setNewNotifEmail(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleAddNotifEmail()}
-                                            disabled={isUpdatingEmails}
-                                            className="h-9 text-sm"
-                                        />
-                                        <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleAddNotifEmail} disabled={isUpdatingEmails || !newNotifEmail}>
-                                            <Plus className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Broadcasters</Label>
-                                        <div className="rounded-lg border bg-muted/10 max-h-40 overflow-y-auto scrollbar-thin">
-                                            {user.notificationEmails && user.notificationEmails.length > 0 ? (
-                                                <ul className="divide-y">
-                                                    {user.notificationEmails.map((email) => (
-                                                        <li key={email} className="flex items-center justify-between p-2.5 text-sm group hover:bg-muted/30 transition-colors">
-                                                            <span className="truncate font-medium">{email}</span>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => handleRemoveNotifEmail(email)}
-                                                                disabled={isUpdatingEmails}
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <div className="p-8 flex flex-col items-center justify-center text-center gap-2 opacity-50">
-                                                    <Info className="h-6 w-6" />
-                                                    <p className="text-[10px] font-medium leading-relaxed">No specific recipients set. Notifications default to the primary login email.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="pt-2 bg-muted/10 rounded-b-lg">
-                                    <p className="text-[10px] text-muted-foreground leading-relaxed">Adding recipients here replaces the primary login email for all automated broadcast triggers.</p>
-                                </CardFooter>
-                            </Card>
+                            {showWorkflow ? planCard : recipientsCard}
+                            {showWorkflow ? recipientsCard : contractCard}
                         </div>
                     </CarouselItem>
 
-                    <CarouselItem>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
-                            {/* Contract Management Card */}
-                            <Card className="border-none shadow-sm overflow-hidden flex flex-col">
-                                <CardHeader className="bg-primary/5 pb-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-primary/10">
-                                            <FileText className="h-5 w-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-base font-bold">Partnership Contract</CardTitle>
-                                            <CardDescription className="text-xs">Authorized legal documentation.</CardDescription>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-6 flex-1">
-                                    <div className="flex flex-col items-center gap-6">
-                                        <div className="w-full p-6 rounded-xl border-2 border-dashed bg-muted/10 flex flex-col items-center justify-center text-center gap-3">
-                                            {user.currentContractUrl ? (
-                                                <>
-                                                    <div className="p-3 rounded-full bg-green-50 text-green-600 shadow-sm border border-green-100">
-                                                        <ShieldCheck className="h-8 w-8" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-sm">Contract Verified & Active</p>
-                                                        <p className="text-xs text-muted-foreground mt-1">Uploaded: {user.contractUploadedDate ? format(toSafeDate(user.contractUploadedDate)!, 'PPP') : 'N/A'}</p>
-                                                    </div>
-                                                    <Button asChild variant="outline" size="sm" className="mt-2 h-8 px-6 text-xs uppercase font-bold tracking-widest bg-white shadow-sm hover:bg-white/80">
-                                                        <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4" /> Open Document</a>
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <div className="py-4">
-                                                    <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                                                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No Contract on File</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="w-full space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Upload New Document</Label>
-                                                <div className="flex gap-2">
-                                                    <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} accept=".pdf,image/*" className="h-9 text-[10px] bg-muted/5 border-muted-foreground/20" />
-                                                    <Button onClick={onContractUpload} disabled={!contractFile || isUploadingContract} size="sm" className="h-9 shadow-sm">
-                                                        {isUploadingContract ? 'Processing...' : 'Upload'}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            {isUploadingContract && (
-                                                <div className="space-y-1">
-                                                    <Progress value={uploadProgress} className="h-1 bg-blue-100" />
-                                                    <p className="text-[10px] text-right font-medium text-primary uppercase tracking-widest">{uploadProgress.toFixed(0)}% uploaded</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </CarouselItem>
+                    {/* Item 4: [Contract] (Only if Workflow was shown, pushing everything back) */}
+                    {showWorkflow && (
+                        <CarouselItem>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
+                                {contractCard}
+                            </div>
+                        </CarouselItem>
+                    )}
                 </CarouselContent>
                 <CarouselPrevious className="absolute -left-10 top-1/2 -translate-y-1/2 hidden sm:flex h-10 w-10 border-none shadow-md bg-white hover:bg-blue-50 text-primary transition-all" />
                 <CarouselNext className="absolute -right-10 top-1/2 -translate-y-1/2 hidden sm:flex h-10 w-10 border-none shadow-md bg-white hover:bg-blue-50 text-primary transition-all" />
