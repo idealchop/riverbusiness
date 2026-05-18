@@ -169,7 +169,8 @@ export function StatCards({
   }, [user, deliveries]);
 
 
-  const hasActivePlan = !!user?.plan;
+  const isActivated = user?.plan && user?.subscriptionStatus === 'activated';
+  const isPending = user?.plan && user?.subscriptionStatus !== 'activated';
 
   const handleToggleConfirmation = () => {
     if (toggleTargetState === null || !user?.id || !firestore) return;
@@ -188,7 +189,7 @@ export function StatCards({
   };
 
   const onSwitchChange = (checked: boolean) => {
-    if (!hasActivePlan) {
+    if (!isActivated) {
         toast({
             variant: "destructive",
             title: "Active Subscription Required",
@@ -201,7 +202,7 @@ export function StatCards({
   };
 
   const planDetails = user?.customPlanDetails || {};
-  const autoRefill = hasActivePlan ? (planDetails?.autoRefillEnabled ?? true) : false;
+  const autoRefill = isActivated ? (planDetails?.autoRefillEnabled ?? true) : false;
   const nextRefillDay = planDetails?.deliveryDay || 'Not set';
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
@@ -295,15 +296,17 @@ export function StatCards({
               <div className="flex items-center gap-6">
                 <WaterTankVisual 
                     percentage={remainingBalancePercentage} 
-                    isUnlimited={(isFlowPlan || isBranchAccount) && hasActivePlan} 
+                    isUnlimited={(isFlowPlan || isBranchAccount) && isActivated} 
                 />
                 
                 <div className="flex-1 space-y-4">
-                    {!hasActivePlan ? (
+                    {!isActivated ? (
                         <div>
-                            <p className="text-2xl font-black text-slate-900 tracking-tight">System Locked</p>
+                            <p className="text-2xl font-black text-slate-900 tracking-tight">
+                                {isPending ? 'Pending Approval' : 'System Locked'}
+                            </p>
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                Setup required to initialize credits.
+                                {isPending ? 'Authorized activation required.' : 'Setup required to initialize credits.'}
                             </p>
                         </div>
                     ) : (isFlowPlan || isBranchAccount) ? (
@@ -422,7 +425,7 @@ export function StatCards({
                     </p>
                 </div>
 
-                {autoRefill ? (
+                {autoRefill && isActivated ? (
                     <Button 
                         variant="outline" 
                         size="sm" 
@@ -436,9 +439,13 @@ export function StatCards({
                         variant="default" 
                         size="sm" 
                         className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl" 
-                        onClick={hasActivePlan ? onRequestRefillClick : () => window.dispatchEvent(new CustomEvent('open-subscription-onboarding'))}
+                        onClick={() => {
+                            if (isActivated) onRequestRefillClick();
+                            else window.dispatchEvent(new CustomEvent('open-subscription-onboarding'));
+                        }}
                     >
-                        <CalendarIcon className="mr-2 h-4 w-4" /> {hasActivePlan ? 'Schedule One-Time' : 'Setup Required'}
+                        <CalendarIcon className="mr-2 h-4 w-4" /> 
+                        {isActivated ? 'Schedule One-Time' : isPending ? 'Activation Pending' : 'Setup Required'}
                     </Button>
                 )}
               </div>

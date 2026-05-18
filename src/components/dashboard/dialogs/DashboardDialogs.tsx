@@ -85,8 +85,8 @@ export function DashboardDialogs({
       return;
     }
 
-    // If no plan, redirect to the integrated onboarding flow
-    if (!user.plan) {
+    // Check if user is fully activated
+    if (!user.plan || user.subscriptionStatus !== 'activated') {
         openDialog('subscriptionOnboarding');
         return;
     }
@@ -124,7 +124,7 @@ export function DashboardDialogs({
       'open-consumption-history': () => openDialog('consumptionHistory'),
       'open-update-schedule': () => openDialog('updateSchedule'),
       'open-request-refill': () => {
-          if (!user?.plan) {
+          if (!user?.plan || user?.subscriptionStatus !== 'activated') {
               openDialog('subscriptionOnboarding');
           } else {
               openDialog('requestRefill');
@@ -155,7 +155,7 @@ export function DashboardDialogs({
         window.removeEventListener(eventName, eventListeners[eventName]);
       });
     };
-  }, [handleOneClickRefill, user?.plan]);
+  }, [handleOneClickRefill, user?.plan, user?.subscriptionStatus]);
 
   const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
