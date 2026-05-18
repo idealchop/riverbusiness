@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
 import { 
     FileText, 
@@ -93,8 +94,17 @@ export function OverviewTab({
     const [isUpdatingEmails, setIsUpdatingEmails] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     
-    // We display and allow editing by "Container Price" (amount)
-    // and convert to "Liter Price" internally.
+    // Plan Details Reference
+    const planDetails = user.customPlanDetails || {};
+
+    // Logistics State
+    const [localAutoRefill, setLocalAutoRefill] = useState(planDetails.autoRefillEnabled ?? true);
+    const [localFrequency, setLocalFrequency] = useState(planDetails.deliveryFrequency || 'Weekly');
+    const [localDay, setLocalDay] = useState(planDetails.deliveryDay || 'Monday');
+    const [localTime, setLocalTime] = useState(planDetails.deliveryTime || '09:00');
+    const [isUpdatingLogistics, setIsUpdatingLogistics] = useState(false);
+
+    // Pricing State
     const initialPriceValue = user.plan?.isConsumptionBased 
         ? (user.plan?.price * LITER_RATIO).toFixed(2)
         : (user.plan?.price || 0).toString();
@@ -109,16 +119,20 @@ export function OverviewTab({
                 : user.plan.price.toString();
             setLocalPrice(val);
         }
-    }, [user.plan?.price, user.plan?.isConsumptionBased]);
+        // Update local logistics state when user prop changes
+        if (user.customPlanDetails) {
+            setLocalAutoRefill(user.customPlanDetails.autoRefillEnabled ?? true);
+            setLocalFrequency(user.customPlanDetails.deliveryFrequency || 'Weekly');
+            setLocalDay(user.customPlanDetails.deliveryDay || 'Monday');
+            setLocalTime(user.customPlanDetails.deliveryTime || '09:00');
+        }
+    }, [user.plan?.price, user.plan?.isConsumptionBased, user.customPlanDetails]);
 
-    const planDetails = user.customPlanDetails || {};
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
     const bonusLiters = planDetails.bonusLiters || 0;
     const rolloverLiters = user.customPlanDetails?.lastMonthRollover || 0;
     const totalAllocation = monthlyPlanLiters + bonusLiters + rolloverLiters;
     const availableLiters = totalAllocation - consumedLitersThisMonth;
-
-    const isAutoRefill = planDetails.autoRefillEnabled ?? true;
 
     const showWorkflow = user.subscriptionStatus !== 'activated';
 
@@ -126,8 +140,6 @@ export function OverviewTab({
         const enteredAmount = parseFloat(localPrice);
         if (isNaN(enteredAmount) || !firestore) return;
         
-        // If consumption based, the entered amount is "Per Container". 
-        // We divide by 19.5 to save the "Per Liter" price to DB.
         const priceToSave = user.plan?.isConsumptionBased 
             ? enteredAmount / LITER_RATIO 
             : enteredAmount;
@@ -194,6 +206,25 @@ export function OverviewTab({
             toast({ variant: 'destructive', title: 'Update failed' });
         } finally {
             setIsUpdatingEmails(false);
+        }
+    };
+
+    const handleSaveLogistics = async () => {
+        if (!firestore) return;
+        setIsUpdatingLogistics(true);
+        try {
+            const userRef = doc(firestore, 'users', user.id);
+            await updateDoc(userRef, {
+                'customPlanDetails.autoRefillEnabled': localAutoRefill,
+                'customPlanDetails.deliveryFrequency': localFrequency,
+                'customPlanDetails.deliveryDay': localDay,
+                'customPlanDetails.deliveryTime': localTime,
+            });
+            toast({ title: 'Logistics updated', description: 'Fulfillment settings have been synchronized.' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Update failed' });
+        } finally {
+            setIsUpdatingLogistics(false);
         }
     };
 
@@ -385,7 +416,7 @@ export function OverviewTab({
 
     const logisticsCard = (
         <Card key="logistics" className="flex flex-col border-none shadow-sm">
-            <CardHeader className="pb-4 bg-muted/10">
+            <CardHeader className="pb-4 bg-muted/10 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-primary/10">
                         <Repeat className="h-4 w-4 text-primary" />
@@ -395,32 +426,70 @@ export function OverviewTab({
                         <CardDescription className="text-xs">Fulfillment mode and automation status.</CardDescription>
                     </div>
                 </div>
+                <Button 
+                    size="sm" 
+                    className="h-8 rounded-xl font-bold text-[10px] uppercase tracking-widest"
+                    onClick={handleSaveLogistics}
+                    disabled={isUpdatingLogistics}
+                >
+                    {isUpdatingLogistics ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3 mr-2" />}
+                    Save Settings
+                </Button>
             </CardHeader>
             <CardContent className="space-y-6 pt-6 flex-1">
                 <div className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50 shadow-inner">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Automation Protocol</p>
-                        <p className={cn("text-lg font-black uppercase tracking-tight", isAutoRefill ? "text-primary" : "text-slate-400")}>
-                            {isAutoRefill ? 'Auto-Refill Active' : 'Manual Mode Only'}
+                        <p className={cn("text-lg font-black uppercase tracking-tight", localAutoRefill ? "text-primary" : "text-slate-400")}>
+                            {localAutoRefill ? 'Auto-Refill Active' : 'Manual Mode Only'}
                         </p>
                     </div>
-                    {isAutoRefill ? <CheckCircle2 className="h-6 w-6 text-primary" /> : <XCircle className="h-6 w-6 text-slate-300" />}
+                    <Switch checked={localAutoRefill} onCheckedChange={setLocalAutoRefill} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
-                        <div className="flex items-center gap-2 text-slate-400">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <p className="text-[9px] font-black uppercase tracking-widest leading-none">Frequency</p>
-                        </div>
-                        <p className="text-xs font-bold text-slate-900">{planDetails.deliveryFrequency || 'As Requested'}</p>
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Frequency</Label>
+                        <Select value={localFrequency} onValueChange={setLocalFrequency}>
+                            <SelectTrigger className="h-8 text-xs font-bold border-none shadow-none focus:ring-0 p-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Weekly">Weekly</SelectItem>
+                                <SelectItem value="Bi-Weekly">Bi-Weekly</SelectItem>
+                                <SelectItem value="Monthly">Monthly</SelectItem>
+                                <SelectItem value="On-Demand">On-Demand</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-white">
-                        <div className="flex items-center gap-2 text-slate-400">
-                            <Clock className="h-3.5 w-3.5" />
-                            <p className="text-[9px] font-black uppercase tracking-widest leading-none">Window</p>
-                        </div>
-                        <p className="text-xs font-bold text-slate-900">{planDetails.deliveryDay || 'N/A'} {planDetails.deliveryTime ? `@ ${planDetails.deliveryTime}` : ''}</p>
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Target Day</Label>
+                        <Select value={localDay} onValueChange={setLocalDay}>
+                            <SelectTrigger className="h-8 text-xs font-bold border-none shadow-none focus:ring-0 p-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Monday">Monday</SelectItem>
+                                <SelectItem value="Tuesday">Tuesday</SelectItem>
+                                <SelectItem value="Wednesday">Wednesday</SelectItem>
+                                <SelectItem value="Thursday">Thursday</SelectItem>
+                                <SelectItem value="Friday">Friday</SelectItem>
+                                <SelectItem value="Saturday">Saturday</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Daily Dispatch Window</Label>
+                    <div className="relative group">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                        <Input 
+                            type="time" 
+                            value={localTime}
+                            onChange={(e) => setLocalTime(e.target.value)}
+                            className="h-10 pl-10 rounded-xl bg-slate-50 border-slate-100 font-bold"
+                        />
                     </div>
                 </div>
             </CardContent>
