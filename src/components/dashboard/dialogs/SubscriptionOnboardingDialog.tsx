@@ -429,9 +429,6 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                     <header className="p-8 md:p-12 pb-8 flex flex-col border-b border-slate-50 shrink-0">
                         <div className="flex items-center justify-between mb-4">
                             <div className="space-y-1">
-                                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-primary border-primary/20">
-                                    Configuration Phase {step} of {STEPS.length - 1}
-                                </Badge>
                                 <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
                                     {STEPS[step].title}
                                 </DialogTitle>
