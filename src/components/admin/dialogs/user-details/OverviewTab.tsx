@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar, Building, Zap, Hourglass, Phone } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail, ShieldCheck, Info, Clock, CheckCircle2, XCircle, Calendar, Building, Zap, Hourglass, Phone, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -263,7 +262,7 @@ export function OverviewTab({
                             {/* Monthly Snapshot Card */}
                             <Card className="flex flex-col border-none shadow-sm bg-gradient-to-br from-blue-50 to-white">
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">This Month's Activity</CardTitle>
+                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">This Month's Activity</CardTitle Terminology: "Monthly Activity Log"
                                     <CardDescription className="text-xs">Live usage and estimated overhead.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6 flex-1">
@@ -399,7 +398,7 @@ export function OverviewTab({
                                             <Mail className="h-4 w-4 text-primary" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Automated Notifications</CardTitle>
+                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Automated Notifications</CardTitle> Terminology: "Automation Recipients"
                                             <CardDescription className="text-xs">Recipients for billing and delivery alerts.</CardDescription>
                                         </div>
                                     </div>
