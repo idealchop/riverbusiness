@@ -35,7 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { format } from 'date-fns';
+import { format, startOfMonth, isWithinInterval, subMonths } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 

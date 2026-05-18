@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, limit } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
+import type { AppUser, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -824,7 +824,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const { data: branchDeliveries } = useCollection<Delivery>(branchDeliveriesQuery);
 
   const topUpRequestsQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [firestore, user]);
-  const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
+  const { data: topUpRequestsData } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
   const isParent = user?.accountType === 'Parent';
   
@@ -871,8 +871,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
     });
     
-    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters || containerToLiter(d.volumeContainers)), 0);
-
     let estimatedCost = 0;
     
     const userCreationDate = toSafeDate(user.createdAt);
@@ -899,7 +897,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     estimatedCost += equipmentCostForPeriod;
 
     if (user.plan?.isConsumptionBased) {
-        const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
+        // Sum amount from delivery records (handles admin pricing updates)
+        const consumptionCost = deliveriesThisCycle.reduce((acc, d) => {
+            return acc + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * (user.plan?.price || 0));
+        }, 0);
         estimatedCost += consumptionCost;
     } else {
         const planCost = user.plan?.price || 0;
@@ -969,7 +970,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
         
         if (user.plan?.isConsumptionBased) {
-            consumptionCost = consumedLiters * (user.plan.price || 0);
+            // Prioritize stored 'amount' field which accounts for admin pricing overrides/sync
+            consumptionCost = deliveriesInPeriod.reduce((acc, d) => {
+                return acc + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * (user.plan?.price || 0));
+            }, 0);
         } else {
             planCost = user.plan?.price || 0;
         }
@@ -1420,7 +1424,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
-    dispatch({ type: 'SET_INVOICE_DETAIL_DIALOG', payload: true });
+    dispatch({ type: 'SET_INVOICE_DETAIL_DIALOG', payload: open });
   };
   
   const handleDownloadInvoice = async (invoice: Payment) => {
