@@ -1,4 +1,3 @@
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface AppUser {
@@ -45,6 +44,15 @@ export interface AppUser {
     currentContractUrl?: string;
     contractUploadedDate?: any;
     contractStatus?: string;
+}
+
+export interface PricingHistory {
+    id: string;
+    containerPrice: number;
+    literPrice: number;
+    updatedAt: any;
+    updatedBy: string;
+    updatedByName: string;
 }
 
 export interface CloudFile {

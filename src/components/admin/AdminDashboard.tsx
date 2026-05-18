@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus, Contact } from 'lucide-react';
+import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus, Contact, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppUser, WaterStation, RefillRequest, Payment, Delivery } from '@/lib/types';
+import type { AppUser, WaterStation, RefillRequest, Payment, Delivery, PricingHistory } from '@/lib/types';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, collectionGroup, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, collectionGroup, doc, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 import { AdminDashboardSkeleton } from './AdminDashboardSkeleton';
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
@@ -18,6 +18,7 @@ import { StationManagementTab } from './tabs/StationManagementTab';
 import { CreateUserDialog } from './dialogs/CreateUserDialog';
 import { StationProfileDialog } from './dialogs/StationProfileDialog';
 import { UserDetailsDialog } from './dialogs/UserDetailsDialog';
+import { GlobalPricingDialog } from './dialogs/GlobalPricingDialog';
 import { cn } from '@/lib/utils';
 
 const toSafeDate = (timestamp: any): Date | null => {
@@ -58,6 +59,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         idField: 'parentId'
     });
 
+    const pricingQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'pricing_history'), orderBy('updatedAt', 'desc'), limit(1)) : null, [firestore]);
+    const { data: latestPricing } = useCollection<PricingHistory>(pricingQuery);
+
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
     const [initialUserDetailTab, setInitialUserDetailTab] = React.useState<string | undefined>();
@@ -67,9 +71,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
+    const [isPricingDialogOpen, setIsPricingDialogOpen] = React.useState(false);
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
+
+    const currentGlobalPrice = latestPricing?.[0]?.containerPrice || 0;
 
     const salesMetrics = useMemo(() => {
         if (!allDeliveries) return { currentMonthSales: 0, lifetimeSales: 0, diff: 0, trend: 'same' };
@@ -107,12 +114,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const stats = useMemo(() => {
         const clients = (allUsers || []).filter(u => u.email !== 'admin@riverph.com' && u.hrRole !== 'employee');
-        const employees = (allUsers || []).filter(u => u.hrRole === 'employee');
-        
         const totalClients = clients.length + (unclaimedProfiles?.length || 0);
 
         return [
             { 
+                id: 'clients',
                 title: 'Total Clients', 
                 value: totalClients.toLocaleString(), 
                 icon: Building, 
@@ -121,14 +127,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 description: 'Business accounts'
             },
             { 
-                title: 'Managed Employees', 
-                value: (employees.length + (unclaimedEmployees?.length || 0)).toLocaleString(), 
-                icon: Users, 
+                id: 'pricing',
+                title: 'Global Container Rate', 
+                value: `₱${currentGlobalPrice.toFixed(2)}`, 
+                icon: Tag, 
                 color: 'text-indigo-500', 
                 bg: 'bg-indigo-50',
-                description: 'Verified staff members'
+                description: 'Standardized rate'
             },
             { 
+                id: 'sales-mtd',
                 title: 'Sales (MTD)', 
                 value: `₱${salesMetrics.currentMonthSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
                 icon: DollarSign, 
@@ -139,6 +147,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 description: salesMetrics.trend === 'increase' ? 'Up vs last month' : 'Growth tracking'
             },
             { 
+                id: 'sales-lifetime',
                 title: 'Lifetime Sales', 
                 value: `₱${salesMetrics.lifetimeSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
                 icon: TrendingUp, 
@@ -147,7 +156,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 description: 'All-time volume'
             },
         ];
-    }, [allUsers, unclaimedProfiles, unclaimedEmployees, salesMetrics]);
+    }, [allUsers, unclaimedProfiles, salesMetrics, currentGlobalPrice]);
 
     React.useEffect(() => {
         const openAccountDialog = () => setIsAccountDialogOpen(true);
@@ -183,9 +192,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <div className="space-y-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
+                    <Card 
+                        key={idx} 
+                        onClick={() => stat.id === 'pricing' && setIsPricingDialogOpen(true)}
+                        className={cn(
+                            "border-none shadow-sm overflow-hidden group hover:shadow-md transition-all",
+                            stat.id === 'pricing' && "cursor-pointer active:scale-95"
+                        )}
+                    >
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{stat.title}</CardTitle>
                             <div className={cn("p-2 rounded-lg transition-colors", stat.bg)}>
                                 <stat.icon className={cn("h-4 w-4", stat.color)} />
                             </div>
@@ -290,6 +306,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             onOpenChange={setIsStationProfileOpen}
             station={stationToUpdate}
             isAdmin={isAdmin}
+        />
+
+        <GlobalPricingDialog
+            isOpen={isPricingDialogOpen}
+            onOpenChange={setIsPricingDialogOpen}
+            allActiveUsers={(allUsers || []).filter(u => u.subscriptionStatus === 'activated')}
+            currentGlobalPrice={currentGlobalPrice}
+            adminUser={adminUser}
         />
 
         <AdminMyAccountDialog
