@@ -13,14 +13,8 @@ import {
     Plus,
     X,
     Maximize2,
-    Type,
-    ArrowRight,
     PlusCircle,
     Diamond,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    Zap,
     CornerRightUp,
     Layout,
     Copy,
@@ -28,10 +22,6 @@ import {
     Pencil,
     LayoutTemplate,
     Sparkles,
-    Binary,
-    Trophy,
-    RotateCcw,
-    Activity,
     Workflow,
     User,
     Users,
@@ -82,11 +72,8 @@ import {
     Box,
     ShoppingBag,
     Hammer,
-    ZapOff,
     Check,
-    ChevronDown,
     Loader2,
-    ArrowUp,
     Map,
     ListTodo,
     Compass
@@ -100,9 +87,6 @@ import {
     DropdownMenuTrigger,
     DropdownMenuLabel,
     DropdownMenuSeparator,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { 
     Popover,
@@ -114,6 +98,7 @@ import { Input } from '../ui/input';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
+import { Timestamp } from 'firebase/firestore';
 
 interface BoardEditorProps {
   initialData: any;
@@ -183,10 +168,10 @@ const BLUEPRINTS = [
             { id: 'b4', type: 'rect', x: 650, y: 400, width: 140, height: 80, text: 'People', color: '#ffffff', bold: true }
         ],
         connections: [
-            { id: 'm1', fromId: 'center', toId: 'b1', type: 'curved' },
-            { id: 'm2', fromId: 'center', toId: 'b2', type: 'curved' },
-            { id: 'm3', fromId: 'center', toId: 'b3', type: 'curved' },
-            { id: 'm4', fromId: 'center', toId: 'b4', type: 'curved' }
+            { id: 'c1', fromId: 'center', toId: 'b1', type: 'curved' },
+            { id: 'c2', fromId: 'center', toId: 'b2', type: 'curved' },
+            { id: 'c3', fromId: 'center', toId: 'b3', type: 'curved' },
+            { id: 'c4', fromId: 'center', toId: 'b4', type: 'curved' }
         ]
     },
     {
@@ -355,7 +340,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const addElement = (type: BoardElement['type'], x?: number, y?: number, data?: Partial<BoardElement>) => {
       if (!editable) return;
       pushHistory();
-      const id = `el-${Date.now()}`;
+      const id = `el-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
       const newEl: BoardElement = {
           id, 
           type: data?.type || type,
@@ -385,12 +370,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const applyBlueprint = (blueprint: typeof BLUEPRINTS[0]) => {
       if (!editable) return;
       pushHistory();
+      
       const offsetX = (100 - viewport.x) / viewport.scale;
       const offsetY = (100 - viewport.y) / viewport.scale;
+      const timestamp = Date.now();
+      const randomSuffix = () => Math.random().toString(36).substr(2, 5);
 
       const newElements: BoardElement[] = blueprint.elements.map(el => ({
           ...el,
-          id: `${el.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          id: `${el.id}-${timestamp}-${randomSuffix()}`,
           x: el.x + offsetX,
           y: el.y + offsetY,
           type: el.type as any,
@@ -403,24 +391,25 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const newConnections: BoardConnection[] = blueprint.connections.map(conn => {
           const fromIdx = blueprint.elements.findIndex(e => e.id === conn.fromId);
           const toIdx = blueprint.elements.findIndex(e => e.id === conn.toId);
+          
+          if (fromIdx === -1 || toIdx === -1) return null;
+
           return {
               ...conn,
-              id: `${conn.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              id: `${conn.id}-${timestamp}-${randomSuffix()}`,
               fromId: newElements[fromIdx].id,
               toId: newElements[toIdx].id,
               type: conn.type as any
           };
-      });
+      }).filter((c): c is BoardConnection => c !== null);
 
-      setElements(prev => {
-          const next = [...prev, ...newElements];
-          setConnections(prevConn => {
-              const nextConn = [...prevConn, ...newConnections];
-              setTimeout(() => sync(next, nextConn), 0);
-              return nextConn;
-          });
-          return next;
-      });
+      const finalElements = [...elements, ...newElements];
+      const finalConnections = [...connections, ...newConnections];
+
+      setElements(finalElements);
+      setConnections(finalConnections);
+      sync(finalElements, finalConnections);
+      
       toast({ title: 'Template applied', description: `${blueprint.name} has been added to your board.` });
   };
 
@@ -437,7 +426,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return next;
       });
       setSelectedIds([]);
-  }, [editable, selectedIds, sync, pushHistory, elements]);
+  }, [editable, selectedIds, sync, pushHistory]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -448,12 +437,16 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (clipboard.length === 0 || !editable) return;
       pushHistory();
       const offset = 40;
+      const timestamp = Date.now();
+      const randomSuffix = () => Math.random().toString(36).substr(2, 5);
+
       const newElements = clipboard.map(el => ({
           ...el,
-          id: `el-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          id: `el-${timestamp}-${randomSuffix()}`,
           x: el.x + offset,
           y: el.y + offset
       }));
+      
       setElements(prev => {
           const next = [...prev, ...newElements];
           setTimeout(() => sync(next, connections), 0);
@@ -629,7 +622,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           });
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
-              const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnFrom, toId: targetHit.id, type: 'curved' };
+              const newConn: BoardConnection = { id: `conn-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, fromId: pendingConnFrom, toId: targetHit.id, type: 'curved' };
               setConnections(prev => {
                   const next = [...prev, newConn];
                   setTimeout(() => sync(elements, next), 0);
@@ -704,10 +697,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none h-full font-sans">
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
             <div className="flex flex-col gap-5">
-                <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} label="Sticky" />
-                <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} label="Process" />
-                <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} label="Event" />
-                <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} label="Logic" />
+                <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} />
+                <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} />
+                <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} />
+                <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} />
                 
                 <Popover onOpenChange={() => setAssetSearch('')}>
                     <PopoverTrigger asChild>
@@ -788,7 +781,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Infrastructure Templates</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Templates</DropdownMenuLabel>
                         <ScrollArea className="h-[400px]">
                             {BLUEPRINTS.map(bp => (
                                 <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
@@ -931,7 +924,7 @@ function ToolbarItem({ icon, active = false, onClick }: any) {
     );
 }
 
-function DraggableTool({ icon, type, onDragStart, label }: any) {
+function DraggableTool({ icon, type, onDragStart }: any) {
     return (
         <div draggable onDragStart={onDragStart} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-105 transition-all group relative">
             {icon}
