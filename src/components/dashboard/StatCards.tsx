@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/ his alert-dialog';
 import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, ShieldCheck } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
@@ -309,10 +309,17 @@ export function StatCards({
                     ) : (isFlowPlan || isBranchAccount) ? (
                         <div>
                             <p className="text-3xl font-black text-slate-900 tracking-tight">Drinking Water</p>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
-                                Unlimited Supply 
-                                <span className="block text-primary">Billed by usage (₱{user?.plan?.price}/L)</span>
-                            </p>
+                            <div className="space-y-2 mt-1">
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none">
+                                    Unlimited Supply 
+                                </p>
+                                <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-none">
+                                    ₱{(user?.plan?.price ? user.plan.price * 19.5 : 0).toFixed(2)} per unit
+                                </p>
+                                <p className="text-[8px] text-slate-400 font-bold leading-tight">
+                                    Rate finalized after discovery call based on delivery complexity.
+                                </p>
+                            </div>
                         </div>
                     ) : (
                         <div className="space-y-4">
