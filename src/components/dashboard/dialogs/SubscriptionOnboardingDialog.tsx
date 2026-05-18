@@ -36,7 +36,7 @@ import {
   Zap,
   Lock,
   Phone,
-  ChevronDown
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -84,19 +84,17 @@ const valueProps = [
   },
   {
     icon: Wrench,
-    title: "Regular Maintanance",
+    title: "Regular Maintenance",
     description: "Scheduled professional cleaning of your dispensers and containers is included."
-  },
-  {
-    icon: Package,
-    title: "Infrastructure provisioning",
-    description: "Authorized use of premium hot and cold dispensers and high-fidelity containers."
-  },
-  {
-    icon: Headset,
-    title: "Executive support access",
-    description: "Dedicated quality officers available around the clock to support your organization."
   }
+];
+
+const planInclusions = [
+    "Real-time consumption monitoring",
+    "Priority refill fulfillment",
+    "Standardized water quality",
+    "Monthly dispenser sanitation",
+    "Automated digital invoicing"
 ];
 
 export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: SubscriptionOnboardingDialogProps) {
@@ -144,7 +142,6 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
     setFormData(prev => ({
         ...prev,
         teamSize: newSize,
-        // Automated estimate: 20L per person per month
         monthlyLiters: newSize * 20 
     }));
   };
@@ -299,8 +296,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
-        "p-0 overflow-hidden border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-[2.5rem] bg-white transition-all duration-500",
-        isIntroStep ? "sm:max-w-4xl h-auto" : "sm:max-w-3xl h-[90vh]"
+        "p-0 overflow-hidden border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-2xl md:rounded-[2.5rem] bg-white transition-all duration-500",
+        isIntroStep ? "max-w-[95vw] sm:max-w-4xl h-auto" : "max-w-[95vw] sm:max-w-3xl h-[90vh]"
       )}>
         <div className="flex h-full overflow-hidden">
           {/* Left: Stepper Navigation (Desktop) - Hidden on Intro */}
@@ -343,48 +340,48 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
           {/* Right: Active Content Area */}
           <div className="flex-1 flex flex-col min-w-0 bg-white">
             {isIntroStep ? (
-                /* Step 0: Value Proposition (No Plan View) */
-                <div className="flex flex-col md:flex-row min-h-[600px] animate-in fade-in duration-500">
-                    <div className="flex-1 p-8 md:p-14 space-y-12">
+                /* Step 0: Value Proposition (No Plan View) - Optimized for Mobile */
+                <div className="flex flex-col md:flex-row max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-hidden animate-in fade-in duration-500">
+                    <div className="flex-1 p-6 sm:p-8 md:p-14 space-y-8 md:space-y-12">
                         <div className="space-y-4">
-                            <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
                                 Unlock intelligent <br/><span className="text-primary">hydration infrastructure.</span>
                             </h2>
-                            <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
+                            <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
                                 Join a professional network of high-fidelity operations utilizing premium resources for the workforce.
                             </p>
                         </div>
 
-                        <div className="grid gap-8">
+                        <div className="grid gap-6 md:gap-8">
                             {valueProps.map((prop, idx) => (
-                                <div className="flex gap-5 group" key={idx}>
+                                <div className="flex gap-4 md:gap-5 group" key={idx}>
                                     <div className="py-1 text-slate-400 group-hover:text-primary transition-all shrink-0">
-                                        <prop.icon className="h-6 w-6" />
+                                        <prop.icon className="h-5 w-5 md:h-6 md:w-6" />
                                     </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-sm font-bold text-slate-900">{prop.title}</h4>
-                                        <p className="text-xs font-medium text-slate-400 leading-relaxed">{prop.description}</p>
+                                    <div className="space-y-0.5 md:space-y-1">
+                                        <h4 className="text-xs md:text-sm font-bold text-slate-900">{prop.title}</h4>
+                                        <p className="text-[10px] md:text-xs font-medium text-slate-400 leading-relaxed">{prop.description}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
                         
-                        <div className="pt-4 flex items-center justify-between border-t border-slate-50">
+                        <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-50">
                             <DialogClose asChild>
-                                <Button variant="ghost" className="rounded-xl h-11 px-8 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest">
+                                <Button variant="ghost" className="w-full sm:w-auto rounded-xl h-11 px-8 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest order-2 sm:order-1">
                                     Dismiss
                                 </Button>
                             </DialogClose>
                             <Button 
                                 onClick={nextStep}
-                                className="rounded-xl h-12 px-12 font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
+                                className="w-full sm:w-auto rounded-xl h-12 px-12 font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 order-1 sm:order-2"
                             >
                                 Activate membership <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>
 
-                    <div className="w-full md:w-[42%] bg-slate-950 text-white p-10 flex flex-col justify-center relative overflow-hidden shrink-0 border-l border-white/5">
+                    <div className="hidden md:flex w-[42%] bg-slate-950 text-white p-10 flex-col justify-center relative overflow-hidden shrink-0 border-l border-white/5">
                         <div className="absolute inset-0 opacity-[0.07] pointer-events-none">
                             <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #fff 1px, transparent 0)', backgroundSize: '32px 32px' }} />
                         </div>
@@ -426,27 +423,24 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             ) : (
                 /* Steps 1-4: Onboarding Form */
                 <>
-                    <header className="p-8 md:p-12 pb-8 flex flex-col border-b border-slate-50 shrink-0">
+                    <header className="p-6 sm:p-8 md:p-12 pb-8 flex flex-col border-b border-slate-50 shrink-0">
                         <div className="flex items-center justify-between mb-4">
                             <div className="space-y-1">
-                                <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+                                <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
                                     {STEPS[step].title}
                                 </DialogTitle>
                             </div>
-                            <div className="md:hidden">
-                                <Progress value={progress} className="w-20 h-1" />
-                            </div>
                         </div>
-                        <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed max-w-xl">
+                        <DialogDescription className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed max-w-xl">
                             {step === 1 && "Please provide your business details. This ensures accurate deliveries and billing."}
                             {step === 2 && "Enter your total staff count. We use this to estimate your weekly water and equipment needs."}
-                            {step === 3 && "Select your consumption tier. Our Flow Plan scales with your business so you only pay for what you use."}
+                            {step === 3 && "Review your specialized consumption tier. Our Flow Plan scales with your business so you only pay for what you use."}
                             {step === 4 && "Your profile is ready. Review the timeline below for starting your service."}
                         </DialogDescription>
                     </header>
 
                     <ScrollArea className="flex-1">
-                        <div className="p-8 md:p-12 pt-6">
+                        <div className="p-6 sm:p-8 md:p-12 pt-6">
                             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                                 {step === 1 && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -488,49 +482,49 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-xs font-semibold text-slate-500 ml-1">Verified account identity</Label>
-                                            <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4 opacity-70" />
+                                            <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-[10px] px-4 opacity-70" />
                                         </div>
                                     </div>
                                 )}
 
                                 {step === 2 && (
                                     <div className="grid gap-6">
-                                        <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-8 space-y-8">
+                                        <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-6 sm:p-8 space-y-6 sm:space-y-8">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
-                                                        <Users className="h-6 w-6" />
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className="p-2 sm:p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                        <Users className="h-5 w-5 sm:h-6 sm:w-6" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-slate-900 leading-none">Workforce count</p>
-                                                        <p className="text-[10px] font-medium text-slate-400 mt-1">Total active employees</p>
+                                                        <p className="text-xs sm:text-sm font-bold text-slate-900 leading-none">Workforce count</p>
+                                                        <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 mt-1">Total active employees</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
-                                                    <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.teamSize}</span>
-                                                    <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
+                                                    <span className="text-xl sm:text-2xl font-bold tabular-nums w-8 sm:w-12 text-center">{formData.teamSize}</span>
+                                                    <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
                                                 </div>
                                             </div>
                                             
                                             <Separator className="bg-slate-200/50" />
                                             
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
-                                                        <Droplets className="h-6 w-6" />
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className="p-2 sm:p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                        <Droplets className="h-5 w-5 sm:h-6 sm:w-6" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-slate-900 leading-none">Consumption volume</p>
-                                                        <p className="text-[10px] font-medium text-slate-400 mt-1">Projected weekly replenishment</p>
+                                                        <p className="text-xs sm:text-sm font-bold text-slate-900 leading-none">Consumption volume</p>
+                                                        <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 mt-1">Projected weekly replenishment</p>
                                                     </div>
                                                 </div>
-                                                <div className="w-32">
+                                                <div className="w-28 sm:w-32">
                                                     <Select 
                                                         value={formData.estimatedWeeklyVolumeRange} 
                                                         onValueChange={(val) => setFormData({...formData, estimatedWeeklyVolumeRange: val})}
                                                     >
-                                                        <SelectTrigger className="h-10 rounded-xl bg-white border-slate-100 shadow-sm font-bold text-xs">
+                                                        <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white border-slate-100 shadow-sm font-bold text-[10px] sm:text-xs">
                                                             <SelectValue placeholder="Select" />
                                                         </SelectTrigger>
                                                         <SelectContent className="rounded-xl">
@@ -547,27 +541,27 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <Separator className="bg-slate-200/50" />
                                             
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary">
-                                                        <Package className="h-6 w-6" />
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className="p-2 sm:p-3 rounded-2xl bg-white shadow-sm text-primary">
+                                                        <Package className="h-5 w-5 sm:h-6 sm:w-6" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-slate-900 leading-none">Equipment deployment</p>
-                                                        <p className="text-[10px] font-medium text-slate-400 mt-1">Planned dispensers</p>
+                                                        <p className="text-xs sm:text-sm font-bold text-slate-900 leading-none">Equipment deployment</p>
+                                                        <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 mt-1">Planned dispensers</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <button onClick={() => setFormData({...formData, estimatedDispensers: Math.max(1, formData.estimatedDispensers - 1)})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
-                                                    <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.estimatedDispensers}</span>
-                                                    <button onClick={() => setFormData({...formData, estimatedDispensers: formData.estimatedDispensers + 1})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <button onClick={() => setFormData({...formData, estimatedDispensers: Math.max(1, formData.estimatedDispensers - 1)})} className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
+                                                    <span className="text-xl sm:text-2xl font-bold tabular-nums w-8 sm:w-12 text-center">{formData.estimatedDispensers}</span>
+                                                    <button onClick={() => setFormData({...formData, estimatedDispensers: formData.estimatedDispensers + 1})} className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
                                                 </div>
                                             </div>
 
                                             <Separator className="bg-slate-200/50" />
                                             <div className="flex items-center gap-2 pt-2 px-1 opacity-60">
                                                 <ShieldCheck className="h-3 w-3 text-green-600" />
-                                                <p className="text-[10px] font-bold text-slate-500">
-                                                    Security active <span className="mx-1 text-slate-300 font-normal">|</span> System identity verified via protocol
+                                                <p className="text-[9px] font-bold text-slate-500">
+                                                    Security active <span className="mx-1 text-slate-300 font-normal">|</span> System identity verified
                                                 </p>
                                             </div>
                                         </Card>
@@ -575,58 +569,54 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 )}
 
                                 {step === 3 && (
-                                    <div className="space-y-8">
-                                        <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-primary-light text-white p-8 relative overflow-hidden group">
+                                    <div className="space-y-10">
+                                        <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-primary-light text-white p-6 sm:p-10 relative overflow-hidden group">
                                             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                                                 <Droplets className="h-24 w-24" />
                                             </div>
                                             <div className="relative z-10 space-y-6">
                                                 <div className="space-y-1">
-                                                    <h4 className="text-xl font-bold tracking-tight uppercase">Flow Plan Tier</h4>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">High-fidelity consumption pricing</p>
+                                                    <h4 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Flow Plan Tier</h4>
+                                                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-60">High-fidelity consumption pricing</p>
                                                 </div>
                                                 <div className="flex items-baseline gap-2">
-                                                    <p className="text-5xl font-black tracking-tighter">₱3.00</p>
-                                                    <p className="text-sm font-bold opacity-60 uppercase">Per Liter</p>
+                                                    <p className="text-5xl sm:text-6xl font-black tracking-tighter">₱3.00</p>
+                                                    <p className="text-xs sm:text-sm font-bold opacity-60 uppercase">Per Liter</p>
                                                 </div>
                                                 <div className="pt-6 border-t border-white/10 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No hidden overhead</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">Real-time analysis</span>
+                                                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">No hidden overhead</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </Card>
 
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Projected monthly consumption (Liters)</Label>
-                                            <Input 
-                                                type="number" 
-                                                value={formData.monthlyLiters} 
-                                                onChange={e => setFormData({...formData, monthlyLiters: Number(e.target.value)})} 
-                                                className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold text-xl text-primary shadow-none" 
-                                            />
-                                            <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2 pt-1">
-                                                <Info className="h-3 w-3" />
-                                                Operational estimate: ₱{(formData.monthlyLiters * 3).toLocaleString()} / mo
-                                            </p>
+                                        <div className="space-y-6">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Included in your activation</h4>
+                                            <div className="grid gap-4">
+                                                {planInclusions.map((item, idx) => (
+                                                    <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:border-primary/20">
+                                                        <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                                                        </div>
+                                                        <span className="text-xs sm:text-sm font-bold text-slate-700">{item}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
 
                                 {step === 4 && (
-                                    <div className="relative pl-6 space-y-12">
+                                    <div className="relative pl-6 space-y-12 py-4">
                                         <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
                                         
                                         <div className="relative z-10 flex items-start gap-6 group">
                                             <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg">1</div>
                                             <div className="space-y-1">
                                                 <p className="text-sm font-bold text-slate-900 tracking-tight">Request received</p>
-                                                <p className="text-xs font-medium text-slate-400">We're setting up your workspace and secure data routing.</p>
+                                                <p className="text-[10px] sm:text-xs font-medium text-slate-400 leading-relaxed">We're setting up your workspace and secure data routing.</p>
                                             </div>
                                         </div>
 
@@ -637,7 +627,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                     <p className="text-sm font-bold text-slate-900 tracking-tight">Verification call</p>
                                                     <Phone className="h-3.5 w-3.5 text-slate-400" />
                                                 </div>
-                                                <p className="text-xs font-medium text-slate-400">A specialist will call to verify your delivery spot and schedule.</p>
+                                                <p className="text-[10px] sm:text-xs font-medium text-slate-400 leading-relaxed">A specialist will call to verify your delivery spot and schedule.</p>
                                             </div>
                                         </div>
 
@@ -648,7 +638,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                     <p className="text-sm font-bold text-slate-900 tracking-tight">Service active</p>
                                                     <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4 uppercase font-bold shadow-none">Priority</Badge>
                                                 </div>
-                                                <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
+                                                <p className="text-[10px] sm:text-xs font-medium text-slate-400 leading-relaxed">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -657,11 +647,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                         </div>
                     </ScrollArea>
 
-                    <DialogFooter className="p-8 bg-slate-50 border-t shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
-                        <div className="flex items-center gap-3">
+                    <DialogFooter className="p-6 sm:p-8 bg-slate-50 border-t shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
+                        <div className="hidden sm:flex items-center gap-3">
                             <div className={cn("h-1.5 w-1.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
                             <div className={cn("h-1.5 w-1.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-2">Phase {step} of {STEPS.length - 1}</span>
+                            <div className={cn("h-1.5 w-1.5 rounded-full", step >= 2 ? "bg-primary" : "bg-slate-200")} />
                         </div>
 
                         <div className="flex items-center gap-3 w-full sm:w-auto">

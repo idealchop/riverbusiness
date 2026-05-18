@@ -704,7 +704,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
    </div>
 );
 
-const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }: any) => (
+const TopUpsTab = ({ topUpRequestsData, dispatch, handleViewInvoice }: any) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
            <div>
@@ -728,8 +728,8 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }: any) => (
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {topUpRequests && topUpRequests.length > 0 ? (
-                        topUpRequests.map((req: any) => {
+                    {topUpRequestsData && topUpRequestsData.length > 0 ? (
+                        topUpRequestsData.map((req: any) => {
                             const asPayment: Payment = {
                                 id: req.id,
                                 date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
@@ -912,7 +912,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     estimatedCost += equipmentCostForPeriod;
 
     if (user.plan?.isConsumptionBased) {
-        // Sum amount from delivery records (handles admin pricing updates)
         const consumptionCost = deliveriesThisCycle.reduce((acc, d) => {
             return acc + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * (user.plan?.price || 0));
         }, 0);
@@ -985,7 +984,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
         
         if (user.plan?.isConsumptionBased) {
-            // Prioritize stored 'amount' field which accounts for admin pricing overrides/sync
             consumptionCost = deliveriesInPeriod.reduce((acc, d) => {
                 return acc + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * (user.plan?.price || 0));
             }, 0);
@@ -1590,7 +1588,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">
                     <TopUpsTab
-                      topUpRequests={topUpRequestsData}
+                      topUpRequestsData={topUpRequestsData}
                       dispatch={dispatch}
                       handleViewInvoice={handleViewInvoice}
                     />
