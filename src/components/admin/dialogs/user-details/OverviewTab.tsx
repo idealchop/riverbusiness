@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +29,9 @@ import {
     Hourglass, 
     Phone, 
     Shield, 
-    Check 
+    Check,
+    Save,
+    Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -89,6 +91,14 @@ export function OverviewTab({
     const [newNotifEmail, setNewNotifEmail] = useState('');
     const [isUpdatingEmails, setIsUpdatingEmails] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [localPrice, setLocalPrice] = useState(user.plan?.price?.toString() || '0');
+    const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
+
+    useEffect(() => {
+        if (user.plan?.price !== undefined) {
+            setLocalPrice(user.plan.price.toString());
+        }
+    }, [user.plan?.price]);
 
     const planDetails = user.customPlanDetails || {};
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
@@ -101,6 +111,22 @@ export function OverviewTab({
 
     const showWorkflow = user.subscriptionStatus !== 'activated';
 
+    const handleUpdatePrice = async () => {
+        const priceNum = parseFloat(localPrice);
+        if (isNaN(priceNum) || !firestore) return;
+        
+        setIsUpdatingPrice(true);
+        try {
+            const userRef = doc(firestore, 'users', user.id);
+            await updateDoc(userRef, { 'plan.price': priceNum });
+            toast({ title: 'Price updated', description: `The rate has been adjusted to ₱${priceNum.toFixed(2)}.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Update failed' });
+        } finally {
+            setIsUpdatingPrice(false);
+        }
+    };
+
     const handleUpdateSubStatus = async (status: AppUser['subscriptionStatus']) => {
         if (!firestore) return;
         setIsUpdatingStatus(true);
@@ -111,9 +137,9 @@ export function OverviewTab({
                 updates.onboardingComplete = true;
             }
             await updateDoc(userRef, updates);
-            toast({ title: 'Protocol Updated', description: `Client moved to ${status?.replace('_', ' ')} phase.` });
+            toast({ title: 'Protocol updated', description: `Client moved to ${status?.replace('_', ' ')} phase.` });
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Update Failed' });
+            toast({ variant: 'destructive', title: 'Update failed' });
         } finally {
             setIsUpdatingStatus(false);
         }
@@ -121,7 +147,7 @@ export function OverviewTab({
 
     const handleAddNotifEmail = async () => {
         if (!newNotifEmail || !newNotifEmail.includes('@') || !firestore) {
-            toast({ variant: 'destructive', title: 'Invalid Email' });
+            toast({ variant: 'destructive', title: 'Invalid email' });
             return;
         }
         setIsUpdatingEmails(true);
@@ -129,9 +155,9 @@ export function OverviewTab({
             const userRef = doc(firestore, 'users', user.id);
             await updateDoc(userRef, { notificationEmails: arrayUnion(newNotifEmail.trim().toLowerCase()) });
             setNewNotifEmail('');
-            toast({ title: 'Recipient Added' });
+            toast({ title: 'Recipient added' });
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Update Failed' });
+            toast({ variant: 'destructive', title: 'Update failed' });
         } finally {
             setIsUpdatingEmails(false);
         }
@@ -143,15 +169,14 @@ export function OverviewTab({
         try {
             const userRef = doc(firestore, 'users', user.id);
             await updateDoc(userRef, { notificationEmails: arrayRemove(email) });
-            toast({ title: 'Recipient Removed' });
+            toast({ title: 'Recipient removed' });
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Update Failed' });
+            toast({ variant: 'destructive', title: 'Update failed' });
         } finally {
             setIsUpdatingEmails(false);
         }
     };
 
-    // Card Components for re-ordering
     const identityCard = (
         <Card key="identity" className="border-none shadow-sm bg-muted/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -401,6 +426,34 @@ export function OverviewTab({
                     <p className="font-bold text-sm mt-1">{user.plan?.name || 'Manual Plan Selection Required'}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{user.plan?.isConsumptionBased ? 'Consumption-based pricing' : 'Set monthly allocation'}</p>
                 </div>
+                
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {user.plan?.isConsumptionBased ? 'Rate per Liter (PHP)' : 'Monthly Subscription (PHP)'}
+                    </Label>
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₱</span>
+                            <Input 
+                                type="number" 
+                                step="0.01" 
+                                value={localPrice} 
+                                onChange={(e) => setLocalPrice(e.target.value)}
+                                className="pl-7 h-9 text-sm font-bold"
+                                disabled={isUpdatingPrice}
+                            />
+                        </div>
+                        <Button 
+                            size="sm" 
+                            className="h-9 px-3 shrink-0" 
+                            onClick={handleUpdatePrice}
+                            disabled={isUpdatingPrice || parseFloat(localPrice) === user.plan?.price}
+                        >
+                            {isUpdatingPrice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                        </Button>
+                    </div>
+                </div>
+
                 <div className="space-y-2 pt-1">
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assigned Fulfillment Station</Label>
                     <Select onValueChange={onAssignStation} defaultValue={user.assignedWaterStationId}>
@@ -533,7 +586,6 @@ export function OverviewTab({
         <div className="relative px-8">
             <Carousel className="w-full">
                 <CarouselContent>
-                    {/* Item 1: Profile + [Workflow OR Activity] */}
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {identityCard}
@@ -541,7 +593,6 @@ export function OverviewTab({
                         </div>
                     </CarouselItem>
 
-                    {/* Item 2: [Activity OR Logistics] + [Logistics OR Plan] */}
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {showWorkflow ? activityLogCard : logisticsCard}
@@ -549,7 +600,6 @@ export function OverviewTab({
                         </div>
                     </CarouselItem>
 
-                    {/* Item 3: [Plan OR Recipients] + [Recipients OR Contract] */}
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             {showWorkflow ? planCard : recipientsCard}
@@ -557,7 +607,6 @@ export function OverviewTab({
                         </div>
                     </CarouselItem>
 
-                    {/* Item 4: [Contract] (Only if Workflow was shown, pushing everything back) */}
                     {showWorkflow && (
                         <CarouselItem>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
