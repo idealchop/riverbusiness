@@ -35,7 +35,8 @@ import {
   CheckCircle,
   Zap,
   Lock,
-  Phone
+  Phone,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +49,13 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Logo } from '@/components/icons';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 
 interface SubscriptionOnboardingDialogProps {
   isOpen: boolean;
@@ -66,12 +74,12 @@ const STEPS = [
 const valueProps = [
   {
     icon: ShieldCheck,
-    title: "Professional-grade Hydration",
+    title: "Professional-grade hydration",
     description: "Standardized drinking water monitored 24/7 with strict laboratory compliance."
   },
   {
     icon: Smartphone,
-    title: "Autonomous Fulfillment Logic",
+    title: "Autonomous fulfillment logic",
     description: "End-to-end digital scheduling and hassle-free, automated in-app invoicing."
   },
   {
@@ -81,12 +89,12 @@ const valueProps = [
   },
   {
     icon: Package,
-    title: "Infrastructure Provisioning",
+    title: "Infrastructure provisioning",
     description: "Authorized use of premium hot and cold dispensers and high-fidelity containers."
   },
   {
     icon: Headset,
-    title: "Executive Support Access",
+    title: "Executive support access",
     description: "Dedicated quality officers available around the clock to support your organization."
   }
 ];
@@ -109,6 +117,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
     latitude: 0 as number | null,
     longitude: 0 as number | null,
     teamSize: 20,
+    estimatedWeeklyVolumeRange: '20-50',
     estimatedDispensers: 2,
     monthlyLiters: 400,
     preferredDay: 'Monday',
@@ -155,13 +164,13 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 longitude: pos.coords.longitude
             }));
             setIsLocating(false);
-            toast({ title: 'Coordinates Captured', description: 'Precise delivery anchor has been set.' });
+            toast({ title: 'Coordinates captured', description: 'Precise delivery anchor has been set.' });
         },
         (err) => {
             setIsLocating(false);
             toast({ 
                 variant: 'destructive', 
-                title: 'Access Denied', 
+                title: 'Access denied', 
                 description: 'Please enable location permissions in your browser to pin your office.' 
             });
         },
@@ -193,13 +202,14 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             updatedAt: serverTimestamp(),
             'customPlanDetails.deliveryDay': formData.preferredDay,
             'customPlanDetails.autoRefillEnabled': true,
-            'customPlanDetails.dispenserQuantity': formData.estimatedDispensers
+            'customPlanDetails.dispenserQuantity': formData.estimatedDispensers,
+            'customPlanDetails.weeklyVolumeRange': formData.estimatedWeeklyVolumeRange
         });
 
-        toast({ title: "Activation Initiated", description: "Your setup request has been received by our administration." });
+        toast({ title: "Activation initiated", description: "Your setup request has been received by our administration." });
         setStep(0);
     } catch (error) {
-        toast({ variant: 'destructive', title: "System Error", description: "Could not initialize activation." });
+        toast({ variant: 'destructive', title: "System error", description: "Could not initialize activation." });
     } finally {
         setIsSubmitting(false);
     }
@@ -212,18 +222,14 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
       return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
-                <DialogHeader className="sr-only">
-                    <DialogTitle>Subscription Approval Tracker</DialogTitle>
-                    <DialogDescription>Track the progress of your Smart Refill activation.</DialogDescription>
-                </DialogHeader>
                 <div className="p-8 space-y-8">
                     <div className="flex items-center gap-4">
                         <div className="p-3 rounded-2xl bg-primary/10 text-primary">
                             <Hourglass className="h-6 w-6 animate-pulse" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black tracking-tight text-slate-900">Activation Status</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">REF: {user?.id.substring(0,8).toUpperCase()}</p>
+                            <h3 className="text-xl font-bold tracking-tight text-slate-900">Activation status</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Ref: {user?.id.substring(0,8).toUpperCase()}</p>
                         </div>
                     </div>
 
@@ -241,7 +247,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 <CheckCircle className="h-3 w-3" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-900 tracking-tight">1. Activation Received</p>
+                                <p className="text-sm font-bold text-slate-900 tracking-tight">1. Activation received</p>
                                 <p className="text-[10px] font-medium text-slate-400">Digital footprint established and isolate data routing active.</p>
                             </div>
                         </div>
@@ -257,7 +263,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {user?.subscriptionStatus === 'discovery_call' ? <Zap className="h-3 w-3 animate-pulse" /> : <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />}
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-900 tracking-tight">2. Discovery Call</p>
+                                <p className="text-sm font-bold text-slate-900 tracking-tight">2. Discovery call</p>
                                 <p className="text-[10px] font-medium text-slate-400">Logistics prerequisite verification and protocol sync.</p>
                             </div>
                         </div>
@@ -267,7 +273,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 <Lock className="h-3 w-3 text-slate-400" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-900 tracking-tight">3. Water Refill Activated</p>
+                                <p className="text-sm font-bold text-slate-900 tracking-tight">3. Water refill activated</p>
                                 <p className="text-[10px] font-medium text-slate-400">Authorized replenishment cycles initiated.</p>
                             </div>
                         </div>
@@ -282,7 +288,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 </div>
                 <DialogFooter className="p-6 bg-slate-50 border-t">
                     <DialogClose asChild>
-                        <Button variant="outline" className="w-full rounded-xl h-12 font-black tracking-widest text-[10px] shadow-sm bg-white uppercase">Close Tracker</Button>
+                        <Button variant="outline" className="w-full rounded-xl h-12 font-bold tracking-widest text-[10px] shadow-sm bg-white uppercase">Close tracker</Button>
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>
@@ -339,14 +345,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             {isIntroStep ? (
                 /* Step 0: Value Proposition (No Plan View) */
                 <div className="flex flex-col md:flex-row min-h-[600px] animate-in fade-in duration-500">
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>Smart Refill Overview</DialogTitle>
-                        <DialogDescription>Analyze the advantages of standardized water management.</DialogDescription>
-                    </DialogHeader>
                     <div className="flex-1 p-8 md:p-14 space-y-12">
                         <div className="space-y-4">
                             <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
-                                Unlock Intelligent <br/><span className="text-primary">Hydration Infrastructure.</span>
+                                Unlock intelligent <br/><span className="text-primary">hydration infrastructure.</span>
                             </h2>
                             <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
                                 Join a professional network of high-fidelity operations utilizing premium resources for the workforce.
@@ -375,9 +377,9 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                             </DialogClose>
                             <Button 
                                 onClick={nextStep}
-                                className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
+                                className="rounded-xl h-12 px-12 font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
                             >
-                                Activate Membership <ArrowRight className="ml-2 h-4 w-4" />
+                                Activate membership <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>
@@ -394,7 +396,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         <MapPin className="h-6 w-6 text-primary" />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-xs font-bold text-white uppercase tracking-tight">Logistics Hub</p>
+                                        <p className="text-xs font-bold text-white tracking-tight">Logistics Hub</p>
                                         <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Network Search</p>
                                     </div>
                                 </div>
@@ -405,7 +407,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
-                                            Interface Pending
+                                            Interface pending
                                         </p>
                                         <p className="text-[10px] font-bold text-white/30 leading-relaxed max-w-[160px] mx-auto">
                                             Automated station discovery protocol is initializing.
@@ -414,7 +416,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 </div>
 
                                 <Button className="w-full h-12 rounded-2xl bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs border-none shadow-xl transition-all active:scale-95 uppercase tracking-wide">
-                                    Analyze Nearby Stations <ChevronRight className="ml-1 h-4 w-4" />
+                                    Analyze nearby stations <ChevronRight className="ml-1 h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
@@ -426,10 +428,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 <>
                     <header className="p-8 md:p-12 pb-6 flex items-center justify-between border-b border-slate-50 shrink-0">
                         <div className="space-y-1">
-                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest text-primary border-primary/20 mb-2">
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-primary border-primary/20 mb-2">
                                 Configuration Phase {step} of {STEPS.length - 1}
                             </Badge>
-                            <DialogTitle className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
+                            <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
                                 {STEPS[step].title}
                             </DialogTitle>
                         </div>
@@ -448,24 +450,24 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business Entity Name</Label>
-                                                <Input value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
+                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Business entity name</Label>
+                                                <Input value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Authorized Representative</Label>
-                                                <Input value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
+                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Authorized representative</Label>
+                                                <Input value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
                                             </div>
                                             <div className="sm:col-span-2 space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Primary Service Address</Label>
+                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Primary service address</Label>
                                                 <div className="relative group">
-                                                    <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12" placeholder="Street, Building, Floor..." />
+                                                    <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12 shadow-none" placeholder="Street, Building, Floor..." />
                                                     <button 
                                                         type="button"
                                                         onClick={handleCaptureLocation}
                                                         disabled={isLocating}
                                                         className={cn(
-                                                            "absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center transition-all",
-                                                            formData.latitude ? "bg-primary text-white" : "bg-white text-slate-400 hover:text-primary hover:bg-primary/5"
+                                                            "absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center transition-all shadow-sm",
+                                                            formData.latitude ? "bg-primary text-white" : "bg-white text-slate-400 hover:text-primary hover:bg-primary/5 border"
                                                         )}
                                                         title="Pin point exact location"
                                                     >
@@ -473,19 +475,19 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                     </button>
                                                 </div>
                                                 {formData.latitude && (
-                                                    <p className="text-[9px] font-bold text-green-600 uppercase tracking-widest flex items-center gap-1.5 mt-1 animate-in fade-in">
+                                                    <p className="text-[10px] font-bold text-green-600 flex items-center gap-1.5 mt-1 animate-in fade-in">
                                                         <CheckCircle2 className="h-3 w-3" />
-                                                        Precision Anchor Set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                                                        Precision anchor set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
                                                     </p>
                                                 )}
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business Contact Number</Label>
-                                                <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
+                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Business contact number</Label>
+                                                <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Active System Identity</Label>
-                                                <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4" />
+                                                <Label className="text-xs font-semibold text-slate-500 ml-1">Verified account identity</Label>
+                                                <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4 opacity-70" />
                                             </div>
                                         </div>
                                     </div>
@@ -504,14 +506,14 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Users className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Team Size</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Active Directory Count</p>
+                                                            <p className="text-sm font-bold text-slate-900 leading-none">Workforce count</p>
+                                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Total active employees</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
-                                                        <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">-</button>
-                                                        <span className="text-2xl font-black tabular-nums w-12 text-center">{formData.teamSize}</span>
-                                                        <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">+</button>
+                                                        <button onClick={() => updateTeamSize(Math.max(1, formData.teamSize - 1))} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
+                                                        <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.teamSize}</span>
+                                                        <button onClick={() => updateTeamSize(formData.teamSize + 1)} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
                                                     </div>
                                                 </div>
                                                 
@@ -523,15 +525,26 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Droplets className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Estimated Volume</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Based on Team Size</p>
+                                                            <p className="text-sm font-bold text-slate-900 leading-none">Consumption volume</p>
+                                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Projected weekly replenishment</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-2xl font-black text-primary tabular-nums leading-none">
-                                                            {formData.monthlyLiters} <span className="text-xs uppercase">L</span>
-                                                        </p>
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Liters per Month</p>
+                                                    <div className="w-32">
+                                                        <Select 
+                                                            value={formData.estimatedWeeklyVolumeRange} 
+                                                            onValueChange={(val) => setFormData({...formData, estimatedWeeklyVolumeRange: val})}
+                                                        >
+                                                            <SelectTrigger className="h-10 rounded-xl bg-white border-slate-100 shadow-sm font-bold text-xs">
+                                                                <SelectValue placeholder="Select" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="rounded-xl">
+                                                                <SelectItem value="10-20">10-20 units</SelectItem>
+                                                                <SelectItem value="20-50">20-50 units</SelectItem>
+                                                                <SelectItem value="50-100">50-100 units</SelectItem>
+                                                                <SelectItem value="100-200">100-200 units</SelectItem>
+                                                                <SelectItem value="300+">300+ more</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                 </div>
 
@@ -543,15 +556,23 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Package className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Infrastructure Nodes</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensers Required</p>
+                                                            <p className="text-sm font-bold text-slate-900 leading-none">Equipment deployment</p>
+                                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Planned dispensers</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
-                                                        <button onClick={() => setFormData({...formData, estimatedDispensers: Math.max(1, formData.estimatedDispensers - 1)})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">-</button>
-                                                        <span className="text-2xl font-black tabular-nums w-12 text-center">{formData.estimatedDispensers}</span>
-                                                        <button onClick={() => setFormData({...formData, estimatedDispensers: formData.estimatedDispensers + 1})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black shadow-sm">+</button>
+                                                        <button onClick={() => setFormData({...formData, estimatedDispensers: Math.max(1, formData.estimatedDispensers - 1)})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">-</button>
+                                                        <span className="text-2xl font-bold tabular-nums w-12 text-center">{formData.estimatedDispensers}</span>
+                                                        <button onClick={() => setFormData({...formData, estimatedDispensers: formData.estimatedDispensers + 1})} className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition-colors">+</button>
                                                     </div>
+                                                </div>
+
+                                                <Separator className="bg-slate-200/50" />
+                                                <div className="flex items-center gap-2 pt-2 px-1 opacity-60">
+                                                    <ShieldCheck className="h-3 w-3 text-green-600" />
+                                                    <p className="text-[10px] font-bold text-slate-500">
+                                                        Security active <span className="mx-1 text-slate-300 font-normal">|</span> System identity verified via protocol
+                                                    </p>
                                                 </div>
                                             </Card>
                                         </div>
@@ -570,8 +591,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             </div>
                                             <div className="relative z-10 space-y-6">
                                                 <div className="space-y-1">
-                                                    <h4 className="text-xl font-black tracking-tight uppercase">Flow Plan Tier</h4>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">High-Fidelity Consumption Pricing</p>
+                                                    <h4 className="text-xl font-bold tracking-tight uppercase">Flow Plan Tier</h4>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">High-fidelity consumption pricing</p>
                                                 </div>
                                                 <div className="flex items-baseline gap-2">
                                                     <p className="text-5xl font-black tracking-tighter">₱3.00</p>
@@ -580,23 +601,23 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="pt-6 border-t border-white/10 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No Hidden Overhead</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No hidden overhead</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">Real-time Analysis</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest">Real-time analysis</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </Card>
 
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Projected Monthly Consumption (Liters)</Label>
+                                            <Label className="text-xs font-semibold text-slate-500 ml-1">Projected monthly consumption (Liters)</Label>
                                             <Input 
                                                 type="number" 
                                                 value={formData.monthlyLiters} 
                                                 onChange={e => setFormData({...formData, monthlyLiters: Number(e.target.value)})} 
-                                                className="h-12 rounded-xl bg-slate-50 border-slate-100 font-black text-xl text-primary" 
+                                                className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold text-xl text-primary shadow-none" 
                                             />
                                             <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2 pt-1">
                                                 <Info className="h-3 w-3" />
@@ -616,18 +637,18 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
                                             
                                             <div className="relative z-10 flex items-start gap-6 group">
-                                                <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg">1</div>
+                                                <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg">1</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 tracking-tight">Activation Received</p>
+                                                    <p className="text-sm font-bold text-slate-900 tracking-tight">Activation received</p>
                                                     <p className="text-xs font-medium text-slate-400">Digital footprint established and secure data routing active.</p>
                                                 </div>
                                             </div>
 
                                             <div className="relative z-10 flex items-start gap-6 group">
-                                                <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
+                                                <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 tracking-tight">Discovery Call</p>
+                                                        <p className="text-sm font-bold text-slate-900 tracking-tight">Discovery call</p>
                                                         <Phone className="h-3.5 w-3.5 text-slate-400" />
                                                     </div>
                                                     <p className="text-xs font-medium text-slate-400">Logistics prerequisite verification and protocol sync via authorized officer.</p>
@@ -635,11 +656,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             </div>
 
                                             <div className="relative z-10 flex items-start gap-6 group">
-                                                <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
+                                                <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 tracking-tight">Water Refill Activated</p>
-                                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4 uppercase">Priority</Badge>
+                                                        <p className="text-sm font-bold text-slate-900 tracking-tight">Water refill activated</p>
+                                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4 uppercase font-bold shadow-none">Priority</Badge>
                                                     </div>
                                                     <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
                                                 </div>
@@ -651,31 +672,31 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                         </div>
                     </ScrollArea>
 
-                    <DialogFooter className="p-8 bg-slate-50/50 border-t shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <DialogFooter className="p-8 bg-slate-50 border-t shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
                         <div className="flex items-center gap-3">
-                            <div className={cn("h-2.5 w-2.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
-                            <div className={cn("h-2.5 w-2.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step} of {STEPS.length - 1}</span>
+                            <div className={cn("h-1.5 w-1.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
+                            <div className={cn("h-1.5 w-1.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-2">Phase {step} of {STEPS.length - 1}</span>
                         </div>
 
                         <div className="flex items-center gap-3 w-full sm:w-auto">
                             {step < STEPS.length - 1 ? (
                                 <>
-                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest">
+                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest">
                                         <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                                     </Button>
-                                    <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
-                                        Next Phase <ChevronRight className="ml-2 h-4 w-4" />
+                                    <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-11 px-10 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10">
+                                        Next phase <ChevronRight className="ml-2 h-4 w-4" />
                                     </Button>
                                 </>
                             ) : (
                                 <>
-                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest">
+                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest">
                                         <ChevronLeft className="mr-2 h-4 w-4" /> Back
                                     </Button>
-                                    <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90">
+                                    <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-11 px-14 font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90">
                                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                                        {isSubmitting ? 'Synchronizing...' : 'Authorize Setup'}
+                                        {isSubmitting ? 'Synchronizing...' : 'Authorize setup'}
                                     </Button>
                                 </>
                             )}
