@@ -191,7 +191,7 @@ export function OverviewTab({
                                 </CardContent>
                             </Card>
 
-                            {/* Subscription Workflow Controller (New) */}
+                            {/* Subscription Workflow Controller */}
                             <Card className="flex flex-col border-none shadow-sm bg-slate-900 text-white overflow-hidden relative">
                                 <CardHeader className="pb-4">
                                     <div className="flex items-center justify-between">
@@ -262,7 +262,7 @@ export function OverviewTab({
                             {/* Monthly Snapshot Card */}
                             <Card className="flex flex-col border-none shadow-sm bg-gradient-to-br from-blue-50 to-white">
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">This Month's Activity</CardTitle Terminology: "Monthly Activity Log"
+                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Monthly Activity Log</CardTitle>
                                     <CardDescription className="text-xs">Live usage and estimated overhead.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6 flex-1">
@@ -398,7 +398,7 @@ export function OverviewTab({
                                             <Mail className="h-4 w-4 text-primary" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Automated Notifications</CardTitle> Terminology: "Automation Recipients"
+                                            <CardTitle className="text-sm font-bold uppercase tracking-wider">Automation Recipients</CardTitle>
                                             <CardDescription className="text-xs">Recipients for billing and delivery alerts.</CardDescription>
                                         </div>
                                     </div>
