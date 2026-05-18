@@ -86,7 +86,10 @@ import {
     Check,
     ChevronDown,
     Loader2,
-    ArrowUp
+    ArrowUp,
+    Map,
+    ListTodo,
+    Compass
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -141,52 +144,84 @@ const PEN_COLORS = [
 
 const BLUEPRINTS = [
     {
+        id: 'bp-kanban',
+        name: 'Agile Kanban',
+        description: 'Standard 4-column delivery board.',
+        icon: ListTodo,
+        elements: [
+            { id: 'k1', type: 'rect', x: 0, y: 0, width: 220, height: 500, text: 'Backlog', color: '#f8fafc', bold: true, fontSize: 16 },
+            { id: 'k2', type: 'rect', x: 240, y: 0, width: 220, height: 500, text: 'In Progress', color: '#f8fafc', bold: true, fontSize: 16 },
+            { id: 'k3', type: 'rect', x: 480, y: 0, width: 220, height: 500, text: 'Review', color: '#f8fafc', bold: true, fontSize: 16 },
+            { id: 'k4', type: 'rect', x: 720, y: 0, width: 220, height: 500, text: 'Done', color: '#dcfce7', bold: true, fontSize: 16 },
+            { id: 'n1', type: 'note', x: 20, y: 60, width: 180, height: 100, text: 'High Priority Item', color: '#fef08a', bold: true }
+        ],
+        connections: []
+    },
+    {
+        id: 'bp-swot',
+        name: 'SWOT Matrix',
+        description: 'Analyze strengths and weaknesses.',
+        icon: Target,
+        elements: [
+            { id: 's1', type: 'rect', x: 100, y: 50, width: 350, height: 250, text: 'Strengths', color: '#dcfce7', bold: true, fontSize: 18 },
+            { id: 's2', type: 'rect', x: 460, y: 50, width: 350, height: 250, text: 'Weaknesses', color: '#fee2e2', bold: true, fontSize: 18 },
+            { id: 's3', type: 'rect', x: 100, y: 310, width: 350, height: 250, text: 'Opportunities', color: '#dbeafe', bold: true, fontSize: 18 },
+            { id: 's4', type: 'rect', x: 460, y: 310, width: 350, height: 250, text: 'Threats', color: '#ffedd5', bold: true, fontSize: 18 }
+        ],
+        connections: []
+    },
+    {
+        id: 'bp-mindmap',
+        name: 'Strategy Mind Map',
+        description: 'Central concept with branches.',
+        icon: Compass,
+        elements: [
+            { id: 'center', type: 'circle', x: 400, y: 250, width: 160, height: 160, text: 'Core Goal', color: '#3b82f6', fontColor: '#ffffff', bold: true, fontSize: 16 },
+            { id: 'b1', type: 'rect', x: 150, y: 100, width: 140, height: 80, text: 'Market', color: '#ffffff', bold: true },
+            { id: 'b2', type: 'rect', x: 650, y: 100, width: 140, height: 80, text: 'Logistics', color: '#ffffff', bold: true },
+            { id: 'b3', type: 'rect', x: 150, y: 400, width: 140, height: 80, text: 'Growth', color: '#ffffff', bold: true },
+            { id: 'b4', type: 'rect', x: 650, y: 400, width: 140, height: 80, text: 'People', color: '#ffffff', bold: true }
+        ],
+        connections: [
+            { id: 'm1', fromId: 'center', toId: 'b1', type: 'curved' },
+            { id: 'm2', fromId: 'center', toId: 'b2', type: 'curved' },
+            { id: 'm3', fromId: 'center', toId: 'b3', type: 'curved' },
+            { id: 'm4', fromId: 'center', toId: 'b4', type: 'curved' }
+        ]
+    },
+    {
+        id: 'bp-journey',
+        name: 'User Journey',
+        description: 'Map customer experience phases.',
+        icon: Map,
+        elements: [
+            { id: 'j1', type: 'circle', x: 50, y: 200, width: 100, height: 100, text: 'Awareness', color: '#f1f5f9', bold: true },
+            { id: 'j2', type: 'circle', x: 250, y: 200, width: 100, height: 100, text: 'Consideration', color: '#f1f5f9', bold: true },
+            { id: 'j3', type: 'circle', x: 450, y: 200, width: 100, height: 100, text: 'Conversion', color: '#f1f5f9', bold: true },
+            { id: 'j4', type: 'circle', x: 650, y: 200, width: 100, height: 100, text: 'Loyalty', color: '#f1f5f9', bold: true }
+        ],
+        connections: [
+            { id: 'jc1', fromId: 'j1', toId: 'j2', type: 'straight' },
+            { id: 'jc2', fromId: 'j2', toId: 'j3', type: 'straight' },
+            { id: 'jc3', fromId: 'j3', toId: 'j4', type: 'straight' }
+        ]
+    },
+    {
         id: 'bp-workflow',
-        name: 'Standard Workflow',
-        description: 'Linear process from start to finish.',
+        name: 'Logic Flow',
+        description: 'Decision tree for operations.',
         icon: Workflow,
         elements: [
-            { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: '', color: '#f1f5f9', bold: true },
-            { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: '', color: '#ffffff', bold: true },
-            { id: 'decision', type: 'diamond', x: 540, y: 175, width: 150, height: 150, text: '', color: '#f3e8ff', bold: true },
-            { id: 'end', type: 'circle', x: 800, y: 200, width: 100, height: 100, text: '', color: '#f1f5f9', bold: true }
+            { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: 'Start', color: '#f1f5f9', bold: true },
+            { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: 'Task 1', color: '#ffffff', bold: true },
+            { id: 'decision', type: 'diamond', x: 540, y: 175, width: 150, height: 150, text: 'Decision?', color: '#f3e8ff', bold: true },
+            { id: 'end', type: 'circle', x: 800, y: 200, width: 100, height: 100, text: 'End', color: '#f1f5f9', bold: true }
         ],
         connections: [
             { id: 'c1', fromId: 'start', toId: 'step1', type: 'curved' },
             { id: 'c2', fromId: 'step1', toId: 'decision', type: 'curved' },
             { id: 'c3', fromId: 'decision', toId: 'end', type: 'curved' }
         ]
-    },
-    {
-        id: 'bp-roadmap',
-        name: 'Project Roadmap',
-        description: 'Multi-phase strategic milestones.',
-        icon: Trophy,
-        elements: [
-            { id: 'ph1', type: 'circle', x: 50, y: 100, width: 80, height: 80, text: '', color: '#3b82f6', fontColor: '#ffffff', bold: true },
-            { id: 't1', type: 'rect', x: 150, y: 80, width: 200, height: 120, text: '', color: '#ffffff', bold: true },
-            { id: 'ph2', type: 'circle', x: 400, y: 100, width: 80, height: 80, text: '', color: '#3b82f6', fontColor: '#ffffff', bold: true },
-            { id: 't2', type: 'rect', x: 500, y: 80, width: 200, height: 120, text: '', color: '#ffffff', bold: true },
-            { id: 'ph3', type: 'circle', x: 750, y: 100, width: 80, height: 80, text: '', color: '#3b82f6', fontColor: '#ffffff', bold: true },
-            { id: 't3', type: 'rect', x: 850, y: 80, width: 200, height: 120, text: '', color: '#ffffff', bold: true }
-        ],
-        connections: [
-            { id: 'r1', fromId: 'ph1', toId: 'ph2', type: 'straight' },
-            { id: 'r2', fromId: 'ph2', toId: 'ph3', type: 'straight' }
-        ]
-    },
-    {
-        id: 'bp-priority',
-        name: 'Priority Matrix',
-        description: 'Impact vs Effort prioritization.',
-        icon: Activity,
-        elements: [
-            { id: 'q1', type: 'rect', x: 100, y: 50, width: 400, height: 300, text: '', color: '#dcfce7', bold: true, fontSize: 18 },
-            { id: 'q2', type: 'rect', x: 500, y: 50, width: 400, height: 300, text: '', color: '#dbeafe', bold: true, fontSize: 18 },
-            { id: 'q3', type: 'rect', x: 100, y: 350, width: 400, height: 300, text: '', color: '#f1f5f9', bold: true, fontSize: 18 },
-            { id: 'q4', type: 'rect', x: 500, y: 350, width: 400, height: 300, text: '', color: '#fee2e2', bold: true, fontSize: 18 }
-        ],
-        connections: []
     }
 ];
 
@@ -386,6 +421,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           });
           return next;
       });
+      toast({ title: 'Template applied', description: `${blueprint.name} has been added to your board.` });
   };
 
   const deleteSelected = useCallback(() => {
@@ -401,7 +437,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return next;
       });
       setSelectedIds([]);
-  }, [editable, selectedIds, sync, pushHistory]);
+  }, [editable, selectedIds, sync, pushHistory, elements]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -752,7 +788,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Architecture Blueprints</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Infrastructure Templates</DropdownMenuLabel>
                         <ScrollArea className="h-[400px]">
                             {BLUEPRINTS.map(bp => (
                                 <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
@@ -826,12 +862,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                             <IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} />
                                         </div>
                                     ) : (
-                                        <div 
-                                            className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none"
+                                        <textarea 
+                                            value={el.text}
+                                            placeholder="..."
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setElements(prev => prev.map(item => item.id === el.id ? { ...item, text: val } : item));
+                                                sync(elements, connections);
+                                            }}
+                                            className="w-full h-full bg-transparent border-none focus:ring-0 resize-none p-0 text-center font-bold overflow-hidden leading-tight"
                                             style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}
-                                        >
-                                            {el.text}
-                                        </div>
+                                        />
                                     )}
                                 </div>
                                 {isSelected && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
