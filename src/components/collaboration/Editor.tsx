@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, Node, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
@@ -26,7 +26,6 @@ import {
     Heading2, 
     CheckSquare,
     Link as LinkIcon,
-    Image as ImageIcon,
     Loader2,
     Sparkles,
     Check,
@@ -41,16 +40,14 @@ import {
     AlignCenter,
     AlignRight,
     Grid,
-    Table as TableIcon,
     Plus,
     Trash2,
-    Columns,
-    Rows,
     Underline as UnderlineIcon,
-    Baseline,
     Maximize2,
-    Minimize2,
-    FileUp
+    PlusCircle,
+    Layout,
+    ChevronDown,
+    MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -74,6 +71,90 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { useMounted } from '@/hooks/use-mounted';
+import { SheetEditor } from './SheetEditor';
+import { BoardEditor } from './BoardEditor';
+
+// --- Custom Interactive Blocks ---
+
+const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
+    return (
+        <NodeViewWrapper className="my-10 relative group/block border-y md:border-x border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white">
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Embedded Sheet</Badge>
+                <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    className="h-6 w-6 rounded-full shadow-lg"
+                    onClick={() => deleteNode()}
+                >
+                    <Trash2 className="h-3 w-3" />
+                </Button>
+            </div>
+            <div className="h-[500px]">
+                <SheetEditor 
+                    initialData={node.attrs.data} 
+                    onContentChange={(data) => updateAttributes({ data })}
+                    editable={extension.options.editable}
+                />
+            </div>
+        </NodeViewWrapper>
+    );
+};
+
+const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
+    return (
+        <NodeViewWrapper className="my-10 relative group/block border-y md:border-x border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl bg-white">
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Embedded Canvas</Badge>
+                <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    className="h-6 w-6 rounded-full shadow-lg"
+                    onClick={() => deleteNode()}
+                >
+                    <Trash2 className="h-3 w-3" />
+                </Button>
+            </div>
+            <div className="h-[600px]">
+                <BoardEditor 
+                    initialData={node.attrs.data} 
+                    onContentChange={(data) => updateAttributes({ data })}
+                    editable={extension.options.editable}
+                />
+            </div>
+        </NodeViewWrapper>
+    );
+};
+
+const SpreadsheetExtension = Node.create({
+    name: 'spreadsheet',
+    group: 'block',
+    atom: true,
+    addAttributes() {
+        return {
+            data: { default: { fields: [], records: [], views: [], activeViewId: '' } }
+        };
+    },
+    parseHTML() { return [{ tag: 'div[data-type="spreadsheet"]' }]; },
+    renderHTML({ HTMLAttributes }) { return ['div', { 'data-type': 'spreadsheet', ...HTMLAttributes }]; },
+    addNodeView() { return ReactNodeViewRenderer(SpreadsheetBlock); },
+});
+
+const CanvasExtension = Node.create({
+    name: 'canvas',
+    group: 'block',
+    atom: true,
+    addAttributes() {
+        return {
+            data: { default: { elements: [], connections: [] } }
+        };
+    },
+    parseHTML() { return [{ tag: 'div[data-type="canvas"]' }]; },
+    renderHTML({ HTMLAttributes }) { return ['div', { 'data-type': 'canvas', ...HTMLAttributes }]; },
+    addNodeView() { return ReactNodeViewRenderer(CanvasBlock); },
+});
+
+// --- Main Editor Component ---
 
 interface EditorProps {
   initialContent: any;
@@ -82,19 +163,6 @@ interface EditorProps {
   editable?: boolean;
   companyId?: string;
 }
-
-const COLORS = [
-    { label: 'Default', value: 'inherit' },
-    { label: 'Slate', value: '#64748b' },
-    { label: 'Red', value: '#ef4444' },
-    { label: 'Orange', value: '#f97316' },
-    { label: 'Amber', value: '#f59e0b' },
-    { label: 'Green', value: '#22c55e' },
-    { label: 'Blue', value: '#3b82f6' },
-    { label: 'Indigo', value: '#6366f1' },
-    { label: 'Purple', value: '#a855f7' },
-    { label: 'Pink', value: '#ec4899' },
-];
 
 export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true, companyId }, ref) => {
   const storage = useStorage();
@@ -225,6 +293,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       TableCell,
       TableHeader,
       Highlight.configure({ multicolor: true }),
+      SpreadsheetExtension.configure({ editable }),
+      CanvasExtension.configure({ editable }),
     ],
     content: initialContent,
     editable: editable,
@@ -338,6 +408,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     }
   };
 
+  const handleInsertSpreadsheet = () => {
+    editor.chain().focus().insertContent({ type: 'spreadsheet' }).run();
+  };
+
+  const handleInsertCanvas = () => {
+    editor.chain().focus().insertContent({ type: 'canvas' }).run();
+  };
+
   if (!editor) return null;
 
   return (
@@ -362,6 +440,32 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                           <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} /> Assistant
                       </Button>
                   </div>
+                  
+                  <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
+                  
+                  {/* Insert Menu */}
+                  <div className="flex items-center px-1 shrink-0">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-9 rounded-2xl px-3 gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-100">
+                                <PlusCircle className="h-3.5 w-3.5" /> Insert
+                                <ChevronDown className="h-3 w-3 opacity-30" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Advanced Assets</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={handleInsertSpreadsheet} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-green-50 text-green-600"><Grid className="h-4 w-4" /></div>
+                                Interactive Spreadsheet
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleInsertCanvas} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
+                                Visual Canvas
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
                   <div className="flex items-center gap-1 px-1 shrink-0">
@@ -427,6 +531,31 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           </div>
       )}
 
+      {editable && !editor.isDestroyed && (
+        <FloatingMenu editor={editor} tippyOptions={{ duration: 100 }}>
+          <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-1 animate-in zoom-in-95 duration-200">
+             <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button onClick={handleInsertSpreadsheet} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-all">
+                            <Grid className="h-5 w-5" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="rounded-lg text-[9px] font-black uppercase tracking-widest">Embedded Spreadsheet</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button onClick={handleInsertCanvas} className="h-10 w-10 flex items-center justify-center rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all">
+                            <Layout className="h-5 w-5" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="rounded-lg text-[9px] font-black uppercase tracking-widest">Visual Canvas</TooltipContent>
+                </Tooltip>
+             </TooltipProvider>
+          </div>
+        </FloatingMenu>
+      )}
+
       <div className={cn("transition-opacity", (isAiProcessing && editor.isEmpty) ? "opacity-20" : "opacity-100")} onClick={() => editor?.commands.focus()}>
         <EditorContent editor={editor} />
       </div>
@@ -457,5 +586,13 @@ function AiAction({ icon, label, onClick }: any) {
         <Button variant="ghost" size="sm" onClick={onClick} className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all shrink-0 whitespace-nowrap">
             {icon} {label}
         </Button>
+    );
+}
+
+function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+    return (
+        <div className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", className)}>
+            {children}
+        </div>
     );
 }
