@@ -18,25 +18,20 @@ import {
   ChevronLeft, 
   Building, 
   Users, 
-  CreditCard, 
   CheckCircle2, 
   Droplets, 
-  Calendar,
   ArrowRight,
   ShieldCheck,
   Package,
   Clock,
-  Sparkles,
   MapPin,
   Globe,
   Headset,
   Smartphone,
   Wrench,
   Info,
-  Mail,
   Loader2,
   Hourglass,
-  History,
   CheckCircle,
   Zap,
   Lock,
@@ -52,6 +47,7 @@ import { useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Logo } from '@/components/icons';
 
 interface SubscriptionOnboardingDialogProps {
   isOpen: boolean;
@@ -61,37 +57,37 @@ interface SubscriptionOnboardingDialogProps {
 
 const STEPS = [
   { id: 'overview', title: 'Smart Refill', icon: ShieldCheck },
-  { id: 'profile', title: 'Corporate Identity', icon: Building },
+  { id: 'profile', title: 'Account', icon: Building },
   { id: 'team', title: 'Team Size', icon: Users },
-  { id: 'plan', title: 'Hydration Tier', icon: Droplets },
-  { id: 'timeline', title: 'Service Activation', icon: Clock }
+  { id: 'plan', title: 'Pricing', icon: Droplets },
+  { id: 'timeline', title: 'Activation', icon: Clock }
 ];
 
 const valueProps = [
   {
     icon: ShieldCheck,
-    title: "Professional-Grade Hydration",
-    description: "Standardized drinking water monitored 24/7 with strict laboratory compliance."
+    title: "professional-grade hydration",
+    description: "standardized drinking water monitored 24/7 with strict laboratory compliance."
   },
   {
     icon: Smartphone,
-    title: "Autonomous Fulfillment Logic",
-    description: "End-to-end digital scheduling and hassle-free, automated in-app invoicing."
+    title: "autonomous fulfillment logic",
+    description: "end-to-end digital scheduling and hassle-free, automated in-app invoicing."
   },
   {
     icon: Wrench,
-    title: "Regular Maintanance",
-    description: "Scheduled professional cleaning of your dispensers and containers is included."
+    title: "regular maintanance",
+    description: "scheduled professional cleaning of your dispensers and containers is included."
   },
   {
     icon: Package,
-    title: "Infrastructure Provisioning",
-    description: "Authorized use of premium hot and cold dispensers and high-fidelity containers."
+    title: "infrastructure provisioning",
+    description: "authorized use of premium hot and cold dispensers and high-fidelity containers."
   },
   {
     icon: Headset,
-    title: "Executive Support Access",
-    description: "Dedicated quality officers available around the clock to support your organization."
+    title: "executive support access",
+    description: "dedicated quality officers available around the clock to support your organization."
   }
 ];
 
@@ -146,7 +142,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
   const handleCaptureLocation = () => {
     if (!navigator.geolocation) {
-        toast({ variant: 'destructive', title: 'GPS unavailable', description: 'Your browser does not support geolocation.' });
+        toast({ variant: 'destructive', title: 'gps unavailable', description: 'your browser does not support geolocation.' });
         return;
     }
 
@@ -159,14 +155,14 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 longitude: pos.coords.longitude
             }));
             setIsLocating(false);
-            toast({ title: 'Coordinates Captured', description: 'Precise delivery anchor has been set.' });
+            toast({ title: 'coordinates captured', description: 'precise delivery anchor has been set.' });
         },
         (err) => {
             setIsLocating(false);
             toast({ 
                 variant: 'destructive', 
-                title: 'Access Denied', 
-                description: 'Please enable location permissions in your browser to pin your office.' 
+                title: 'access denied', 
+                description: 'please enable location permissions in your browser to pin your office.' 
             });
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -200,10 +196,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             'customPlanDetails.dispenserQuantity': formData.estimatedDispensers
         });
 
-        toast({ title: "Activation Initiated", description: "Your setup request has been received by our administration." });
+        toast({ title: "activation initiated", description: "your setup request has been received by our administration." });
         setStep(0);
     } catch (error) {
-        toast({ variant: 'destructive', title: "System Error", description: "Could not initialize activation." });
+        toast({ variant: 'destructive', title: "system error", description: "could not initialize activation." });
     } finally {
         setIsSubmitting(false);
     }
@@ -217,8 +213,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden bg-white">
                 <DialogHeader className="sr-only">
-                    <DialogTitle>Subscription Approval Tracker</DialogTitle>
-                    <DialogDescription>Track the progress of your Smart Refill activation.</DialogDescription>
+                    <DialogTitle>subscription approval tracker</DialogTitle>
+                    <DialogDescription>track the progress of your smart refill activation.</DialogDescription>
                 </DialogHeader>
                 <div className="p-8 space-y-8">
                     <div className="flex items-center gap-4">
@@ -226,15 +222,14 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                             <Hourglass className="h-6 w-6 animate-pulse" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">Activation Status</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Ref: {user?.id.substring(0,8).toUpperCase()}</p>
+                            <h3 className="text-xl font-black tracking-tight text-slate-900 lowercase">activation status</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">ref: {user?.id.substring(0,8).toUpperCase()}</p>
                         </div>
                     </div>
 
                     <div className="relative pl-6 space-y-12">
                         <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
                         
-                        {/* Step 1: Activation Receive */}
                         <div className={cn(
                             "relative z-10 flex items-start gap-6 transition-all duration-500",
                             user?.subscriptionStatus === 'pending_activation' || user?.subscriptionStatus === 'discovery_call' ? "opacity-100" : "opacity-30"
@@ -246,12 +241,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 <CheckCircle className="h-3 w-3" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">1. Activation Receive</p>
-                                <p className="text-[10px] font-medium text-slate-400">Digital footprint established and isolate data routing active.</p>
+                                <p className="text-sm font-black text-slate-900 lowercase tracking-tight">1. activation receive</p>
+                                <p className="text-[10px] font-medium text-slate-400">digital footprint established and isolate data routing active.</p>
                             </div>
                         </div>
 
-                        {/* Step 2: Discovery Call */}
                         <div className={cn(
                             "relative z-10 flex items-start gap-6 transition-all duration-500",
                             user?.subscriptionStatus === 'discovery_call' ? "opacity-100" : "opacity-30"
@@ -263,33 +257,32 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                 {user?.subscriptionStatus === 'discovery_call' ? <Zap className="h-3 w-3 animate-pulse" /> : <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />}
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">2. Discovery Call</p>
-                                <p className="text-[10px] font-medium text-slate-400">Logistics prerequisite verification and protocol sync.</p>
+                                <p className="text-sm font-black text-slate-900 lowercase tracking-tight">2. discovery call</p>
+                                <p className="text-[10px] font-medium text-slate-400">logistics prerequisite verification and protocol sync.</p>
                             </div>
                         </div>
 
-                        {/* Step 3: Water Refill Activated */}
                         <div className="relative z-10 flex items-start gap-6 opacity-30">
                             <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center ring-4 ring-white shadow-lg">
                                 <Lock className="h-3 w-3 text-slate-400" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">3. Water Refill Activated</p>
-                                <p className="text-[10px] font-medium text-slate-400">Authorized replenishment cycles initiated.</p>
+                                <p className="text-sm font-black text-slate-900 lowercase tracking-tight">3. water refill activated</p>
+                                <p className="text-[10px] font-medium text-slate-400">authorized replenishment cycles initiated.</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-4">
                         <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <p className="text-[10px] font-bold text-blue-900 leading-relaxed uppercase tracking-tight">
-                            Our administration team is currently processing your setup. You will receive an automated broadcast once the next phase is authorized.
+                        <p className="text-[10px] font-bold text-blue-900 leading-relaxed lowercase tracking-tight">
+                            our administration team is currently processing your setup. you will receive an automated broadcast once the next phase is authorized.
                         </p>
                     </div>
                 </div>
                 <DialogFooter className="p-6 bg-slate-50 border-t">
                     <DialogClose asChild>
-                        <Button variant="outline" className="w-full rounded-xl h-12 font-black uppercase tracking-widest text-[10px] shadow-sm bg-white">Close Tracker</Button>
+                        <Button variant="outline" className="w-full rounded-xl h-12 font-black lowercase tracking-widest text-[10px] shadow-sm bg-white">close tracker</Button>
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>
@@ -308,10 +301,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
           {!isIntroStep && (
             <div className="hidden md:flex w-64 bg-slate-900 p-10 flex-col shrink-0 animate-in slide-in-from-left duration-500">
                <div className="flex items-center gap-3 mb-12">
-                  <div className="p-2 rounded-xl bg-white/10">
-                      <ShieldCheck className="h-5 w-5 text-primary-light" />
+                  <Logo className="h-10 w-10" />
+                  <div className="flex flex-col">
+                      <span className="font-black text-xs uppercase tracking-[0.2em] text-white leading-tight">Water</span>
+                      <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Refill</span>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">River Setup</span>
                </div>
 
                <nav className="flex-1 space-y-1">
@@ -332,18 +326,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                               )}>
                                   {isCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                               </div>
-                              <span className="text-xs font-bold uppercase tracking-widest whitespace-nowrap">{s.title}</span>
+                              <span className="text-xs font-bold lowercase tracking-widest whitespace-nowrap">{s.title.toLowerCase()}</span>
                           </div>
                       )
                   })}
                </nav>
-               
-               <div className="mt-auto space-y-4">
-                   <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40 leading-none">Security Active</p>
-                      <p className="text-[9px] font-bold text-white/20 leading-relaxed">System identity verified via protocol.</p>
-                   </div>
-               </div>
             </div>
           )}
 
@@ -353,16 +340,16 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 /* Step 0: Value Proposition (No Plan View) */
                 <div className="flex flex-col md:flex-row min-h-[600px] animate-in fade-in duration-500">
                     <DialogHeader className="sr-only">
-                        <DialogTitle>Smart Refill Overview</DialogTitle>
-                        <DialogDescription>Analyze the advantages of standardized water management.</DialogDescription>
+                        <DialogTitle>smart refill overview</DialogTitle>
+                        <DialogDescription>analyze the advantages of standardized water management.</DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 p-8 md:p-14 space-y-12">
                         <div className="space-y-4">
-                            <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
-                                Unlock Intelligent <br/><span className="text-primary">Hydration Infrastructure.</span>
+                            <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight lowercase">
+                                unlock intelligent <br/><span className="text-primary">hydration infrastructure.</span>
                             </h2>
-                            <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
-                                Join a professional network of high-fidelity operations utilizing premium resources for the workforce.
+                            <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm lowercase">
+                                join a professional network of high-fidelity operations utilizing premium resources for the workforce.
                             </p>
                         </div>
 
@@ -373,8 +360,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         <prop.icon className="h-6 w-6" />
                                     </div>
                                     <div className="space-y-1">
-                                        <h4 className="text-sm font-bold text-slate-900">{prop.title}</h4>
-                                        <p className="text-xs font-medium text-slate-400 leading-relaxed">{prop.description}</p>
+                                        <h4 className="text-sm font-bold text-slate-900 lowercase">{prop.title}</h4>
+                                        <p className="text-xs font-medium text-slate-400 leading-relaxed lowercase">{prop.description}</p>
                                     </div>
                                 </div>
                             ))}
@@ -382,15 +369,15 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                         
                         <div className="pt-4 flex items-center justify-between border-t border-slate-50">
                             <DialogClose asChild>
-                                <Button variant="ghost" className="rounded-xl h-11 px-8 font-bold text-xs text-slate-400 hover:text-slate-900">
-                                    Dismiss
+                                <Button variant="ghost" className="rounded-xl h-11 px-8 font-bold text-xs text-slate-400 hover:text-slate-900 lowercase">
+                                    dismiss
                                 </Button>
                             </DialogClose>
                             <Button 
                                 onClick={nextStep}
-                                className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
+                                className="rounded-xl h-12 px-12 font-black lowercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
                             >
-                                Activate Membership <ArrowRight className="ml-2 h-4 w-4" />
+                                activate membership <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>
@@ -407,8 +394,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         <MapPin className="h-6 w-6 text-primary" />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-xs font-bold text-white">Logistics hub</p>
-                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Network search</p>
+                                        <p className="text-xs font-bold text-white lowercase">logistics hub</p>
+                                        <p className="text-[10px] font-bold text-white/40 lowercase tracking-widest">network search</p>
                                     </div>
                                 </div>
                                 
@@ -417,21 +404,21 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                         <Globe className="h-12 w-12 text-white/10 group-hover:text-primary transition-colors" />
                                     </div>
                                     <div className="space-y-2">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
-                                            Interface pending
+                                        <p className="text-[10px] font-black lowercase tracking-[0.3em] text-white/20">
+                                            interface pending
                                         </p>
-                                        <p className="text-[10px] font-bold text-white/30 leading-relaxed max-w-[160px] mx-auto">
-                                            Automated station discovery protocol is initializing.
+                                        <p className="text-[10px] font-bold text-white/30 leading-relaxed max-w-[160px] mx-auto lowercase">
+                                            automated station discovery protocol is initializing.
                                         </p>
                                     </div>
                                 </div>
 
-                                <Button className="w-full h-12 rounded-2xl bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs border-none shadow-xl transition-all active:scale-95">
-                                    Analyze nearby stations <ChevronRight className="ml-1 h-4 w-4" />
+                                <Button className="w-full h-12 rounded-2xl bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs border-none shadow-xl transition-all active:scale-95 lowercase">
+                                    analyze nearby stations <ChevronRight className="ml-1 h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
-                        <div className="absolute bottom-10 left-10 text-[9px] font-black uppercase tracking-[0.6em] text-white/10">River Command</div>
+                        <div className="absolute bottom-10 left-10 text-[9px] font-black lowercase tracking-[0.6em] text-white/10">river command</div>
                     </div>
                 </div>
             ) : (
@@ -439,11 +426,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                 <>
                     <header className="p-8 md:p-12 pb-6 flex items-center justify-between border-b border-slate-50 shrink-0">
                         <div className="space-y-1">
-                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-0.2em text-primary border-primary/20 mb-2">
-                                Configuration Phase {step} of {STEPS.length - 1}
+                            <Badge variant="outline" className="text-[9px] font-black lowercase tracking-0.2em text-primary border-primary/20 mb-2">
+                                configuration phase {step} of {STEPS.length - 1}
                             </Badge>
-                            <DialogTitle className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
-                                {STEPS[step].title}
+                            <DialogTitle className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 lowercase">
+                                {STEPS[step].title.toLowerCase()}
                             </DialogTitle>
                         </div>
                         <div className="md:hidden">
@@ -456,22 +443,22 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                                 {step === 1 && (
                                     <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Establish your corporate identity. These records are utilized for logistics routing and tax-compliant financial documentation.
+                                        <p className="text-sm font-medium text-slate-500 leading-relaxed lowercase">
+                                            establish your corporate identity. these records are utilized for logistics routing and tax-compliant financial documentation.
                                         </p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business entity name</Label>
+                                                <Label className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-1">business entity name</Label>
                                                 <Input value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Authorized representative</Label>
+                                                <Label className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-1">authorized representative</Label>
                                                 <Input value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                             <div className="sm:col-span-2 space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Primary service address</Label>
+                                                <Label className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-1">primary service address</Label>
                                                 <div className="relative group">
-                                                    <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12" placeholder="Street, Building, Floor..." />
+                                                    <Input value={formData.serviceAddress} onChange={e => setFormData({...formData, serviceAddress: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-4 pr-12 lowercase" placeholder="street, building, floor..." />
                                                     <button 
                                                         type="button"
                                                         onClick={handleCaptureLocation}
@@ -480,24 +467,24 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             "absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center transition-all",
                                                             formData.latitude ? "bg-primary text-white" : "bg-white text-slate-400 hover:text-primary hover:bg-primary/5"
                                                         )}
-                                                        title="Pin point exact location"
+                                                        title="pin point exact location"
                                                     >
                                                         {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
                                                     </button>
                                                 </div>
                                                 {formData.latitude && (
-                                                    <p className="text-[9px] font-bold text-green-600 uppercase tracking-widest flex items-center gap-1.5 mt-1 animate-in fade-in">
+                                                    <p className="text-[9px] font-bold text-green-600 lowercase tracking-widest flex items-center gap-1.5 mt-1 animate-in fade-in">
                                                         <CheckCircle2 className="h-3 w-3" />
-                                                        Precision anchor set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                                                        precision anchor set: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
                                                     </p>
                                                 )}
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business contact number</Label>
+                                                <Label className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-1">business contact number</Label>
                                                 <Input value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Active system identity</Label>
+                                                <Label className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-1">active system identity</Label>
                                                 <Input value={user?.email || ''} disabled className="h-12 rounded-xl bg-slate-100 border-slate-200 font-mono text-xs px-4" />
                                             </div>
                                         </div>
@@ -506,8 +493,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
                                 {step === 2 && (
                                     <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Specify your operational workforce size. This enables the system to compute an optimized allocation for zero-friction supply replenishment.
+                                        <p className="text-sm font-medium text-slate-500 leading-relaxed lowercase">
+                                            specify your operational workforce size. this enables the system to compute an optimized allocation for zero-friction supply replenishment.
                                         </p>
                                         <div className="grid gap-6">
                                             <Card className="border-none shadow-none bg-slate-50 rounded-[2rem] p-8 space-y-8">
@@ -517,8 +504,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Users className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Team size</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Active directory count</p>
+                                                            <p className="text-sm font-bold text-slate-900 lowercase tracking-tight leading-none">team size</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 lowercase tracking-widest mt-1">active directory count</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
@@ -536,15 +523,15 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Droplets className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Estimated Volume</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Based on team size</p>
+                                                            <p className="text-sm font-bold text-slate-900 lowercase tracking-tight leading-none">estimated volume</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 lowercase tracking-widest mt-1">based on team size</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="text-2xl font-black text-primary tabular-nums leading-none">
-                                                            {formData.monthlyLiters} <span className="text-xs">L</span>
+                                                            {formData.monthlyLiters} <span className="text-xs">l</span>
                                                         </p>
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Liters per month</p>
+                                                        <p className="text-[9px] font-bold text-slate-400 lowercase mt-1">liters per month</p>
                                                     </div>
                                                 </div>
 
@@ -556,8 +543,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                             <Package className="h-6 w-6" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900 uppercase tracking-tight leading-none">Infrastructure Nodes</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dispensers required</p>
+                                                            <p className="text-sm font-bold text-slate-900 lowercase tracking-tight leading-none">infrastructure nodes</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 lowercase tracking-widest mt-1">dispensers required</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
@@ -573,8 +560,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
                                 {step === 3 && (
                                     <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Based on your workforce metrics, the **Flow Plan** is recommended. This tier provides maximum flexibility with usage-based financial logic.
+                                        <p className="text-sm font-medium text-slate-500 leading-relaxed lowercase">
+                                            based on your workforce metrics, the flow plan is recommended. this tier provides maximum flexibility with usage-based financial logic.
                                         </p>
                                         
                                         <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-primary-light text-white p-8 relative overflow-hidden group">
@@ -583,37 +570,37 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             </div>
                                             <div className="relative z-10 space-y-6">
                                                 <div className="space-y-1">
-                                                    <h4 className="text-xl font-black tracking-tight uppercase">Flow Plan tier</h4>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">High-fidelity consumption pricing</p>
+                                                    <h4 className="text-xl font-black tracking-tight lowercase">flow plan tier</h4>
+                                                    <p className="text-[10px] font-bold lowercase tracking-widest opacity-60">high-fidelity consumption pricing</p>
                                                 </div>
                                                 <div className="flex items-baseline gap-2">
                                                     <p className="text-5xl font-black tracking-tighter">₱3.00</p>
-                                                    <p className="text-sm font-bold opacity-60 uppercase">per liter</p>
+                                                    <p className="text-sm font-bold opacity-60 lowercase">per liter</p>
                                                 </div>
                                                 <div className="pt-6 border-t border-white/10 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No hidden overhead</span>
+                                                        <span className="text-[10px] font-bold lowercase tracking-widest">no hidden overhead</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle2 className="h-4 w-4" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">Real-time analysis</span>
+                                                        <span className="text-[10px] font-bold lowercase tracking-widest">real-time analysis</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </Card>
 
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Projected monthly consumption (Liters)</Label>
+                                            <Label className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-1">projected monthly consumption (liters)</Label>
                                             <Input 
                                                 type="number" 
                                                 value={formData.monthlyLiters} 
                                                 onChange={e => setFormData({...formData, monthlyLiters: Number(e.target.value)})} 
                                                 className="h-12 rounded-xl bg-slate-50 border-slate-100 font-black text-xl text-primary" 
                                             />
-                                            <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2 pt-1">
+                                            <p className="text-[10px] font-bold text-slate-400 flex items-center gap-2 pt-1 lowercase">
                                                 <Info className="h-3 w-3" />
-                                                Operational estimate: ₱{(formData.monthlyLiters * 3).toLocaleString()} / mo
+                                                operational estimate: ₱{(formData.monthlyLiters * 3).toLocaleString()} / mo
                                             </p>
                                         </div>
                                     </div>
@@ -621,8 +608,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
 
                                 {step === 4 && (
                                     <div className="space-y-8">
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                                            Your organizational profile is ready for initialization. Review the professional activation timeline below:
+                                        <p className="text-sm font-medium text-slate-500 leading-relaxed lowercase">
+                                            your organizational profile is ready for initialization. review the professional activation timeline below:
                                         </p>
 
                                         <div className="relative pl-6 space-y-12">
@@ -631,8 +618,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="relative z-10 flex items-start gap-6 group">
                                                 <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg">1</div>
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Activation Receive</p>
-                                                    <p className="text-xs font-medium text-slate-400">Digital footprint established and secure data routing active.</p>
+                                                    <p className="text-sm font-black text-slate-900 lowercase tracking-tight">activation receive</p>
+                                                    <p className="text-xs font-medium text-slate-400 lowercase">digital footprint established and secure data routing active.</p>
                                                 </div>
                                             </div>
 
@@ -640,10 +627,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">2</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Discovery Call</p>
+                                                        <p className="text-sm font-black text-slate-900 lowercase tracking-tight">discovery call</p>
                                                         <Phone className="h-3.5 w-3.5 text-slate-400" />
                                                     </div>
-                                                    <p className="text-xs font-medium text-slate-400">Logistics prerequisite verification and protocol sync via authorized officer.</p>
+                                                    <p className="text-xs font-medium text-slate-400 lowercase">logistics prerequisite verification and protocol sync via authorized officer.</p>
                                                 </div>
                                             </div>
 
@@ -651,10 +638,10 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                                 <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-black text-[10px] ring-4 ring-white shadow-lg group-hover:bg-primary/20 group-hover:text-primary transition-colors">3</div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Water Refill Activated</p>
-                                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4">Priority</Badge>
+                                                        <p className="text-sm font-black text-slate-900 lowercase tracking-tight">water refill activated</p>
+                                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[8px] h-4 lowercase">priority</Badge>
                                                     </div>
-                                                    <p className="text-xs font-medium text-slate-400">Coordinated dispatch initiated for primary infrastructure replenishment.</p>
+                                                    <p className="text-xs font-medium text-slate-400 lowercase">coordinated dispatch initiated for primary infrastructure replenishment.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -668,27 +655,27 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                         <div className="flex items-center gap-3">
                             <div className={cn("h-2.5 w-2.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
                             <div className={cn("h-2.5 w-2.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step} of {STEPS.length - 1}</span>
+                            <span className="text-[10px] font-black lowercase tracking-widest text-slate-400 ml-2">phase {step} of {STEPS.length - 1}</span>
                         </div>
 
                         <div className="flex items-center gap-3 w-full sm:w-auto">
                             {step < STEPS.length - 1 ? (
                                 <>
-                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900">
-                                        <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900 lowercase">
+                                        <ChevronLeft className="mr-2 h-4 w-4" /> previous
                                     </Button>
-                                    <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
-                                        Next phase <ChevronRight className="ml-2 h-4 w-4" />
+                                    <Button onClick={nextStep} className="flex-1 sm:flex-none rounded-xl h-12 px-12 font-black lowercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
+                                        next phase <ChevronRight className="ml-2 h-4 w-4" />
                                     </Button>
                                 </>
                             ) : (
                                 <>
-                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900">
-                                        <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                    <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-12 px-6 font-bold text-slate-400 hover:text-slate-900 lowercase">
+                                        <ChevronLeft className="mr-2 h-4 w-4" /> back
                                     </Button>
-                                    <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90">
+                                    <Button onClick={handleFinalize} disabled={isSubmitting} className="flex-1 sm:flex-none rounded-xl h-12 px-16 font-black lowercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90">
                                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                                        {isSubmitting ? 'Synchronizing...' : 'Authorize Setup'}
+                                        {isSubmitting ? 'synchronizing...' : 'authorize setup'}
                                     </Button>
                                 </>
                             )}
