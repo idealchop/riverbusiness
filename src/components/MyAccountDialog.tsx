@@ -772,6 +772,20 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }: any) => (
     </Card>
 );
 
+interface MyAccountDialogProps {
+  user: AppUser | null;
+  authUser: AuthUser | null;
+  planImage: ImagePlaceholder | null;
+  paymentHistory: Payment[];
+  paymentsLoading: boolean;
+  onLogout: () => void;
+  children?: React.ReactNode;
+  onPayNow: (invoice: Payment) => void;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  initialTab?: string;
+}
+
 export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange, initialTab }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
@@ -1463,8 +1477,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return format(subMonths(safeDate, 1), 'MMMM yyyy');
   };
   
-  const displayPhoto = user.photoURL;
-
   const handleTopUpSubmit = async () => {
     if (!topUpProof || !topUpAmount || !user || !storage || !auth || !firestore) return;
     
@@ -1575,7 +1587,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">
                     <TopUpsTab
-                      topUpRequests={topUpRequests}
+                      topUpRequests={topUpRequestsData}
                       dispatch={dispatch}
                       handleViewInvoice={handleViewInvoice}
                     />
@@ -1631,7 +1643,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <span className="font-medium">P{(breakdownDetails.dispenserCost || 0).toFixed(2)}</span>
                     </div>
                 }
-                {(breakdownDetails.manualCharges || []).map((charge, index) => (
+                {(breakdownDetails.manualCharges || []).map((charge: any, index: number) => (
                   <div className="flex justify-between" key={`manual-${index}`}>
                     <span className="text-muted-foreground">
                       {charge.description}
@@ -1642,7 +1654,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     </span>
                   </div>
                 ))}
-                {(breakdownDetails.pendingCharges || []).map((charge, index) => (
+                {(breakdownDetails.pendingCharges || []).map((charge: any, index: number) => (
                   <div className="flex justify-between" key={`pending-${index}`}>
                     <span className="text-muted-foreground italic">
                       {charge.description}
@@ -2108,18 +2120,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       </Dialog>
     </AlertDialog>
   );
-}
-
-interface MyAccountDialogProps {
-  user: AppUser | null;
-  authUser: AuthUser | null;
-  planImage: ImagePlaceholder | null;
-  paymentHistory: Payment[];
-  paymentsLoading: boolean;
-  onLogout: () => void;
-  children?: React.ReactNode;
-  onPayNow: (invoice: Payment) => void;
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  initialTab?: string;
 }
