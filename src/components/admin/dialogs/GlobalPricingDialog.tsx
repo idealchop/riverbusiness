@@ -26,7 +26,8 @@ import {
     Save, 
     Loader2, 
     History,
-    ArrowRight
+    ArrowRight,
+    ShieldCheck
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
@@ -82,8 +83,6 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
             });
 
             // 2. Push to all active users
-            // NOTE: Firestore batches have a limit of 500 operations. 
-            // In a production app with >500 users, this should be a Cloud Function.
             allActiveUsers.forEach(user => {
                 const userRef = doc(firestore, 'users', user.id);
                 batch.update(userRef, { 'plan.price': literPrice });
@@ -100,7 +99,6 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
             console.error("Pricing update error:", error);
             toast({ variant: 'destructive', title: 'Action failed' });
         } finally {
-            setIsUpdating(true);
             setIsUpdating(false);
         }
     };
@@ -171,7 +169,6 @@ export function GlobalPricingDialog({ isOpen, onOpenChange, allActiveUsers, curr
                         </div>
                     </ScrollArea>
 
-                    {/* Desktop Side: History */}
                     <aside className="w-full md:w-72 bg-slate-50/50 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col shrink-0">
                         <div className="p-6 border-b border-slate-100 bg-white">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
