@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -26,7 +26,6 @@ import {
   Clock,
   MapPin,
   Globe,
-  Headset,
   Smartphone,
   Wrench,
   Info,
@@ -42,10 +41,10 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, PricingHistory } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Logo } from '@/components/icons';
@@ -103,6 +102,14 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
   const [isLocating, setIsLocating] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  // Fetch Global Pricing
+  const pricingQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'pricing_history'), orderBy('updatedAt', 'desc'), limit(1)) : null, 
+    [firestore]
+  );
+  const { data: latestPricing } = useCollection<PricingHistory>(pricingQuery);
+  const containerPrice = latestPricing?.[0]?.containerPrice || 65;
 
   const isPendingApproval = user?.subscriptionStatus && user.subscriptionStatus !== 'activated';
 
@@ -181,9 +188,13 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
     
     try {
         const userRef = doc(firestore, 'users', user.id);
+        
+        // Internal pricing conversion: Divide container price by 19.5 for liter price
+        const finalLiterPrice = containerPrice / 19.5;
+
         const plan = {
             name: formData.monthlyLiters > 500 ? 'Commercial' : 'SME',
-            price: 3,
+            price: finalLiterPrice,
             isConsumptionBased: true
         };
 
@@ -212,7 +223,6 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
     }
   };
 
-  const progress = ((step + 1) / STEPS.length) * 100;
   const isIntroStep = step === 0;
 
   if (isPendingApproval) {
@@ -577,11 +587,11 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="relative z-10 space-y-6">
                                                 <div className="space-y-1">
                                                     <h4 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Flow Plan Tier</h4>
-                                                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-60">High-fidelity consumption pricing</p>
+                                                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-60">Authorized consumption pricing</p>
                                                 </div>
                                                 <div className="flex items-baseline gap-2">
-                                                    <p className="text-5xl sm:text-6xl font-black tracking-tighter">₱3.00</p>
-                                                    <p className="text-xs sm:text-sm font-bold opacity-60 uppercase">Per Liter</p>
+                                                    <p className="text-5xl sm:text-6xl font-black tracking-tighter">₱{containerPrice.toFixed(2)}</p>
+                                                    <p className="text-xs sm:text-sm font-bold opacity-60 uppercase">Per Container</p>
                                                 </div>
                                                 <div className="pt-6 border-t border-white/10 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
