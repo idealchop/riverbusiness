@@ -326,9 +326,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   }, [searchTerm]);
 
   const activeView = useMemo(() => {
+    if (!views || views.length === 0) {
+        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [] } } as SheetView;
+    }
     const found = views.find(v => v.id === activeViewId);
     if (found) return found;
-    return views[0] || { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [] } } as SheetView;
+    return views[0];
   }, [views, activeViewId]);
 
   const sync = useCallback((newFields: SheetField[], newRecords: SheetRecord[], newViews: SheetView[], newViewId: string) => {
@@ -447,18 +450,18 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     sync(nextFields, records, views, activeViewId);
   }, [fields, records, views, activeViewId, sync]);
 
-  const updateOption = useCallback((fieldId: string, oldLabel: string, newLabel: string, newColor?: string) => {
+  const updateOption = useCallback((fieldId: string, oldLabel: string, nLabel: string, nColor?: string) => {
       const field = fields.find(f => f.id === fieldId);
       if (!field || !field.options) return;
 
       const nextOptions = field.options.map(opt => 
-          opt.label === oldLabel ? { ...opt, label: newLabel, color: newColor || opt.color } : opt
+          opt.label === oldLabel ? { ...opt, label: nLabel, color: nColor || opt.color } : opt
       );
       
       const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: nextOptions } : f);
       const nextRecords = records.map(r => {
           if (r.values[fieldId] === oldLabel) {
-              return { ...r, values: { ...r.values, [fieldId]: newLabel } };
+              return { ...r, values: { ...r.values, [fieldId]: nLabel } };
           }
           return r;
       });
@@ -585,8 +588,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
     const handleMouseMove = (e: MouseEvent) => {
         const delta = e.clientX - resizeStartXRef.current;
-        const newWidth = Math.max(80, resizeStartWidthRef.current + delta);
-        setFields(prev => prev.map(f => f.id === resizingFieldId ? { ...f, width: newWidth } : f));
+        const nWidth = Math.max(80, resizeStartWidthRef.current + delta);
+        setFields(prev => prev.map(f => f.id === resizingFieldId ? { ...f, width: nWidth } : f));
     };
 
     const handleMouseUp = () => {
@@ -643,8 +646,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-1 shadow-2xl border-slate-100">
                                     <DropdownMenuItem onClick={() => {
-                                        const newName = window.prompt('Rename view:', v.name);
-                                        if (newName) handleRenameView(v.id, newName);
+                                        const nName = window.prompt('Rename view:', v.name);
+                                        if (nName) handleRenameView(v.id, nName);
                                     }} className="gap-2 text-xs font-semibold py-2.5 rounded-lg cursor-pointer">
                                         <Edit className="h-3.5 w-3.5" /> Rename Tab
                                     </DropdownMenuItem>
@@ -871,9 +874,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 className="text-[10px] font-black text-slate-900 uppercase tracking-widest bg-white border-none focus:ring-1 focus:ring-primary rounded px-1 h-7 w-full shadow-inner"
                                                 defaultValue={field.name}
                                                 onBlur={(e) => {
-                                                    const newName = e.target.value.trim();
-                                                    if (newName && newName !== field.name) {
-                                                        const next = fields.map(f => f.id === field.id ? { ...f, name: newName } : f);
+                                                    const nName = e.target.value.trim();
+                                                    if (nName && nName !== field.name) {
+                                                        const next = fields.map(f => f.id === field.id ? { ...f, name: nName } : f);
                                                         setFields(next);
                                                         sync(next, records, views, activeViewId);
                                                     }
@@ -1206,7 +1209,7 @@ function CalendarView({ fields, records, onRecordClick }: any) {
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white transition-all" onClick={() => setViewDate(addMonths(viewDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setViewDate(new Date())} className="h-10 rounded-xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm bg-white">Today</Button>
+                <Button variant="outline" size="sm" onClick={() => setViewDate(n Date())} className="h-10 rounded-xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm bg-white">Today</Button>
             </div>
             <ScrollArea className="flex-1">
                 <div className="grid grid-cols-7 border-l border-t">

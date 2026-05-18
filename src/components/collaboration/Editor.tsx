@@ -47,7 +47,8 @@ import {
     PlusCircle,
     Layout,
     ChevronDown,
-    MoreHorizontal
+    MoreHorizontal,
+    Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -443,13 +444,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  {/* Insert Menu */}
+                  {/* Insert Menu - Integration of canvas and sheet */}
                   <div className="flex items-center px-1 shrink-0">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-9 rounded-2xl px-3 gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-100">
-                                <PlusCircle className="h-3.5 w-3.5" /> Insert
-                                <ChevronDown className="h-3 w-3 opacity-30" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group">
+                                <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="center" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
@@ -461,6 +461,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                             <DropdownMenuItem onClick={handleInsertCanvas} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
                                 Visual Canvas
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><ImageIcon className="h-4 w-4" /></div>
+                                Static Image
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
