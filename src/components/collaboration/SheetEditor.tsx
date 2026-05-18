@@ -280,19 +280,31 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const isMounted = useMounted();
   const { toast } = useToast();
 
-  const [fields, setFields] = useState<SheetField[]>(initialData?.fields || [
+  const [fields, setFields] = useState<SheetField[]>(() => {
+    if (initialData?.fields && initialData.fields.length > 0) return initialData.fields;
+    return [
       { id: 'f1', name: 'Primary Item', type: 'text', isPrimary: true, width: 250 },
       { id: 'f2', name: 'Status', type: 'status', options: [{label: 'Todo', color: 'bg-slate-100 text-slate-700'}, {label: 'In Progress', color: 'bg-blue-100 text-blue-700'}, {label: 'Done', color: 'bg-green-100 text-green-700'}], width: 150 },
       { id: 'f3', name: 'Due Date', type: 'date', width: 150 }
-  ]);
-  const [records, setRecords] = useState<SheetRecord[]>(initialData?.records || [
+    ];
+  });
+
+  const [records, setRecords] = useState<SheetRecord[]>(() => {
+    if (initialData?.records && initialData.records.length > 0) return initialData.records;
+    return [
       { id: 'r1', values: { f1: 'Initialize Workspace', f2: 'In Progress', f3: format(new Date(), 'yyyy-MM-dd') }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  ]);
-  const [views, setViews] = useState<SheetView[]>(initialData?.views || [
+    ];
+  });
+
+  const [views, setViews] = useState<SheetView[]>(() => {
+    if (initialData?.views && initialData.views.length > 0) return initialData.views;
+    return [
       { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [] } },
       { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [] } },
       { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [] } }
-  ]);
+    ];
+  });
+
   const [activeViewId, setActiveViewId] = useState(initialData?.activeViewId || 'v1');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -313,7 +325,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const activeView = useMemo(() => views.find(v => v.id === activeViewId) || views[0], [views, activeViewId]);
+  const activeView = useMemo(() => {
+    const found = views.find(v => v.id === activeViewId);
+    if (found) return found;
+    return views[0] || { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [] } } as SheetView;
+  }, [views, activeViewId]);
 
   const sync = useCallback((newFields: SheetField[], newRecords: SheetRecord[], newViews: SheetView[], newViewId: string) => {
       if (!editable) return;
@@ -651,7 +667,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <Plus className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl shadow-2xl border-slate-100">
+                    <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
                         <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New Tab Logic</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleCreateView('grid')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                             <Grid className="h-4 w-4 text-blue-500" /> Spreadsheet Grid
@@ -813,12 +829,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             </div>
         </div>
 
-        {(filters.length > 0 || sortConfig || (activeView.config?.hiddenFields?.length || 0) > 0) && (
+        {(filters.length > 0 || sortConfig || (activeView?.config?.hiddenFields?.length || 0) > 0) && (
             <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
-                {(activeView.config?.hiddenFields?.length || 0) > 0 && (
+                {(activeView?.config?.hiddenFields?.length || 0) > 0 && (
                     <div className="flex items-center gap-1.5 mr-2">
                         <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-blue-50 text-blue-600 font-bold text-[9px] uppercase gap-1.5">
-                            <EyeOff className="h-3 w-3" /> {activeView.config?.hiddenFields?.length} Hidden Fields
+                            <EyeOff className="h-3 w-3" /> {activeView?.config?.hiddenFields?.length} Hidden Fields
                         </Badge>
                     </div>
                 )}
@@ -838,7 +854,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         )}
 
         <div className="flex-1 overflow-hidden flex flex-col relative bg-white">
-            {activeView.type === 'grid' && (
+            {activeView?.type === 'grid' && (
                 <ScrollArea className="flex-1">
                     <div className="inline-block min-w-full">
                         <div className="flex bg-slate-50/50 sticky top-0 z-20 border-b backdrop-blur-md">
@@ -1010,11 +1026,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 </ScrollArea>
             )}
 
-            {activeView.type === 'kanban' && (
+            {activeView?.type === 'kanban' && (
                 <KanbanView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} onRecordUpdate={updateRecordValue} />
             )}
 
-            {activeView.type === 'calendar' && (
+            {activeView?.type === 'calendar' && (
                 <CalendarView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
             )}
         </div>
