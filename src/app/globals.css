@@ -281,6 +281,14 @@
     border-radius: 0.25rem;
     padding: 0 0.125rem;
   }
+
+  /* Multi-Column Layout Styles */
+  .tiptap-column-group {
+    @apply flex flex-col md:flex-row gap-6 my-10;
+  }
+  .tiptap-column {
+    @apply flex-1 min-w-0 border-t-2 border-transparent hover:border-slate-100 transition-colors pt-2;
+  }
 }
 
 @keyframes bounce-and-fade {

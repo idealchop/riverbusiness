@@ -106,11 +106,11 @@ import {
     PopoverContent,
     PopoverTrigger 
 } from '@/components/ui/popover';
+import { ScrollArea } from '../ui/scroll-area';
+import { Input } from '../ui/input';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
-import { ScrollArea } from '../ui/scroll-area';
-import { Input } from '../ui/input';
 
 interface BoardEditorProps {
   initialData: any;
@@ -733,7 +733,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 </div>
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Icons</p>
-                                    <div className="grid grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-6 gap-2">
                                         {filteredAssets.icons.map(asset => (
                                             <div 
                                                 key={asset.name} 
@@ -745,7 +745,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                                 className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-grab active:cursor-grabbing transition-all group"
                                             >
                                                 <asset.icon className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" />
-                                                <span className="text-[8px] font-bold uppercase tracking-tight text-slate-400 group-hover:text-slate-900 truncate w-full text-center">{asset.name}</span>
                                             </div>
                                         ))}
                                     </div>

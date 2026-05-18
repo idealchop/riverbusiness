@@ -51,7 +51,8 @@ import {
     Image as ImageIcon,
     Maximize,
     Minimize2,
-    Monitor
+    Monitor,
+    Columns
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -238,6 +239,23 @@ const CanvasExtension = Node.create({
     addNodeView() { return ReactNodeViewRenderer(CanvasBlock); },
 });
 
+// --- Multi-Column Layout Extensions ---
+
+const ColumnGroup = Node.create({
+    name: 'columnGroup',
+    group: 'block',
+    content: 'column+',
+    parseHTML() { return [{ tag: 'div[data-type="column-group"]' }]; },
+    renderHTML() { return ['div', { 'data-type': 'column-group', class: 'tiptap-column-group' }, 0]; },
+});
+
+const Column = Node.create({
+    name: 'column',
+    content: 'block+',
+    parseHTML() { return [{ tag: 'div[data-type="column"]' }]; },
+    renderHTML() { return ['div', { 'data-type': 'column', class: 'tiptap-column' }, 0]; },
+});
+
 // --- Main Editor Component ---
 
 interface EditorProps {
@@ -379,6 +397,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       Highlight.configure({ multicolor: true }),
       SpreadsheetExtension.configure({ editable }),
       CanvasExtension.configure({ editable }),
+      ColumnGroup,
+      Column,
     ],
     content: initialContent,
     editable: editable,
@@ -500,6 +520,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     editor.chain().focus().insertContent({ type: 'canvas' }).run();
   };
 
+  const handleInsertColumns = (count: number) => {
+      const columns = Array.from({ length: count }, () => ({ type: 'column', content: [{ type: 'paragraph' }] }));
+      editor.chain().focus().insertContent({ type: 'columnGroup', content: columns }).run();
+  };
+
   if (!editor) return null;
 
   return (
@@ -513,7 +538,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10 z-50">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] {isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}"></span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
                       </div>
                   </div>
               )}
@@ -527,7 +552,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  {/* Insert Menu - Integration of canvas and sheet */}
                   <div className="flex items-center px-1 shrink-0">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -535,8 +559,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                                 <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Advanced Assets</DropdownMenuLabel>
+                        <DropdownMenuContent align="center" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New block asset</DropdownMenuLabel>
                             <DropdownMenuItem onClick={handleInsertSpreadsheet} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-green-50 text-green-600"><Grid className="h-4 w-4" /></div>
                                 Interactive Spreadsheet
@@ -544,6 +568,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                             <DropdownMenuItem onClick={handleInsertCanvas} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
                                 Visual Canvas
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleInsertColumns(2)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600"><Columns className="h-4 w-4" /></div>
+                                2 Column Layout
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleInsertColumns(3)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600"><Columns className="h-4 w-4" /></div>
+                                3 Column Layout
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><ImageIcon className="h-4 w-4" /></div>
