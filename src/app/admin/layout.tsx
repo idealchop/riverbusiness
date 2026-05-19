@@ -49,8 +49,16 @@ export default function AdminLayout({
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   
   React.useEffect(() => {
-    if (!isUserLoading && !authUser && !isLoggingOut) {
+    if (isUserLoading || isLoggingOut) return;
+
+    if (!authUser) {
       router.push('/login');
+      return;
+    }
+
+    // REDIRECTION PROTOCOL: If not the authorized admin identity, route to client dashboard
+    if (authUser.email !== 'admin@riverph.com') {
+      router.push('/dashboard');
     }
   }, [authUser, isUserLoading, router, isLoggingOut]);
 
@@ -72,8 +80,11 @@ export default function AdminLayout({
     }
   };
 
-  if (!isMounted || !auth || isUserLoading || isLoggingOut) {
-    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
+  // Prevent rendering content for unauthorized identities to ensure zero visual leak
+  const isAuthorized = authUser?.email === 'admin@riverph.com';
+
+  if (!isMounted || !auth || isUserLoading || isLoggingOut || !isAuthorized) {
+    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Verifying credentials..."} />;
   }
 
   return (
