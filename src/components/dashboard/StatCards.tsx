@@ -317,7 +317,7 @@ export function StatCards({
                                     Unlimited Supply 
                                 </p>
                                 <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-none">
-                                    ₱{(user?.plan?.price ? user.plan.price * 19.5 : 0).toFixed(2)} per unit
+                                    ₱{(user?.plan?.price ? user.plan.price * 19.5 : 65).toFixed(2)} per unit
                                 </p>
                                 <p className="text-[8px] text-slate-400 font-bold leading-tight">
                                     Rate finalized after discovery call based on delivery complexity.

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -41,10 +41,10 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import type { AppUser, PricingHistory } from '@/lib/types';
+import type { AppUser } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Logo } from '@/components/icons';
@@ -103,13 +103,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Fetch Global Pricing
-  const pricingQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'pricing_history'), orderBy('updatedAt', 'desc'), limit(1)) : null, 
-    [firestore]
-  );
-  const { data: latestPricing } = useCollection<PricingHistory>(pricingQuery);
-  const containerPrice = latestPricing?.[0]?.containerPrice || 65;
+  // Optimized Pricing: Derived from user plan if existing, or a constant fallback to avoid security exceptions
+  const containerPrice = user?.plan?.price ? user.plan.price * 19.5 : 65;
 
   const isPendingApproval = user?.subscriptionStatus && user.subscriptionStatus !== 'activated';
 
@@ -189,8 +184,8 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
     try {
         const userRef = doc(firestore, 'users', user.id);
         
-        // Internal pricing conversion: Divide container price by 19.5 for liter price
-        const finalLiterPrice = containerPrice / 19.5;
+        // Internal pricing conversion: Standard 65 PHP per container / 19.5 L
+        const finalLiterPrice = 65 / 19.5;
 
         const plan = {
             name: formData.monthlyLiters > 500 ? 'Commercial' : 'SME',
@@ -664,7 +659,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                             <div className={cn("h-1.5 w-1.5 rounded-full", step >= 2 ? "bg-primary" : "bg-slate-200")} />
                         </div>
 
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
                             {step < STEPS.length - 1 ? (
                                 <>
                                     <Button variant="ghost" onClick={prevStep} disabled={isSubmitting} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-900 uppercase tracking-widest">
