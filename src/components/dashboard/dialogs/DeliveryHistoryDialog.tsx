@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -128,8 +129,8 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
     if (!status) return { color: 'bg-slate-50 text-slate-400 border-slate-100', icon: Package, label: 'N/A' };
     switch (status) {
         case 'Delivered': return { color: 'bg-green-50 text-green-700 border-green-100', icon: PackageCheck, label: 'Verified' };
-        case 'In Transit': return { color: 'bg-blue-50 text-blue-700 border-blue-100', icon: Truck, label: 'Dispatched' };
-        default: return { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Package, label: 'Processing' };
+        case 'In Transit': return { color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Truck, label: 'Dispatched' };
+        default: return { color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Package, label: 'Processing' };
     }
   };
 
@@ -140,11 +141,11 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
         <DialogHeader className="p-8 pb-6 bg-white border-b shrink-0">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-200">
+                  <div className="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
                     <FileClock className="h-6 w-6" />
                   </div>
                   <div className="text-center sm:text-left space-y-1">
-                      <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Fulfillment Ledger</DialogTitle>
+                      <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Water Refill Records</DialogTitle>
                       <DialogDescription className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                          Authorized record of all water fulfillment cycles
                       </DialogDescription>
