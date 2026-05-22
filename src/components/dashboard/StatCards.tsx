@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -320,9 +319,6 @@ export function StatCards({
                                 <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-none">
                                     ₱{(user?.plan?.price ? user.plan.price * 19.5 : 65).toFixed(2)} per unit
                                 </p>
-                                <p className="text-[8px] text-slate-400 font-bold leading-tight">
-                                    Rate finalized after discovery call based on delivery complexity.
-                                </p>
                             </div>
                         </div>
                     ) : (
@@ -419,27 +415,30 @@ export function StatCards({
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Scheduled Dispatch</p>
-                    <p className={cn("text-base font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>
-                        {autoRefill ? `Every ${nextRefillDay}` : "Manual Mode Only"}
-                    </p>
+                <div className="flex items-center gap-3">
+                  {autoRefill && isActivated && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all shrink-0" 
+                      onClick={onUpdateScheduleClick}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Scheduled Dispatch</p>
+                      <p className={cn("text-base font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>
+                          {autoRefill ? `Every ${nextRefillDay}` : "Manual Mode Only"}
+                      </p>
+                  </div>
                 </div>
 
-                {autoRefill && isActivated ? (
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full h-8 text-[10px] font-bold uppercase tracking-widest rounded-xl border-slate-200" 
-                        onClick={onUpdateScheduleClick}
-                    >
-                        <Edit className="mr-2 h-3 w-3" /> Customize Delivery
-                    </Button>
-                ) : (
+                {(!autoRefill || !isActivated) && (
                     <Button 
                         variant="default" 
                         size="sm" 
-                        className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl" 
+                        className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl mt-4" 
                         onClick={() => {
                             if (isActivated) onRequestRefillClick();
                             else window.dispatchEvent(new CustomEvent('open-subscription-onboarding'));
