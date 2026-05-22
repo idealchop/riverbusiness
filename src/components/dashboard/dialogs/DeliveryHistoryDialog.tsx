@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -11,7 +10,19 @@ import { Badge } from '@/components/ui/badge';
 import { Delivery, AppUser, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { History, Calendar as CalendarIcon, Download, PackageCheck, Truck, Package, Eye, ChevronRight, Filter, Search } from 'lucide-react';
+import { 
+    History, 
+    Calendar as CalendarIcon, 
+    Download, 
+    PackageCheck, 
+    Truck, 
+    Package, 
+    Eye, 
+    ChevronRight, 
+    Search,
+    FileClock,
+    ClipboardList
+} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -110,57 +121,57 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
       branches: branches
     });
 
-    toast({ title: 'Report Generated', description: 'Your high-fidelity delivery log is downloading.' });
+    toast({ title: 'Record Generated', description: 'Your delivery history is ready for review.' });
   };
   
   const getStatusInfo = (status: Delivery['status'] | undefined) => {
-    if (!status) return { color: 'bg-slate-50 text-slate-400 border-slate-200', icon: Package, label: 'N/A' };
+    if (!status) return { color: 'bg-slate-50 text-slate-400 border-slate-100', icon: Package, label: 'N/A' };
     switch (status) {
-        case 'Delivered': return { color: 'bg-green-50 text-green-700 border-green-200', icon: PackageCheck, label: 'Delivered' };
-        case 'In Transit': return { color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Truck, label: 'In Transit' };
-        default: return { color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Package, label: 'Pending' };
+        case 'Delivered': return { color: 'bg-green-50 text-green-700 border-green-100', icon: PackageCheck, label: 'Verified' };
+        case 'In Transit': return { color: 'bg-blue-50 text-blue-700 border-blue-100', icon: Truck, label: 'Dispatched' };
+        default: return { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Package, label: 'Processing' };
     }
   };
 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-3xl rounded-[2rem] bg-white overflow-hidden">
-        <DialogHeader className="p-8 pb-6 bg-slate-50/50 border-b shrink-0">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-4">
+      <DialogContent className="sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-3xl rounded-none sm:rounded-[2rem] bg-white overflow-hidden">
+        <DialogHeader className="p-8 pb-6 bg-white border-b shrink-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-blue-50 text-primary shadow-inner">
-                    <History className="h-6 w-6" />
+                  <div className="p-3 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-200">
+                    <FileClock className="h-6 w-6" />
                   </div>
                   <div className="text-center sm:text-left space-y-1">
-                      <DialogTitle className="text-2xl font-black tracking-tight uppercase leading-none">Refill History</DialogTitle>
-                      <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                         {isParent ? 'Consolidated branch logistics' : 'Personal fulfillment ledger'}
+                      <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Refill History</DialogTitle>
+                      <DialogDescription className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                         Authorized record of all water fulfillment cycles
                       </DialogDescription>
                   </div>
               </div>
-              <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} size="sm" className="w-full sm:w-auto h-11 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
-                <Download className="mr-2 h-4 w-4" />
-                Export Logic Statement
+              <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} size="sm" className="w-full sm:w-auto h-11 px-8 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10">
+                <Download className="mr-2 h-3.5 w-3.5" />
+                Download Record
               </Button>
           </div>
         </DialogHeader>
         
         <div className="flex flex-col sm:flex-row items-center gap-3 px-8 pt-8 pb-4 bg-white shrink-0">
           <div className="relative flex-1 w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-primary transition-colors" />
             <Input 
-                placeholder="Find tracking # or branch..." 
-                className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-100 focus-visible:ring-primary shadow-inner font-bold text-xs" 
+                placeholder="Search Reference ID..." 
+                className="pl-10 h-11 rounded-xl bg-slate-50 border-none focus-visible:ring-primary shadow-inner font-bold text-xs" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("w-full sm:w-[280px] h-11 justify-start text-left font-bold rounded-xl border-slate-200 bg-white shadow-sm", !deliveryDateRange && "text-slate-400")}>
+              <Button variant="outline" className={cn("w-full sm:w-[280px] h-11 justify-start text-left font-bold rounded-xl border-slate-100 bg-white shadow-sm", !deliveryDateRange && "text-slate-400")}>
                 <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                {deliveryDateRange?.from ? (deliveryDateRange.to ? (<> {format(deliveryDateRange.from, "MMM d")} - {format(deliveryDateRange.to!, "MMM d, y")} </>) : (format(deliveryDateRange.from, "MMM d, y"))) : (<span className="text-[10px] uppercase font-black tracking-widest">Select period window</span>)}
+                {deliveryDateRange?.from ? (deliveryDateRange.to ? (<> {format(deliveryDateRange.from, "MMM d")} - {format(deliveryDateRange.to!, "MMM d, y")} </>) : (format(deliveryDateRange.from, "MMM d, y"))) : (<span className="text-[10px] uppercase font-bold tracking-widest">Filter by window</span>)}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 border-none shadow-3xl rounded-[1.5rem]" align="end">
@@ -168,22 +179,22 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
             </PopoverContent>
           </Popover>
           {(deliveryDateRange || searchTerm) && (
-              <Button variant="ghost" size="sm" onClick={() => { setDeliveryDateRange(undefined); setSearchTerm(''); }} className="h-11 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">Reset</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setDeliveryDateRange(undefined); setSearchTerm(''); }} className="h-11 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">Clear</Button>
           )}
         </div>
 
-        <div className="flex-1 min-h-0 px-8 py-4 overflow-hidden">
+        <div className="flex-1 min-h-0 px-8 py-4">
             <ScrollArea className="h-full">
             {/* Desktop Table View */}
             <Table className="hidden md:table">
                 <TableHeader className="bg-slate-50/50">
                 <TableRow className="border-none">
-                    <TableHead className="pl-6 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Ref ID</TableHead>
-                    {isParent && <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Branch</TableHead>}
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Dispatch</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Volume</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Status</TableHead>
-                    <TableHead className="text-right pr-6 font-black uppercase text-[10px] tracking-widest text-slate-400">Management</TableHead>
+                    <TableHead className="pl-6 py-4 font-black uppercase text-[10px] tracking-[0.3em] text-slate-300">Reference</TableHead>
+                    {isParent && <TableHead className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-300">Branch</TableHead>}
+                    <TableHead className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-300">Service Date</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-300">Volume</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-300">Verification</TableHead>
+                    <TableHead className="text-right pr-6 font-black uppercase text-[10px] tracking-[0.3em] text-slate-300">Details</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -192,30 +203,29 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                     const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
                     const containers = delivery.volumeContainers || 0;
                     return (
-                    <TableRow key={delivery.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0">
+                    <TableRow key={delivery.id} className="group hover:bg-slate-50/30 transition-all border-b border-slate-50 last:border-0">
                         <TableCell className="pl-6 py-5 font-mono text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-primary transition-colors">{delivery.id}</TableCell>
                         {isParent && <TableCell className="font-bold text-sm text-slate-900">{branchMap[delivery.userId] || 'Primary Hub'}</TableCell>}
                         <TableCell className="text-sm font-semibold text-slate-600">{format(getSortableDate(delivery.date), 'MMM d, yyyy')}</TableCell>
                         <TableCell>
-                          <div className="font-black text-sm text-slate-900">{liters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</div>
-                          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">({containers} Containers)</div>
+                          <div className="font-bold text-sm text-slate-900">{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{containers} Units</div>
                         </TableCell>
                         <TableCell>
-                            <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-wider border-none px-3 h-6 shadow-none', status.color)}>
-                                <status.icon className="h-3 w-3 mr-1.5" />
+                            <Badge variant="outline" className={cn('text-[9px] font-bold uppercase tracking-widest border-none px-3 h-6 shadow-none', status.color)}>
                                 {status.label}
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right pr-6">
-                            <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-3">
                                 {delivery.proofOfDeliveryUrl ? (
-                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 bg-white border-slate-200 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
+                                    <Button variant="ghost" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 text-primary hover:bg-primary/5 transition-all" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
                                         <Eye className="h-3.5 w-3.5" /> Proof
                                     </Button>
                                 ) : (
-                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic pr-3">Pending POD</span>
+                                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic pr-3">Pending POD</span>
                                 )}
-                                <ChevronRight className="h-4 w-4 text-slate-200" />
+                                <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-primary transition-colors" />
                             </div>
                         </TableCell>
                     </TableRow>
@@ -231,34 +241,33 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                 </TableBody>
             </Table>
 
-            {/* Mobile Card View */}
+            {/* Mobile Card View - Simplified */}
             <div className="space-y-6 md:hidden">
                 {paginatedDeliveries.length > 0 ? paginatedDeliveries.map(delivery => {
                 const status = getStatusInfo(delivery.status);
                 const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
                 return (
-                    <Card key={delivery.id} className="shadow-none border-slate-100 rounded-[1.5rem] bg-slate-50/50 group overflow-hidden active:scale-[0.98] transition-all">
-                    <CardContent className="p-6 space-y-5">
+                    <Card key={delivery.id} className="shadow-none border-slate-100 rounded-2xl bg-white group overflow-hidden active:scale-[0.98] transition-all">
+                    <CardContent className="p-5 space-y-4">
                         <div className="flex justify-between items-start">
                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-slate-400 font-mono uppercase tracking-widest">#{delivery.id}</p>
-                                <p className="font-black text-base text-slate-900">{format(getSortableDate(delivery.date), 'MMMM d, yyyy')}</p>
-                                {isParent && <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1.5">{branchMap[delivery.userId] || 'Branch'}</p>}
+                                <p className="text-[9px] font-black text-slate-400 font-mono uppercase tracking-widest">Ref: {delivery.id}</p>
+                                <p className="font-bold text-base text-slate-900">{format(getSortableDate(delivery.date), 'MMMM d, yyyy')}</p>
+                                {isParent && <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">{branchMap[delivery.userId] || 'Branch'}</p>}
                             </div>
-                            <Badge variant="outline" className={cn('text-[9px] uppercase font-black tracking-widest border-none px-3 h-6 shadow-sm', status.color)}>
+                            <Badge variant="outline" className={cn('text-[9px] uppercase font-bold tracking-widest border-none px-2 h-5 shadow-none', status.color)}>
                                 {status.label}
                             </Badge>
                         </div>
-                        <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-inner border border-slate-100">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logistics Load</span>
-                          <p className="font-black text-sm text-slate-900">{liters.toLocaleString()} L <span className="text-[10px] text-slate-400 font-bold ml-1">({delivery.volumeContainers}U)</span></p>
+                        
+                        <div className="flex items-center justify-between border-t border-slate-50 pt-4">
+                          <p className="font-black text-sm text-slate-900">{liters.toLocaleString()} L <span className="text-[10px] text-slate-400 font-bold ml-1">({delivery.volumeContainers} Units)</span></p>
+                          {delivery.proofOfDeliveryUrl && (
+                            <button onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)} className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5 hover:underline">
+                                <Eye className="h-3.5 w-3.5" /> Proof
+                            </button>
+                          )}
                         </div>
-                        {delivery.proofOfDeliveryUrl && (
-                        <Button variant="outline" size="sm" className="w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm bg-white border-slate-100 text-primary gap-2" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
-                            <Eye className="h-4 w-4" />
-                            Verify Dispatch Proof
-                        </Button>
-                        )}
                     </CardContent>
                     </Card>
                 );
@@ -272,8 +281,8 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
             </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t p-8 pt-6 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
-            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ledger Index: {filteredDeliveries.length} Records</div>
+        <DialogFooter className="border-t p-8 pt-6 bg-white flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
+            <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Ledger Index: {filteredDeliveries.length} Records</div>
             <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="flex items-center gap-2 mr-auto sm:mr-4">
                     <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl font-bold uppercase text-[9px] shadow-sm bg-white" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
