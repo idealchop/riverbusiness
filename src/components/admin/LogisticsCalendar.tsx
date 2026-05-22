@@ -3,20 +3,33 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Repeat, Truck, Clock, User, Settings2, Info, Grab, Loader2, Save, ShieldCheck } from 'lucide-react';
+import { 
+    Calendar as CalendarIcon, 
+    ChevronLeft, 
+    ChevronRight, 
+    Repeat, 
+    Truck, 
+    Clock, 
+    User, 
+    Settings2, 
+    Info, 
+    Grab, 
+    Loader2, 
+    Save, 
+    ShieldCheck,
+    CheckCircle2,
+    X
+} from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { AppUser, RefillRequest } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-    Dialog, 
-    DialogContent, 
-    DialogHeader, 
-    DialogTitle, 
-    DialogDescription,
-    DialogFooter
-} from '@/components/ui/dialog';
+    Popover,
+    PopoverContent,
+    PopoverTrigger 
+} from '@/components/ui/popover';
 import { 
     Select, 
     SelectContent, 
@@ -44,11 +57,94 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+// Sub-component for individual client entries to manage their own Popover state
+function ClientRefillEntry({ 
+    user, 
+    onDragStart, 
+    onSave 
+}: { 
+    user: AppUser, 
+    onDragStart: (e: React.DragEvent) => void,
+    onSave: (userId: string, day: string, time: string) => Promise<void>
+}) {
+    const [localDay, setLocalDay] = useState(user.customPlanDetails?.deliveryDay || 'Monday');
+    const [localTime, setLocalTime] = useState(user.customPlanDetails?.deliveryTime || '09:00');
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleInternalSave = async () => {
+        setIsUpdating(true);
+        await onSave(user.id, localDay, localTime);
+        setIsUpdating(false);
+        setIsOpen(false);
+    };
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                <button 
+                    draggable
+                    onDragStart={onDragStart}
+                    className="w-full text-left p-1.5 rounded-xl bg-blue-50 border border-blue-100 text-[9px] font-bold text-primary uppercase tracking-tighter flex items-center gap-1.5 hover:bg-white transition-all shadow-sm group/btn cursor-grab active:cursor-grabbing"
+                >
+                    <Grab className="h-2.5 w-2.5 shrink-0 opacity-40 group-hover/btn:opacity-100" />
+                    <span className="truncate flex-1">{user.businessName}</span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover/btn:opacity-100 transition-opacity">
+                        <Clock className="h-2.5 w-2.5 text-blue-300" />
+                        <span className="text-[7px]">{user.customPlanDetails?.deliveryTime || '09:00'}</span>
+                    </div>
+                </button>
+            </PopoverTrigger>
+            <PopoverContent side="right" align="start" className="w-64 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white overflow-hidden z-50">
+                <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Adjust Cycle</p>
+                    <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-slate-900"><X className="h-3.5 w-3.5" /></button>
+                </div>
+                <div className="p-4 space-y-4">
+                    <div className="space-y-1.5">
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Delivery Day</Label>
+                        <Select value={localDay} onValueChange={setLocalDay}>
+                            <SelectTrigger className="h-9 rounded-xl bg-white border-slate-200 font-bold text-xs shadow-sm">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl shadow-2xl border-slate-100">
+                                {WEEKDAYS.map(day => (
+                                    <SelectItem key={day} value={day} className="font-bold text-xs py-2 rounded-lg">{day}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Dispatch Window</Label>
+                        <div className="relative">
+                            <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                            <Input 
+                                type="time" 
+                                value={localTime}
+                                onChange={(e) => setLocalTime(e.target.value)}
+                                className="h-9 rounded-xl bg-white border-slate-200 font-bold text-xs pl-8 shadow-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <Button 
+                        onClick={handleInternalSave} 
+                        disabled={isUpdating}
+                        size="sm"
+                        className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 gap-2"
+                    >
+                        {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                        Sync Logistics
+                    </Button>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 export function LogisticsCalendar({ users, refillRequests }: { users: AppUser[], refillRequests: RefillRequest[] }) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [selectedUserForEdit, setSelectedUserForEdit] = useState<AppUser | null>(null);
-    const [localTime, setLocalTime] = useState('09:00');
-    const [isUpdating, setIsUpdating] = useState(false);
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -59,8 +155,6 @@ export function LogisticsCalendar({ users, refillRequests }: { users: AppUser[],
         });
     }, [currentMonth]);
 
-    // --- Drag and Drop Handlers ---
-    
     const handleDragStart = (e: React.DragEvent, user: AppUser) => {
         e.dataTransfer.setData('userId', user.id);
         e.dataTransfer.effectAllowed = 'move';
@@ -88,41 +182,21 @@ export function LogisticsCalendar({ users, refillRequests }: { users: AppUser[],
         }
     };
 
-    const handleOpenEdit = (user: AppUser) => {
-        setSelectedUserForEdit(user);
-        setLocalTime(user.customPlanDetails?.deliveryTime || '09:00');
-    };
-
-    const handleSaveSchedule = async () => {
-        if (!selectedUserForEdit || !firestore) return;
-        setIsUpdating(true);
+    const handleSaveSchedule = async (userId: string, day: string, time: string) => {
+        if (!firestore) return;
         try {
-            const userRef = doc(firestore, 'users', selectedUserForEdit.id);
+            const userRef = doc(firestore, 'users', userId);
             await updateDoc(userRef, {
-                'customPlanDetails.deliveryDay': selectedUserForEdit.customPlanDetails?.deliveryDay,
-                'customPlanDetails.deliveryTime': localTime
+                'customPlanDetails.deliveryDay': day,
+                'customPlanDetails.deliveryTime': time
             });
             toast({ 
                 title: 'Cycle Adjusted', 
-                description: `${selectedUserForEdit.businessName} logistics window updated.` 
+                description: `Client logistics window updated successfully.` 
             });
-            setSelectedUserForEdit(null);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Update Failed' });
-        } finally {
-            setIsUpdating(false);
         }
-    };
-
-    const handleDayChangeInDialog = (newDay: string) => {
-        if (!selectedUserForEdit) return;
-        setSelectedUserForEdit({
-            ...selectedUserForEdit,
-            customPlanDetails: {
-                ...selectedUserForEdit.customPlanDetails,
-                deliveryDay: newDay
-            }
-        });
     };
 
     return (
@@ -151,23 +225,19 @@ export function LogisticsCalendar({ users, refillRequests }: { users: AppUser[],
                         </div>
                     ))}
                 </div>
-                <div className="grid grid-cols-7 divide-x divide-y border-b">
-                    {/* Empty cells for padding before the 1st of the month */}
+                <div className="grid grid-cols-7 divide-x divide-y border-b relative">
                     {Array.from({ length: getDay(startOfMonth(currentMonth)) }).map((_, i) => (
                         <div key={`empty-${i}`} className="min-h-[140px] bg-slate-50/10" />
                     ))}
                     
                     {days.map(day => {
                         const dayName = format(day, 'EEEE');
-                        
-                        // Automated Refills: recurring weekly based on deliveryDay
                         const autoRefills = users.filter(u => 
                             u.customPlanDetails?.autoRefillEnabled === true && 
                             u.customPlanDetails?.deliveryDay === dayName &&
                             u.subscriptionStatus === 'activated'
                         );
 
-                        // One-time Refill Requests: specifically scheduled for this date
                         const manualRequests = refillRequests.filter(req => {
                             const reqDate = toSafeDate(req.requestedDate);
                             return reqDate && isSameDay(reqDate, day);
@@ -201,20 +271,12 @@ export function LogisticsCalendar({ users, refillRequests }: { users: AppUser[],
                                 
                                 <div className="space-y-1.5">
                                     {autoRefills.map(u => (
-                                        <button 
+                                        <ClientRefillEntry 
                                             key={u.id} 
-                                            draggable
+                                            user={u} 
                                             onDragStart={(e) => handleDragStart(e, u)}
-                                            onClick={() => handleOpenEdit(u)}
-                                            className="w-full text-left p-1.5 rounded-xl bg-blue-50 border border-blue-100 text-[9px] font-bold text-primary uppercase tracking-tighter flex items-center gap-1.5 hover:bg-white transition-all shadow-sm group/btn cursor-grab active:cursor-grabbing"
-                                        >
-                                            <Grab className="h-2.5 w-2.5 shrink-0 opacity-40 group-hover/btn:opacity-100" />
-                                            <span className="truncate flex-1">{u.businessName}</span>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                                                <Clock className="h-2.5 w-2.5 text-blue-300" />
-                                                <span className="text-[7px]">{u.customPlanDetails?.deliveryTime || '09:00'}</span>
-                                            </div>
-                                        </button>
+                                            onSave={handleSaveSchedule}
+                                        />
                                     ))}
                                     {manualRequests.map(req => (
                                         <div 
@@ -242,79 +304,9 @@ export function LogisticsCalendar({ users, refillRequests }: { users: AppUser[],
                 </div>
                 <div className="hidden lg:flex items-center gap-2 border-l border-slate-200 pl-8 ml-2">
                     <Info className="h-3 w-3 text-slate-300" />
-                    <span className="text-[9px] font-bold italic text-slate-400 tracking-tight">Drag entries to re-schedule days, or click to adjust precise time windows.</span>
+                    <span className="text-[9px] font-bold italic text-slate-400 tracking-tight">Drag entries to re-schedule, or click to adjust precise time windows.</span>
                 </div>
             </CardFooter>
-
-            <Dialog open={!!selectedUserForEdit} onOpenChange={(open) => !open && setSelectedUserForEdit(null)}>
-                <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-3xl bg-white p-8">
-                    <DialogHeader className="mb-8">
-                        <div className="p-3 rounded-2xl bg-blue-50 text-primary w-fit mb-4">
-                            <Repeat className="h-6 w-6" />
-                        </div>
-                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 uppercase leading-none">Adjust Cycle</DialogTitle>
-                        <DialogDescription className="text-slate-500 font-medium pt-2">
-                            Configure the logistical window for <strong className="text-slate-900">{selectedUserForEdit?.businessName}</strong>.
-                        </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Target Delivery Day</Label>
-                                <Select 
-                                    value={selectedUserForEdit?.customPlanDetails?.deliveryDay} 
-                                    onValueChange={handleDayChangeInDialog}
-                                    disabled={isUpdating}
-                                >
-                                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold px-4 shadow-none">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl shadow-2xl border-slate-100">
-                                        {WEEKDAYS.map(day => (
-                                            <SelectItem key={day} value={day} className="font-bold text-xs py-2.5 rounded-lg">{day}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Daily Dispatch Window</Label>
-                                <div className="relative">
-                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                                    <Input 
-                                        type="time" 
-                                        value={localTime}
-                                        onChange={(e) => setLocalTime(e.target.value)}
-                                        disabled={isUpdating}
-                                        className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold pl-10 shadow-none"
-                                    />
-                                </div>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest pl-1">Preferred delivery time in 24h format</p>
-                            </div>
-                        </div>
-
-                        <div className="p-5 rounded-3xl bg-blue-50 border border-blue-100 flex items-start gap-4">
-                            <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                            <p className="text-[10px] font-bold text-blue-900 leading-relaxed uppercase tracking-tight">
-                                Authorizing these adjustments will instantly update the station's fulfillment protocol and trigger automated 24h dispatch notices.
-                            </p>
-                        </div>
-                    </div>
-
-                    <DialogFooter className="pt-10 gap-3">
-                        <Button variant="ghost" onClick={() => setSelectedUserForEdit(null)} className="rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest text-slate-400">Cancel</Button>
-                        <Button 
-                            onClick={handleSaveSchedule} 
-                            disabled={isUpdating}
-                            className="flex-1 rounded-2xl h-12 px-8 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 gap-2"
-                        >
-                            {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Sync Logistics
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </Card>
     );
 }
