@@ -229,7 +229,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
           </Select>
           <Button onClick={onHistoryClick} variant="outline" size="sm" className="h-9 font-bold uppercase tracking-widest text-[10px] bg-white border-slate-200">
             <History className="h-3.5 w-3.5 mr-1.5" />
-            Logs
+            History
           </Button>
         </div>
       </CardHeader>

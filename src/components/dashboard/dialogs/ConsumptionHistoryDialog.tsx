@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -9,6 +10,7 @@ import { format } from 'date-fns';
 import { BarChart3, Droplets, Calendar, History } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -39,21 +41,22 @@ export function ConsumptionHistoryDialog({ isOpen, onOpenChange, deliveries, use
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
-        <DialogHeader className="p-8 bg-muted/20 border-b">
+      <DialogContent className="sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-2xl rounded-2xl bg-white">
+        <DialogHeader className="p-6 md:p-8 bg-muted/20 border-b">
           <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl bg-primary/10">
                 <BarChart3 className="h-5 w-5 text-primary" />
               </div>
-              <DialogTitle className="text-2xl font-bold tracking-tight">Consumption Ledger</DialogTitle>
+              <DialogTitle className="text-xl md:text-2xl font-bold tracking-tight">Refill History</DialogTitle>
           </div>
           <DialogDescription className="text-sm font-medium">
             A comprehensive tracking of all water volume delivered to your business {isParent ? 'network' : 'premises'}.
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[60vh] px-8 py-6">
-          <Table>
+        <ScrollArea className="flex-1 px-6 md:px-8 py-6">
+          {/* Desktop Table View */}
+          <Table className="hidden md:table">
             <TableHeader className="bg-muted/10">
               <TableRow>
                 <TableHead className="py-4">Transaction Date</TableHead>
@@ -98,11 +101,45 @@ export function ConsumptionHistoryDialog({ isOpen, onOpenChange, deliveries, use
               )}
             </TableBody>
           </Table>
+
+          {/* Mobile Card View */}
+          <div className="space-y-4 md:hidden">
+            {sortedDeliveries.length > 0 ? sortedDeliveries.map(delivery => {
+                const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
+                const containers = delivery.volumeContainers || 0;
+                return (
+                  <Card key={delivery.id} className="shadow-none border bg-muted/10">
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="h-3.5 w-3.5 text-primary" />
+                                <span className="font-bold text-sm text-slate-900">{format(new Date(delivery.date), 'MMM d, yyyy')}</span>
+                            </div>
+                            {isParent && (
+                                <Badge variant="outline" className="bg-white border-slate-200 text-primary font-bold uppercase text-[8px] tracking-widest px-1.5 h-4">
+                                    {branchMap[delivery.userId] || 'Primary'}
+                                </Badge>
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <p className="font-black text-slate-900 text-sm">{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{containers} units</p>
+                        </div>
+                    </CardContent>
+                  </Card>
+                );
+            }) : (
+                <div className="text-center py-20 opacity-30 flex flex-col items-center gap-2">
+                    <History className="h-10 w-10" />
+                    <p className="text-xs font-bold uppercase tracking-widest">No logistics history</p>
+                </div>
+            )}
+          </div>
         </ScrollArea>
 
-        <DialogFooter className="p-8 pt-4 bg-muted/5 border-t">
+        <DialogFooter className="p-6 md:p-8 pt-4 bg-muted/5 border-t">
             <DialogClose asChild>
-                <Button variant="outline" className="font-bold uppercase tracking-widest text-[10px] rounded-xl px-10 h-10 border-slate-200">Dismiss</Button>
+                <Button variant="outline" className="w-full sm:w-auto font-bold uppercase tracking-widest text-[10px] rounded-xl px-10 h-10 border-slate-200 shadow-sm bg-white">Dismiss</Button>
             </DialogClose>
         </DialogFooter>
       </DialogContent>

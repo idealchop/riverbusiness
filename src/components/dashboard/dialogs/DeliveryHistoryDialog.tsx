@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -124,16 +125,16 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-2xl rounded-2xl">
-        <DialogHeader className="p-8 pb-4 bg-muted/20 border-b">
-          <div className="flex items-center justify-between mb-4">
+      <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-2xl rounded-2xl bg-white">
+        <DialogHeader className="p-6 md:p-8 pb-4 bg-muted/20 border-b">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-primary/10">
                     <History className="h-5 w-5 text-primary" />
                   </div>
-                  <DialogTitle className="text-2xl font-bold tracking-tight">Supply Fulfillment Log</DialogTitle>
+                  <DialogTitle className="text-xl md:text-2xl font-bold tracking-tight">Refill History</DialogTitle>
               </div>
-              <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} size="sm" className="h-9 px-6 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg">
+              <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} size="sm" className="w-full sm:w-auto h-9 px-6 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg">
                 <Download className="mr-2 h-3.5 w-3.5" />
                 Export High-Fidelity SOA
               </Button>
@@ -143,7 +144,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-col sm:flex-row items-center gap-3 px-8 pt-6 pb-2">
+        <div className="flex flex-col sm:flex-row items-center gap-3 px-6 md:px-8 pt-6 pb-2">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
@@ -169,7 +170,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
           )}
         </div>
 
-        <div className="flex-1 min-h-0 px-8 py-4">
+        <div className="flex-1 min-h-0 px-6 md:px-8 py-4 overflow-hidden">
             <ScrollArea className="h-full">
             {/* Desktop Table View */}
             <Table className="hidden md:table">
@@ -269,16 +270,16 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
             </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t p-8 pt-4 bg-muted/5 flex flex-col-reverse md:flex-row md:justify-between items-center w-full gap-4">
+        <DialogFooter className="border-t p-6 md:p-8 pt-4 bg-muted/5 flex flex-col-reverse md:flex-row md:justify-between items-center w-full gap-4">
             <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ledger {filteredDeliveries.length} entries</div>
             <div className="flex items-center gap-3">
-                <div className="flex items-center space-x-1 mr-4">
-                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
+                <div className="flex items-center space-x-1 mr-2 md:mr-4">
+                    <Button variant="outline" size="sm" className="h-8 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
                     <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-3">{currentPage} / {totalPages || 1}</span>
-                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
+                    <Button variant="outline" size="sm" className="h-8 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
                 </div>
                 <DialogClose asChild>
-                    <Button variant="ghost" className="h-9 px-8 rounded-xl font-bold uppercase tracking-widest text-[10px] text-slate-500 hover:text-slate-900">Dismiss</Button>
+                    <Button variant="ghost" className="h-9 px-6 md:px-8 rounded-xl font-bold uppercase tracking-widest text-[10px] text-slate-500 hover:text-slate-900">Dismiss</Button>
                 </DialogClose>
             </div>
         </DialogFooter>
