@@ -144,7 +144,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                     <FileClock className="h-6 w-6" />
                   </div>
                   <div className="text-center sm:text-left space-y-1">
-                      <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Refill History</DialogTitle>
+                      <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Fulfillment Ledger</DialogTitle>
                       <DialogDescription className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                          Authorized record of all water fulfillment cycles
                       </DialogDescription>
