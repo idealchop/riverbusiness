@@ -135,7 +135,7 @@ function ClientRefillEntry({
                         className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 gap-2"
                     >
                         {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                        Sync Logistics
+                        Save Schedule
                     </Button>
                 </div>
             </PopoverContent>

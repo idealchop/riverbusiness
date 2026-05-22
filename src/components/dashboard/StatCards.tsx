@@ -159,7 +159,7 @@ export function StatCards({
         })
         .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
-    const diff = consumedLitersLastMonth === 0 ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / consumedLitersLastMonth) * 100;
+    const diff = consumedLitersLastMonth === 0 ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / (consumedLitersLastMonth || 1)) * 100;
     const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
         
     let monthlyEquipmentCost = 0;
@@ -521,7 +521,7 @@ export function StatCards({
                                     className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 gap-2"
                                 >
                                     {isUpdatingLogistics ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-2" />}
-                                    Sync Logistics
+                                    Save Schedule
                                 </Button>
                             </div>
                         </PopoverContent>
