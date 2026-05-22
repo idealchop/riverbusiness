@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus, Contact, Tag } from 'lucide-react';
+import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus, Contact, Tag, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, WaterStation, RefillRequest, Payment, Delivery, PricingHistory } from '@/lib/types';
@@ -19,6 +19,7 @@ import { CreateUserDialog } from './dialogs/CreateUserDialog';
 import { StationProfileDialog } from './dialogs/StationProfileDialog';
 import { UserDetailsDialog } from './dialogs/UserDetailsDialog';
 import { GlobalPricingDialog } from './dialogs/GlobalPricingDialog';
+import { LogisticsCalendar } from './LogisticsCalendar';
 import { cn } from '@/lib/utils';
 
 const toSafeDate = (timestamp: any): Date | null => {
@@ -229,6 +230,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </CardContent>
                     </Card>
                 ))}
+            </div>
+
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 delay-200">
+                <LogisticsCalendar 
+                    users={allUsers || []} 
+                    refillRequests={refillRequests || []} 
+                />
             </div>
 
             <Tabs defaultValue="user-management" className="space-y-6">
