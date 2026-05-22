@@ -125,63 +125,65 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-2xl rounded-2xl bg-white">
-        <DialogHeader className="p-6 md:p-8 pb-4 bg-muted/20 border-b">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10">
-                    <History className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-3xl rounded-[2rem] bg-white overflow-hidden">
+        <DialogHeader className="p-8 pb-6 bg-slate-50/50 border-b shrink-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-4">
+              <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-blue-50 text-primary shadow-inner">
+                    <History className="h-6 w-6" />
                   </div>
-                  <DialogTitle className="text-xl md:text-2xl font-bold tracking-tight">Refill History</DialogTitle>
+                  <div className="text-center sm:text-left space-y-1">
+                      <DialogTitle className="text-2xl font-black tracking-tight uppercase leading-none">Refill History</DialogTitle>
+                      <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                         {isParent ? 'Consolidated branch logistics' : 'Personal fulfillment ledger'}
+                      </DialogDescription>
+                  </div>
               </div>
-              <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} size="sm" className="w-full sm:w-auto h-9 px-6 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg">
-                <Download className="mr-2 h-3.5 w-3.5" />
-                Export High-Fidelity SOA
+              <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} size="sm" className="w-full sm:w-auto h-11 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
+                <Download className="mr-2 h-4 w-4" />
+                Export Logic Statement
               </Button>
           </div>
-          <DialogDescription className="text-sm font-medium">
-             {isParent ? 'Consolidated logistics tracking for all business branches.' : 'Tracking replenishment cycles and distribution metrics.'}
-          </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-col sm:flex-row items-center gap-3 px-6 md:px-8 pt-6 pb-2">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <div className="flex flex-col sm:flex-row items-center gap-3 px-8 pt-8 pb-4 bg-white shrink-0">
+          <div className="relative flex-1 w-full group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-primary transition-colors" />
             <Input 
                 placeholder="Find tracking # or branch..." 
-                className="pl-10 h-10 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-primary shadow-none" 
+                className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-100 focus-visible:ring-primary shadow-inner font-bold text-xs" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("w-full sm:w-[260px] h-10 justify-start text-left font-bold rounded-xl border-slate-200 bg-white", !deliveryDateRange && "text-slate-400")}>
+              <Button variant="outline" className={cn("w-full sm:w-[280px] h-11 justify-start text-left font-bold rounded-xl border-slate-200 bg-white shadow-sm", !deliveryDateRange && "text-slate-400")}>
                 <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                {deliveryDateRange?.from ? (deliveryDateRange.to ? (<> {format(deliveryDateRange.from, "MMM d")} - {format(deliveryDateRange.to!, "MMM d, y")} </>) : (format(deliveryDateRange.from, "MMM d, y"))) : (<span className="text-[10px] uppercase tracking-widest">Filter by Date Range</span>)}
+                {deliveryDateRange?.from ? (deliveryDateRange.to ? (<> {format(deliveryDateRange.from, "MMM d")} - {format(deliveryDateRange.to!, "MMM d, y")} </>) : (format(deliveryDateRange.from, "MMM d, y"))) : (<span className="text-[10px] uppercase font-black tracking-widest">Select period window</span>)}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-none shadow-2xl rounded-2xl" align="end">
-              <Calendar initialFocus mode="range" defaultMonth={deliveryDateRange?.from} selected={deliveryDateRange} onSelect={setDeliveryDateRange} numberOfMonths={2} />
+            <PopoverContent className="w-auto p-0 border-none shadow-3xl rounded-[1.5rem]" align="end">
+              <Calendar initialFocus mode="range" defaultMonth={deliveryDateRange?.from} selected={deliveryDateRange} onSelect={setDeliveryDateRange} numberOfMonths={2} className="rounded-[1.5rem]" />
             </PopoverContent>
           </Popover>
           {(deliveryDateRange || searchTerm) && (
-              <Button variant="ghost" size="sm" onClick={() => { setDeliveryDateRange(undefined); setSearchTerm(''); }} className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">Clear</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setDeliveryDateRange(undefined); setSearchTerm(''); }} className="h-11 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">Reset</Button>
           )}
         </div>
 
-        <div className="flex-1 min-h-0 px-6 md:px-8 py-4 overflow-hidden">
+        <div className="flex-1 min-h-0 px-8 py-4 overflow-hidden">
             <ScrollArea className="h-full">
             {/* Desktop Table View */}
             <Table className="hidden md:table">
-                <TableHeader className="bg-muted/10">
-                <TableRow>
-                    <TableHead className="pl-4 py-4">Ref ID</TableHead>
-                    {isParent && <TableHead>Target Branch</TableHead>}
-                    <TableHead>Dispatch Date</TableHead>
-                    <TableHead>Volume Metrics</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right pr-4">Action</TableHead>
+                <TableHeader className="bg-slate-50/50">
+                <TableRow className="border-none">
+                    <TableHead className="pl-6 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Ref ID</TableHead>
+                    {isParent && <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Branch</TableHead>}
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Dispatch</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Volume</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Status</TableHead>
+                    <TableHead className="text-right pr-6 font-black uppercase text-[10px] tracking-widest text-slate-400">Management</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -190,39 +192,39 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                     const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
                     const containers = delivery.volumeContainers || 0;
                     return (
-                    <TableRow key={delivery.id} className="group hover:bg-muted/30 transition-colors">
-                        <TableCell className="pl-4 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{delivery.id}</TableCell>
-                        {isParent && <TableCell className="font-bold text-sm">{branchMap[delivery.userId] || 'Primary Hub'}</TableCell>}
-                        <TableCell className="text-sm font-medium">{format(getSortableDate(delivery.date), 'MMM d, yyyy')}</TableCell>
+                    <TableRow key={delivery.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0">
+                        <TableCell className="pl-6 py-5 font-mono text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-primary transition-colors">{delivery.id}</TableCell>
+                        {isParent && <TableCell className="font-bold text-sm text-slate-900">{branchMap[delivery.userId] || 'Primary Hub'}</TableCell>}
+                        <TableCell className="text-sm font-semibold text-slate-600">{format(getSortableDate(delivery.date), 'MMM d, yyyy')}</TableCell>
                         <TableCell>
-                          <div className="font-bold text-sm">{liters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</div>
-                          <div className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">({containers} Containers)</div>
+                          <div className="font-black text-sm text-slate-900">{liters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">({containers} Containers)</div>
                         </TableCell>
                         <TableCell>
-                            <Badge variant="outline" className={cn('text-[10px] font-bold uppercase tracking-wider border px-2 py-0.5 gap-1.5 shadow-sm', status.color)}>
-                                <status.icon className="h-3 w-3" />
+                            <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-wider border-none px-3 h-6 shadow-none', status.color)}>
+                                <status.icon className="h-3 w-3 mr-1.5" />
                                 {status.label}
                             </Badge>
                         </TableCell>
-                        <TableCell className="text-right pr-4">
-                            <div className="flex items-center justify-end gap-2">
+                        <TableCell className="text-right pr-6">
+                            <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                 {delivery.proofOfDeliveryUrl ? (
-                                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-widest border-slate-200 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
-                                        <Eye className="mr-1.5 h-3 w-3" /> View Proof
+                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 bg-white border-slate-200 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
+                                        <Eye className="h-3.5 w-3.5" /> Proof
                                     </Button>
                                 ) : (
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic pr-3">Pending POD</span>
+                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic pr-3">Pending POD</span>
                                 )}
-                                <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                                <ChevronRight className="h-4 w-4 text-slate-200" />
                             </div>
                         </TableCell>
                     </TableRow>
                     );
                 }) : (
                     <TableRow>
-                    <TableCell colSpan={isParent ? 6 : 5} className="text-center py-20 text-muted-foreground opacity-30">
-                        <History className="h-10 w-10 mx-auto mb-2" />
-                        <p className="text-sm font-bold uppercase tracking-widest">No logistics records found</p>
+                    <TableCell colSpan={isParent ? 6 : 5} className="text-center py-32 opacity-20 flex flex-col items-center gap-4 justify-center">
+                        <History className="h-12 w-12" />
+                        <p className="text-xs font-black uppercase tracking-[0.4em]">Empty Ledger</p>
                     </TableCell>
                     </TableRow>
                 )}
@@ -230,30 +232,30 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
             </Table>
 
             {/* Mobile Card View */}
-            <div className="space-y-4 md:hidden">
+            <div className="space-y-6 md:hidden">
                 {paginatedDeliveries.length > 0 ? paginatedDeliveries.map(delivery => {
                 const status = getStatusInfo(delivery.status);
                 const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
                 return (
-                    <Card key={delivery.id} className="shadow-none border bg-muted/10">
-                    <CardContent className="p-4 space-y-4">
+                    <Card key={delivery.id} className="shadow-none border-slate-100 rounded-[1.5rem] bg-slate-50/50 group overflow-hidden active:scale-[0.98] transition-all">
+                    <CardContent className="p-6 space-y-5">
                         <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">REF: {delivery.id}</p>
-                                <p className="font-black text-sm">{format(getSortableDate(delivery.date), 'MMM d, yyyy')}</p>
-                                {isParent && <p className="text-[10px] font-bold text-primary uppercase tracking-tighter mt-1">{branchMap[delivery.userId] || 'Branch'}</p>}
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-slate-400 font-mono uppercase tracking-widest">#{delivery.id}</p>
+                                <p className="font-black text-base text-slate-900">{format(getSortableDate(delivery.date), 'MMMM d, yyyy')}</p>
+                                {isParent && <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1.5">{branchMap[delivery.userId] || 'Branch'}</p>}
                             </div>
-                            <Badge variant="outline" className={cn('text-[9px] uppercase font-bold border px-2', status.color)}>
+                            <Badge variant="outline" className={cn('text-[9px] uppercase font-black tracking-widest border-none px-3 h-6 shadow-sm', status.color)}>
                                 {status.label}
                             </Badge>
                         </div>
-                        <div className="flex justify-between items-baseline border-y border-slate-100 py-3">
+                        <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-inner border border-slate-100">
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logistics Load</span>
-                          <p className="font-extrabold text-sm">{liters.toLocaleString()} L <span className="text-[10px] text-muted-foreground font-normal">({delivery.volumeContainers} units)</span></p>
+                          <p className="font-black text-sm text-slate-900">{liters.toLocaleString()} L <span className="text-[10px] text-slate-400 font-bold ml-1">({delivery.volumeContainers}U)</span></p>
                         </div>
                         {delivery.proofOfDeliveryUrl && (
-                        <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest shadow-sm bg-white" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
-                            <Eye className="mr-2 h-3.5 w-3.5 text-primary" />
+                        <Button variant="outline" size="sm" className="w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm bg-white border-slate-100 text-primary gap-2" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
+                            <Eye className="h-4 w-4" />
                             Verify Dispatch Proof
                         </Button>
                         )}
@@ -261,25 +263,25 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                     </Card>
                 );
                 }) : (
-                    <div className="text-center py-20 opacity-30 flex flex-col items-center gap-2">
-                         <History className="h-8 w-8" />
-                         <p className="text-xs font-bold uppercase tracking-widest">Empty Ledger</p>
+                    <div className="text-center py-20 opacity-20 flex flex-col items-center gap-4">
+                         <History className="h-10 w-10" />
+                         <p className="text-xs font-black uppercase tracking-[0.4em]">Empty Ledger</p>
                     </div>
                 )}
             </div>
             </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t p-6 md:p-8 pt-4 bg-muted/5 flex flex-col-reverse md:flex-row md:justify-between items-center w-full gap-4">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ledger {filteredDeliveries.length} entries</div>
-            <div className="flex items-center gap-3">
-                <div className="flex items-center space-x-1 mr-2 md:mr-4">
-                    <Button variant="outline" size="sm" className="h-8 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
-                    <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-3">{currentPage} / {totalPages || 1}</span>
-                    <Button variant="outline" size="sm" className="h-8 text-[10px] uppercase font-bold" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
+        <DialogFooter className="border-t p-8 pt-6 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ledger Index: {filteredDeliveries.length} Records</div>
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className="flex items-center gap-2 mr-auto sm:mr-4">
+                    <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl font-bold uppercase text-[9px] shadow-sm bg-white" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter tabular-nums px-2">{currentPage} / {totalPages || 1}</span>
+                    <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl font-bold uppercase text-[9px] shadow-sm bg-white" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
                 </div>
                 <DialogClose asChild>
-                    <Button variant="ghost" className="h-9 px-6 md:px-8 rounded-xl font-bold uppercase tracking-widest text-[10px] text-slate-500 hover:text-slate-900">Dismiss</Button>
+                    <Button variant="ghost" className="h-10 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900 transition-colors">Dismiss</Button>
                 </DialogClose>
             </div>
         </DialogFooter>

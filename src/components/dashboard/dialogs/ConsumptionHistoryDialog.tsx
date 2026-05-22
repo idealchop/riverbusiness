@@ -41,105 +41,113 @@ export function ConsumptionHistoryDialog({ isOpen, onOpenChange, deliveries, use
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-2xl rounded-2xl bg-white">
-        <DialogHeader className="p-6 md:p-8 bg-muted/20 border-b">
-          <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <BarChart3 className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0 border-none shadow-3xl rounded-[2rem] bg-white overflow-hidden">
+        <DialogHeader className="p-8 pb-6 bg-slate-50/50 border-b shrink-0">
+          <div className="flex items-center gap-4 mb-2">
+              <div className="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
+                <BarChart3 className="h-6 w-6" />
               </div>
-              <DialogTitle className="text-xl md:text-2xl font-bold tracking-tight">Refill History</DialogTitle>
+              <div>
+                  <DialogTitle className="text-2xl font-black tracking-tight uppercase leading-none">Logistics History</DialogTitle>
+                  <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">
+                     Verified organizational water volume record
+                  </DialogDescription>
+              </div>
           </div>
-          <DialogDescription className="text-sm font-medium">
-            A comprehensive tracking of all water volume delivered to your business {isParent ? 'network' : 'premises'}.
-          </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 px-6 md:px-8 py-6">
-          {/* Desktop Table View */}
-          <Table className="hidden md:table">
-            <TableHeader className="bg-muted/10">
-              <TableRow>
-                <TableHead className="py-4">Transaction Date</TableHead>
-                 {isParent && <TableHead>Branch Entity</TableHead>}
-                <TableHead className="text-right pr-4">Volume Record</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedDeliveries.length > 0 ? sortedDeliveries.map(delivery => {
-                const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
-                const containers = delivery.volumeContainers || 0;
-                return (
-                  <TableRow key={delivery.id} className="hover:bg-muted/30 transition-colors group cursor-default">
-                    <TableCell className="py-4">
-                        <div className="flex items-center gap-3">
-                            <Calendar className="h-3.5 w-3.5 text-slate-400 group-hover:text-primary transition-colors" />
-                            <span className="font-bold text-sm text-slate-900">{format(new Date(delivery.date), 'MMMM d, yyyy')}</span>
-                        </div>
-                    </TableCell>
-                     {isParent && (
-                        <TableCell>
-                            <Badge variant="secondary" className="bg-white border-slate-100 text-slate-600 font-bold uppercase text-[9px] tracking-widest px-2 py-0.5">
-                                {branchMap[delivery.userId] || 'Primary'}
-                            </Badge>
-                        </TableCell>
-                     )}
-                    <TableCell className="text-right pr-4">
-                        <div className="flex flex-col items-end">
-                            <span className="font-extrabold text-slate-900 text-sm">{liters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</span>
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{containers} Containers</span>
-                        </div>
-                    </TableCell>
+        <ScrollArea className="flex-1 px-8 py-8">
+          <div className="max-w-4xl mx-auto space-y-6">
+              {/* Desktop Table View */}
+              <Table className="hidden md:table">
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none">
+                    <TableHead className="py-4 font-black uppercase text-[10px] tracking-widest text-slate-400 pl-6">Transaction Date</TableHead>
+                     {isParent && <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Branch Entity</TableHead>}
+                    <TableHead className="text-right pr-6 font-black uppercase text-[10px] tracking-widest text-slate-400">Volume Record</TableHead>
                   </TableRow>
-                );
-              }) : (
-                <TableRow>
-                  <TableCell colSpan={isParent ? 3 : 2} className="text-center py-20 opacity-30 flex flex-col items-center gap-2 justify-center h-full">
-                      <History className="h-10 w-10 mx-auto" />
-                      <p className="text-sm font-bold uppercase tracking-widest">No logistics history found</p>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Mobile Card View */}
-          <div className="space-y-4 md:hidden">
-            {sortedDeliveries.length > 0 ? sortedDeliveries.map(delivery => {
-                const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
-                const containers = delivery.volumeContainers || 0;
-                return (
-                  <Card key={delivery.id} className="shadow-none border bg-muted/10">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <Calendar className="h-3.5 w-3.5 text-primary" />
-                                <span className="font-bold text-sm text-slate-900">{format(new Date(delivery.date), 'MMM d, yyyy')}</span>
+                </TableHeader>
+                <TableBody>
+                  {sortedDeliveries.length > 0 ? sortedDeliveries.map(delivery => {
+                    const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
+                    const containers = delivery.volumeContainers || 0;
+                    return (
+                      <TableRow key={delivery.id} className="hover:bg-slate-50/50 transition-colors group cursor-default border-b border-slate-50 last:border-0">
+                        <TableCell className="py-5 pl-6">
+                            <div className="flex items-center gap-3">
+                                <Calendar className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                                <span className="font-bold text-sm text-slate-900 leading-none pt-0.5">{format(new Date(delivery.date), 'MMMM d, yyyy')}</span>
                             </div>
-                            {isParent && (
-                                <Badge variant="outline" className="bg-white border-slate-200 text-primary font-bold uppercase text-[8px] tracking-widest px-1.5 h-4">
-                                    {branchMap[delivery.userId] || 'Primary'}
+                        </TableCell>
+                         {isParent && (
+                            <TableCell>
+                                <Badge variant="secondary" className="bg-white border-slate-100 text-slate-600 font-bold uppercase text-[9px] tracking-widest px-3 h-6 shadow-sm">
+                                    {branchMap[delivery.userId] || 'Primary Hub'}
                                 </Badge>
-                            )}
-                        </div>
-                        <div className="text-right">
-                            <p className="font-black text-slate-900 text-sm">{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
-                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{containers} units</p>
-                        </div>
-                    </CardContent>
-                  </Card>
-                );
-            }) : (
-                <div className="text-center py-20 opacity-30 flex flex-col items-center gap-2">
-                    <History className="h-10 w-10" />
-                    <p className="text-xs font-bold uppercase tracking-widest">No logistics history</p>
-                </div>
-            )}
+                            </TableCell>
+                         )}
+                        <TableCell className="text-right pr-6">
+                            <div className="flex flex-col items-end">
+                                <span className="font-black text-slate-900 text-sm tabular-nums">{liters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{containers} Containers</span>
+                            </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }) : (
+                    <TableRow>
+                      <TableCell colSpan={isParent ? 3 : 2} className="text-center py-32 opacity-20 flex flex-col items-center gap-4 justify-center">
+                          <History className="h-12 w-12" />
+                          <p className="text-xs font-black uppercase tracking-[0.4em]">Empty Ledger</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Mobile Card View */}
+              <div className="space-y-5 md:hidden">
+                {sortedDeliveries.length > 0 ? sortedDeliveries.map(delivery => {
+                    const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers || 0);
+                    const containers = delivery.volumeContainers || 0;
+                    return (
+                      <Card key={delivery.id} className="shadow-none border-slate-100 rounded-[1.5rem] bg-slate-50/50 overflow-hidden active:scale-[0.98] transition-all">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div className="space-y-1.5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="p-1.5 rounded-lg bg-white border border-slate-100 text-primary shadow-sm">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                    </div>
+                                    <span className="font-black text-sm text-slate-900">{format(new Date(delivery.date), 'MMM d, yyyy')}</span>
+                                </div>
+                                {isParent && (
+                                    <Badge variant="outline" className="bg-white border-slate-100 text-primary font-black uppercase text-[8px] tracking-widest px-2 h-5 shadow-none ml-0.5">
+                                        {branchMap[delivery.userId] || 'Primary'}
+                                    </Badge>
+                                )}
+                            </div>
+                            <div className="text-right space-y-0.5">
+                                <p className="font-black text-slate-900 text-base tabular-nums leading-none">{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{containers} Units</p>
+                            </div>
+                        </CardContent>
+                      </Card>
+                    );
+                }) : (
+                    <div className="text-center py-20 opacity-20 flex flex-col items-center gap-4">
+                        <History className="h-10 w-10" />
+                        <p className="text-xs font-black uppercase tracking-[0.4em]">Empty Ledger</p>
+                    </div>
+                )}
+              </div>
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-6 md:p-8 pt-4 bg-muted/5 border-t">
+        <DialogFooter className="p-8 pt-6 bg-slate-50/50 border-t shrink-0">
             <DialogClose asChild>
-                <Button variant="outline" className="w-full sm:w-auto font-bold uppercase tracking-widest text-[10px] rounded-xl px-10 h-10 border-slate-200 shadow-sm bg-white">Dismiss</Button>
+                <Button variant="ghost" className="w-full sm:w-auto font-black uppercase tracking-widest text-[10px] rounded-xl px-12 h-11 text-slate-400 hover:text-slate-900 transition-colors">
+                    Dismiss
+                </Button>
             </DialogClose>
         </DialogFooter>
       </DialogContent>
