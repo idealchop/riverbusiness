@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -10,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, ShieldCheck } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
-import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth, addDays } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -303,10 +304,10 @@ export function StatCards({
                     {!isActivated ? (
                         <div>
                             <p className="text-2xl font-black text-slate-900 tracking-tight">
-                                {isPending ? 'Pending Approval' : 'System Locked'}
+                                Drinking Water
                             </p>
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                {isPending ? 'Authorized activation required.' : 'Setup required to initialize credits.'}
+                                Subscribe to access water refills.
                             </p>
                         </div>
                     ) : (isFlowPlan || isBranchAccount) ? (
