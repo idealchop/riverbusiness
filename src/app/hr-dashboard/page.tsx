@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -359,7 +360,7 @@ export default function HRDashboard() {
     <div className="space-y-10 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">HR Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Team Hub Dashboard</h1>
           <p className="text-slate-500 font-medium text-sm">Hello, {user?.name?.split(' ')[0] || 'Employee'} • Universal Access Active</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

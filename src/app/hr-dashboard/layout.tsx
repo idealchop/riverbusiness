@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import HRLayoutClient from './HRLayoutClient';
 
 export const metadata: Metadata = {
-  title: 'HR Management',
+  title: 'Team Hub',
 };
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {

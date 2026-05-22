@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -35,7 +36,7 @@ const apps = [
     },
     { 
       id: '02', 
-      name: 'HR Management', 
+      name: 'Team Hub', 
       description: 'Unified workforce intelligence and payroll engine.',
       features: [
           'Station-based biometric attendance terminal',

@@ -111,8 +111,8 @@ export default function HRLayoutClient({ children }: { children: React.ReactNode
             <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
                 <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
                 <div className="flex flex-col">
-                <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">HR</span>
-                <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Management</span>
+                <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Team</span>
+                <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Hub</span>
                 </div>
             </Link>
 

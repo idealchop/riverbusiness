@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -25,7 +26,7 @@ const apps = [
   },
   { 
     id: '02', 
-    name: 'HR Management', 
+    name: 'Team Hub', 
     href: '/hr-dashboard', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
   },
