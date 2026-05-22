@@ -147,19 +147,19 @@ export function StatCards({
     const monthsToBill = 1;
     
     const deliveriesThisCycle = deliveries.filter(d => {
-        const dDate = new Date(d.date);
-        return isWithinInterval(dDate, { start: cycleStart, end: cycleEnd });
+        const deliveryDate = new Date(d.date);
+        return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
     const consumedLitersLastMonth = deliveries
         .filter(d => {
-            const dDate = new Date(d.date);
-            return isWithinInterval(dDate, { start: lastStart, end: lastEnd });
+            const deliveryDate = new Date(d.date);
+            return isWithinInterval(deliveryDate, { start: lastStart, end: lastEnd });
         })
         .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
-    const diff = lastMonthEnd.getTime() === lastStart.getTime() ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / (consumedLitersLastMonth || 1)) * 100;
+    const diff = consumedLitersLastMonth === 0 ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / consumedLitersLastMonth) * 100;
     const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
         
     let monthlyEquipmentCost = 0;
