@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -8,7 +8,29 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, ShieldCheck, Clock, CheckCircle2 } from 'lucide-react';
+import { 
+  History, 
+  Edit, 
+  Calendar as CalendarIcon, 
+  Info, 
+  Users, 
+  Droplets, 
+  MapPin, 
+  BarChart3, 
+  HelpCircle, 
+  Wallet, 
+  TrendingUp, 
+  TrendingDown, 
+  ArrowRight, 
+  Repeat, 
+  ShieldCheck, 
+  Clock, 
+  CheckCircle2,
+  X,
+  ChevronRight,
+  Loader2,
+  Save
+} from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth, addDays } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -123,11 +145,17 @@ export function StatCards({
     const lastEnd = endOfMonth(subMonths(now, 1));
     const monthsToBill = 1;
     
-    const deliveriesThisCycle = deliveries.filter(d => isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd }));
+    const deliveriesThisCycle = deliveries.filter(d => {
+        const dDate = new Date(d.date);
+        return isWithinInterval(dDate, { start: cycleStart, end: cycleEnd });
+    });
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
     const consumedLitersLastMonth = deliveries
-        .filter(d => isWithinInterval(new Date(d.date), { start: lastStart, end: lastEnd }))
+        .filter(d => {
+            const dDate = new Date(d.date);
+            return isWithinInterval(dDate, { start: lastStart, end: lastEnd });
+        })
         .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
     const diff = lastMonthEnd.getTime() === lastStart.getTime() ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / (consumedLitersLastMonth || 1)) * 100;
