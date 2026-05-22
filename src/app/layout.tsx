@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -6,11 +7,10 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: {
-    default: 'River Business | The All-in-One Business Operating System',
+    default: 'River Business | AI-powered operations platform for modern businesses',
     template: '%s | River Business',
   },
-  description:
-    'The platform to run essential needs for business workforce. River Business is a unified ecosystem connecting operations, people, collaboration, and security in one modular SaaS platform.',
+  description: 'AI-powered operations platform for modern businesses.',
   keywords: [
     'business operating system',
     'workforce management',
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'RiverPH', url: 'https://riverph.com' }],
   openGraph: {
-    title: 'River Business | All-in-One Operating System for Modern Teams',
-    description: 'The platform to run essential needs for business workforce. Manage operations, people, and data in one intelligent ecosystem.',
+    title: 'River Business | AI-powered operations platform for modern businesses',
+    description: 'AI-powered operations platform for modern businesses.',
     url: 'https://riverph.com',
     siteName: 'River Business',
     images: [
@@ -42,8 +42,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'River Business | The platform to run essential needs for business workforce',
-    description: 'Streamline your business operations with our unified SaaS platform. From HR to logistics, everything runs in one place.',
+    title: 'River Business | AI-powered operations platform for modern businesses',
+    description: 'AI-powered operations platform for modern businesses.',
     images: ['https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a'],
   },
 };
