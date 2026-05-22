@@ -8,7 +8,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: {
     default: 'River Business | AI-powered operations platform for modern businesses',
-    template: '%s | River Business',
+    template: '%s',
   },
   description: 'AI-powered operations platform for modern businesses.',
   keywords: [
