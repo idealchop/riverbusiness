@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Repeat, Truck, Clock, User, Settings2, Info, Grab, Loader2, Save } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Repeat, Truck, Clock, User, Settings2, Info, Grab, Loader2, Save, ShieldCheck } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { AppUser, RefillRequest } from '@/lib/types';
@@ -37,7 +37,7 @@ const toSafeDate = (val: any): Date | null => {
     if (val instanceof Timestamp) return val.toDate();
     if (typeof val === 'string') {
         const date = new Date(val);
-        return isNaN(d.getTime()) ? null : date;
+        return isNaN(date.getTime()) ? null : date;
     }
     if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
     const d = new Date(val);
