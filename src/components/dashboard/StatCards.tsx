@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, ShieldCheck } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, ShieldCheck, Clock, CheckCircle2 } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth, addDays } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -16,8 +16,11 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 /**
  * A sophisticated vertical water tank visual component.
@@ -88,6 +91,11 @@ export function StatCards({
   const [isConfirmingToggle, setIsConfirmingToggle] = React.useState(false);
   const [toggleTargetState, setToggleTargetState] = React.useState<boolean | null>(null);
   
+  const [localDay, setLocalDay] = useState(user?.customPlanDetails?.deliveryDay || 'Monday');
+  const [localTime, setLocalTime] = useState(user?.customPlanDetails?.deliveryTime || '09:00');
+  const [isUpdatingLogistics, setIsUpdatingLogistics] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
   const consumptionDetails = useMemo(() => {
     const now = new Date();
     
@@ -122,7 +130,7 @@ export function StatCards({
         .filter(d => isWithinInterval(new Date(d.date), { start: lastStart, end: lastEnd }))
         .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
-    const diff = consumedLitersLastMonth === 0 ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / consumedLitersLastMonth) * 100;
+    const diff = lastMonthEnd.getTime() === lastStart.getTime() ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / (consumedLitersLastMonth || 1)) * 100;
     const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
         
     let monthlyEquipmentCost = 0;
@@ -186,6 +194,24 @@ export function StatCards({
         setIsConfirmingToggle(false);
         setToggleTargetState(null);
     });
+  };
+
+  const handleSaveLogistics = async () => {
+    if (!firestore || !user?.id) return;
+    setIsUpdatingLogistics(true);
+    try {
+        const userRef = doc(firestore, 'users', user.id);
+        await updateDoc(userRef, {
+            'customPlanDetails.deliveryDay': localDay,
+            'customPlanDetails.deliveryTime': localTime,
+        });
+        toast({ title: 'Cycle Adjusted', description: 'Your fulfillment window has been updated.' });
+        setIsPopoverOpen(false);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Update failed' });
+    } finally {
+        setIsUpdatingLogistics(false);
+    }
   };
 
   const onSwitchChange = (checked: boolean) => {
@@ -285,7 +311,7 @@ export function StatCards({
           <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white overflow-hidden relative">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Available Credits</span>
+                <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Water Credits</span>
                 <button onClick={onSaveLitersClick} className="flex items-center gap-1.5 p-1 rounded-lg bg-blue-50 text-primary border border-blue-100 hover:bg-blue-100 transition-all z-50">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   <span className="text-[8px] font-black uppercase tracking-widest pr-1">Live Quality</span>
@@ -328,7 +354,7 @@ export function StatCards({
                                     <p className="text-4xl font-black text-slate-900 tracking-tighter">{consumptionDetails.currentBalance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
                                     <span className="text-sm font-black text-slate-400">L</span>
                                 </div>
-                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Remaining Tank Volume</p>
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Tank Balance</p>
                             </div>
                             <div className="grid grid-cols-1 gap-2 text-[9px] font-bold uppercase tracking-tight">
                                 <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
@@ -350,7 +376,7 @@ export function StatCards({
           <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />Current Consumption
+                <BarChart3 className="h-4 w-4 text-primary" />Usage Analysis
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -379,7 +405,7 @@ export function StatCards({
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Repeat className="h-4 w-4 text-primary" />
-                  <span>Auto-Refill Status</span>
+                  <span>Auto-Refill</span>
                   <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -389,7 +415,7 @@ export function StatCards({
                         </TooltipTrigger>
                         <TooltipContent className="rounded-xl p-3 border-slate-100 shadow-xl bg-white max-w-[220px]">
                             <p className="text-[10px] font-bold text-slate-900 leading-relaxed uppercase tracking-tight">
-                                Automated Logistics: No more manual orders or follow-up calls. Our team monitors your supply and handles everything automatically.
+                                Automated Logistics: Our team monitors your supply and handles replenishment cycles automatically.
                             </p>
                         </TooltipContent>
                     </Tooltip>
@@ -404,7 +430,6 @@ export function StatCards({
                     "h-16 rounded-xl border flex items-center justify-center transition-all relative overflow-hidden",
                     autoRefill ? "bg-blue-50 border-blue-100 shadow-inner" : "bg-slate-50 border-slate-200"
                 )}>
-                   {/* Water Wave Animation Background */}
                     <div className={cn(
                         "absolute inset-0 pointer-events-none z-0 transition-all duration-700",
                         !autoRefill && "grayscale opacity-40"
@@ -417,17 +442,64 @@ export function StatCards({
 
                 <div className="flex items-center gap-3">
                   {autoRefill && isActivated && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all shrink-0" 
-                      onClick={onUpdateScheduleClick}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all shrink-0" 
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-64 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white overflow-hidden z-50">
+                            <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Logistics Cycle</p>
+                                <button onClick={() => setIsPopoverOpen(false)} className="text-slate-300 hover:text-slate-900"><X className="h-3.5 w-3.5" /></button>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Delivery Day</Label>
+                                    <Select value={localDay} onValueChange={setLocalDay}>
+                                        <SelectTrigger className="h-9 rounded-xl bg-white border-slate-200 font-bold text-xs shadow-sm">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl shadow-2xl border-slate-100">
+                                            {WEEKDAYS.map(day => (
+                                                <SelectItem key={day} value={day} className="font-bold text-xs py-2 rounded-lg">{day}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Dispatch Window</Label>
+                                    <div className="relative">
+                                        <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                                        <Input 
+                                            type="time" 
+                                            value={localTime}
+                                            onChange={(e) => setLocalTime(e.target.value)}
+                                            className="h-9 rounded-xl bg-white border-slate-200 font-bold text-xs pl-8 shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <Button 
+                                    onClick={handleSaveLogistics} 
+                                    disabled={isUpdatingLogistics}
+                                    size="sm"
+                                    className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 gap-2"
+                                >
+                                    {isUpdatingLogistics ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-2" />}
+                                    Sync Logistics
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                   )}
                   <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Scheduled Dispatch</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Logistics Cycle</p>
                       <p className={cn("text-base font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>
                           {autoRefill ? `Every ${nextRefillDay}` : "Manual Mode Only"}
                       </p>
@@ -445,7 +517,7 @@ export function StatCards({
                         }}
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" /> 
-                        {isActivated ? 'Schedule One-Time' : isPending ? 'Activation Pending' : 'Setup Required'}
+                        {isActivated ? 'Schedule One-Time' : isPending ? 'Setup Required' : 'Avail Water Refill'}
                     </Button>
                 )}
               </div>
