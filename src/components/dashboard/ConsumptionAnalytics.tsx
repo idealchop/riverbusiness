@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -211,9 +210,8 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         <div>
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            {isParent ? 'Multi-Branch Analytics' : 'Consumption Intelligence'}
+            {isParent ? 'Multi-Branch Analytics' : 'Consumption History'}
           </CardTitle>
-          <CardDescription className="text-xs font-medium uppercase tracking-widest text-muted-foreground mt-1">Detailed usage patterns and logistical flow.</CardDescription>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as any)}>
