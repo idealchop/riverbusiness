@@ -268,7 +268,7 @@ export default function EditModulePage() {
                                             key={module.id}
                                             initialContent={module.textContent || { type: 'doc', content: [{ type: 'paragraph' }] }} 
                                             onContentChange={(json) => form.setValue('textContent', json)}
-                                            companyId={user?.companyId}
+                                            companyId={companyId}
                                             editable={true}
                                         />
                                     </div>

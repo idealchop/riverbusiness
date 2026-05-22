@@ -245,7 +245,7 @@ export default function CreateModulePage() {
                                             ref={editorRef}
                                             initialContent={form.getValues('textContent')} 
                                             onContentChange={(json) => form.setValue('textContent', json)}
-                                            companyId={user?.companyId}
+                                            companyId={companyId}
                                             editable={true}
                                         />
                                     </div>

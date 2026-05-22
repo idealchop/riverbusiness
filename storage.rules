@@ -14,34 +14,38 @@ service firebase.storage {
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
+    function isSameCompany(companyId) {
+      return isAuthenticated() && (
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyId == companyId ||
+        isAdmin()
+      );
+    }
+
     // --- SHARED CLOUD STORAGE ---
     // Allow public read to support shareable links and frictionless team collaboration.
     // Allow any authenticated user to write/upload to facilitate an open organizational drive.
-    match /cloud_storage/{allPaths=**} {
+    match /cloud_storage/{companyId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if isSameCompany(companyId);
+    }
+
+    // --- COLLABORATION ASSETS ---
+    // Strictly enforced organizational isolation for images embedded in documents.
+    match /collab_images/{companyId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSameCompany(companyId);
     }
 
     // --- FLEXIBLE ASSETS ---
-    // Allow any authenticated user to manage profile photos, payment proofs, chat attachments, and collab images.
-    // This removes strict individual ownership for a more flexible team environment.
-    match /users/{allPaths=**} {
-      allow read, write: if isAuthenticated();
-    }
-    match /chats/{allPaths=**} {
-      allow read, write: if isAuthenticated();
+    // Allow users to manage their own specific profile and chat assets.
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
     
-    // Aligned with Client ID and Organization
-    match /collab_images/{companyId}/{allPaths=**} {
-      allow read, write: if isAuthenticated();
+    match /chats/{userId}/{allPaths=**} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
     
-    // Legacy support for user-based paths if they still exist
-    match /collab_images/{userId}/{allPaths=**} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
-    }
-
     // --- SECURE ADMINISTRATIVE ASSETS ---
     // Only admins can manage official station documents, contracts, and internal uploads.
     match /admin_uploads/{allPaths=**} {

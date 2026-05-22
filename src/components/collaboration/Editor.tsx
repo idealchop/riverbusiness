@@ -273,60 +273,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const [customGoal, setCustomGoal] = useState('');
   const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
 
-  const uploadAndInsertImage = useCallback(async (file: File) => {
-    if (!editor || !storage || !auth?.currentUser) return;
-
-    if (!file.type.startsWith('image/')) {
-        toast({ variant: 'destructive', title: 'Wrong format', description: 'Please use an image file.' });
-        return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    
-    const targetPath = companyId || 'unassigned';
-    const path = `collab_images/${targetPath}/${Date.now()}-${file.name}`;
-
-    try {
-      const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
-        setUploadProgress(progress);
-      });
-      
-      if (isMounted && editor && !editor.isDestroyed) {
-          editor.chain().focus().setImage({ src: url }).run();
-          toast({ title: 'Image added' });
-      }
-    } catch (error) {
-      console.error('Image upload failed:', error);
-      if (isMounted) toast({ variant: 'destructive', title: 'Failed to add image' });
-    } finally {
-      if (isMounted) {
-        setIsUploading(false);
-        setUploadProgress(0);
-      }
-    }
-  }, [storage, auth, toast, isMounted, companyId]);
-
-  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) uploadAndInsertImage(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const acceptAiSuggestion = () => {
-    if (!aiPreview || !editor) return;
-    setAiPreview(null);
-    toast({ title: 'Changes kept' });
-  };
-
-  const discardAiSuggestion = () => {
-    if (!aiPreview || !editor) return;
-    const { from, to, originalText } = aiPreview;
-    editor.chain().focus().deleteRange(from, to).insertContentAt(from, originalText).run();
-    setAiPreview(null);
-    toast({ title: 'Changes removed' });
-  };
-
   const CustomImage = ImageExtension.extend({
     addAttributes() {
       return {
@@ -403,6 +349,61 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         },
     }
   }, [isMounted]);
+
+  const uploadAndInsertImage = useCallback(async (file: File) => {
+    if (!editor || editor.isDestroyed || !storage || !auth?.currentUser) return;
+
+    if (!file.type.startsWith('image/')) {
+        toast({ variant: 'destructive', title: 'Wrong format', description: 'Please use an image file.' });
+        return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    // Crucial: Use organization ID for storage path alignment
+    const targetPath = companyId || 'unassigned';
+    const path = `collab_images/${targetPath}/${Date.now()}-${file.name}`;
+
+    try {
+      const url = await uploadFileWithProgress(storage, auth, path, file, {}, (progress) => {
+        setUploadProgress(progress);
+      });
+      
+      if (isMounted && editor && !editor.isDestroyed) {
+          editor.chain().focus().setImage({ src: url }).run();
+          toast({ title: 'Image added' });
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      if (isMounted) toast({ variant: 'destructive', title: 'Failed to add image' });
+    } finally {
+      if (isMounted) {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    }
+  }, [storage, auth, toast, isMounted, companyId, editor]);
+
+  const handleImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadAndInsertImage(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const acceptAiSuggestion = () => {
+    if (!aiPreview || !editor) return;
+    setAiPreview(null);
+    toast({ title: 'Changes kept' });
+  };
+
+  const discardAiSuggestion = () => {
+    if (!aiPreview || !editor) return;
+    const { from, to, originalText } = aiPreview;
+    editor.chain().focus().deleteRange(from, to).insertContentAt(from, originalText).run();
+    setAiPreview(null);
+    toast({ title: 'Changes removed' });
+  };
 
   useImperativeHandle(ref, () => ({
       focus: () => {
