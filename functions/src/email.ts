@@ -188,16 +188,15 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
 export function getPaymentStatusTemplate(businessName: string, invoiceId: string, amount: number, status: string) {
   const isPaid = status === 'Paid';
   const content = `
-    <p class="body-text">Hi ${businessName}, ${isPaid ? "your financial status is confirmed. Your account remains in excellent standing within the River ecosystem." : "we've received your settlement proof and our audit team is currently verifying the transaction."}</p>
-    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; margin-top: 24px; border: 1px solid #e2e8f0;">
-      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Amount Processed</p>
+    <p class="greeting">Hi ${businessName}, ${isPaid ? "your payment is confirmed." : "we've received your proof of payment."}</p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Amount Processed</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
   `;
-
   return {
-    subject: isPaid ? `Financial Verification Complete ✅` : `Settlement Logged ⏳`,
-    html: getEmailWrapper(content, isPaid ? 'Transaction Verified' : 'Processing Settlement', `<p style="text-align: center; color: #64748b; font-size: 14px;">Invoice ID: ${invoiceId}</p>`)
+    subject: isPaid ? `Payment Confirmed ✅` : `Processing Payment ⏳`,
+    html: getEmailWrapper(content, isPaid ? 'Payment Successful' : 'Review in Progress', `<p style="text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px;">Invoice: ${invoiceId}</p>`)
   };
 }
 
@@ -298,6 +297,28 @@ export function getPaymentReminderTemplate(businessName: string, amount: string,
   return {
     subject: `Action Required: Statement for ${period} 🌊`,
     html: getEmailWrapper(content, 'Financial Follow-up', '', 'Settle via Workspace')
+  };
+}
+
+export function getStationRefillNoticeTemplate(stationName: string, businessName: string, address: string, day: string, time: string) {
+  const content = `
+    <p class="body-text">Hello <strong>${stationName}</strong>,</p>
+    <p class="body-text">
+      This is an automated logistics reminder. A recurring hydration replenishment is scheduled for tomorrow as part of our high-fidelity service agreement.
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin: 24px 0;">
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Client:</span> ${businessName}</div>
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Target Day:</span> Tomorrow, ${day}</div>
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Est. Window:</span> ${time}</div>
+      <div style="font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Service Point:</span> ${address}</div>
+    </div>
+    <p class="body-text">
+      Please ensure adequate inventory is prepared for dispatch. Logistics data can be synchronized via the Command Center.
+    </p>
+  `;
+  return {
+    subject: `Logistics Notice: Scheduled Refill for ${businessName} Tomorrow 💧`,
+    html: getEmailWrapper(content, 'Dispatch Authorization', `<p style="text-align: center; color: #64748b; font-size: 13px;">Recurring Supply Cycle</p>`, 'Open Hub')
   };
 }
 

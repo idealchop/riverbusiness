@@ -3,6 +3,7 @@ import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import * as logger from "firebase-functions/logger";
+import * as functions from 'firebase-functions';
 import PDFDocument from 'pdfkit';
 import { format, startOfMonth, endOfMonth, parse, endOfDay, addMonths, subMonths, addDays } from 'date-fns';
 
@@ -24,7 +25,8 @@ import {
     getPaymentReminderTemplate,
     getEmployeeInvitationTemplate,
     getEmployeePayslipTemplate,
-    getLeaveStatusTemplate
+    getLeaveStatusTemplate,
+    getStationRefillNoticeTemplate
 } from './email';
 
 // Export all billing functions
@@ -481,6 +483,60 @@ export async function generatePayslipPDF(companyName: string, companyAddress: st
 }
 
 // --- TRIGGERS ---
+
+/**
+ * Scheduled function to notify water stations of upcoming auto-refills tomorrow.
+ * Runs daily at 9:00 AM.
+ */
+export const notifyStationsOfUpcomingRefills = functions.runWith({
+    secrets: ["BREVO_API_KEY"]
+}).pubsub.schedule('0 9 * * *').onRun(async (context) => {
+    const db = getFirestore();
+    const now = new Date();
+    const tomorrow = addDays(now, 1);
+    const tomorrowDayName = format(tomorrow, 'EEEE'); // e.g., "Monday"
+
+    logger.info(`Daily Logistics Pulse: Checking for auto-refills scheduled for tomorrow (${tomorrowDayName})`);
+
+    const usersSnap = await db.collection('users')
+        .where('customPlanDetails.autoRefillEnabled', '==', true)
+        .where('customPlanDetails.deliveryDay', '==', tomorrowDayName)
+        .get();
+
+    if (usersSnap.empty) {
+        logger.info("No auto-refills found for tomorrow.");
+        return null;
+    }
+
+    const promises = usersSnap.docs.map(async (userDoc) => {
+        const user = userDoc.data();
+        if (!user.assignedWaterStationId) return;
+
+        const stationDoc = await db.collection('waterStations').doc(user.assignedWaterStationId).get();
+        const station = stationDoc.data();
+
+        if (station?.email) {
+            const template = getStationRefillNoticeTemplate(
+                station.name,
+                user.businessName,
+                user.address || 'N/A',
+                tomorrowDayName,
+                user.customPlanDetails.deliveryTime || 'TBD'
+            );
+
+            return sendEmail({
+                to: station.email,
+                subject: template.subject,
+                text: `Scheduled refill dispatch authorized for ${user.businessName} tomorrow.`,
+                html: template.html
+            });
+        }
+        return null;
+    });
+
+    await Promise.all(promises);
+    return null;
+});
 
 /**
  * Frictionless Email Update Sync.
