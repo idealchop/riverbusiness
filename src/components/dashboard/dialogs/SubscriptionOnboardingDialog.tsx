@@ -432,14 +432,17 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                         <div className="flex items-center justify-between mb-4">
                             <div className="space-y-1">
                                 <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
-                                    {STEPS[step].title}
+                                    {user?.plan && step === 3 ? "Change Your Plan" : STEPS[step].title}
                                 </DialogTitle>
                             </div>
                         </div>
                         <DialogDescription className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed max-w-xl">
                             {step === 1 && "Please provide your business details. This ensures accurate deliveries and billing."}
                             {step === 2 && "Enter your total staff count. We use this to estimate your weekly water and equipment needs."}
-                            {step === 3 && "Review your specialized consumption tier. Our Flow Plan scales with your business so you only pay for what you use."}
+                            {step === 3 && (user?.plan 
+                                ? "Review your specialized consumption tier or transition to our optimized Flow Plan for better scalability." 
+                                : "Choose the plan that fits your team. Our Flow Plan is great because you only pay for the water you use.")
+                            }
                             {step === 4 && "Your profile is ready. Review the timeline below for starting your service."}
                         </DialogDescription>
                     </header>
@@ -582,7 +585,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
                                             <div className="relative z-10 space-y-6">
                                                 <div className="space-y-1">
                                                     <h4 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Flow Plan Tier</h4>
-                                                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-60">Authorized consumption pricing</p>
+                                                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-60">Simple pricing for your team</p>
                                                 </div>
                                                 <div className="flex items-baseline gap-2">
                                                     <p className="text-5xl sm:text-6xl font-black tracking-tighter">₱{containerPrice.toFixed(2)}</p>

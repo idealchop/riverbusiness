@@ -474,7 +474,7 @@ export function StatCards({
 
                                 <div className="space-y-1.5">
                                     <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Dispatch Window</Label>
-                                    <div className="relative">
+                                    <div className="relative group">
                                         <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                                         <Input 
                                             type="time" 
