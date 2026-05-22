@@ -304,21 +304,21 @@ export function getStationRefillNoticeTemplate(stationName: string, businessName
   const content = `
     <p class="body-text">Hello <strong>${stationName}</strong>,</p>
     <p class="body-text">
-      This is an automated logistics reminder. A recurring hydration replenishment is scheduled for tomorrow as part of our high-fidelity service agreement.
+      This is a reminder for a scheduled water delivery tomorrow.
     </p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin: 24px 0;">
       <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Client:</span> ${businessName}</div>
-      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Target Day:</span> Tomorrow, ${day}</div>
-      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Est. Window:</span> ${time}</div>
-      <div style="font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Service Point:</span> ${address}</div>
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Day:</span> Tomorrow, ${day}</div>
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Time:</span> ${time}</div>
+      <div style="font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Address:</span> ${address}</div>
     </div>
     <p class="body-text">
-      Please ensure adequate inventory is prepared for dispatch. Logistics data can be synchronized via the Command Center.
+      Please prepare the containers for delivery. You can check more details in the dashboard.
     </p>
   `;
   return {
-    subject: `Logistics Notice: Scheduled Refill for ${businessName} Tomorrow 💧`,
-    html: getEmailWrapper(content, 'Dispatch Authorization', `<p style="text-align: center; color: #64748b; font-size: 13px;">Recurring Supply Cycle</p>`, 'Open Hub')
+    subject: `Delivery Reminder: ${businessName} Tomorrow 💧`,
+    html: getEmailWrapper(content, 'Refill Schedule', `<p style="text-align: center; color: #64748b; font-size: 13px;">Scheduled Delivery</p>`, 'Open Hub')
   };
 }
 
