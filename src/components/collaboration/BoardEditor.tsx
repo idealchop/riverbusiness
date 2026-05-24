@@ -328,7 +328,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     setElements(prevState.elements);
     setConnections(prevState.connections);
     sync(prevState.elements, prevState.connections);
-  }, [history, editable, sync]);
+    toast({ title: 'Undo successful', description: 'Previous action has been reversed.' });
+  }, [history, editable, sync, toast]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -376,7 +377,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           setTimeout(() => sync(elements, next), 0);
           return next;
       });
-      toast({ title: 'Unlinked' });
+      toast({ title: 'Link removed', description: 'Connection between elements has been deleted.' });
   }, [editable, elements, sync, pushHistory, toast]);
 
   const applyBlueprint = (blueprint: typeof BLUEPRINTS[0]) => {
@@ -421,8 +422,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       setElements(finalElements);
       setConnections(finalConnections);
       sync(finalElements, finalConnections);
-      
-      toast({ title: 'Template applied', description: `${blueprint.name} has been added to your board.` });
   };
 
   const deleteSelected = useCallback(() => {
@@ -438,7 +437,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return next;
       });
       setSelectedIds([]);
-  }, [editable, selectedIds, sync, pushHistory]);
+      toast({ title: 'Elements deleted', description: 'Selected items have been removed from the canvas.' });
+  }, [editable, selectedIds, sync, pushHistory, toast]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -983,5 +983,3 @@ function Port({ side, id }: { side: 'top' | 'right' | 'bottom' | 'left', id: str
         </div>
     );
 }
-    
-    
