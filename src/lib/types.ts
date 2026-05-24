@@ -198,6 +198,7 @@ export interface SheetView {
         hiddenFields?: string[];
         filters?: any[];
         sorts?: any[];
+        groupByFieldId?: string; // NEW: Field to group by in grid view
         rowHeight?: RowHeight;
         wrapHeaders?: boolean;
     };

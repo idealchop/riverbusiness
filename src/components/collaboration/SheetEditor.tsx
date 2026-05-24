@@ -23,7 +23,10 @@ import {
     RotateCcw,
     Layout,
     GripVertical,
-    HelpCircle
+    HelpCircle,
+    ChevronRight,
+    Users,
+    ChevronDownCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,7 +112,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [views, setViews] = useState<SheetView[]>(() => {
     if (initialData?.views && initialData.views.length > 0) return initialData.views;
     return [
-      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [] } },
+      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [], groupByFieldId: '' } },
       { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [], sorts: [] } },
       { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [], sorts: [] } }
     ];
@@ -120,6 +123,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isAllFieldsVisible, setIsAllFieldsVisible] = useState(false);
   
   const [sortRules, setSortRules] = useState<SortRule[]>(initialData?.views?.find((v: any) => v.id === initialData?.activeViewId)?.config?.sorts || []);
   const [autoSort, setAutoSort] = useState(true);
@@ -137,7 +141,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
   const activeView = useMemo(() => {
     if (!views || views.length === 0) {
-        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [] } } as SheetView;
+        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [], groupByFieldId: '' } } as SheetView;
     }
     const found = views.find(v => v.id === activeViewId);
     if (found) return found;
@@ -272,6 +276,15 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     sync(fields, records, nextViews, activeViewId);
   };
 
+  const handleGroupByChange = (fieldId: string) => {
+      const nextViews = views.map(v => v.id === activeViewId ? {
+          ...v,
+          config: { ...v.config, groupByFieldId: v.config?.groupByFieldId === fieldId ? '' : fieldId }
+      } : v);
+      setViews(nextViews);
+      sync(fields, records, nextViews, activeViewId);
+  };
+
   const handleAddOptionDirectly = useCallback((fieldId: string, label: string) => {
     const field = fields.find(f => f.id === fieldId);
     if (!field || !field.options || !label.trim()) return;
@@ -336,7 +349,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const handleCreateView = useCallback((type: SheetViewType) => {
     const id = `v-${Date.now()}`;
     const name = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-    const newView: SheetView = { id, name, type, config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [] } };
+    const newView: SheetView = { id, name, type, config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [], groupByFieldId: '' } };
     const next = [...views, newView];
     setViews(next);
     setActiveViewId(id);
@@ -471,6 +484,19 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     return list;
   }, [records, debouncedSearch, sortRules, filters, fields]);
 
+  const groupedRecords = useMemo(() => {
+      const fieldId = activeView.config?.groupByFieldId;
+      if (!fieldId) return { flat: filteredRecords };
+
+      const groups: Record<string, SheetRecord[]> = {};
+      filteredRecords.forEach(r => {
+          const val = String(r.values[fieldId] || 'Uncategorized');
+          if (!groups[val]) groups[val] = [];
+          groups[val].push(r);
+      });
+      return groups;
+  }, [filteredRecords, activeView]);
+
   const handleResizeStart = useCallback((e: React.MouseEvent, fieldId: string, currentWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -517,6 +543,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   }, [activeView]);
 
   const headerWrapClass = activeView.config?.wrapHeaders ? 'whitespace-normal leading-tight py-2' : 'whitespace-nowrap';
+
+  const groupSuggestions = useMemo(() => fields.filter(f => ['status', 'select', 'text', 'date', 'checkbox'].includes(f.type)).slice(0, 5), [fields]);
 
   if (!isMounted) return null;
 
@@ -772,6 +800,75 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <Popover>
                         <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", activeView.config?.groupByFieldId ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                                <Layout className="h-3.5 w-3.5" /> 
+                                <span className="hidden sm:inline">Group</span>
+                                {activeView.config?.groupByFieldId && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">1</Badge>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[320px] p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white z-[60]">
+                            <div className="p-4 bg-slate-50/50 border-b flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-black uppercase tracking-tight text-slate-900">Group by</h4>
+                                    <HelpCircle className="h-3.5 w-3.5 text-slate-300" />
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => handleGroupByChange('')} className="h-7 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Clear</Button>
+                            </div>
+                            <ScrollArea className="max-h-[400px]">
+                                <div className="p-4 space-y-6">
+                                    <div className="space-y-2">
+                                        <p className="px-1 text-[9px] font-black uppercase tracking-widest text-slate-300">Pick a field to group by</p>
+                                        <div className="space-y-0.5">
+                                            {groupSuggestions.map(f => (
+                                                <button 
+                                                    key={f.id} 
+                                                    onClick={() => handleGroupByChange(f.id)}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                                                        activeView.config?.groupByFieldId === f.id ? "bg-primary/5 text-primary" : "text-slate-600 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    <ChevronDownCircle className={cn("h-4 w-4", activeView.config?.groupByFieldId === f.id ? "text-primary" : "text-slate-300")} />
+                                                    <span className="text-xs font-bold">{f.name}</span>
+                                                    {activeView.config?.groupByFieldId === f.id && <Check className="h-3.5 w-3.5 ml-auto" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {!isAllFieldsVisible && fields.length > 5 && (
+                                        <button 
+                                            onClick={() => setIsAllFieldsVisible(true)}
+                                            className="w-full flex items-center gap-3 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary transition-colors"
+                                        >
+                                            <ChevronDown className="h-3.5 w-3.5" /> See all fields
+                                        </button>
+                                    )}
+
+                                    {isAllFieldsVisible && (
+                                        <div className="space-y-0.5 pt-2 border-t border-slate-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            {fields.filter(f => !groupSuggestions.find(s => s.id === f.id)).map(f => (
+                                                <button 
+                                                    key={f.id} 
+                                                    onClick={() => handleGroupByChange(f.id)}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                                                        activeView.config?.groupByFieldId === f.id ? "bg-primary/5 text-primary" : "text-slate-600 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    <ChevronDownCircle className={cn("h-4 w-4", activeView.config?.groupByFieldId === f.id ? "text-primary" : "text-slate-300")} />
+                                                    <span className="text-xs font-bold">{f.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-all">
                                 <Rows className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Appearance</span>
@@ -821,7 +918,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         </div>
 
         {/* Filter Status Bar */}
-        {(filters.length > 0 || sortRules.length > 0 || (activeView?.config?.hiddenFields?.length || 0) > 0) && (
+        {(filters.length > 0 || sortRules.length > 0 || activeView.config?.groupByFieldId || (activeView?.config?.hiddenFields?.length || 0) > 0) && (
             <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
                 {(activeView?.config?.hiddenFields?.length || 0) > 0 && (
                     <div className="flex items-center gap-1.5 mr-2">
@@ -831,6 +928,19 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     </div>
                 )}
                 
+                {activeView.config?.groupByFieldId && (
+                    <Badge variant="outline" className="h-6 px-2.5 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200">
+                        <Layout className="h-3 w-3" />
+                        <span>Grouped by {fields.find(f => f.id === activeView.config?.groupByFieldId)?.name}</span>
+                        <button 
+                            onClick={() => handleGroupByChange('')}
+                            className="h-4 w-4 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors ml-1"
+                        >
+                            <X className="h-2.5 w-2.5" />
+                        </button>
+                    </Badge>
+                )}
+
                 {filters.map(f => {
                     const field = fields.find(field => field.id === f.fieldId);
                     return (
@@ -997,28 +1107,39 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             </DropdownMenu>
                         </div>
 
-                        <div className="divide-y">
-                            {filteredRecords.map((record, idx) => (
-                                <div key={record.id} className={cn("flex hover:bg-slate-50/30 transition-colors group", rowHeightClass)}>
-                                    <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
-                                        {idx + 1}
-                                    </div>
-                                    {visibleFields.map((field) => (
-                                        <div key={field.id} style={{ width: field.width }} className="border-r shrink-0 flex items-center relative">
-                                            <CellRenderer 
-                                                field={field} 
-                                                value={record.values[field.id]} 
-                                                onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
-                                                onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
-                                                onUpdateOption={updateOption}
-                                                onDeleteOption={deleteOption}
-                                                onUpdateField={updateField}
-                                                editable={editable}
-                                            />
+                        <div className="divide-y pb-20">
+                            {Object.entries(groupedRecords).map(([groupKey, groupRecords], gIdx) => (
+                                <React.Fragment key={groupKey}>
+                                    {activeView.config?.groupByFieldId && (
+                                        <div className="bg-slate-50/80 sticky top-10 z-10 px-6 py-2 border-b flex items-center gap-3">
+                                            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{groupKey}</span>
+                                            <Badge variant="outline" className="h-5 px-2 bg-white text-slate-400 border-slate-100 text-[8px] font-bold">{groupRecords.length} Items</Badge>
+                                        </div>
+                                    )}
+                                    {groupRecords.map((record, idx) => (
+                                        <div key={record.id} className={cn("flex hover:bg-slate-50/30 transition-colors group", rowHeightClass)}>
+                                            <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
+                                                {idx + 1}
+                                            </div>
+                                            {visibleFields.map((field) => (
+                                                <div key={field.id} style={{ width: field.width }} className="border-r shrink-0 flex items-center relative">
+                                                    <CellRenderer 
+                                                        field={field} 
+                                                        value={record.values[field.id]} 
+                                                        onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
+                                                        onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
+                                                        onUpdateOption={updateOption}
+                                                        onDeleteOption={deleteOption}
+                                                        onUpdateField={updateField}
+                                                        editable={editable}
+                                                    />
+                                                </div>
+                                            ))}
+                                            <div className="flex-1 bg-white" />
                                         </div>
                                     ))}
-                                    <div className="flex-1 bg-white" />
-                                </div>
+                                </React.Fragment>
                             ))}
                             <div className={cn("flex hover:bg-slate-50/30 transition-colors items-center border-b", rowHeightClass)}>
                                 <div className="w-12 h-full shrink-0 border-r" />
