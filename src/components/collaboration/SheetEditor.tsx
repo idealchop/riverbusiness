@@ -49,7 +49,13 @@ import {
     Baseline,
     RotateCcw,
     Zap,
-    AlignLeft
+    AlignLeft,
+    Menu,
+    Rows,
+    BetweenVerticalStart,
+    BetweenVerticalEnd,
+    Maximize,
+    StretchVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,7 +79,7 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { SheetField, SheetRecord, SheetView, SheetFieldType, SheetViewType } from '@/lib/types';
+import type { SheetField, SheetRecord, SheetView, SheetFieldType, SheetViewType, RowHeight } from '@/lib/types';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, addDays } from 'date-fns';
@@ -137,6 +143,13 @@ const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
 ];
 
 const CURRENCY_SYMBOLS = ['₱', '$', '€', '£', '¥', '₩', '₹'];
+
+const ROW_HEIGHT_OPTIONS: { id: RowHeight, label: string, icon: React.ElementType }[] = [
+    { id: 'short', label: 'Short', icon: BetweenVerticalStart },
+    { id: 'medium', label: 'Medium', icon: BetweenVerticalEnd },
+    { id: 'tall', icon: Maximize, label: 'Tall' },
+    { id: 'extra-tall', icon: StretchVertical, label: 'Extra Tall' }
+];
 
 const OPTION_COLORS = [
     // Subtle Row
@@ -550,7 +563,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [views, setViews] = useState<SheetView[]>(() => {
     if (initialData?.views && initialData.views.length > 0) return initialData.views;
     return [
-      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [] } },
+      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false } },
       { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [] } },
       { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [] } }
     ];
@@ -578,7 +591,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
   const activeView = useMemo(() => {
     if (!views || views.length === 0) {
-        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [] } } as SheetView;
+        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false } } as SheetView;
     }
     const found = views.find(v => v.id === activeViewId);
     if (found) return found;
@@ -698,6 +711,24 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     sync(fields, records, nextViews, activeViewId);
   };
 
+  const handleRowHeightChange = (height: RowHeight) => {
+    const nextViews = views.map(v => v.id === activeViewId ? {
+        ...v,
+        config: { ...v.config, rowHeight: height }
+    } : v);
+    setViews(nextViews);
+    sync(fields, records, nextViews, activeViewId);
+  };
+
+  const handleToggleWrapHeaders = (enabled: boolean) => {
+    const nextViews = views.map(v => v.id === activeViewId ? {
+        ...v,
+        config: { ...v.config, wrapHeaders: enabled }
+    } : v);
+    setViews(nextViews);
+    sync(fields, records, nextViews, activeViewId);
+  };
+
   const handleAddOptionDirectly = useCallback((fieldId: string, label: string) => {
     const field = fields.find(f => f.id === fieldId);
     if (!field || !field.options || !label.trim()) return;
@@ -760,7 +791,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const handleCreateView = useCallback((type: SheetViewType) => {
     const id = `v-${Date.now()}`;
     const name = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-    const newView: SheetView = { id, name, type, config: { hiddenFields: [] } };
+    const newView: SheetView = { id, name, type, config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false } };
     const next = [...views, newView];
     setViews(next);
     setActiveViewId(id);
@@ -869,6 +900,18 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       const hidden = activeView.config?.hiddenFields || [];
       return fields.filter(f => !hidden.includes(f.id));
   }, [fields, activeView]);
+
+  const rowHeightClass = useMemo(() => {
+    const height = activeView.config?.rowHeight || 'medium';
+    switch (height) {
+        case 'short': return 'h-8';
+        case 'tall': return 'h-16';
+        case 'extra-tall': return 'h-24';
+        default: return 'h-10';
+    }
+  }, [activeView]);
+
+  const headerWrapClass = activeView.config?.wrapHeaders ? 'whitespace-normal leading-tight py-2' : 'whitespace-nowrap';
 
   if (!isMounted) return null;
 
@@ -1088,6 +1131,53 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             </ScrollArea>
                         </PopoverContent>
                     </Popover>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-all">
+                                <Rows className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Appearance</span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 p-0 overflow-hidden border-none shadow-3xl rounded-2xl bg-white">
+                            <div className="p-4 bg-slate-50 border-b">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Layout Protocol</h4>
+                            </div>
+                            <div className="p-2 space-y-4">
+                                <div className="space-y-2">
+                                    <p className="px-2 text-[9px] font-black uppercase tracking-widest text-slate-300">Select a row height</p>
+                                    <div className="space-y-0.5">
+                                        {ROW_HEIGHT_OPTIONS.map((opt) => (
+                                            <button 
+                                                key={opt.id}
+                                                onClick={() => handleRowHeightChange(opt.id)}
+                                                className={cn(
+                                                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all",
+                                                    (activeView.config?.rowHeight || 'medium') === opt.id ? "bg-primary/10 text-primary" : "text-slate-600 hover:bg-slate-50"
+                                                )}
+                                            >
+                                                <opt.icon className="h-4 w-4" />
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <Separator className="bg-slate-50" />
+                                <div className="p-1 space-y-1">
+                                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                                        <div className="flex items-center gap-3">
+                                            <RotateCcw className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                                            <span className="text-xs font-bold text-slate-600">Wrap headers</span>
+                                        </div>
+                                        <Switch 
+                                            checked={activeView.config?.wrapHeaders || false} 
+                                            onCheckedChange={handleToggleWrapHeaders}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
         </div>
@@ -1120,12 +1210,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             {activeView?.type === 'grid' && (
                 <ScrollArea className="flex-1">
                     <div className="inline-block min-w-full">
-                        <div className="flex bg-slate-50/50 sticky top-0 z-20 border-b backdrop-blur-md">
-                            <div className="w-12 h-10 border-r bg-slate-100/50 flex items-center justify-center shrink-0">
+                        <div className="flex bg-slate-50/50 sticky top-0 z-20 border-b backdrop-blur-md min-h-[40px]">
+                            <div className="w-12 border-r bg-slate-100/50 flex items-center justify-center shrink-0">
                                 <span className="text-[10px] font-black text-slate-300">#</span>
                             </div>
                             {visibleFields.map((field) => (
-                                <div key={field.id} style={{ width: field.width }} className="group h-10 border-r flex items-center justify-between px-3 shrink-0 relative">
+                                <div key={field.id} style={{ width: field.width }} className="group border-r flex items-center justify-between px-3 shrink-0 relative">
                                     <div className="flex items-center gap-2 overflow-hidden flex-1">
                                         {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3.5 w-3.5 text-slate-400 shrink-0" })}
                                         {editingFieldId === field.id ? (
@@ -1150,7 +1240,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                         ) : (
                                             <span 
                                                 onDoubleClick={() => setEditingFieldId(field.id)}
-                                                className="text-[10px] font-black text-slate-600 uppercase tracking-widest truncate flex-1 cursor-text"
+                                                className={cn(
+                                                    "text-[10px] font-black text-slate-600 uppercase tracking-widest truncate flex-1 cursor-text",
+                                                    headerWrapClass
+                                                )}
                                             >
                                                 {field.name}
                                             </span>
@@ -1287,12 +1380,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                         <div className="divide-y">
                             {filteredRecords.map((record, idx) => (
-                                <div key={record.id} className="flex hover:bg-slate-50/30 transition-colors group">
-                                    <div className="w-12 h-10 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
+                                <div key={record.id} className={cn("flex hover:bg-slate-50/30 transition-colors group", rowHeightClass)}>
+                                    <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
                                         {idx + 1}
                                     </div>
                                     {visibleFields.map((field) => (
-                                        <div key={field.id} style={{ width: field.width }} className="h-10 border-r shrink-0 flex items-center relative">
+                                        <div key={field.id} style={{ width: field.width }} className="border-r shrink-0 flex items-center relative">
                                             <CellRenderer 
                                                 field={field} 
                                                 value={record.values[field.id]} 
@@ -1309,9 +1402,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     <div className="flex-1 bg-white" />
                                 </div>
                             ))}
-                            <div className="flex hover:bg-slate-50/30 transition-colors h-10 items-center border-b">
-                                <div className="w-12 h-10 shrink-0 border-r" />
-                                <button onClick={addRecord} className="flex-1 h-10 px-4 text-xs font-bold text-slate-300 hover:text-primary transition-colors text-left flex items-center gap-2">
+                            <div className={cn("flex hover:bg-slate-50/30 transition-colors items-center border-b", rowHeightClass)}>
+                                <div className="w-12 h-full shrink-0 border-r" />
+                                <button onClick={addRecord} className="flex-1 h-full px-4 text-xs font-bold text-slate-300 hover:text-primary transition-colors text-left flex items-center gap-2">
                                     <Plus className="h-3.5 w-3.5" /> New entry...
                                 </button>
                             </div>

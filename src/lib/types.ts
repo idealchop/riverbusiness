@@ -185,6 +185,7 @@ export interface SheetRecord {
 }
 
 export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'list';
+export type RowHeight = 'short' | 'medium' | 'tall' | 'extra-tall';
 
 export interface SheetView {
     id: string;
@@ -197,6 +198,8 @@ export interface SheetView {
         hiddenFields?: string[];
         filters?: any[];
         sorts?: any[];
+        rowHeight?: RowHeight;
+        wrapHeaders?: boolean;
     };
 }
 
