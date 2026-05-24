@@ -146,7 +146,7 @@ const OPTION_COLORS = [
     { label: 'Indigo', value: 'bg-indigo-100 text-indigo-700' },
 ];
 
-const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, editable, isExpanded = false }: any) => {
+const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUpdateOption, onDeleteOption, editable, isExpanded = false }: any) => {
     const [localValue, setLocalValue] = useState(value);
     const [isEditing, setIsEditing] = useState(false);
     const [newOptionLabel, setNewOptionLabel] = useState('');
@@ -157,7 +157,6 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
         setIsEditing(false);
         let finalValue = localValue;
         
-        // Cast numeric types for valid organizational data
         if (field.type === 'number' || field.type === 'currency') {
             finalValue = localValue === '' ? null : Number(localValue);
         }
@@ -193,38 +192,69 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
                         {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200">
+                <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200">
                     <ScrollArea className="max-h-60">
                         <div className="p-1 space-y-0.5">
                             {field.options?.map((opt: any) => (
-                                <DropdownMenuItem key={opt.label} onClick={() => onChange(opt.label)} className="gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
-                                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
-                                    <span className="flex-1">{opt.label}</span>
-                                    {value === opt.label && <Check className="h-3 w-3 text-primary" />}
-                                </DropdownMenuItem>
+                                <div key={opt.label} className="flex items-center gap-1 group/item pr-1">
+                                    <DropdownMenuItem onClick={() => onChange(opt.label)} className="flex-1 gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
+                                        <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
+                                        <span className="flex-1 truncate">{opt.label}</span>
+                                        {value === opt.label && <Check className="h-3 w-3 text-primary" />}
+                                    </DropdownMenuItem>
+                                    
+                                    {editable && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
+                                                    <Palette className="h-3 w-3 text-slate-400" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent side="right" align="start" className="grid grid-cols-4 gap-1 p-2 rounded-xl bg-white shadow-2xl z-[70] border-slate-100">
+                                                {OPTION_COLORS.map(c => (
+                                                    <button 
+                                                        key={c.value} 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onUpdateOption(field.id, opt.label, opt.label, c.value);
+                                                        }} 
+                                                        className={cn(
+                                                            "h-6 w-6 rounded-lg border transition-transform hover:scale-110", 
+                                                            opt.color === c.value && "ring-2 ring-primary ring-offset-1"
+                                                        )} 
+                                                        style={{ backgroundColor: c.value.split(' ')[0].replace('bg-', '') }} 
+                                                    />
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </ScrollArea>
                     
                     {editable && (
-                        <div className="p-2 bg-slate-50 border-t">
-                            <div className="relative">
-                                <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-                                <Input 
-                                    placeholder="Add new option..." 
-                                    value={newOptionLabel}
-                                    onChange={(e) => setNewOptionLabel(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && newOptionLabel.trim()) {
-                                            onAddOption(newOptionLabel.trim());
-                                            onChange(newOptionLabel.trim());
-                                            setNewOptionLabel('');
-                                        }
-                                    }}
-                                    className="h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-bold uppercase tracking-widest" 
-                                />
+                        <>
+                            <DropdownMenuSeparator className="bg-slate-50" />
+                            <div className="p-2 bg-slate-50">
+                                <div className="relative">
+                                    <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                                    <Input 
+                                        placeholder="New option..." 
+                                        value={newOptionLabel}
+                                        onChange={(e) => setNewOptionLabel(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newOptionLabel.trim()) {
+                                                onAddOption(newOptionLabel.trim());
+                                                onChange(newOptionLabel.trim());
+                                                setNewOptionLabel('');
+                                            }
+                                        }}
+                                        className="h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-bold uppercase tracking-widest" 
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        </>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -1033,6 +1063,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
                                                 onExpand={() => setSelectedRecordId(record.id)}
                                                 onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
+                                                onUpdateOption={updateOption}
+                                                onDeleteOption={deleteOption}
                                                 editable={editable}
                                             />
                                         </div>
@@ -1089,6 +1121,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             value={records.find(r => r.id === selectedRecordId)?.values[field.id]} 
                                             onChange={(val: any) => updateRecordValue(selectedRecordId, field.id, val)}
                                             onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
+                                            onUpdateOption={updateOption}
+                                            onDeleteOption={deleteOption}
                                             editable={editable}
                                             isExpanded
                                         />
