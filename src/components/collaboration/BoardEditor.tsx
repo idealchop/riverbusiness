@@ -386,7 +386,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           color: el.color || '#ffffff',
           width: el.width || 150,
           height: el.height || 150
-      }));
+        }));
 
       const newConnections: BoardConnection[] = blueprint.connections.map(conn => {
           const fromIdx = blueprint.elements.findIndex(e => e.id === conn.fromId);
@@ -820,6 +820,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         height: type === 'icon' ? 100 : undefined
                     });
                 }
+             }}
+             style={{ 
+                 backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', 
+                 backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`,
+                 backgroundPosition: `${viewport.x}px ${viewport.y}px`
              }}
              ref={containerRef}>
             
