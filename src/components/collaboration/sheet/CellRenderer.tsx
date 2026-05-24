@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, memo } from 'react';
 import { 
     ChevronDown, 
@@ -9,7 +11,8 @@ import {
     Mail, 
     Phone, 
     AlignLeft,
-    Check
+    Check,
+    CalendarDays
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -249,9 +252,9 @@ export const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOptio
                         initialFocus
                         className="rounded-b-[1.5rem]"
                         classNames={{
-                            day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl font-bold",
-                            day_today: "bg-blue-50 text-primary font-bold rounded-xl border border-primary/20",
-                            day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
+                            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-xl font-bold",
+                            day_today: "bg-accent text-accent-foreground font-bold rounded-xl border border-primary/20",
+                            day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-xl hover:bg-slate-50 transition-all",
                         }}
                     />
                 </PopoverContent>

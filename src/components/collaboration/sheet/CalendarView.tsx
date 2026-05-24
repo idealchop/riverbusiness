@@ -1,9 +1,10 @@
+'use client';
+
 import React, { useMemo, useState } from 'react';
 import { 
     CalendarDays, 
     ChevronLeft, 
     ChevronRight,
-    Calendar as CalendarIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';

@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { 
@@ -19,7 +20,8 @@ import {
     Copy,
     EyeOff,
     Rows,
-    RotateCcw
+    RotateCcw,
+    Layout // Essential icon restored
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -832,7 +834,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                         {CURRENCY_SYMBOLS.map(symbol => (
                                                             <button 
                                                                 key={symbol} 
-                                                                onClick={() => updateField(field.id, { currencySymbol: symbol })}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    updateField(field.id, { currencySymbol: symbol });
+                                                                }}
                                                                 className={cn(
                                                                     "h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-all hover:bg-slate-100",
                                                                     (field.currencySymbol || '₱') === symbol ? "bg-primary/10 text-primary" : "text-slate-600"
@@ -921,52 +926,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <CalendarView fields={fields} records={filteredRecords} onRecordClick={(id: string) => {}} />
             )}
         </div>
-
-        {false && (
-            <div className="absolute inset-y-0 right-0 w-full sm:w-[500px] bg-white border-l shadow-3xl z-[100] animate-in slide-in-from-right duration-300 flex flex-col">
-                <div className="h-16 border-b flex items-center justify-between px-6 bg-slate-50/50">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-white shadow-sm text-primary">
-                            <Maximize2 className="h-4 w-4" />
-                        </div>
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Record Detail</h4>
-                    </div>
-                    <button onClick={() => {}} className="p-2 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-                <ScrollArea className="flex-1">
-                    <div className="p-10 space-y-10">
-                        <div className="space-y-8">
-                            {fields.map(field => (
-                                <div key={field.id} className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
-                                        {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3 w-3" })}
-                                        {field.name}
-                                    </Label>
-                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 min-h-[48px] flex items-center">
-                                        <CellRenderer 
-                                            field={field} 
-                                            value={null} 
-                                            onChange={(val: any) => {}}
-                                            onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
-                                            onUpdateOption={updateOption}
-                                            onDeleteOption={deleteOption}
-                                            onUpdateField={updateField}
-                                            editable={editable}
-                                            isExpanded
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </ScrollArea>
-                <div className="h-20 border-t p-6 bg-slate-50/50 flex items-center justify-end">
-                    <Button onClick={() => {}} className="rounded-xl h-9 px-8 text-[10px] font-bold uppercase tracking-widest shadow-lg">Done</Button>
-                </div>
-            </div>
-        )}
     </div>
   );
 }

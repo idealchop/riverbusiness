@@ -1,9 +1,8 @@
+'use client';
+
 import React, { useMemo, useState } from 'react';
 import { 
-    Layout, 
     AlertCircle, 
-    Type,
-    MoreHorizontal
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -90,7 +89,7 @@ export function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: a
                                                 if (!val || f.id === statusField.id) return null;
                                                 return (
                                                     <div key={f.id} className="flex items-center gap-2.5">
-                                                        {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-3 w-3 text-slate-300 shrink-0" })}
+                                                        {React.createElement(FIELD_ICONS[f.type] || 'span', { className: "h-3 w-3 text-slate-300 shrink-0" })}
                                                         <span className="text-[10px] font-bold uppercase tracking-tight text-slate-500 truncate">{f.type === 'currency' ? `${f.currencySymbol || '₱'}${Number(val).toLocaleString()}` : val}</span>
                                                     </div>
                                                 )
