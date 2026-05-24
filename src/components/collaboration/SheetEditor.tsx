@@ -77,6 +77,13 @@ import {
     PopoverContent,
     PopoverTrigger 
 } from '@/components/ui/popover';
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { SheetField, SheetRecord, SheetView, SheetFieldType, SheetViewType, RowHeight } from '@/lib/types';
