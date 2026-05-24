@@ -1199,11 +1199,25 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     </div>
                 )}
                 
-                {filters.length > 0 && (
-                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-green-50 text-green-700 font-bold text-[9px] uppercase gap-1.5">
-                        <Filter className="h-3 w-3" /> Filtered by {filters.length} {filters.length === 1 ? 'rule' : 'rules'}
-                    </Badge>
-                )}
+                {filters.map(f => {
+                    const field = fields.find(field => field.id === f.fieldId);
+                    return (
+                        <Badge 
+                            key={f.id} 
+                            variant="outline" 
+                            className="h-6 px-2 pr-1 rounded-lg border-none bg-green-50 text-green-700 font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200"
+                        >
+                            <Filter className="h-3 w-3" />
+                            <span>{field?.name || 'Field'} {f.operator.replace('_', ' ')} {f.value ? `"${f.value}"` : ''}</span>
+                            <button 
+                                onClick={() => removeFilter(f.id)}
+                                className="h-4 w-4 rounded-md hover:bg-green-200/50 flex items-center justify-center transition-colors ml-1"
+                            >
+                                <X className="h-2.5 w-2.5" />
+                            </button>
+                        </Badge>
+                    );
+                })}
 
                 {sortConfig && (
                     <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5">
