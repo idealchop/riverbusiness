@@ -21,7 +21,9 @@ import {
     EyeOff,
     Rows,
     RotateCcw,
-    Layout
+    Layout,
+    GripVertical,
+    HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +80,12 @@ interface FilterRule {
     value: string;
 }
 
+interface SortRule {
+    id: string;
+    fieldId: string;
+    direction: 'asc' | 'desc';
+}
+
 export function SheetEditor({ initialData, onContentChange, editable = true }: SheetEditorProps) {
   const isMounted = useMounted();
   const { toast } = useToast();
@@ -101,9 +109,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [views, setViews] = useState<SheetView[]>(() => {
     if (initialData?.views && initialData.views.length > 0) return initialData.views;
     return [
-      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false } },
-      { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [] } },
-      { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [] } }
+      { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [] } },
+      { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [], sorts: [] } },
+      { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [], sorts: [] } }
     ];
   });
 
@@ -113,7 +121,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
+  const [sortRules, setSortRules] = useState<SortRule[]>(initialData?.views?.find((v: any) => v.id === initialData?.activeViewId)?.config?.sorts || []);
+  const [autoSort, setAutoSort] = useState(true);
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
@@ -128,7 +137,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
   const activeView = useMemo(() => {
     if (!views || views.length === 0) {
-        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false } } as SheetView;
+        return { id: 'v1', name: 'Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [] } } as SheetView;
     }
     const found = views.find(v => v.id === activeViewId);
     if (found) return found;
@@ -319,16 +328,19 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
   const handleSwitchView = useCallback((id: string) => {
       setActiveViewId(id);
+      const targetView = views.find(v => v.id === id);
+      setSortRules(targetView?.config?.sorts || []);
       sync(fields, records, views, id);
   }, [fields, records, views, sync]);
 
   const handleCreateView = useCallback((type: SheetViewType) => {
     const id = `v-${Date.now()}`;
     const name = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-    const newView: SheetView = { id, name, type, config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false } };
+    const newView: SheetView = { id, name, type, config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [] } };
     const next = [...views, newView];
     setViews(next);
     setActiveViewId(id);
+    setSortRules([]);
     sync(fields, next, records, id);
   }, [views, fields, records, sync]);
 
@@ -348,6 +360,49 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     setActiveViewId(nextActive);
     sync(fields, next, records, nextActive);
   }, [views, fields, records, activeViewId, sync]);
+
+  // --- Sorting Protocol ---
+
+  const addSortRule = useCallback(() => {
+      const newRule: SortRule = { id: `sort-${Date.now()}`, fieldId: fields[0].id, direction: 'asc' };
+      const nextRules = [...sortRules, newRule];
+      setSortRules(nextRules);
+      if (autoSort) {
+          const nextViews = views.map(v => v.id === activeViewId ? { ...v, config: { ...v.config, sorts: nextRules } } : v);
+          setViews(nextViews);
+          sync(fields, records, nextViews, activeViewId);
+      }
+  }, [sortRules, fields, autoSort, views, activeViewId, sync, records]);
+
+  const updateSortRule = useCallback((id: string, updates: Partial<SortRule>) => {
+      const nextRules = sortRules.map(r => r.id === id ? { ...r, ...updates } : r);
+      setSortRules(nextRules);
+      if (autoSort) {
+        const nextViews = views.map(v => v.id === activeViewId ? { ...v, config: { ...v.config, sorts: nextRules } } : v);
+        setViews(nextViews);
+        sync(fields, records, nextViews, activeViewId);
+      }
+  }, [sortRules, autoSort, views, activeViewId, sync, fields, records]);
+
+  const removeSortRule = useCallback((id: string) => {
+      const nextRules = sortRules.filter(r => r.id !== id);
+      setSortRules(nextRules);
+      const nextViews = views.map(v => v.id === activeViewId ? { ...v, config: { ...v.config, sorts: nextRules } } : v);
+      setViews(nextViews);
+      sync(fields, records, nextViews, activeViewId);
+  }, [sortRules, views, activeViewId, sync, fields, records]);
+
+  const getSortLabels = (fieldId: string) => {
+      const field = fields.find(f => f.id === fieldId);
+      if (!field) return { asc: 'A → Z', desc: 'Z → A' };
+      switch (field.type) {
+          case 'number':
+          case 'currency': return { asc: '1 → 9', desc: '9 → 1' };
+          case 'date': return { asc: 'Earliest → Latest', desc: 'Latest → Earliest' };
+          case 'checkbox': return { asc: 'Unchecked → Checked', desc: 'Checked → Unchecked' };
+          default: return { asc: 'A → Z', desc: 'Z → A' };
+      }
+  };
 
   const addFilter = useCallback(() => {
       setFilters(prev => [...prev, { id: `flt-${Date.now()}`, fieldId: fields[0].id, operator: 'contains', value: '' }]);
@@ -387,18 +442,34 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         });
     }
 
-    if (sortConfig) {
+    if (sortRules.length > 0) {
         list.sort((a, b) => {
-            const valA = String(a.values[sortConfig.fieldId] || '');
-            const valB = String(b.values[sortConfig.fieldId] || '');
-            return sortConfig.direction === 'asc' 
-                ? valA.localeCompare(valB, undefined, { numeric: true }) 
-                : valB.localeCompare(valA, undefined, { numeric: true });
+            for (const rule of sortRules) {
+                const field = fields.find(f => f.id === rule.fieldId);
+                const valA = a.values[rule.fieldId];
+                const valB = b.values[rule.fieldId];
+                
+                if (valA === valB) continue;
+                if (valA === null || valA === undefined) return 1;
+                if (valB === null || valB === undefined) return -1;
+
+                let comparison = 0;
+                if (field?.type === 'number' || field?.type === 'currency') {
+                    comparison = Number(valA) - Number(valB);
+                } else if (field?.type === 'date') {
+                    comparison = new Date(valA).getTime() - new Date(valB).getTime();
+                } else {
+                    comparison = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+                }
+
+                return rule.direction === 'asc' ? comparison : -comparison;
+            }
+            return 0;
         });
     }
 
     return list;
-  }, [records, debouncedSearch, sortConfig, filters]);
+  }, [records, debouncedSearch, sortRules, filters, fields]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, fieldId: string, currentWidth: number) => {
     e.preventDefault();
@@ -583,34 +654,66 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         </PopoverContent>
                     </Popover>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", sortConfig ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", sortRules.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <ArrowUpDown className="h-3.5 w-3.5" /> 
                                 <span className="hidden sm:inline">Sort</span>
+                                {sortRules.length > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{sortRules.length}</Badge>}
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl shadow-2xl border-slate-100">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 p-2">Order records by</DropdownMenuLabel>
-                            {fields.map(f => (
-                                <DropdownMenuItem key={f.id} onClick={() => setSortConfig({ fieldId: f.id, direction: sortConfig?.fieldId === f.id && sortConfig.direction === 'asc' ? 'desc' : 'asc' })} className="text-xs font-bold py-2 rounded-lg cursor-pointer flex justify-between">
-                                    <div className="flex items-center gap-2">
-                                        {React.createElement(FIELD_ICONS[f.type], { className: "h-3.5 w-3.5 opacity-40" })}
-                                        {f.name}
-                                    </div>
-                                    {sortConfig?.fieldId === f.id && (
-                                        <Badge variant="secondary" className="text-[8px]">{sortConfig.direction.toUpperCase()}</Badge>
-                                    )}
-                                </DropdownMenuItem>
-                            ))}
-                            {sortConfig && (
-                                <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => setSortConfig(null)} className="text-xs font-bold py-2 rounded-lg cursor-pointer text-red-500">Clear all sorting</DropdownMenuItem>
-                                </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[380px] p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white z-[60]">
+                            <div className="p-4 bg-slate-50/50 border-b flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-black uppercase tracking-tight text-slate-900">Sort by</h4>
+                                    <HelpCircle className="h-3.5 w-3.5 text-slate-300" />
+                                </div>
+                            </div>
+                            <ScrollArea className="max-h-[300px]">
+                                <div className="p-4 space-y-3">
+                                    {sortRules.map((rule) => {
+                                        const labels = getSortLabels(rule.fieldId);
+                                        return (
+                                            <div key={rule.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
+                                                <div className="flex-1 grid grid-cols-[1fr_auto] gap-2 p-1 bg-slate-50 border rounded-xl">
+                                                    <Select value={rule.fieldId} onValueChange={(val) => updateSortRule(rule.id, { fieldId: val })}>
+                                                        <SelectTrigger className="h-9 border-none bg-transparent shadow-none font-bold text-xs focus:ring-0">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
+                                                            {fields.map(f => <SelectItem key={f.id} value={f.id} className="text-xs font-bold">{f.name}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <Select value={rule.direction} onValueChange={(val: any) => updateSortRule(rule.id, { direction: val })}>
+                                                        <SelectTrigger className="w-[140px] h-9 border-none bg-transparent shadow-none font-bold text-xs focus:ring-0 border-l rounded-none">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
+                                                            <SelectItem value="asc" className="text-xs font-bold">{labels.asc}</SelectItem>
+                                                            <SelectItem value="desc" className="text-xs font-bold">{labels.desc}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="flex items-center gap-0.5">
+                                                    <Button variant="ghost" size="icon" onClick={() => removeSortRule(rule.id)} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50"><X className="h-4 w-4" /></Button>
+                                                    <div className="h-8 w-8 flex items-center justify-center text-slate-200 cursor-grab"><GripVertical className="h-4 w-4" /></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <Button variant="ghost" onClick={addSortRule} className="w-full h-10 rounded-xl gap-3 text-[11px] font-bold text-slate-400 hover:text-primary hover:bg-primary/5 transition-all justify-start px-3">
+                                        <Plus className="h-3.5 w-3.5" /> Add another sort
+                                    </Button>
+                                </div>
+                            </ScrollArea>
+                            <div className="p-4 bg-slate-50/50 border-t flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Switch checked={autoSort} onCheckedChange={setAutoSort} className="scale-75" />
+                                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Automatically sort records</span>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                     
                     <Popover>
                         <PopoverTrigger asChild>
@@ -718,7 +821,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         </div>
 
         {/* Filter Status Bar */}
-        {(filters.length > 0 || sortConfig || (activeView?.config?.hiddenFields?.length || 0) > 0) && (
+        {(filters.length > 0 || sortRules.length > 0 || (activeView?.config?.hiddenFields?.length || 0) > 0) && (
             <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
                 {(activeView?.config?.hiddenFields?.length || 0) > 0 && (
                     <div className="flex items-center gap-1.5 mr-2">
@@ -748,11 +851,22 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     );
                 })}
 
-                {sortConfig && (
-                    <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5">
-                        <ArrowUpDown className="h-3 w-3" /> Sorted by {fields.find(f => f.id === sortConfig.fieldId)?.name}
-                    </Badge>
-                )}
+                {sortRules.map(r => {
+                    const field = fields.find(f => f.id === r.fieldId);
+                    const labels = getSortLabels(r.fieldId);
+                    return (
+                        <Badge key={r.id} variant="outline" className="h-6 px-2.5 pr-1 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5 flex items-center">
+                            <ArrowUpDown className="h-3 w-3" />
+                            <span>Sorted by {field?.name} ({r.direction === 'asc' ? labels.asc : labels.desc})</span>
+                            <button 
+                                onClick={() => removeSortRule(r.id)}
+                                className="h-4 w-4 rounded-md hover:bg-amber-200/50 flex items-center justify-center transition-colors ml-1"
+                            >
+                                <X className="h-2.5 w-2.5" />
+                            </button>
+                        </Badge>
+                    );
+                })}
             </div>
         )}
 
