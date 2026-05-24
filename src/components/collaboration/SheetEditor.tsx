@@ -206,7 +206,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                                     {editable && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
+                                                <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                                     <Palette className="h-3 w-3 text-slate-400" />
                                                 </button>
                                             </DropdownMenuTrigger>
@@ -220,9 +220,9 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                                                         }} 
                                                         className={cn(
                                                             "h-6 w-6 rounded-lg border transition-transform hover:scale-110", 
+                                                            c.value.split(' ')[0],
                                                             opt.color === c.value && "ring-2 ring-primary ring-offset-1"
                                                         )} 
-                                                        style={{ backgroundColor: c.value.split(' ')[0].replace('bg-', '') }} 
                                                     />
                                                 ))}
                                             </DropdownMenuContent>
@@ -238,7 +238,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                             <DropdownMenuSeparator className="bg-slate-50" />
                             <div className="p-2 bg-slate-50">
                                 <div className="relative">
-                                    <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                                    <Plus className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-300" />
                                     <input 
                                         placeholder="New..." 
                                         value={newOptionLabel}
@@ -250,7 +250,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                                                 setNewOptionLabel('');
                                             }
                                         }}
-                                        className="w-full h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-primary focus:outline-none" 
+                                        className="w-full h-8 pl-7 rounded-lg bg-white border-none shadow-inner text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-primary focus:outline-none placeholder:text-slate-200" 
                                     />
                                 </div>
                             </div>
@@ -994,11 +994,19 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                                     <div key={idx} className="flex items-center gap-2">
                                                                         <DropdownMenu>
                                                                             <DropdownMenuTrigger asChild>
-                                                                                <button className={cn("h-5 w-5 rounded-full shrink-0 border border-white shadow-sm", opt.color.split(' ')[0])} />
+                                                                                <button className={cn("h-5 w-5 rounded-full shrink-0 border border-slate-100 shadow-sm transition-all hover:scale-110", opt.color.split(' ')[0])} />
                                                                             </DropdownMenuTrigger>
-                                                                            <DropdownMenuContent className="grid grid-cols-4 gap-1 p-2 rounded-xl bg-white shadow-2xl">
+                                                                            <DropdownMenuContent className="grid grid-cols-4 gap-1 p-2 rounded-xl bg-white shadow-2xl z-[70] border-slate-100">
                                                                                 {OPTION_COLORS.map(c => (
-                                                                                    <button key={c.value} onClick={() => updateOption(field.id, opt.label, opt.label, c.value)} className={cn("h-6 w-6 rounded-lg border", opt.color === c.value && "ring-2 ring-primary ring-offset-1")} style={{ backgroundColor: c.value.split(' ')[0].replace('bg-', '') }} />
+                                                                                    <button 
+                                                                                        key={c.value} 
+                                                                                        onClick={() => updateOption(field.id, opt.label, opt.label, c.value)} 
+                                                                                        className={cn(
+                                                                                            "h-6 w-6 rounded-lg border transition-transform hover:scale-110", 
+                                                                                            c.value.split(' ')[0],
+                                                                                            opt.color === c.value && "ring-2 ring-primary ring-offset-1"
+                                                                                        )} 
+                                                                                    />
                                                                                 ))}
                                                                             </DropdownMenuContent>
                                                                         </DropdownMenu>
