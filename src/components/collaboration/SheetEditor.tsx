@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { 
     Grid, 
     Plus,
@@ -57,7 +58,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 // Specialized Sub-Modules
-import { FIELD_ICONS, VIEW_ICONS, FIELD_TYPES, CURRENCY_SYMBOLS, ROW_HEIGHT_OPTIONS, OPTION_COLORS } from './sheet/constants';
+import { FIELD_ICONS, VIEW_ICONS, FIELD_TYPES, CURRENCY_SYMBOLS, ROW_HEIGHT_OPTIONS } from './sheet/constants';
 import { CellRenderer } from './sheet/CellRenderer';
 import { KanbanView } from './sheet/KanbanView';
 import { CalendarView } from './sheet/CalendarView';
@@ -108,7 +109,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   
   const [sortConfig, setSortConfig] = useState<{ fieldId: string, direction: 'asc' | 'desc' } | null>(null);
@@ -890,7 +890,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 field={field} 
                                                 value={record.values[field.id]} 
                                                 onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
-                                                onExpand={() => setSelectedRecordId(record.id)}
                                                 onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
                                                 onUpdateOption={updateOption}
                                                 onDeleteOption={deleteOption}
@@ -915,15 +914,15 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             )}
 
             {activeView?.type === 'kanban' && (
-                <KanbanView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} onRecordUpdate={updateRecordValue} />
+                <KanbanView fields={fields} records={filteredRecords} onRecordClick={(id: string) => {}} onRecordUpdate={updateRecordValue} />
             )}
 
             {activeView?.type === 'calendar' && (
-                <CalendarView fields={fields} records={filteredRecords} onRecordClick={setSelectedRecordId} />
+                <CalendarView fields={fields} records={filteredRecords} onRecordClick={(id: string) => {}} />
             )}
         </div>
 
-        {selectedRecordId && (
+        {false && (
             <div className="absolute inset-y-0 right-0 w-full sm:w-[500px] bg-white border-l shadow-3xl z-[100] animate-in slide-in-from-right duration-300 flex flex-col">
                 <div className="h-16 border-b flex items-center justify-between px-6 bg-slate-50/50">
                     <div className="flex items-center gap-3">
@@ -932,7 +931,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         </div>
                         <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Record Detail</h4>
                     </div>
-                    <button onClick={() => setSelectedRecordId(null)} className="p-2 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors">
+                    <button onClick={() => {}} className="p-2 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -948,8 +947,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 min-h-[48px] flex items-center">
                                         <CellRenderer 
                                             field={field} 
-                                            value={records.find(r => r.id === selectedRecordId)?.values[field.id]} 
-                                            onChange={(val: any) => updateRecordValue(selectedRecordId, field.id, val)}
+                                            value={null} 
+                                            onChange={(val: any) => {}}
                                             onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
                                             onUpdateOption={updateOption}
                                             onDeleteOption={deleteOption}
@@ -964,7 +963,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     </div>
                 </ScrollArea>
                 <div className="h-20 border-t p-6 bg-slate-50/50 flex items-center justify-end">
-                    <Button onClick={() => setSelectedRecordId(null)} className="rounded-xl h-9 px-8 text-[10px] font-bold uppercase tracking-widest shadow-lg">Done</Button>
+                    <Button onClick={() => {}} className="rounded-xl h-9 px-8 text-[10px] font-bold uppercase tracking-widest shadow-lg">Done</Button>
                 </div>
             </div>
         )}
