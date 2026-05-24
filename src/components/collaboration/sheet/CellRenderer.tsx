@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -60,12 +61,11 @@ export const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOptio
     if (field.type === 'checkbox') {
         return (
             <div className="w-full h-full flex items-center justify-center">
-                <input 
-                    type="checkbox" 
+                <Checkbox 
                     checked={!!value} 
-                    onChange={(e) => onChange(e.target.checked)}
+                    onCheckedChange={(checked) => onChange(!!checked)}
                     disabled={!editable}
-                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 transition-all cursor-pointer"
+                    className="h-4 w-4 rounded-md border-slate-300 transition-all cursor-pointer"
                 />
             </div>
         );
