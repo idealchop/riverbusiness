@@ -137,13 +137,23 @@ const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
 
 const OPTION_COLORS = [
     { label: 'Gray', value: 'bg-slate-100 text-slate-700' },
-    { label: 'Blue', value: 'bg-blue-100 text-blue-700' },
-    { label: 'Green', value: 'bg-green-100 text-green-700' },
-    { label: 'Amber', value: 'bg-amber-100 text-amber-700' },
-    { label: 'Red', value: 'bg-red-100 text-red-700' },
-    { label: 'Purple', value: 'bg-purple-100 text-purple-700' },
-    { label: 'Pink', value: 'bg-pink-100 text-pink-700' },
-    { label: 'Indigo', value: 'bg-indigo-100 text-indigo-700' },
+    { label: 'Blue', value: 'bg-blue-50 text-blue-700' },
+    { label: 'Green', value: 'bg-green-50 text-green-700' },
+    { label: 'Amber', value: 'bg-amber-50 text-amber-700' },
+    { label: 'Red', value: 'bg-red-50 text-red-700' },
+    { label: 'Purple', value: 'bg-purple-50 text-purple-700' },
+    { label: 'Pink', value: 'bg-pink-50 text-pink-700' },
+    { label: 'Indigo', value: 'bg-indigo-50 text-indigo-700' },
+    { label: 'Teal', value: 'bg-teal-50 text-teal-700' },
+    { label: 'Solid Gray', value: 'bg-slate-500 text-white' },
+    { label: 'Solid Blue', value: 'bg-blue-600 text-white' },
+    { label: 'Solid Green', value: 'bg-green-600 text-white' },
+    { label: 'Solid Amber', value: 'bg-amber-500 text-white' },
+    { label: 'Solid Red', value: 'bg-red-600 text-white' },
+    { label: 'Solid Purple', value: 'bg-purple-600 text-white' },
+    { label: 'Solid Teal', value: 'bg-teal-600 text-white' },
+    { label: 'Solid Indigo', value: 'bg-indigo-600 text-white' },
+    { label: 'Solid Pink', value: 'bg-pink-600 text-white' },
 ];
 
 const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUpdateOption, onDeleteOption, editable, isExpanded = false }: any) => {
@@ -185,32 +195,32 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                 <DropdownMenuTrigger asChild>
                     <button className="w-full h-full px-3 flex items-center justify-between group/cell outline-none">
                         {value ? (
-                            <Badge className={cn("text-[10px] font-bold uppercase tracking-widest border-none shadow-none px-2", option?.color || 'bg-slate-100 text-slate-700')}>
+                            <Badge className={cn("text-[10px] font-bold uppercase tracking-widest border-none shadow-none px-2.5 h-6", option?.color || 'bg-slate-100 text-slate-700')}>
                                 {value}
                             </Badge>
                         ) : <span className="text-slate-200 text-xs italic">Select...</span>}
                         {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200 z-[60]">
-                    <ScrollArea className="max-h-60">
-                        <div className="p-1 space-y-0.5">
+                <DropdownMenuContent align="start" className="w-64 p-0 rounded-[1.5rem] border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white overflow-hidden animate-in zoom-in-95 duration-200 z-[60]">
+                    <ScrollArea className="max-h-64">
+                        <div className="p-2 space-y-0.5">
                             {field.options?.map((opt: any) => (
                                 <div key={opt.label} className="flex items-center gap-1 group/item pr-1">
-                                    <DropdownMenuItem onClick={() => onChange(opt.label)} className="flex-1 gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
+                                    <DropdownMenuItem onClick={() => onChange(opt.label)} className="flex-1 gap-3 text-[10px] font-black uppercase tracking-[0.1em] rounded-xl cursor-pointer py-3 px-4">
                                         <div className={cn("h-2 w-2 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
                                         <span className="flex-1 truncate">{opt.label}</span>
-                                        {value === opt.label && <Check className="h-3 w-3 text-primary" />}
+                                        {value === opt.label && <Check className="h-3.5 w-3.5 text-primary stroke-[3]" />}
                                     </DropdownMenuItem>
                                     
                                     {editable && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                                    <Palette className="h-3 w-3 text-slate-400" />
+                                                <button className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
+                                                    <Palette className="h-4 w-4 text-slate-400" />
                                                 </button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent side="right" align="start" className="grid grid-cols-4 gap-1 p-2 rounded-xl bg-white shadow-2xl z-[70] border-slate-100">
+                                            <DropdownMenuContent side="right" align="start" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white shadow-2xl z-[70] border-slate-100">
                                                 {OPTION_COLORS.map(c => (
                                                     <button 
                                                         key={c.value} 
@@ -219,7 +229,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                                                             onUpdateOption(field.id, opt.label, opt.label, c.value);
                                                         }} 
                                                         className={cn(
-                                                            "h-6 w-6 rounded-lg border transition-transform hover:scale-110", 
+                                                            "h-7 w-7 rounded-lg border border-slate-100 transition-all hover:scale-110", 
                                                             c.value.split(' ')[0],
                                                             opt.color === c.value && "ring-2 ring-primary ring-offset-1"
                                                         )} 
@@ -234,27 +244,24 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                     </ScrollArea>
                     
                     {editable && (
-                        <>
-                            <DropdownMenuSeparator className="bg-slate-50" />
-                            <div className="p-2 bg-slate-50">
-                                <div className="relative">
-                                    <Plus className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-300" />
-                                    <input 
-                                        placeholder="New..." 
-                                        value={newOptionLabel}
-                                        onChange={(e) => setNewOptionLabel(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && newOptionLabel.trim()) {
-                                                onAddOption(newOptionLabel.trim());
-                                                onChange(newOptionLabel.trim());
-                                                setNewOptionLabel('');
-                                            }
-                                        }}
-                                        className="w-full h-8 pl-7 rounded-lg bg-white border-none shadow-inner text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-primary focus:outline-none placeholder:text-slate-200" 
-                                    />
-                                </div>
+                        <div className="p-3 bg-slate-50/50 border-t border-slate-50">
+                            <div className="relative">
+                                <Plus className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                                <input 
+                                    placeholder="NEW..." 
+                                    value={newOptionLabel}
+                                    onChange={(e) => setNewOptionLabel(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && newOptionLabel.trim()) {
+                                            onAddOption(newOptionLabel.trim());
+                                            onChange(newOptionLabel.trim());
+                                            setNewOptionLabel('');
+                                        }
+                                    }}
+                                    className="w-full h-10 pl-9 pr-4 rounded-full bg-white border border-slate-100 shadow-inner text-[10px] font-black uppercase tracking-[0.2em] focus:ring-1 focus:ring-primary focus:outline-none placeholder:text-slate-200 transition-all" 
+                                />
                             </div>
-                        </>
+                        </div>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -337,7 +344,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     if (initialData?.fields && initialData.fields.length > 0) return initialData.fields;
     return [
       { id: 'f1', name: 'Primary Item', type: 'text', isPrimary: true, width: 250 },
-      { id: 'f2', name: 'Status', type: 'status', options: [{label: 'Todo', color: 'bg-slate-100 text-slate-700'}, {label: 'In Progress', color: 'bg-blue-100 text-blue-700'}, {label: 'Done', color: 'bg-green-100 text-green-700'}], width: 150 },
+      { id: 'f2', name: 'Status', type: 'status', options: [{label: 'Todo', color: 'bg-slate-100 text-slate-700'}, {label: 'In Progress', color: 'bg-blue-50 text-blue-700'}, {label: 'Done', color: 'bg-green-50 text-green-700'}], width: 150 },
       { id: 'f3', name: 'Due Date', type: 'date', width: 150 }
     ];
   });
@@ -427,7 +434,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         width: 150,
         options: (type === 'status' || type === 'select') ? [
             { label: 'Option 1', color: 'bg-slate-100 text-slate-700' },
-            { label: 'Option 2', color: 'bg-blue-100 text-blue-700' }
+            { label: 'Option 2', color: 'bg-blue-50 text-blue-700' }
         ] : undefined
     };
     const next = [...fields, newField];
@@ -460,7 +467,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
           type: newType,
           options: (newType === 'status' || newType === 'select') && !f.options ? [
               { label: 'Option 1', color: 'bg-slate-100 text-slate-700' },
-              { label: 'Option 2', color: 'bg-blue-100 text-blue-700' }
+              { label: 'Option 2', color: 'bg-blue-50 text-blue-700' }
           ] : f.options
       } : f);
       setFields(next);
@@ -752,7 +759,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 onBlur={() => !searchTerm && setIsSearchExpanded(false)}
                             />
                             <button onClick={() => {setSearchTerm(''); setIsSearchExpanded(false);}} className="absolute right-2 text-slate-300 hover:text-slate-600 transition-colors">
-                                <X className="h-3 w-3" />
+                                <X className="h-3.5 w-3.5" />
                             </button>
                         </div>
                     ) : (
