@@ -185,20 +185,20 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                 <DropdownMenuTrigger asChild>
                     <button className="w-full h-full px-3 flex items-center justify-between group/cell outline-none">
                         {value ? (
-                            <Badge className={cn("text-[10px] font-bold uppercase tracking-widest border-none shadow-none", option?.color || 'bg-slate-100 text-slate-700')}>
+                            <Badge className={cn("text-[10px] font-bold uppercase tracking-widest border-none shadow-none px-2", option?.color || 'bg-slate-100 text-slate-700')}>
                                 {value}
                             </Badge>
                         ) : <span className="text-slate-200 text-xs italic">Select...</span>}
                         {!isExpanded && <ChevronDown className="h-3 w-3 text-slate-200 group-hover/cell:text-slate-400 transition-colors" />}
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200">
+                <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl border-slate-100 shadow-3xl bg-white overflow-hidden animate-in zoom-in-95 duration-200 z-[60]">
                     <ScrollArea className="max-h-60">
                         <div className="p-1 space-y-0.5">
                             {field.options?.map((opt: any) => (
                                 <div key={opt.label} className="flex items-center gap-1 group/item pr-1">
                                     <DropdownMenuItem onClick={() => onChange(opt.label)} className="flex-1 gap-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl cursor-pointer py-2.5 px-3">
-                                        <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
+                                        <div className={cn("h-2 w-2 rounded-full shrink-0 shadow-sm", opt.color.split(' ')[0])} />
                                         <span className="flex-1 truncate">{opt.label}</span>
                                         {value === opt.label && <Check className="h-3 w-3 text-primary" />}
                                     </DropdownMenuItem>
@@ -239,8 +239,8 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                             <div className="p-2 bg-slate-50">
                                 <div className="relative">
                                     <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-                                    <Input 
-                                        placeholder="New option..." 
+                                    <input 
+                                        placeholder="New..." 
                                         value={newOptionLabel}
                                         onChange={(e) => setNewOptionLabel(e.target.value)}
                                         onKeyDown={(e) => {
@@ -250,7 +250,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                                                 setNewOptionLabel('');
                                             }
                                         }}
-                                        className="h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-bold uppercase tracking-widest" 
+                                        className="w-full h-8 pl-8 rounded-lg bg-white border-none shadow-inner text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-primary focus:outline-none" 
                                     />
                                 </div>
                             </div>
