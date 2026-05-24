@@ -150,6 +150,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
     const [localValue, setLocalValue] = useState(value);
     const [isEditing, setIsEditing] = useState(false);
     const [newOptionLabel, setNewOptionLabel] = useState('');
+    const [isLongTextPopoverOpen, setIsLongTextPopoverOpen] = useState(false);
 
     useEffect(() => setLocalValue(value), [value]);
 
@@ -197,39 +198,47 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                         <div className="p-2 space-y-0.5">
                             {field.options?.map((opt: any) => (
                                 <div key={opt.label} className="flex items-center gap-1 group/item pr-1 transition-all">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <button 
-                                                className={cn(
-                                                    "h-4 w-4 rounded-full ml-3 border border-slate-100 shadow-sm transition-all hover:scale-125 cursor-pointer shrink-0",
-                                                    opt.color.split(' ')[0]
-                                                )} 
-                                            />
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent side="right" align="start" className="w-[440px] p-4 rounded-[2rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none z-[70] animate-in slide-in-from-left-2">
-                                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 mb-4 px-2">
-                                                Color Protocol: {opt.label}
-                                            </DropdownMenuLabel>
-                                            <div className="grid grid-cols-11 gap-1.5">
-                                                {OPTION_COLORS.map(c => (
-                                                    <button 
-                                                        key={c.value} 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onUpdateOption(field.id, opt.label, opt.label, c.value);
-                                                        }} 
-                                                        className={cn(
-                                                            "h-7 w-full rounded-full border border-transparent transition-all hover:scale-110 flex items-center justify-center px-1 overflow-hidden", 
-                                                            c.value,
-                                                            opt.color === c.value && "ring-2 ring-primary ring-offset-2 scale-110 z-10"
-                                                        )}
-                                                    >
-                                                        <span className="text-[7px] font-black uppercase tracking-tighter truncate opacity-60">{opt.label}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Handle color change logic triggered by clicking the bullet
+                                        }}
+                                        className="h-full"
+                                    >
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button 
+                                                    className={cn(
+                                                        "h-4 w-4 rounded-full ml-3 border border-slate-100 shadow-sm transition-all hover:scale-125 cursor-pointer shrink-0",
+                                                        opt.color.split(' ')[0]
+                                                    )} 
+                                                />
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent side="right" align="start" className="w-[440px] p-4 rounded-[2rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none z-[70] animate-in slide-in-from-left-2">
+                                                <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 mb-4 px-2">
+                                                    Color Protocol: {opt.label}
+                                                </DropdownMenuLabel>
+                                                <div className="grid grid-cols-11 gap-1.5">
+                                                    {OPTION_COLORS.map(c => (
+                                                        <button 
+                                                            key={c.value} 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onUpdateOption(field.id, opt.label, opt.label, c.value);
+                                                            }} 
+                                                            className={cn(
+                                                                "h-7 w-full rounded-full border border-transparent transition-all hover:scale-110 flex items-center justify-center px-1 overflow-hidden", 
+                                                                c.value,
+                                                                opt.color === c.value && "ring-2 ring-primary ring-offset-2 scale-110 z-10"
+                                                            )}
+                                                        >
+                                                            <span className="text-[7px] font-black uppercase tracking-tighter truncate opacity-60">{opt.label}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </button>
 
                                     <DropdownMenuItem onClick={() => onChange(opt.label)} className="flex-1 gap-3 text-[10px] font-black uppercase tracking-[0.1em] rounded-xl cursor-pointer py-3 px-3">
                                         <span className="flex-1 truncate">{opt.label}</span>
@@ -252,7 +261,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                     {editable && (
                         <div className="p-3 bg-slate-50/50 border-t border-slate-50">
                             <div className="relative">
-                                <Plus className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-300" />
+                                <Plus className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                                 <input 
                                     placeholder="NEW..." 
                                     value={newOptionLabel}
@@ -271,6 +280,53 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
+        );
+    }
+
+    if (field.type === 'longtext' && !isExpanded) {
+        return (
+            <div className="w-full h-full flex items-center group/longtext relative overflow-hidden">
+                <div 
+                    className="flex-1 px-3 py-2 text-sm font-semibold truncate cursor-text"
+                    onClick={() => editable && setIsEditing(true)}
+                >
+                    {value || <span className="text-slate-200 italic font-normal">...</span>}
+                </div>
+                <Popover open={isLongTextPopoverOpen} onOpenChange={setIsLongTextPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <button className="opacity-0 group-hover/longtext:opacity-100 p-1.5 mr-1 rounded-lg hover:bg-slate-100 text-slate-400 transition-all shrink-0">
+                            <Maximize2 className="h-3.5 w-3.5" />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-[480px] p-0 rounded-[2rem] border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white overflow-hidden z-[60] animate-in zoom-in-95 duration-200">
+                        <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlignLeft className="h-3.5 w-3.5 text-slate-400" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{field.name}</span>
+                            </div>
+                            <button onClick={() => setIsLongTextPopoverOpen(false)} className="text-slate-300 hover:text-slate-900 transition-colors">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <textarea
+                            autoFocus
+                            value={localValue || ''}
+                            onChange={(e) => setLocalValue(e.target.value)}
+                            onBlur={handleBlur}
+                            className="w-full min-h-[240px] p-6 text-sm font-semibold bg-white focus:outline-none resize-none leading-relaxed"
+                            placeholder="Enter detailed content..."
+                        />
+                        <div className="p-4 bg-slate-50/50 border-t flex justify-end">
+                            <Button 
+                                onClick={() => setIsLongTextPopoverOpen(false)}
+                                className="h-9 rounded-xl px-8 font-black text-[10px] uppercase tracking-widest shadow-lg"
+                            >
+                                Done
+                            </Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
         );
     }
 
