@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -77,7 +76,9 @@ import {
     Loader2,
     Map,
     ListTodo,
-    Compass
+    Compass,
+    Keyboard,
+    Command
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -339,6 +340,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       return { x, y };
   };
 
+  const handleZoom = useCallback((delta: number) => {
+    setViewport(prev => ({
+        ...prev,
+        scale: Math.min(Math.max(0.1, prev.scale + delta), 5)
+    }));
+  }, []);
+
   const addElement = (type: BoardElement['type'], x?: number, y?: number, data?: Partial<BoardElement>) => {
       if (!editable) return;
       pushHistory();
@@ -478,6 +486,18 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const activeElement = document.activeElement;
           const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
           if (!isInput) {
+            // Tool selection shortcuts
+            if (e.key.toLowerCase() === 's') { e.preventDefault(); setTool('select'); }
+            if (e.key.toLowerCase() === 'p') { e.preventDefault(); setTool('pen'); }
+            if (e.key.toLowerCase() === 'h') { e.preventDefault(); setTool('hand'); }
+            if (e.key.toLowerCase() === 'l') { e.preventDefault(); setTool('arrow'); }
+
+            // Zoom shortcuts
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) { e.preventDefault(); handleZoom(0.2); }
+            if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) { e.preventDefault(); handleZoom(-0.2); }
+            if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setViewport(v => ({ ...v, scale: 1 })); }
+
+            // Operational shortcuts
             if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteSelected(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'c') { e.preventDefault(); handleCopy(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'v') { e.preventDefault(); handlePaste(); }
@@ -487,7 +507,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       };
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedIds, deleteSelected, handleCopy, handlePaste, handleDuplicate, undo]);
+  }, [selectedIds, deleteSelected, handleCopy, handlePaste, handleDuplicate, undo, handleZoom]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
@@ -658,8 +678,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
           const delta = e.deltaY * -0.01;
-          const newScale = Math.min(Math.max(0.1, viewport.scale + delta), 5);
-          setViewport(prev => ({ ...prev, scale: newScale }));
+          handleZoom(delta);
       } else {
           setViewport(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
       }
@@ -949,9 +968,74 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     <Button variant="ghost" size="icon" onClick={() => setTool('select')} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-4 w-4" /></Button>
                 </div>
             )}
+
+            <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2 animate-in slide-in-from-right-4 duration-700">
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button className="h-10 px-4 rounded-xl bg-white border border-slate-200 shadow-lg text-slate-400 hover:text-primary transition-all flex items-center gap-3 active:scale-95">
+                            <Command className="h-4 w-4" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Protocol Guide</span>
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="end" className="w-72 p-0 overflow-hidden rounded-[1.5rem] border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white">
+                        <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Keyboard Shortcuts</p>
+                        </div>
+                        <ScrollArea className="h-80">
+                            <div className="p-4 space-y-4">
+                                <ShortcutSection title="Tools">
+                                    <ShortcutRow label="Pointer / Select" keys={['S']} />
+                                    <ShortcutRow label="Drawing Pen" keys={['P']} />
+                                    <ShortcutRow label="Hand / Pan" keys={['H']} />
+                                    <ShortcutRow label="Arrow / Link" keys={['L']} />
+                                </ShortcutSection>
+                                <ShortcutSection title="Workspace">
+                                    <ShortcutRow label="Zoom In" keys={['Ctrl', '+']} />
+                                    <ShortcutRow label="Zoom Out" keys={['Ctrl', '-']} />
+                                    <ShortcutRow label="Reset View" keys={['Ctrl', '0']} />
+                                </ShortcutSection>
+                                <ShortcutSection title="Operations">
+                                    <ShortcutRow label="Undo" keys={['Ctrl', 'Z']} />
+                                    <ShortcutRow label="Duplicate" keys={['Ctrl', 'D']} />
+                                    <ShortcutRow label="Copy / Paste" keys={['Ctrl', 'C/V']} />
+                                    <ShortcutRow label="Delete" keys={['Del']} />
+                                </ShortcutSection>
+                            </div>
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
+
+                <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-white border border-slate-200 shadow-lg">
+                    <button onClick={() => handleZoom(-0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">-</button>
+                    <span className="text-[9px] font-black text-slate-900 w-10 text-center uppercase tracking-widest">{Math.round(viewport.scale * 100)}%</span>
+                    <button onClick={() => handleZoom(0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">+</button>
+                </div>
+            </div>
         </div>
     </div>
   );
+}
+
+function ShortcutSection({ title, children }: { title: string, children: React.ReactNode }) {
+    return (
+        <div className="space-y-2">
+            <h5 className="text-[8px] font-black uppercase tracking-widest text-slate-300 ml-1">{title}</h5>
+            <div className="space-y-1">{children}</div>
+        </div>
+    );
+}
+
+function ShortcutRow({ label, keys }: { label: string, keys: string[] }) {
+    return (
+        <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
+            <span className="text-[10px] font-bold text-slate-500">{label}</span>
+            <div className="flex items-center gap-1">
+                {keys.map(key => (
+                    <kbd key={key} className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded border border-slate-200 bg-white text-[9px] font-black text-slate-900 shadow-sm">{key}</kbd>
+                ))}
+            </div>
+        </div>
+    );
 }
 
 function ToolbarItem({ icon, active = false, onClick }: any) {
