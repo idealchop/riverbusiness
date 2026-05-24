@@ -80,6 +80,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
 
 interface SheetEditorProps {
   initialData: any;
@@ -331,6 +332,54 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
         );
     }
 
+    if (field.type === 'date') {
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button 
+                        disabled={!editable}
+                        className="w-full h-full px-3 flex items-center justify-between group/date outline-none transition-colors hover:bg-slate-50"
+                    >
+                        <span className={cn(
+                            "text-sm font-semibold truncate flex-1 text-left",
+                            !value && "text-slate-200 italic font-normal"
+                        )}>
+                            {value ? format(new Date(value), 'MMM d, yyyy') : "Pick date..."}
+                        </span>
+                        <CalendarIcon className="h-3.5 w-3.5 text-slate-300 group-hover/date:text-primary transition-colors shrink-0" />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="p-0 border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[1.5rem] bg-white z-[60] overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Select Timeline</span>
+                        {value && (
+                            <button 
+                                onClick={() => onChange(null)}
+                                className="text-[8px] font-black uppercase text-red-500 hover:underline"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    <Calendar
+                        mode="single"
+                        selected={value ? new Date(value) : undefined}
+                        onSelect={(date) => {
+                            if (date) onChange(format(date, 'yyyy-MM-dd'));
+                        }}
+                        initialFocus
+                        className="rounded-b-[1.5rem]"
+                        classNames={{
+                            day_selected: "bg-primary text-white hover:bg-primary/90 rounded-xl font-bold",
+                            day_today: "bg-blue-50 text-primary font-bold rounded-xl border border-primary/20",
+                            day: "h-9 w-9 p-0 font-bold text-xs uppercase rounded-xl hover:bg-slate-50 transition-all",
+                        }}
+                    />
+                </PopoverContent>
+            </Popover>
+        );
+    }
+
     if (isEditing || isExpanded) {
         if (field.type === 'longtext') {
             return (
@@ -347,7 +396,6 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
 
         let inputType = "text";
         if (field.type === 'number' || field.type === 'currency') inputType = "number";
-        if (field.type === 'date') inputType = "date";
         if (field.type === 'email') inputType = "email";
         if (field.type === 'url') inputType = "url";
         if (field.type === 'phone') inputType = "tel";
@@ -398,7 +446,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                         "w-full h-full bg-transparent px-3 text-sm font-semibold focus:outline-none transition-colors",
                         field.type === 'currency' && "pl-1"
                     )}
-                    placeholder={field.type === 'date' ? '' : "..."}
+                    placeholder="..."
                 />
             </div>
         );
