@@ -173,6 +173,7 @@ export interface SheetField {
     width?: number;
     required?: boolean;
     isPrimary?: boolean;
+    currencySymbol?: string;
 }
 
 export interface SheetRecord {

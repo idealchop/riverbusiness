@@ -135,6 +135,8 @@ const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
     { type: 'phone', label: 'Phone' },
 ];
 
+const CURRENCY_SYMBOLS = ['₱', '$', '€', '£', '¥', '₩', '₹'];
+
 const OPTION_COLORS = [
     // Subtle Row
     { value: 'bg-blue-50 text-blue-700' }, { value: 'bg-sky-50 text-sky-700' }, { value: 'bg-cyan-50 text-cyan-700' }, { value: 'bg-teal-50 text-teal-700' }, { value: 'bg-green-50 text-green-700' }, { value: 'bg-yellow-50 text-yellow-700' }, { value: 'bg-orange-50 text-orange-700' }, { value: 'bg-red-50 text-red-700' }, { value: 'bg-pink-50 text-pink-700' }, { value: 'bg-purple-50 text-purple-700' }, { value: 'bg-slate-100 text-slate-700' },
@@ -146,7 +148,7 @@ const OPTION_COLORS = [
     { value: 'bg-blue-800 text-white' }, { value: 'bg-sky-800 text-white' }, { value: 'bg-cyan-800 text-white' }, { value: 'bg-teal-800 text-white' }, { value: 'bg-green-800 text-white' }, { value: 'bg-yellow-700 text-white' }, { value: 'bg-orange-800 text-white' }, { value: 'bg-red-800 text-white' }, { value: 'bg-pink-800 text-white' }, { value: 'bg-purple-800 text-white' }, { value: 'bg-slate-800 text-white' },
 ];
 
-const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUpdateOption, onDeleteOption, editable, isExpanded = false }: any) => {
+const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUpdateOption, onDeleteOption, onUpdateField, editable, isExpanded = false }: any) => {
     const [localValue, setLocalValue] = useState(value);
     const [isEditing, setIsEditing] = useState(false);
     const [newOptionLabel, setNewOptionLabel] = useState('');
@@ -201,7 +203,6 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                                     <button 
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            // Handle color change logic triggered by clicking the bullet
                                         }}
                                         className="h-full"
                                     >
@@ -353,7 +354,36 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
 
         return (
             <div className="flex items-center w-full h-full relative">
-                {field.type === 'currency' && <span className="pl-3 text-slate-400 text-sm font-bold shrink-0">₱</span>}
+                {field.type === 'currency' && (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="pl-3 pr-1 text-slate-400 text-sm font-black hover:text-primary transition-colors h-full flex items-center gap-1 group/currency shrink-0">
+                                <span>{field.currencySymbol || '₱'}</span>
+                                <ChevronDown className="h-2 w-2 opacity-0 group-hover/currency:opacity-100" />
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-48 p-1 rounded-xl shadow-2xl border-slate-100 bg-white z-[70]">
+                            <DropdownMenuLabel className="text-[8px] font-black uppercase text-slate-400 px-2 py-1 tracking-widest">Select Symbol</DropdownMenuLabel>
+                            <div className="grid grid-cols-4 gap-1 p-1">
+                                {CURRENCY_SYMBOLS.map(symbol => (
+                                    <button 
+                                        key={symbol} 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onUpdateField(field.id, { currencySymbol: symbol });
+                                        }}
+                                        className={cn(
+                                            "h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-all hover:bg-slate-100",
+                                            (field.currencySymbol || '₱') === symbol ? "bg-primary/10 text-primary" : "text-slate-600"
+                                        )}
+                                    >
+                                        {symbol}
+                                    </button>
+                                ))}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                )}
                 <input 
                     autoFocus={!isExpanded}
                     type={inputType}
@@ -383,7 +413,37 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                 "text-sm font-semibold truncate flex-1",
                 !value && "text-slate-200 italic font-normal"
             )}>
-                {field.type === 'currency' && value !== null && value !== undefined && value !== '' ? `₱${Number(value).toLocaleString()}` : (value || (field.isPrimary ? "Enter Item..." : ""))}
+                {field.type === 'currency' && value !== null && value !== undefined && value !== '' ? (
+                    <span className="flex items-center gap-1">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="text-slate-400 font-black hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                    {field.currencySymbol || '₱'}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-48 p-1 rounded-xl shadow-2xl border-slate-100 bg-white z-[70]">
+                                <div className="grid grid-cols-4 gap-1 p-1">
+                                    {CURRENCY_SYMBOLS.map(symbol => (
+                                        <button 
+                                            key={symbol} 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onUpdateField(field.id, { currencySymbol: symbol });
+                                            }}
+                                            className={cn(
+                                                "h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-all hover:bg-slate-100",
+                                                (field.currencySymbol || '₱') === symbol ? "bg-primary/10 text-primary" : "text-slate-600"
+                                            )}
+                                        >
+                                            {symbol}
+                                        </button>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                        {Number(value).toLocaleString()}
+                    </span>
+                ) : (value || (field.isPrimary ? "Enter Item..." : ""))}
             </span>
             {field.isPrimary && (
                 <button 
@@ -494,6 +554,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
         name: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
         type,
         width: 150,
+        currencySymbol: type === 'currency' ? '₱' : undefined,
         options: (type === 'status' || type === 'select') ? [
             { label: 'Option 1', color: 'bg-slate-100 text-slate-700' },
             { label: 'Option 2', color: 'bg-blue-50 text-blue-700' }
@@ -527,6 +588,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       const next = fields.map(f => f.id === fieldId ? { 
           ...f, 
           type: newType,
+          currencySymbol: newType === 'currency' ? (f.currencySymbol || '₱') : undefined,
           options: (newType === 'status' || newType === 'select') && !f.options ? [
               { label: 'Option 1', color: 'bg-slate-100 text-slate-700' },
               { label: 'Option 2', color: 'bg-blue-50 text-blue-700' }
@@ -535,6 +597,13 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       setFields(next);
       sync(next, records, views, activeViewId);
   }, [fields, records, views, activeViewId, sync]);
+
+  const updateField = useCallback((fieldId: string, updates: Partial<SheetField>) => {
+    const next = fields.map(f => f.id === fieldId ? { ...f, ...updates } : f);
+    setFields(next);
+    sync(next, records, views, activeViewId);
+    if (updates.currencySymbol) toast({ title: 'Currency updated', description: `Format changed to ${updates.currencySymbol}` });
+  }, [fields, records, views, activeViewId, sync, toast]);
 
   const handleToggleFieldVisibility = (fieldId: string, visible: boolean) => {
     const currentHidden = activeView.config?.hiddenFields || [];
@@ -1044,6 +1113,27 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 </DropdownMenuSubContent>
                                             </DropdownMenuSub>
 
+                                            {field.type === 'currency' && (
+                                                <>
+                                                    <DropdownMenuSeparator className="bg-slate-50" />
+                                                    <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 tracking-widest">Currency Symbol</DropdownMenuLabel>
+                                                    <div className="grid grid-cols-4 gap-1 p-2">
+                                                        {CURRENCY_SYMBOLS.map(symbol => (
+                                                            <button 
+                                                                key={symbol} 
+                                                                onClick={() => updateField(field.id, { currencySymbol: symbol })}
+                                                                className={cn(
+                                                                    "h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-all hover:bg-slate-100",
+                                                                    (field.currencySymbol || '₱') === symbol ? "bg-primary/10 text-primary" : "text-slate-600"
+                                                                )}
+                                                            >
+                                                                {symbol}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
+
                                             {(field.type === 'select' || field.type === 'status') && (
                                                 <>
                                                     <DropdownMenuSeparator className="bg-slate-50" />
@@ -1142,6 +1232,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
                                                 onUpdateOption={updateOption}
                                                 onDeleteOption={deleteOption}
+                                                onUpdateField={updateField}
                                                 editable={editable}
                                             />
                                         </div>
@@ -1200,6 +1291,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
                                             onUpdateOption={updateOption}
                                             onDeleteOption={deleteOption}
+                                            onUpdateField={updateField}
                                             editable={editable}
                                             isExpanded
                                         />
@@ -1298,7 +1390,7 @@ function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: any) {
                                                 return (
                                                     <div key={f.id} className="flex items-center gap-2.5">
                                                         {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-3 w-3 text-slate-300 shrink-0" })}
-                                                        <span className="text-[10px] font-bold uppercase tracking-tight text-slate-500 truncate">{f.type === 'currency' ? `₱${Number(val).toLocaleString()}` : val}</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-tight text-slate-500 truncate">{f.type === 'currency' ? `${f.currencySymbol || '₱'}${Number(val).toLocaleString()}` : val}</span>
                                                     </div>
                                                 )
                                             })}
