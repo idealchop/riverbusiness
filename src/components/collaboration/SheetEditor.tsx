@@ -48,7 +48,8 @@ import {
     Bold,
     Baseline,
     RotateCcw,
-    Zap
+    Zap,
+    AlignLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +98,7 @@ interface FilterRule {
 
 const FIELD_ICONS: Record<SheetFieldType, React.ElementType> = {
     text: Type,
+    longtext: AlignLeft,
     number: Hash,
     date: CalendarDays,
     checkbox: CheckSquare,
@@ -121,6 +123,7 @@ const VIEW_ICONS: Record<SheetViewType, React.ElementType> = {
 
 const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [
     { type: 'text', label: 'Single line text' },
+    { type: 'longtext', label: 'Multi-line text' },
     { type: 'number', label: 'Number' },
     { type: 'currency', label: 'Currency' },
     { type: 'date', label: 'Date' },
@@ -152,7 +155,14 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
 
     const handleBlur = () => {
         setIsEditing(false);
-        if (localValue !== value) onChange(localValue);
+        let finalValue = localValue;
+        
+        // Cast numeric types for valid organizational data
+        if (field.type === 'number' || field.type === 'currency') {
+            finalValue = localValue === '' ? null : Number(localValue);
+        }
+
+        if (finalValue !== value) onChange(finalValue);
     };
 
     if (field.type === 'checkbox') {
@@ -222,6 +232,19 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
     }
 
     if (isEditing || isExpanded) {
+        if (field.type === 'longtext') {
+            return (
+                <textarea
+                    autoFocus={!isExpanded}
+                    value={localValue || ''}
+                    onChange={(e) => setLocalValue(e.target.value)}
+                    onBlur={handleBlur}
+                    className="w-full h-full bg-transparent p-3 text-sm font-semibold focus:outline-none resize-none min-h-[100px]"
+                    placeholder="..."
+                />
+            );
+        }
+
         let inputType = "text";
         if (field.type === 'number' || field.type === 'currency') inputType = "number";
         if (field.type === 'date') inputType = "date";
@@ -230,8 +253,8 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
         if (field.type === 'phone') inputType = "tel";
 
         return (
-            <div className="flex items-center w-full h-full">
-                {field.type === 'currency' && <span className="pl-3 text-slate-400 text-sm font-bold">₱</span>}
+            <div className="flex items-center w-full h-full relative">
+                {field.type === 'currency' && <span className="pl-3 text-slate-400 text-sm font-bold shrink-0">₱</span>}
                 <input 
                     autoFocus={!isExpanded}
                     type={inputType}
@@ -261,7 +284,7 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, edit
                 "text-sm font-semibold truncate flex-1",
                 !value && "text-slate-200 italic font-normal"
             )}>
-                {field.type === 'currency' && value ? `₱${Number(value).toLocaleString()}` : (value || (field.isPrimary ? "Enter Item..." : ""))}
+                {field.type === 'currency' && value !== null && value !== undefined && value !== '' ? `₱${Number(value).toLocaleString()}` : (value || (field.isPrimary ? "Enter Item..." : ""))}
             </span>
             {field.isPrimary && (
                 <button 

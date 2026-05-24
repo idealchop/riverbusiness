@@ -150,6 +150,7 @@ export interface BoardConnection {
 
 export type SheetFieldType = 
   | 'text' 
+  | 'longtext'
   | 'number' 
   | 'date' 
   | 'checkbox' 
