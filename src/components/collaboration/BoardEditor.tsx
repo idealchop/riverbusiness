@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -366,6 +367,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       setSelectedIds([id]);
       return id;
   };
+
+  const deleteConnection = useCallback((id: string) => {
+      if (!editable) return;
+      pushHistory();
+      setConnections(prev => {
+          const next = prev.filter(c => c.id !== id);
+          setTimeout(() => sync(elements, next), 0);
+          return next;
+      });
+      toast({ title: 'Unlinked' });
+  }, [editable, elements, sync, pushHistory, toast]);
 
   const applyBlueprint = (blueprint: typeof BLUEPRINTS[0]) => {
       if (!editable) return;
@@ -836,7 +848,28 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </marker>
                     </defs>
                     {connections.map(conn => (
-                        <path key={conn.id} d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} fill="none" stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" />
+                        <g key={conn.id} className="group/conn pointer-events-none">
+                            {/* Transparent hit area for easy unlinking */}
+                            <path 
+                                d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} 
+                                fill="none" 
+                                stroke="transparent" 
+                                strokeWidth="20" 
+                                className="pointer-events-auto cursor-pointer"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteConnection(conn.id);
+                                }}
+                            />
+                            <path 
+                                d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} 
+                                fill="none" 
+                                stroke="#cbd5e1" 
+                                strokeWidth="2" 
+                                markerEnd="url(#arrowhead)" 
+                                className="group-hover/conn:stroke-red-400 transition-colors"
+                            />
+                        </g>
                     ))}
                     {pendingConnFrom && currentMouseCoords && (
                         <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#arrowhead)" />
@@ -950,3 +983,5 @@ function Port({ side, id }: { side: 'top' | 'right' | 'bottom' | 'left', id: str
         </div>
     );
 }
+    
+    
