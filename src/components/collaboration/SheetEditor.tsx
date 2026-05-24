@@ -162,7 +162,8 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
         let finalValue = localValue;
         
         if (field.type === 'number' || field.type === 'currency') {
-            finalValue = localValue === '' ? null : Number(localValue);
+            const parsed = localValue === '' ? null : Number(localValue);
+            finalValue = isNaN(parsed as any) ? value : parsed;
         }
 
         if (finalValue !== value) onChange(finalValue);
@@ -454,12 +455,13 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
 
     return (
         <div 
-            className="w-full h-full px-3 flex items-center group/cell cursor-text"
+            className="w-full h-full px-3 flex items-center group/cell cursor-text relative overflow-hidden"
             onClick={() => editable && setIsEditing(true)}
         >
             <span className={cn(
                 "text-sm font-semibold truncate flex-1",
-                !value && "text-slate-200 italic font-normal"
+                !value && "text-slate-200 italic font-normal",
+                (field.type === 'url' || field.type === 'email') && value && "text-primary hover:underline transition-all"
             )}>
                 {field.type === 'currency' && value !== null && value !== undefined && value !== '' ? (
                     <span className="flex items-center gap-1">
@@ -493,12 +495,31 @@ const CellRenderer = memo(({ field, value, onChange, onExpand, onAddOption, onUp
                     </span>
                 ) : (value || (field.isPrimary ? "Enter Item..." : ""))}
             </span>
+
+            {/* Functional Buttons for Email, URL, Phone */}
+            {value && (field.type === 'url' || field.type === 'email' || field.type === 'phone') && (
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (field.type === 'url') window.open(value.startsWith('http') ? value : `https://${value}`, '_blank');
+                        if (field.type === 'email') window.location.href = `mailto:${value}`;
+                        if (field.type === 'phone') window.location.href = `tel:${value}`;
+                        toast({ title: 'Opening Connection', description: `Initializing protocol for: ${value}` });
+                    }}
+                    className="opacity-0 group-hover/cell:opacity-100 p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-all shrink-0 ml-1 shadow-sm border border-slate-100 bg-white"
+                >
+                    {field.type === 'url' && <Globe className="h-3.5 w-3.5" />}
+                    {field.type === 'email' && <Mail className="h-3.5 w-3.5" />}
+                    {field.type === 'phone' && <Phone className="h-3.5 w-3.5" />}
+                </button>
+            )}
+
             {field.isPrimary && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); onExpand?.(); }}
-                    className="opacity-0 group-hover/cell:opacity-100 p-1 rounded hover:bg-slate-200 text-slate-400 transition-all"
+                    className="opacity-0 group-hover/cell:opacity-100 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-all shrink-0 ml-1"
                 >
-                    <Maximize2 className="h-3 w-3" />
+                    <Maximize2 className="h-3.5 w-3.5" />
                 </button>
             )}
         </div>
@@ -1197,7 +1218,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Edit Categories</span>
                                                             </div>
                                                             <div className="p-4 space-y-3">
-                                                                {field.options?.map((opt, idx) => (
+                                                                {field.options?.map((opt: any, idx: number) => (
                                                                     <div key={idx} className="flex items-center gap-2">
                                                                         <DropdownMenu>
                                                                             <DropdownMenuTrigger asChild>
