@@ -48,13 +48,6 @@ import {
     PopoverContent,
     PopoverTrigger 
 } from '@/components/ui/popover';
-import { 
-    Select, 
-    SelectContent, 
-    SelectItem, 
-    SelectTrigger, 
-    SelectValue 
-} from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -133,6 +126,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   const [resizingFieldId, setResizingFieldId] = useState<string | null>(null);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -283,6 +278,15 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       } : v);
       setViews(nextViews);
       sync(fields, records, nextViews, activeViewId);
+      // Reset collapsed state on grouping change
+      setCollapsedGroups({});
+  };
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups(prev => ({
+        ...prev,
+        [groupKey]: !prev[groupKey]
+    }));
   };
 
   const handleAddOptionDirectly = useCallback((fieldId: string, label: string) => {
@@ -344,6 +348,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       const targetView = views.find(v => v.id === id);
       setSortRules(targetView?.config?.sorts || []);
       sync(fields, records, views, id);
+      setCollapsedGroups({});
   }, [fields, records, views, sync]);
 
   const handleCreateView = useCallback((type: SheetViewType) => {
@@ -1108,39 +1113,48 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         </div>
 
                         <div className="divide-y pb-20">
-                            {Object.entries(groupedRecords).map(([groupKey, groupRecords], gIdx) => (
-                                <React.Fragment key={groupKey}>
-                                    {activeView.config?.groupByFieldId && (
-                                        <div className="bg-slate-50/80 sticky top-10 z-10 px-6 py-2 border-b flex items-center gap-3">
-                                            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{groupKey}</span>
-                                            <Badge variant="outline" className="h-5 px-2 bg-white text-slate-400 border-slate-100 text-[8px] font-bold">{groupRecords.length} Items</Badge>
-                                        </div>
-                                    )}
-                                    {groupRecords.map((record, idx) => (
-                                        <div key={record.id} className={cn("flex hover:bg-slate-50/30 transition-colors group", rowHeightClass)}>
-                                            <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
-                                                {idx + 1}
+                            {Object.entries(groupedRecords).map(([groupKey, groupRecords], gIdx) => {
+                                const isCollapsed = collapsedGroups[groupKey];
+                                return (
+                                    <React.Fragment key={groupKey}>
+                                        {activeView.config?.groupByFieldId && (
+                                            <div 
+                                                className="bg-slate-50/80 sticky top-10 z-10 px-6 py-2 border-b flex items-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors group/header"
+                                                onClick={() => toggleGroup(groupKey)}
+                                            >
+                                                <ChevronRight className={cn(
+                                                    "h-3.5 w-3.5 text-slate-400 transition-transform duration-200",
+                                                    !isCollapsed && "rotate-90"
+                                                )} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{groupKey}</span>
+                                                <Badge variant="outline" className="h-5 px-2 bg-white text-slate-400 border-slate-100 text-[8px] font-bold">{groupRecords.length} Items</Badge>
                                             </div>
-                                            {visibleFields.map((field) => (
-                                                <div key={field.id} style={{ width: field.width }} className="border-r shrink-0 flex items-center relative">
-                                                    <CellRenderer 
-                                                        field={field} 
-                                                        value={record.values[field.id]} 
-                                                        onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
-                                                        onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
-                                                        onUpdateOption={updateOption}
-                                                        onDeleteOption={deleteOption}
-                                                        onUpdateField={updateField}
-                                                        editable={editable}
-                                                    />
+                                        )}
+                                        {!isCollapsed && groupRecords.map((record, idx) => (
+                                            <div key={record.id} className={cn("flex hover:bg-slate-50/30 transition-colors group", rowHeightClass)}>
+                                                <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
+                                                    {idx + 1}
                                                 </div>
-                                            ))}
-                                            <div className="flex-1 bg-white" />
-                                        </div>
-                                    ))}
-                                </React.Fragment>
-                            ))}
+                                                {visibleFields.map((field) => (
+                                                    <div key={field.id} style={{ width: field.width }} className="border-r shrink-0 flex items-center relative">
+                                                        <CellRenderer 
+                                                            field={field} 
+                                                            value={record.values[field.id]} 
+                                                            onChange={(val: any) => updateRecordValue(record.id, field.id, val)}
+                                                            onAddOption={(label: string) => handleAddOptionDirectly(field.id, label)}
+                                                            onUpdateOption={updateOption}
+                                                            onDeleteOption={deleteOption}
+                                                            onUpdateField={updateField}
+                                                            editable={editable}
+                                                        />
+                                                    </div>
+                                                ))}
+                                                <div className="flex-1 bg-white" />
+                                            </div>
+                                        ))}
+                                    </React.Fragment>
+                                );
+                            })}
                             <div className={cn("flex hover:bg-slate-50/30 transition-colors items-center border-b", rowHeightClass)}>
                                 <div className="w-12 h-full shrink-0 border-r" />
                                 <button onClick={addRecord} className="flex-1 h-full px-4 text-xs font-bold text-slate-300 hover:text-primary transition-colors text-left flex items-center gap-2">
