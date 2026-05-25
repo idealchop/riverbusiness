@@ -51,13 +51,12 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
         const now = new Date();
         setViewDate(now);
         
-        // Auto-scroll to today's column if within the same month
         if (scrollAreaRef.current) {
             const today = now.getDate();
-            const scrollPosition = (today - 1) * DAY_WIDTH - 100; // Offset for better visibility
+            const scrollPosition = (today - 1) * DAY_WIDTH - 100; 
             const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
             if (viewport) {
-                viewport.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
+                viewport.scrollTo({ left: Math.max(0, scrollPosition) });
             }
         }
     };
@@ -77,6 +76,12 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
         }
         setDraggedRecordId(null);
         setDropTargetDate(null);
+    };
+
+    const handleGridClick = (recordId: string, date: Date) => {
+        if (dateField) {
+            onRecordUpdate(recordId, dateField.id, format(date, 'yyyy-MM-dd'));
+        }
     };
 
     const handleResizeStart = (e: React.MouseEvent, recordId: string, currentDuration: number) => {
@@ -122,7 +127,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
 
     if (!dateField) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-20 gap-4 opacity-40 animate-in fade-in duration-500">
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-20 gap-4 opacity-40">
                 <GanttChart className="h-16 w-16 text-slate-300" />
                 <div className="space-y-1">
                     <p className="text-sm font-black uppercase tracking-widest text-slate-900">Timeline Logic Required</p>
@@ -143,13 +148,13 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                     </div>
                     <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl shadow-inner">
                         <button 
-                            className="p-1.5 rounded-lg hover:bg-white transition-all text-slate-500" 
+                            className="p-1.5 rounded-lg hover:bg-white text-slate-500" 
                             onClick={() => setViewDate(subMonths(viewDate, 1))}
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
                         <button 
-                            className="p-1.5 rounded-lg hover:bg-white transition-all text-slate-500" 
+                            className="p-1.5 rounded-lg hover:bg-white text-slate-500" 
                             onClick={() => setViewDate(addMonths(viewDate, 1))}
                         >
                             <ChevronRight className="h-4 w-4" />
@@ -178,10 +183,10 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                             {records.map(record => (
                                 <div 
                                     key={record.id} 
-                                    className="h-14 px-6 flex items-center hover:bg-white transition-colors cursor-pointer group"
+                                    className="h-14 px-6 flex items-center hover:bg-white cursor-pointer group"
                                     onClick={() => onRecordClick(record.id)}
                                 >
-                                    <span className="text-xs font-bold text-slate-700 truncate group-hover:text-primary transition-colors">
+                                    <span className="text-xs font-bold text-slate-700 truncate group-hover:text-primary">
                                         {record.values[primaryField.id] || 'Untitled'}
                                     </span>
                                 </div>
@@ -189,7 +194,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                             <div className="p-4">
                                 <button 
                                     onClick={() => window.dispatchEvent(new CustomEvent('request-new-record'))}
-                                    className="w-full h-10 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:border-primary hover:text-primary transition-all"
+                                    className="w-full h-10 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:border-primary hover:text-primary"
                                 >
                                     <PlusCircle className="h-3.5 w-3.5" /> New Entry
                                 </button>
@@ -208,7 +213,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                     <div 
                                         key={day.toISOString()} 
                                         className={cn(
-                                            "w-12 h-12 flex flex-col items-center justify-center border-r shrink-0 transition-colors",
+                                            "w-12 h-12 flex flex-col items-center justify-center border-r shrink-0",
                                             isToday(day) ? "bg-primary/5" : "bg-white"
                                         )}
                                     >
@@ -242,8 +247,9 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                                     key={day.toISOString()} 
                                                     onDragOver={(e) => { e.preventDefault(); setDropTargetDate(day.toISOString() + record.id); }}
                                                     onDrop={(e) => handleDrop(e, day)}
+                                                    onClick={() => handleGridClick(record.id, day)}
                                                     className={cn(
-                                                        "w-12 border-r shrink-0 transition-colors",
+                                                        "w-12 border-r shrink-0 cursor-pointer",
                                                         isToday(day) ? "bg-slate-50/50" : "bg-white",
                                                         dropTargetDate === day.toISOString() + record.id && "bg-primary/10"
                                                     )} 
@@ -260,11 +266,11 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                                         width: `${duration * DAY_WIDTH}px` 
                                                     }}
                                                     className={cn(
-                                                        "absolute top-2 bottom-2 z-10 transition-all cursor-grab active:cursor-grabbing px-1 animate-in zoom-in-95 duration-200 group/task",
+                                                        "absolute top-2 bottom-2 z-10 cursor-grab active:cursor-grabbing px-1 group/task",
                                                         draggedRecordId === record.id && "opacity-0"
                                                     )}
                                                 >
-                                                    <div className="w-full h-full rounded-xl bg-primary shadow-lg shadow-primary/20 flex flex-col items-center justify-center gap-1 group/bar relative hover:scale-x-[1.02] transition-transform origin-left">
+                                                    <div className="w-full h-full rounded-xl bg-primary shadow-lg shadow-primary/20 flex flex-col items-center justify-center gap-1 group/bar relative origin-left">
                                                         <input 
                                                             className="w-full bg-transparent border-none text-white text-[9px] font-black text-center uppercase tracking-tighter focus:ring-0 px-2 outline-none truncate"
                                                             value={record.values[primaryField.id] || ''}
@@ -276,7 +282,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                                         {/* Resize Handle (Stretch) */}
                                                         <div 
                                                             onMouseDown={(e) => handleResizeStart(e, record.id, duration)}
-                                                            className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover/task:opacity-100 transition-opacity flex items-center justify-center"
+                                                            className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover/task:opacity-100 flex items-center justify-center"
                                                         >
                                                             <div className="h-4 w-1 rounded-full bg-white/40" />
                                                         </div>

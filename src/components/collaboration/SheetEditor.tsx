@@ -289,7 +289,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
       } : v);
       setViews(nextViews);
       sync(fields, records, nextViews, activeViewId);
-      // Reset collapsed state on grouping change
       setCollapsedGroups({});
   };
 
@@ -573,10 +572,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     return (
                         <div key={v.id} 
                             className={cn(
-                                "group relative flex items-center shrink-0 h-9 rounded-xl transition-all whitespace-nowrap px-1 gap-0.5",
+                                "group relative flex items-center shrink-0 h-9 rounded-xl whitespace-nowrap px-1 gap-0.5",
                                 isActive 
                                     ? "bg-primary/10 text-primary border border-primary/20" 
-                                    : "text-slate-5050 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
+                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
                             )}
                         >
                             <button 
@@ -589,7 +588,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className={cn(
-                                        "h-6 w-6 rounded-md hover:bg-slate-900/5 flex items-center justify-center transition-all",
+                                        "h-6 w-6 rounded-md hover:bg-slate-900/5 flex items-center justify-center",
                                         isActive ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-slate-300"
                                     )}>
                                         <ChevronDown className="h-3.5 w-3.5" />
@@ -617,7 +616,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl shrink-0 text-slate-300 hover:text-primary transition-colors ml-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl shrink-0 text-slate-300 hover:text-primary ml-1">
                             <Plus className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -642,7 +641,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             <div className="flex items-center gap-1.5">
                 <div className="flex items-center">
                     {isSearchExpanded ? (
-                        <div className="relative flex items-center animate-in slide-in-from-right-1 duration-200">
+                        <div className="relative flex items-center">
                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                              <Input 
                                 autoFocus
@@ -652,7 +651,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 onBlur={() => !searchTerm && setIsSearchExpanded(false)}
                             />
-                            <button onClick={() => {setSearchTerm(''); setIsSearchExpanded(false);}} className="absolute right-2 text-slate-300 hover:text-slate-600 transition-colors">
+                            <button onClick={() => {setSearchTerm(''); setIsSearchExpanded(false);}} className="absolute right-2 text-slate-300 hover:text-slate-600">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
@@ -668,7 +667,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 <div className="flex items-center gap-0.5">
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider", (activeView.config?.hiddenFields?.length || 0) > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <EyeOff className="h-3 w-3" /> 
                                 <span className="hidden sm:inline">Hide</span>
                                 {(activeView.config?.hiddenFields?.length || 0) > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{activeView.config?.hiddenFields?.length}</Badge>}
@@ -682,7 +681,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <ScrollArea className="max-h-72">
                                 <div className="p-2 space-y-0.5">
                                     {fields.map(f => (
-                                        <div key={f.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                                        <div key={f.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 group">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 {React.createElement(FIELD_ICONS[f.type] || Type, { className: "h-3.5 w-3.5 text-slate-400 shrink-0" })}
                                                 <span className="text-xs font-semibold text-slate-700 truncate">{f.name}</span>
@@ -701,7 +700,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", sortRules.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider", sortRules.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <ArrowUpDown className="h-3.5 w-3.5" /> 
                                 <span className="hidden sm:inline">Sort</span>
                                 {sortRules.length > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{sortRules.length}</Badge>}
@@ -719,7 +718,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     {sortRules.map((rule) => {
                                         const labels = getSortLabels(rule.fieldId);
                                         return (
-                                            <div key={rule.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
+                                            <div key={rule.id} className="flex items-center gap-2">
                                                 <div className="flex-1 grid grid-cols-[1fr_auto] gap-2 p-1 bg-slate-50 border rounded-xl">
                                                     <Select value={rule.fieldId} onValueChange={(val) => updateSortRule(rule.id, { fieldId: val })}>
                                                         <SelectTrigger className="h-9 border-none bg-transparent shadow-none font-bold text-xs focus:ring-0">
@@ -746,7 +745,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                             </div>
                                         );
                                     })}
-                                    <Button variant="ghost" onClick={addSortRule} className="w-full h-10 rounded-xl gap-3 text-[11px] font-bold text-slate-400 hover:text-primary hover:bg-primary/5 transition-all justify-start px-3">
+                                    <Button variant="ghost" onClick={addSortRule} className="w-full h-10 rounded-xl gap-3 text-[11px] font-bold text-slate-400 hover:text-primary hover:bg-primary/5 justify-start px-3">
                                         <Plus className="h-3.5 w-3.5" /> Add another sort
                                     </Button>
                                 </div>
@@ -762,7 +761,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider", filters.length > 0 ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <Filter className="h-3.5 w-3.5" /> 
                                 <span className="hidden sm:inline">Filter</span>
                                 {filters.length > 0 && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">{filters.length}</Badge>}
@@ -776,7 +775,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <ScrollArea className="max-h-72">
                                 <div className="p-4 space-y-3">
                                     {filters.map((f, i) => (
-                                        <div key={f.id} className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200">
+                                        <div key={f.id} className="flex items-center gap-2">
                                             <Select value={f.fieldId} onValueChange={(val) => updateFilter(f.id, { fieldId: val })}>
                                                 <SelectTrigger className="w-[110px] h-9 rounded-xl text-[10px] font-bold">
                                                     <SelectValue />
@@ -817,13 +816,13 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider transition-all", activeView.config?.groupByFieldId ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider", activeView.config?.groupByFieldId ? "bg-primary/10 text-primary" : "text-slate-500 hover:text-slate-900")}>
                                 <Layout className="h-3.5 w-3.5" /> 
                                 <span className="hidden sm:inline">Group</span>
                                 {activeView.config?.groupByFieldId && <Badge className="h-3.5 min-w-[14px] px-0.5 ml-0.5 bg-primary text-[7px] flex items-center justify-center">1</Badge>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-[320px] p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white z-[60]">
+                        <PopoverContent align="end" className="w-[320px] p-0 border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white z-[60]">
                             <div className="p-4 bg-slate-50/50 border-b flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <h4 className="text-xs font-black uppercase tracking-tight text-slate-900">Group by</h4>
@@ -841,7 +840,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                     key={f.id} 
                                                     onClick={() => handleGroupByChange(f.id)}
                                                     className={cn(
-                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl",
                                                         activeView.config?.groupByFieldId === f.id ? "bg-primary/5 text-primary" : "text-slate-600 hover:bg-slate-50"
                                                     )}
                                                 >
@@ -856,20 +855,20 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     {!isAllFieldsVisible && fields.length > 5 && (
                                         <button 
                                             onClick={() => setIsAllFieldsVisible(true)}
-                                            className="w-full flex items-center gap-3 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary transition-colors"
+                                            className="w-full flex items-center gap-3 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary"
                                         >
                                             <ChevronDown className="h-3.5 w-3.5" /> See all fields
                                         </button>
                                     )}
 
                                     {isAllFieldsVisible && (
-                                        <div className="space-y-0.5 pt-2 border-t border-slate-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="space-y-0.5 pt-2 border-t border-slate-50">
                                             {fields.filter(f => !groupSuggestions.find(s => s.id === f.id)).map(f => (
                                                 <button 
                                                     key={f.id} 
                                                     onClick={() => handleGroupByChange(f.id)}
                                                     className={cn(
-                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl",
                                                         activeView.config?.groupByFieldId === f.id ? "bg-primary/5 text-primary" : "text-slate-600 hover:bg-slate-50"
                                                     )}
                                                 >
@@ -886,7 +885,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-all")}>
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider text-slate-500 hover:text-slate-900")}>
                                 <Rows className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Appearance</span>
                             </Button>
@@ -904,7 +903,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 key={opt.id}
                                                 onClick={() => handleRowHeightChange(opt.id)}
                                                 className={cn(
-                                                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all",
+                                                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold",
                                                     (activeView.config?.rowHeight || 'medium') === opt.id ? "bg-primary/10 text-primary" : "text-slate-600 hover:bg-slate-50"
                                                 )}
                                             >
@@ -916,9 +915,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 </div>
                                 <Separator className="bg-slate-50" />
                                 <div className="p-1 space-y-1">
-                                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 group">
                                         <div className="flex items-center gap-3">
-                                            <RotateCcw className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                                            <RotateCcw className="h-4 w-4 text-slate-400 group-hover:text-primary" />
                                             <span className="text-xs font-bold text-slate-600">Wrap headers</span>
                                         </div>
                                         <Switch 
@@ -936,7 +935,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
         {/* Filter Status Bar */}
         {(filters.length > 0 || sortRules.length > 0 || activeView.config?.groupByFieldId || (activeView?.config?.hiddenFields?.length || 0) > 0) && (
-            <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none animate-in fade-in duration-300">
+            <div className="h-10 bg-slate-50/50 border-b flex items-center px-6 gap-2 shrink-0 overflow-x-auto scrollbar-none">
                 {(activeView?.config?.hiddenFields?.length || 0) > 0 && (
                     <div className="flex items-center gap-1.5 mr-2">
                         <Badge variant="outline" className="h-6 px-2.5 rounded-lg border-none bg-blue-50 text-blue-600 font-bold text-[9px] uppercase gap-1.5">
@@ -946,12 +945,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 )}
                 
                 {activeView.config?.groupByFieldId && (
-                    <Badge variant="outline" className="h-6 px-2 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200" onClick={() => toggleGroup(String(activeView.config?.groupByFieldId))}>
+                    <Badge variant="outline" className="h-6 px-2 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center" onClick={() => toggleGroup(String(activeView.config?.groupByFieldId))}>
                         <Layout className="h-3 w-3" />
                         <span>Grouped by {fields.find(f => f.id === activeView.config?.groupByFieldId)?.name}</span>
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleGroupByChange(''); }}
-                            className="h-4 w-4 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors ml-1"
+                            className="h-4 w-4 rounded-md hover:bg-white/20 flex items-center justify-center ml-1"
                         >
                             <X className="h-2.5 w-2.5" />
                         </button>
@@ -964,13 +963,13 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                         <Badge 
                             key={f.id} 
                             variant="outline" 
-                            className="h-6 px-2 pr-1 rounded-lg border-none bg-green-50 text-green-700 font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200"
+                            className="h-6 px-2 pr-1 rounded-lg border-none bg-green-50 text-green-700 font-bold text-[9px] uppercase gap-1.5 flex items-center"
                         >
                             <Filter className="h-3 w-3" />
                             <span>{field?.name || 'Field'} {f.operator.replace('_', ' ')} {f.value ? `"${f.value}"` : ''}</span>
                             <button 
                                 onClick={() => removeFilter(f.id)}
-                                className="h-4 w-4 rounded-md hover:bg-green-200/50 flex items-center justify-center transition-colors ml-1"
+                                className="h-4 w-4 rounded-md hover:bg-green-200/50 flex items-center justify-center ml-1"
                             >
                                 <X className="h-2.5 w-2.5" />
                             </button>
@@ -987,7 +986,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <span>Sorted by {field?.name} ({r.direction === 'asc' ? labels.asc : labels.desc})</span>
                             <button 
                                 onClick={() => removeSortRule(r.id)}
-                                className="h-4 w-4 rounded-md hover:bg-amber-200/50 flex items-center justify-center transition-colors ml-1"
+                                className="h-4 w-4 rounded-md hover:bg-amber-200/50 flex items-center justify-center ml-1"
                             >
                                 <X className="h-2.5 w-2.5" />
                             </button>
@@ -1043,7 +1042,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <button className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md hover:bg-slate-200 flex items-center justify-center transition-all">
+                                            <button className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md hover:bg-slate-200 flex items-center justify-center">
                                                 <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                                             </button>
                                         </DropdownMenuTrigger>
@@ -1080,7 +1079,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                                     updateField(field.id, { currencySymbol: symbol });
                                                                 }}
                                                                 className={cn(
-                                                                    "h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-all hover:bg-slate-100",
+                                                                    "h-9 rounded-lg flex items-center justify-center font-bold text-sm hover:bg-slate-100",
                                                                     (field.currencySymbol || '₱') === symbol ? "bg-primary/10 text-primary" : "text-slate-600"
                                                                 )}
                                                             >
@@ -1102,14 +1101,14 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                                     <div 
                                         onMouseDown={(e) => handleResizeStart(e, field.id, field.width || 150)}
-                                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/40 transition-colors z-30" 
+                                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/40 z-30" 
                                     />
                                 </div>
                             ))}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="h-10 w-12 flex items-center justify-center hover:bg-slate-50 border-r shrink-0 text-slate-300 hover:text-primary transition-all group outline-none">
-                                        <Plus className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                                    <button className="h-10 w-12 flex items-center justify-center hover:bg-slate-50 border-r shrink-0 text-slate-300 hover:text-primary group outline-none">
+                                        <Plus className="h-4 w-4" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-56 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white z-[60]">
@@ -1131,20 +1130,20 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     <React.Fragment key={groupKey}>
                                         {activeView.config?.groupByFieldId && (
                                             <div 
-                                                className="bg-slate-50/80 sticky top-10 z-10 px-6 py-2 border-b flex items-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors group/header"
+                                                className="bg-slate-50/80 sticky top-10 z-10 px-6 py-2 border-b flex items-center gap-3 cursor-pointer hover:bg-slate-100 group/header"
                                                 onClick={() => toggleGroup(groupKey)}
                                             >
                                                 <ChevronRight className={cn(
-                                                    "h-3.5 w-3.5 text-slate-400 transition-transform duration-200",
+                                                    "h-3.5 w-3.5 text-slate-400",
                                                     !isCollapsed && "rotate-90"
                                                 )} />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 group-hover/header:tracking-[0.4em] transition-all duration-500">{groupKey}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{groupKey}</span>
                                                 <Badge variant="outline" className="h-5 px-2 bg-white text-slate-400 border-slate-100 text-[8px] font-bold">{groupRecords.length} Items</Badge>
                                             </div>
                                         )}
                                         {!isCollapsed && groupRecords.map((record, idx) => (
-                                            <div key={record.id} className={cn("flex hover:bg-slate-50/30 transition-colors group", rowHeightClass)}>
-                                                <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900 transition-colors">
+                                            <div key={record.id} className={cn("flex hover:bg-slate-50/30 group", rowHeightClass)}>
+                                                <div className="w-12 border-r bg-slate-50/30 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0 group-hover:text-slate-900">
                                                     {idx + 1}
                                                 </div>
                                                 {visibleFields.map((field) => (
@@ -1167,9 +1166,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                     </React.Fragment>
                                 );
                             })}
-                            <div className={cn("flex hover:bg-slate-50/30 transition-colors items-center border-b", rowHeightClass)}>
+                            <div className={cn("flex hover:bg-slate-50/30 items-center border-b", rowHeightClass)}>
                                 <div className="w-12 h-full shrink-0 border-r" />
-                                <button onClick={addRecord} className="flex-1 h-full px-4 text-xs font-bold text-slate-300 hover:text-primary transition-colors text-left flex items-center gap-2">
+                                <button onClick={addRecord} className="flex-1 h-full px-4 text-xs font-bold text-slate-300 hover:text-primary text-left flex items-center gap-2">
                                     <Plus className="h-3.5 w-3.5" /> New entry...
                                 </button>
                             </div>
