@@ -1,4 +1,4 @@
-['use client';
+'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { 
@@ -578,7 +578,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                 "group relative flex items-center shrink-0 h-9 rounded-xl transition-all whitespace-nowrap px-1 gap-0.5",
                                 isActive 
                                     ? "bg-primary/10 text-primary border border-primary/20" 
-                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
+                                    : "text-slate-5050 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
                             )}
                         >
                             <button 
@@ -1073,7 +1073,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                 <>
                                                     <DropdownMenuSeparator className="bg-slate-50" />
                                                     <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-1.5 tracking-widest">Currency Symbol</DropdownMenuLabel>
-                                                    <div className="grid grid-cols-4 gap-1 p-2">
+                                                    <div className="grid grid-cols-4 gap-1 p-1">
                                                         {CURRENCY_SYMBOLS.map(symbol => (
                                                             <button 
                                                                 key={symbol} 
