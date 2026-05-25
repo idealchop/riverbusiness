@@ -26,7 +26,8 @@ import {
     HelpCircle,
     ChevronRight,
     Users,
-    ChevronDownCircle
+    ChevronDownCircle,
+    GanttChart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +70,7 @@ import { FIELD_ICONS, VIEW_ICONS, FIELD_TYPES, CURRENCY_SYMBOLS, ROW_HEIGHT_OPTI
 import { CellRenderer } from './sheet/CellRenderer';
 import { KanbanView } from './sheet/KanbanView';
 import { CalendarView } from './sheet/CalendarView';
+import { GanttView } from './sheet/GanttView';
 
 interface SheetEditorProps {
   initialData: any;
@@ -114,7 +116,8 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     return [
       { id: 'v1', name: 'Main Grid', type: 'grid', config: { hiddenFields: [], rowHeight: 'medium', wrapHeaders: false, sorts: [], groupByFieldId: '' } },
       { id: 'v2', name: 'Board', type: 'kanban', config: { hiddenFields: [], sorts: [] } },
-      { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [], sorts: [] } }
+      { id: 'v3', name: 'Calendar', type: 'calendar', config: { hiddenFields: [], sorts: [] } },
+      { id: 'v4', name: 'Gantt', type: 'gantt', config: { hiddenFields: [], sorts: [] } }
     ];
   });
 
@@ -370,7 +373,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   }, [views, fields, records, sync]);
 
   const handleRenameView = useCallback((viewId: string, newName: string) => {
-    if (newName && nName.trim()) {
+    if (newName && newName.trim()) {
         const next = views.map(v => v.id === viewId ? { ...v, name: newName.trim() } : v);
         setViews(next);
         sync(fields, records, next, activeViewId);
@@ -628,7 +631,10 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                             <Layout className="h-4 w-4 text-purple-500" /> Kanban Stacks
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleCreateView('calendar')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
-                            <VIEW_ICONS.calendar className="h-4 w-4 text-green-500" /> Date Calendar
+                            <CalendarIcon className="h-4 w-4 text-green-500" /> Date Calendar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateView('gantt')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                            <GanttChart className="h-4 w-4 text-orange-500" /> Gantt Chart
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -941,11 +947,11 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 )}
                 
                 {activeView.config?.groupByFieldId && (
-                    <Badge variant="outline" className="h-6 px-2 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200">
+                    <Badge variant="outline" className="h-6 px-2 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200" onClick={() => toggleGroup(String(activeView.config?.groupByFieldId))}>
                         <Layout className="h-3 w-3" />
                         <span>Grouped by {fields.find(f => f.id === activeView.config?.groupByFieldId)?.name}</span>
                         <button 
-                            onClick={() => handleGroupByChange('')}
+                            onClick={(e) => { e.stopPropagation(); handleGroupByChange(''); }}
                             className="h-4 w-4 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors ml-1"
                         >
                             <X className="h-2.5 w-2.5" />
@@ -1181,7 +1187,12 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
             {activeView?.type === 'calendar' && (
                 <CalendarView fields={fields} records={filteredRecords} onRecordClick={(id: string) => {}} />
             )}
+
+            {activeView?.type === 'gantt' && (
+                <GanttView fields={fields} records={filteredRecords} onRecordClick={(id: string) => {}} onRecordUpdate={updateRecordValue} />
+            )}
         </div>
     </div>
   );
 }
+

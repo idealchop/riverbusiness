@@ -21,7 +21,8 @@ import {
     BetweenVerticalEnd, 
     Maximize, 
     StretchVertical,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    GanttChart
 } from 'lucide-react';
 import { SheetFieldType, SheetViewType, RowHeight } from '@/lib/types';
 
@@ -47,7 +48,8 @@ export const VIEW_ICONS: Record<SheetViewType, React.ElementType> = {
     grid: Grid,
     kanban: Layout,
     calendar: CalendarIcon,
-    list: ListFilter
+    list: ListFilter,
+    gantt: GanttChart
 };
 
 export const FIELD_TYPES: { type: SheetFieldType, label: string }[] = [

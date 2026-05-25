@@ -184,7 +184,7 @@ export interface SheetRecord {
     createdBy?: string;
 }
 
-export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'list';
+export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'list' | 'gantt';
 export type RowHeight = 'short' | 'medium' | 'tall' | 'extra-tall';
 
 export interface SheetView {
