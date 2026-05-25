@@ -48,6 +48,13 @@ import {
     PopoverContent,
     PopoverTrigger 
 } from '@/components/ui/popover';
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -363,7 +370,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
   }, [views, fields, records, sync]);
 
   const handleRenameView = useCallback((viewId: string, newName: string) => {
-    if (newName && newName.trim()) {
+    if (newName && nName.trim()) {
         const next = views.map(v => v.id === viewId ? { ...v, name: newName.trim() } : v);
         setViews(next);
         sync(fields, records, next, activeViewId);
@@ -934,7 +941,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                 )}
                 
                 {activeView.config?.groupByFieldId && (
-                    <Badge variant="outline" className="h-6 px-2.5 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200">
+                    <Badge variant="outline" className="h-6 px-2 pr-1 rounded-lg border-none bg-primary text-white font-bold text-[9px] uppercase gap-1.5 flex items-center animate-in zoom-in-95 duration-200">
                         <Layout className="h-3 w-3" />
                         <span>Grouped by {fields.find(f => f.id === activeView.config?.groupByFieldId)?.name}</span>
                         <button 
@@ -970,7 +977,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                     const field = fields.find(f => f.id === r.fieldId);
                     const labels = getSortLabels(r.fieldId);
                     return (
-                        <Badge key={r.id} variant="outline" className="h-6 px-2.5 pr-1 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5 flex items-center">
+                        <Badge key={r.id} variant="outline" className="h-6 px-2 pr-1 rounded-lg border-none bg-amber-50 text-amber-700 font-bold text-[9px] uppercase gap-1.5 flex items-center">
                             <ArrowUpDown className="h-3 w-3" />
                             <span>Sorted by {field?.name} ({r.direction === 'asc' ? labels.asc : labels.desc})</span>
                             <button 
