@@ -8,7 +8,9 @@ import {
     Clock, 
     AlertCircle, 
     Calendar as CalendarIcon,
-    Grab
+    Grab,
+    Plus,
+    PlusCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -49,6 +51,10 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
         }
         setDraggedRecordId(null);
         setDropTargetDate(null);
+    };
+
+    const handleTextChange = (recordId: string, newText: string) => {
+        onRecordUpdate(recordId, primaryField.id, newText);
     };
 
     if (!dateField) {
@@ -104,6 +110,14 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                     </span>
                                 </div>
                             ))}
+                            <div className="p-4">
+                                <button 
+                                    onClick={() => window.dispatchEvent(new CustomEvent('request-new-record'))}
+                                    className="w-full h-10 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:border-primary hover:text-primary transition-all"
+                                >
+                                    <PlusCircle className="h-3.5 w-3.5" /> New Entry
+                                </button>
+                            </div>
                         </div>
                     </ScrollArea>
                 </div>
@@ -141,7 +155,8 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                             {/* Rows Matrix */}
                             <div className="relative divide-y">
                                 {records.map(record => {
-                                    const recordDate = toSafeDate(record.values[dateField.id]);
+                                    const recordDateString = record.values[dateField.id];
+                                    const recordDate = recordDateString ? new Date(recordDateString) : null;
                                     
                                     return (
                                         <div key={record.id} className="flex relative group/row h-14">
@@ -174,9 +189,11 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                                 >
                                                     <div className="w-full h-full rounded-xl bg-primary shadow-lg shadow-primary/20 flex flex-col items-center justify-center gap-1 group/bar relative">
                                                         <input 
-                                                            className="w-full bg-transparent border-none text-white text-[9px] font-black text-center uppercase tracking-tighter focus:ring-0 px-1 pointer-events-none"
-                                                            value={record.values[primaryField.id] || '...'}
-                                                            readOnly
+                                                            className="w-full bg-transparent border-none text-white text-[9px] font-black text-center uppercase tracking-tighter focus:ring-0 px-1 outline-none"
+                                                            value={record.values[primaryField.id] || ''}
+                                                            onChange={(e) => handleTextChange(record.id, e.target.value)}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            placeholder="..."
                                                         />
                                                         <div className="absolute -top-1 -right-1 opacity-0 group-hover/bar:opacity-100 transition-opacity">
                                                             <div className="h-4 w-4 rounded-full bg-white shadow-md flex items-center justify-center">
@@ -208,19 +225,15 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Timeline Cell</span>
                     </div>
                 </div>
-                <p className="text-[9px] font-bold italic text-slate-400">Drag bars to adjust dispatch or production timing across the grid.</p>
+                <p className="text-[9px] font-bold italic text-slate-400">Drag bars to adjust dispatch or production timing, or edit text directly on the timeline.</p>
             </div>
         </div>
     );
 }
 
-function isWithinInterval(date: Date, interval: { start: Date, end: Date }) {
-    const d = startOfDay(date);
-    return d >= startOfDay(interval.start) && d <= startOfDay(interval.end);
-}
-
-const startOfDay = (date: Date) => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
+const isWithinInterval = (date: Date, interval: { start: Date, end: Date }) => {
+    const d = new Date(date).setHours(0,0,0,0);
+    const s = new Date(interval.start).setHours(0,0,0,0);
+    const e = new Date(interval.end).setHours(0,0,0,0);
+    return d >= s && d <= e;
 };

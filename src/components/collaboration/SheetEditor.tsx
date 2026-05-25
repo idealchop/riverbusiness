@@ -1,4 +1,4 @@
-'use client';
+['use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { 
@@ -27,7 +27,8 @@ import {
     ChevronRight,
     Users,
     ChevronDownCircle,
-    GanttChart
+    GanttChart,
+    Calendar as CalendarIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1195,4 +1196,3 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     </div>
   );
 }
-
