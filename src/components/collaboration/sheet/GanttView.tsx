@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, subMonths, addMonths, isToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, subMonths, addMonths, isToday, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { SheetField, SheetRecord } from '@/lib/types';
 
@@ -33,10 +33,12 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
     const [draggedRecordId, setDraggedRecordId] = useState<string | null>(null);
     const [dropTargetDate, setDropTargetDate] = useState<string | null>(null);
     
-    // Stretching (Resizing) States
+    // Resizing States
     const [resizingRecordId, setResizingRecordId] = useState<string | null>(null);
     const resizeStartX = useRef(0);
     const resizeStartDuration = useRef(1);
+
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     const dateField = useMemo(() => fields.find(f => f.type === 'date'), [fields]);
     const primaryField = useMemo(() => fields.find(f => f.isPrimary) || fields[0], [fields]);
@@ -45,8 +47,23 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
     const monthEnd = endOfMonth(viewDate);
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+    const handleGoToToday = () => {
+        const now = new Date();
+        setViewDate(now);
+        
+        // Auto-scroll to today's column if within the same month
+        if (scrollAreaRef.current) {
+            const today = now.getDate();
+            const scrollPosition = (today - 1) * DAY_WIDTH - 100; // Offset for better visibility
+            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) {
+                viewport.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
+            }
+        }
+    };
+
     const handleDragStart = (e: React.DragEvent, recordId: string) => {
-        if (resizingRecordId) return; // Prevent drag if resizing
+        if (resizingRecordId) return; 
         setDraggedRecordId(recordId);
         e.dataTransfer.setData('recordId', recordId);
         e.dataTransfer.effectAllowed = 'move';
@@ -72,13 +89,6 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         if (!resizingRecordId) return;
-        
-        const deltaX = e.clientX - resizeStartX.current;
-        const deltaDays = Math.round(deltaX / DAY_WIDTH);
-        const newDuration = Math.max(1, resizeStartDuration.current + deltaDays);
-        
-        // Optimistic local update could happen here if we had local state for durations
-        // For now, we update on mouse up to keep ledger synced
     }, [resizingRecordId]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
@@ -132,15 +142,28 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Organization Timeline</p>
                     </div>
                     <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl shadow-inner">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white transition-all" onClick={() => setViewDate(subMonths(viewDate, 1))}>
+                        <button 
+                            className="p-1.5 rounded-lg hover:bg-white transition-all text-slate-500" 
+                            onClick={() => setViewDate(subMonths(viewDate, 1))}
+                        >
                             <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white transition-all" onClick={() => setViewDate(addMonths(viewDate, 1))}>
+                        </button>
+                        <button 
+                            className="p-1.5 rounded-lg hover:bg-white transition-all text-slate-500" 
+                            onClick={() => setViewDate(addMonths(viewDate, 1))}
+                        >
                             <ChevronRight className="h-4 w-4" />
-                        </Button>
+                        </button>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setViewDate(new Date())} className="h-10 rounded-xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm bg-white border-slate-200">Go to Today</Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleGoToToday} 
+                    className="h-10 rounded-xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm bg-white border-slate-200"
+                >
+                    Go to Today
+                </Button>
             </div>
 
             {/* Gantt Matrix */}
@@ -148,7 +171,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                 {/* Fixed Sidebar for Record Titles */}
                 <div className="w-64 border-r bg-slate-50/50 flex flex-col shrink-0">
                     <div className="h-12 border-b bg-slate-100/50 flex items-center px-6 shrink-0">
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Object Title</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Object Title</span>
                     </div>
                     <ScrollArea className="flex-1">
                         <div className="divide-y divide-slate-100">
@@ -177,7 +200,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
 
                 {/* Scrollable Timeline Grid */}
                 <div className="flex-1 flex flex-col overflow-hidden relative">
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="flex-1" ref={scrollAreaRef}>
                         <div className="inline-block min-w-full">
                             {/* Days Header */}
                             <div className="flex sticky top-0 z-20 bg-white border-b">
@@ -257,13 +280,6 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                                         >
                                                             <div className="h-4 w-1 rounded-full bg-white/40" />
                                                         </div>
-
-                                                        {/* Icon cues */}
-                                                        <div className="absolute -top-1 -right-1 opacity-0 group-hover/bar:opacity-100 transition-opacity">
-                                                            <div className="h-4 w-4 rounded-full bg-white shadow-md flex items-center justify-center">
-                                                                <Grab className="h-2 w-2 text-primary" />
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -276,30 +292,13 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                     </ScrollArea>
                 </div>
             </div>
-
-            {/* Legend / Footer */}
-            <div className="h-12 border-t bg-slate-50/80 px-8 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Active Entry</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-slate-200" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Timeline Grid</span>
-                    </div>
-                </div>
-                <p className="text-[9px] font-bold italic text-slate-400">
-                    Drag bars to move start date. <span className="text-primary font-black ml-1">Stretch bars from the right edge</span> to adjust task duration.
-                </p>
-            </div>
         </div>
     );
 }
 
 const isWithinInterval = (date: Date, interval: { start: Date, end: Date }) => {
-    const d = new Date(date).setHours(0,0,0,0);
-    const s = new Date(interval.start).setHours(0,0,0,0);
-    const e = new Date(interval.end).setHours(0,0,0,0);
+    const d = startOfDay(new Date(date)).getTime();
+    const s = startOfDay(new Date(interval.start)).getTime();
+    const e = startOfDay(new Date(interval.end)).getTime();
     return d >= s && d <= e;
 };
