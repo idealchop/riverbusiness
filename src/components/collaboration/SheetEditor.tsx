@@ -390,8 +390,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
     sync(fields, next, records, nextActive);
   }, [views, fields, records, activeViewId, sync]);
 
-  // --- Sorting Protocol ---
-
   const addSortRule = useCallback(() => {
       const newRule: SortRule = { id: `sort-${Date.now()}`, fieldId: fields[0].id, direction: 'asc' };
       const nextRules = [...sortRules, newRule];
@@ -888,7 +886,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
 
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-all">
+                            <Button variant="ghost" size="sm" className={cn("h-8 px-2 rounded-xl gap-1.5 font-bold text-[9px] uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-all")}>
                                 <Rows className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Appearance</span>
                             </Button>
@@ -1140,7 +1138,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true }: S
                                                     "h-3.5 w-3.5 text-slate-400 transition-transform duration-200",
                                                     !isCollapsed && "rotate-90"
                                                 )} />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{groupKey}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 group-hover/header:tracking-[0.4em] transition-all duration-500">{groupKey}</span>
                                                 <Badge variant="outline" className="h-5 px-2 bg-white text-slate-400 border-slate-100 text-[8px] font-bold">{groupRecords.length} Items</Badge>
                                             </div>
                                         )}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { 
     GanttChart, 
     ChevronLeft, 
@@ -10,7 +10,8 @@ import {
     Calendar as CalendarIcon,
     Grab,
     Plus,
-    PlusCircle
+    PlusCircle,
+    ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -25,11 +26,18 @@ interface GanttViewProps {
     onRecordClick: (id: string) => void;
 }
 
+const DAY_WIDTH = 48;
+
 export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: GanttViewProps) {
     const [viewDate, setViewDate] = useState(new Date());
     const [draggedRecordId, setDraggedRecordId] = useState<string | null>(null);
     const [dropTargetDate, setDropTargetDate] = useState<string | null>(null);
     
+    // Stretching (Resizing) States
+    const [resizingRecordId, setResizingRecordId] = useState<string | null>(null);
+    const resizeStartX = useRef(0);
+    const resizeStartDuration = useRef(1);
+
     const dateField = useMemo(() => fields.find(f => f.type === 'date'), [fields]);
     const primaryField = useMemo(() => fields.find(f => f.isPrimary) || fields[0], [fields]);
 
@@ -38,6 +46,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
     const handleDragStart = (e: React.DragEvent, recordId: string) => {
+        if (resizingRecordId) return; // Prevent drag if resizing
         setDraggedRecordId(recordId);
         e.dataTransfer.setData('recordId', recordId);
         e.dataTransfer.effectAllowed = 'move';
@@ -52,6 +61,50 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
         setDraggedRecordId(null);
         setDropTargetDate(null);
     };
+
+    const handleResizeStart = (e: React.MouseEvent, recordId: string, currentDuration: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setResizingRecordId(recordId);
+        resizeStartX.current = e.clientX;
+        resizeStartDuration.current = currentDuration;
+    };
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!resizingRecordId) return;
+        
+        const deltaX = e.clientX - resizeStartX.current;
+        const deltaDays = Math.round(deltaX / DAY_WIDTH);
+        const newDuration = Math.max(1, resizeStartDuration.current + deltaDays);
+        
+        // Optimistic local update could happen here if we had local state for durations
+        // For now, we update on mouse up to keep ledger synced
+    }, [resizingRecordId]);
+
+    const handleMouseUp = useCallback((e: MouseEvent) => {
+        if (!resizingRecordId) return;
+
+        const deltaX = e.clientX - resizeStartX.current;
+        const deltaDays = Math.round(deltaX / DAY_WIDTH);
+        const newDuration = Math.max(1, resizeStartDuration.current + deltaDays);
+
+        if (newDuration !== resizeStartDuration.current) {
+            onRecordUpdate(resizingRecordId, 'duration', newDuration);
+        }
+        
+        setResizingRecordId(null);
+    }, [resizingRecordId, onRecordUpdate]);
+
+    useEffect(() => {
+        if (resizingRecordId) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [resizingRecordId, handleMouseMove, handleMouseUp]);
 
     const handleTextChange = (recordId: string, newText: string) => {
         onRecordUpdate(recordId, primaryField.id, newText);
@@ -157,6 +210,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                 {records.map(record => {
                                     const recordDateString = record.values[dateField.id];
                                     const recordDate = recordDateString ? new Date(recordDateString) : null;
+                                    const duration = Number(record.values.duration) || 1;
                                     
                                     return (
                                         <div key={record.id} className="flex relative group/row h-14">
@@ -179,22 +233,32 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                                                     draggable
                                                     onDragStart={(e) => handleDragStart(e, record.id)}
                                                     style={{ 
-                                                        left: `${(recordDate.getDate() - 1) * 48}px`,
-                                                        width: '48px' 
+                                                        left: `${(recordDate.getDate() - 1) * DAY_WIDTH}px`,
+                                                        width: `${duration * DAY_WIDTH}px` 
                                                     }}
                                                     className={cn(
-                                                        "absolute top-2 bottom-2 z-10 transition-all cursor-grab active:cursor-grabbing px-1 animate-in zoom-in-95 duration-200",
+                                                        "absolute top-2 bottom-2 z-10 transition-all cursor-grab active:cursor-grabbing px-1 animate-in zoom-in-95 duration-200 group/task",
                                                         draggedRecordId === record.id && "opacity-0"
                                                     )}
                                                 >
-                                                    <div className="w-full h-full rounded-xl bg-primary shadow-lg shadow-primary/20 flex flex-col items-center justify-center gap-1 group/bar relative">
+                                                    <div className="w-full h-full rounded-xl bg-primary shadow-lg shadow-primary/20 flex flex-col items-center justify-center gap-1 group/bar relative hover:scale-x-[1.02] transition-transform origin-left">
                                                         <input 
-                                                            className="w-full bg-transparent border-none text-white text-[9px] font-black text-center uppercase tracking-tighter focus:ring-0 px-1 outline-none"
+                                                            className="w-full bg-transparent border-none text-white text-[9px] font-black text-center uppercase tracking-tighter focus:ring-0 px-2 outline-none truncate"
                                                             value={record.values[primaryField.id] || ''}
                                                             onChange={(e) => handleTextChange(record.id, e.target.value)}
                                                             onMouseDown={(e) => e.stopPropagation()}
                                                             placeholder="..."
                                                         />
+                                                        
+                                                        {/* Resize Handle (Stretch) */}
+                                                        <div 
+                                                            onMouseDown={(e) => handleResizeStart(e, record.id, duration)}
+                                                            className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover/task:opacity-100 transition-opacity flex items-center justify-center"
+                                                        >
+                                                            <div className="h-4 w-1 rounded-full bg-white/40" />
+                                                        </div>
+
+                                                        {/* Icon cues */}
                                                         <div className="absolute -top-1 -right-1 opacity-0 group-hover/bar:opacity-100 transition-opacity">
                                                             <div className="h-4 w-4 rounded-full bg-white shadow-md flex items-center justify-center">
                                                                 <Grab className="h-2 w-2 text-primary" />
@@ -222,10 +286,12 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-slate-200" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Timeline Cell</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Timeline Grid</span>
                     </div>
                 </div>
-                <p className="text-[9px] font-bold italic text-slate-400">Drag bars to adjust dispatch or production timing, or edit text directly on the timeline.</p>
+                <p className="text-[9px] font-bold italic text-slate-400">
+                    Drag bars to move start date. <span className="text-primary font-black ml-1">Stretch bars from the right edge</span> to adjust task duration.
+                </p>
             </div>
         </div>
     );
