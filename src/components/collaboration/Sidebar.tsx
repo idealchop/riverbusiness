@@ -181,7 +181,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={onFavorite}
+                            onFavorite={handleFavorite}
                             onTrash={onTrash}
                             onDuplicate={onDuplicate}
                         />
@@ -334,33 +334,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     </div>
                 </div>
             )}
-            
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button 
-                        variant="ghost" 
-                        className="w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs text-slate-500 hover:text-slate-900"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Create new asset
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white">
-                    <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
-                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
-                        Rich Text Document
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Sheet', 'sheet')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
-                        <div className="p-1.5 rounded-lg bg-green-50 text-green-500"><Grid className="h-4 w-4" /></div>
-                        Operational Sheet
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Board', 'board')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
-                        <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
-                        Visual Whiteboard
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
         </div>
       </div>
 
@@ -368,7 +341,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         <div className="space-y-8">
             {/* Collapsible Home Section */}
             <div className="space-y-1">
-                <div className="flex items-center justify-between group/home pr-1">
+                <div className="flex items-center group/home pr-1">
                     <Link href="/workspace" className="flex-1">
                         <div className={cn(
                             "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-bold transition-all",
@@ -380,12 +353,38 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                             <span>Home</span>
                         </div>
                     </Link>
-                    <button 
-                        onClick={() => setIsHomeExpanded(!isHomeExpanded)}
-                        className="h-6 w-6 rounded-md hover:bg-slate-200/50 flex items-center justify-center transition-colors text-slate-400"
-                    >
-                        {isHomeExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                    </button>
+                    
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover/home:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="h-7 w-7 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all">
+                                    <Plus className="h-4 w-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white z-[60]">
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
+                                    Rich Text Document
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Sheet', 'sheet')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                                    <div className="p-1.5 rounded-lg bg-green-50 text-green-600"><Grid className="h-4 w-4" /></div>
+                                    Operational Sheet
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Board', 'board')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
+                                    <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
+                                    Visual Whiteboard
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <button 
+                            onClick={() => setIsHomeExpanded(!isHomeExpanded)}
+                            className="h-7 w-7 rounded-lg hover:bg-slate-200 flex items-center justify-center transition-colors text-slate-400"
+                        >
+                            {isHomeExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        </button>
+                    </div>
                 </div>
                 
                 {isHomeExpanded && (
