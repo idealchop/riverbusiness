@@ -41,7 +41,7 @@ import { Input } from '@/components/ui/input';
 import { LogoBlack } from '@/components/icons';
 import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -181,7 +181,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={onFavorite}
+                            onFavorite={handleFavorite}
                             onTrash={onTrash}
                             onDuplicate={onDuplicate}
                         />
@@ -355,7 +355,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         Operational Sheet
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Board', 'board')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
-                        <div className="p-1.5 rounded-lg bg-purple-50 text-purple-500"><Layout className="h-4 w-4" /></div>
+                        <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
                         Visual Whiteboard
                     </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -365,7 +365,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
-            {/* High-Fidelity Home Link */}
+            {/* High-Fidelity Home Link and Hierarchy */}
             <div className="space-y-1">
                 <Link href="/workspace">
                     <div className={cn(
@@ -378,6 +378,36 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         <span>Home</span>
                     </div>
                 </Link>
+                
+                <div className="pl-6 space-y-0.5">
+                    <Link href="/workspace/docs">
+                        <div className={cn(
+                            "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                            pathname === '/workspace/docs' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                        )}>
+                            <FileText className="h-3 w-3 text-blue-500" />
+                            <span>Docs</span>
+                        </div>
+                    </Link>
+                    <Link href="/workspace/sheets">
+                        <div className={cn(
+                            "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                            pathname === '/workspace/sheets' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                        )}>
+                            <Grid className="h-3 w-3 text-green-600" />
+                            <span>Sheets</span>
+                        </div>
+                    </Link>
+                    <Link href="/workspace/boards">
+                        <div className={cn(
+                            "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                            pathname === '/workspace/boards' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                        )}>
+                            <Layout className="h-3 w-3 text-purple-600" />
+                            <span>Canvases</span>
+                        </div>
+                    </Link>
+                </div>
             </div>
 
             {favorites.length > 0 && !searchQuery && selectedMemberId === user?.id && (
