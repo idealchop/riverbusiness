@@ -4,12 +4,13 @@ import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
-import { Grid, Clock, History, Search, Plus, BarChart3, Database, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Grid, Clock, History, Search, Plus, BarChart3, Database, ShieldCheck, CheckCircle2, TrendingUp, Boxes, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function SheetsHubPage() {
   const { user: authUser } = useUser();
@@ -49,6 +50,12 @@ export default function SheetsHubPage() {
     }));
   };
 
+  const engines = [
+      { title: 'Global Supply Matrix', desc: 'Track inventory nodes across regions.', icon: Boxes, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+      { title: 'Q3 Financial Ledger', desc: 'Consolidated fiscal reporting and audit.', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
+      { title: 'Operations Tracker', desc: 'Real-time task and resource distribution.', icon: Briefcase, color: 'text-slate-600', bg: 'bg-slate-100' },
+  ];
+
   return (
     <div className="min-h-full bg-white flex flex-col animate-in fade-in duration-700">
       <div className="max-w-6xl mx-auto w-full px-8 py-12 md:py-20 space-y-16">
@@ -79,29 +86,26 @@ export default function SheetsHubPage() {
             </div>
         </section>
 
-        {/* Function Cards */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="group relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-10 text-white shadow-2xl transition-all duration-500 hover:-translate-y-1">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                    <ShieldCheck className="h-20 w-20" />
-                </div>
-                <div className="relative z-10 space-y-4">
-                    <Badge variant="outline" className="border-white/20 text-white font-black text-[9px] uppercase tracking-[0.2em] h-5 px-2">Secure Protocol</Badge>
-                    <h3 className="text-2xl font-black tracking-tight uppercase">Audit Logs</h3>
-                    <p className="text-sm text-slate-400 leading-relaxed max-w-[280px]">Automated tracking for quality certificates and lab test history.</p>
-                    <Button variant="link" className="text-white p-0 h-auto font-black uppercase text-[10px] tracking-widest mt-4">Initiate Sync →</Button>
-                </div>
+        {/* Engine Showcase */}
+        <section className="space-y-8">
+            <div className="flex items-center justify-between">
+                <h2 className="text-[10px] font-black tracking-[0.3em] text-slate-300 uppercase">Standard Data Frameworks</h2>
+                <div className="h-px flex-1 mx-8 bg-slate-50" />
             </div>
-            <div className="group relative overflow-hidden rounded-[2.5rem] bg-emerald-50 p-10 text-slate-900 border border-emerald-100 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                    <Grid className="h-20 w-20" />
-                </div>
-                <div className="relative z-10 space-y-4">
-                    <Badge variant="outline" className="bg-white border-emerald-200 text-emerald-700 font-black text-[9px] uppercase tracking-[0.2em] h-5 px-2 shadow-none">Data Engine</Badge>
-                    <h3 className="text-2xl font-black tracking-tight uppercase">Inventory Matrix</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed max-w-[280px]">Track supply volume, container counts, and replenishment cycles.</p>
-                    <Button variant="link" className="text-emerald-700 p-0 h-auto font-black uppercase text-[10px] tracking-widest mt-4">Configure Engine →</Button>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {engines.map((eng, i) => (
+                    <Card key={i} className="group border-none shadow-none bg-slate-50/50 rounded-[2rem] hover:bg-white hover:shadow-xl transition-all duration-500 cursor-pointer overflow-hidden border-2 border-transparent hover:border-emerald-500/10" onClick={handleCreate}>
+                        <CardContent className="p-8 space-y-6 text-center md:text-left">
+                            <div className={cn("p-4 rounded-2xl w-fit shadow-inner group-hover:scale-110 transition-transform duration-500 mx-auto md:mx-0", eng.bg, eng.color)}>
+                                <eng.icon className="h-6 w-6" />
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-lg font-black text-slate-900 tracking-tight uppercase leading-none">{eng.title}</h4>
+                                <p className="text-xs font-medium text-slate-500 leading-relaxed">{eng.desc}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
         </section>
 

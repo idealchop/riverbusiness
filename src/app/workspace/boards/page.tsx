@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
-import { Layout, Clock, History, Plus, Workflow, Target, Sparkles, Map, Compass, MousePointer2 } from 'lucide-react';
+import { Layout, Clock, History, Plus, Workflow, Target, Sparkles, Map, Compass, MousePointer2, GitBranch, Layers, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
@@ -50,6 +50,12 @@ export default function BoardsHubPage() {
     }));
   };
 
+  const blueprints = [
+      { title: 'Agile Workflow', desc: 'Standard team task stacks.', icon: GitBranch, color: 'text-purple-500', bg: 'bg-purple-50' },
+      { title: 'UX Journey Map', desc: 'Visualizing customer flow.', icon: Layers, color: 'text-blue-500', bg: 'bg-blue-50' },
+      { title: 'Strategy Board', desc: 'High-level business planning.', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50' },
+  ];
+
   return (
     <div className="min-h-full bg-white flex flex-col animate-in fade-in duration-700 overflow-hidden">
       <div className="max-w-6xl mx-auto w-full px-8 py-12 md:py-20 space-y-16">
@@ -80,12 +86,27 @@ export default function BoardsHubPage() {
             </div>
         </section>
 
-        {/* Workspace Tiles */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <CanvasActionTile title="Workflows" icon={<Workflow className="h-5 w-5" />} color="text-blue-500" bg="bg-blue-50" onClick={handleCreate} />
-            <CanvasActionTile title="Journeys" icon={<Map className="h-5 w-5" />} color="text-amber-500" bg="bg-amber-50" onClick={handleCreate} />
-            <CanvasActionTile title="Strategies" icon={<Target className="h-5 w-5" />} color="text-red-500" bg="bg-red-50" onClick={handleCreate} />
-            <CanvasActionTile title="Brainstorm" icon={<Sparkles className="h-5 w-5" />} color="text-purple-500" bg="bg-purple-50" onClick={handleCreate} />
+        {/* Blueprint Showcase */}
+        <section className="space-y-8">
+            <div className="flex items-center justify-between">
+                <h2 className="text-[10px] font-black tracking-[0.3em] text-slate-300 uppercase">Strategic Logic Blueprints</h2>
+                <div className="h-px flex-1 mx-8 bg-slate-50" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {blueprints.map((bp, i) => (
+                    <Card key={i} className="group border-none shadow-none bg-slate-50/50 rounded-[2rem] hover:bg-white hover:shadow-xl transition-all duration-500 cursor-pointer overflow-hidden border-2 border-transparent hover:border-purple-500/10" onClick={handleCreate}>
+                        <CardContent className="p-8 space-y-6">
+                            <div className={cn("p-4 rounded-2xl w-fit shadow-inner group-hover:scale-110 transition-transform duration-500 mx-auto md:mx-0", bp.bg, bp.color)}>
+                                <bp.icon className="h-6 w-6" />
+                            </div>
+                            <div className="space-y-2 text-center md:text-left">
+                                <h4 className="text-lg font-black text-slate-900 tracking-tight uppercase leading-none">{bp.title}</h4>
+                                <p className="text-xs font-medium text-slate-500 leading-relaxed">{bp.desc}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
         </section>
 
         {/* Board Ledger */}

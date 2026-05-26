@@ -4,13 +4,13 @@ import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Clock, History, Sparkles, BookOpen, Search, Plus, UserCircle } from 'lucide-react';
+import { FileText, Clock, History, Sparkles, BookOpen, Search, Plus, UserCircle, Files, Milestone, ShieldCheck, Newspaper } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 export default function DocsHubPage() {
   const { user: authUser } = useUser();
@@ -50,6 +50,12 @@ export default function DocsHubPage() {
     }));
   };
 
+  const blueprints = [
+    { title: 'Corporate Playbook', desc: 'Standardized operational procedures.', icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { title: 'Project Roadmap', desc: 'Strategic milestones and delivery dates.', icon: Milestone, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { title: 'Release Notes', desc: 'Internal system upgrade documentation.', icon: Newspaper, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+  ];
+
   return (
     <div className="min-h-full bg-white flex flex-col animate-in fade-in duration-700">
       <div className="max-w-6xl mx-auto w-full px-8 py-12 md:py-20 space-y-16">
@@ -74,32 +80,33 @@ export default function DocsHubPage() {
                 </Button>
                 <div className="h-10 w-px bg-slate-100 hidden sm:block" />
                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    <Users className="h-3.5 w-3.5" />
+                    <Files className="h-3.5 w-3.5" />
                     {recentDocs.length} Active assets in ledger
                 </div>
             </div>
         </section>
 
-        {/* Action Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <QuickActionCard 
-                title="Project Charters" 
-                desc="Outline goals and resource needs." 
-                icon={<Sparkles className="h-5 w-5 text-blue-500" />}
-                onClick={handleCreate}
-            />
-            <QuickActionCard 
-                title="Meeting Agendas" 
-                desc="Synchronize team focus points." 
-                icon={<History className="h-5 w-5 text-indigo-500" />}
-                onClick={handleCreate}
-            />
-            <QuickActionCard 
-                title="SOP Guidelines" 
-                desc="Establish standard protocols." 
-                icon={<ShieldCheck className="h-5 w-5 text-emerald-500" />}
-                onClick={handleCreate}
-            />
+        {/* Blueprint Showcase */}
+        <section className="space-y-8">
+            <div className="flex items-center justify-between">
+                <h2 className="text-[10px] font-black tracking-[0.3em] text-slate-300 uppercase">Recommended Blueprints</h2>
+                <div className="h-px flex-1 mx-8 bg-slate-50" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {blueprints.map((bp, i) => (
+                    <Card key={i} className="group border-none shadow-none bg-slate-50/50 rounded-[2rem] hover:bg-white hover:shadow-xl transition-all duration-500 cursor-pointer overflow-hidden border-2 border-transparent hover:border-blue-500/10" onClick={handleCreate}>
+                        <CardContent className="p-8 space-y-6">
+                            <div className={cn("p-4 rounded-2xl w-fit shadow-inner group-hover:scale-110 transition-transform duration-500", bp.bg, bp.color)}>
+                                <bp.icon className="h-6 w-6" />
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-lg font-black text-slate-900 tracking-tight uppercase leading-none">{bp.title}</h4>
+                                <p className="text-xs font-medium text-slate-500 leading-relaxed">{bp.desc}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
         </section>
 
         {/* Ledger Section */}
@@ -155,41 +162,11 @@ export default function DocsHubPage() {
   );
 }
 
-function QuickActionCard({ title, desc, icon, onClick }: any) {
-    return (
-        <button onClick={onClick} className="text-left p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 hover:border-primary/20 hover:-translate-y-1 group">
-            <div className="p-3 rounded-2xl bg-slate-50 w-fit mb-6 group-hover:bg-primary/5 transition-colors shadow-inner">{icon}</div>
-            <h4 className="text-lg font-black text-slate-900 tracking-tight mb-2 uppercase leading-none">{title}</h4>
-            <p className="text-xs font-medium text-slate-500 leading-relaxed">{desc}</p>
-        </button>
-    );
-}
-
 function ArrowUpRight({ className }: { className?: string }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
             <line x1="7" y1="17" x2="17" y2="7"></line>
             <polyline points="7 7 17 7 17 17"></polyline>
-        </svg>
-    );
-}
-
-function Users({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-    );
-}
-
-function ShieldCheck({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
-            <path d="m9 12 2 2 4-4"></path>
         </svg>
     );
 }
