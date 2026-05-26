@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Clock, History, Sparkles, BookOpen, Search, Plus } from 'lucide-react';
+import { FileText, Clock, History, Sparkles, BookOpen, Search, Plus, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
