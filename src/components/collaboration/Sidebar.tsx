@@ -246,6 +246,8 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const favorites = pages.filter(p => p.isFavorite);
   const rootPages = filteredPages.filter(p => !p.parentId);
 
+  const isWorkspaceHomeActive = pathname === '/workspace';
+
   return (
     <div className={cn(
       "bg-slate-50/80 border-r transition-all duration-300 flex flex-col h-full group/sidebar shrink-0 relative",
@@ -363,6 +365,21 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
+            {/* High-Fidelity Home Link */}
+            <div className="space-y-1">
+                <Link href="/workspace">
+                    <div className={cn(
+                        "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-bold transition-all",
+                        isWorkspaceHomeActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+                    )}>
+                        <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                            <Home className={cn("h-3.5 w-3.5", isWorkspaceHomeActive ? "text-primary" : "text-slate-400")} />
+                        </div>
+                        <span>Home</span>
+                    </div>
+                </Link>
+            </div>
+
             {favorites.length > 0 && !searchQuery && selectedMemberId === user?.id && (
                 <div className="space-y-1">
                     <h4 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 mb-2">Favorites</h4>
