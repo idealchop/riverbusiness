@@ -94,7 +94,7 @@ const NavItem = memo(({
         <div className="space-y-0.5">
             <div 
                 className={cn(
-                    "group flex items-center h-8 rounded-lg transition-all relative pr-2",
+                    "group/menu-item flex items-center h-8 rounded-lg transition-all relative pr-2",
                     isActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 )}
                 style={{ paddingLeft: `${(level * 12) + 8}px` }}
@@ -119,7 +119,7 @@ const NavItem = memo(({
                     <span className="text-sm font-semibold truncate leading-none pt-0.5">{page.title || 'Untitled'}</span>
                 </Link>
 
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5 shrink-0 bg-inherit pl-2">
+                <div className="flex items-center opacity-0 group-hover/menu-item:opacity-100 transition-opacity gap-0.5 shrink-0 bg-inherit pl-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button className="h-6 w-6 rounded hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
@@ -181,7 +181,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={handleFavorite}
+                            onFavorite={onFavorite}
                             onTrash={onTrash}
                             onDuplicate={onDuplicate}
                         />
@@ -341,28 +341,26 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         <div className="space-y-8">
             {/* Collapsible Home Section */}
             <div className="space-y-1">
-                <div className="flex items-center group/home pr-1">
-                    <Link href="/workspace" className="flex-1">
-                        <div className={cn(
-                            "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-bold transition-all",
-                            isWorkspaceHomeActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
-                        )}>
-                            <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
-                                <Home className={cn("h-3.5 w-3.5", isWorkspaceHomeActive ? "text-primary" : "text-slate-400")} />
-                            </div>
-                            <span>Home</span>
+                <div className={cn(
+                    "group/home flex items-center h-8 rounded-lg transition-all pr-1",
+                    isWorkspaceHomeActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+                )}>
+                    <Link href="/workspace" className="flex-1 flex items-center gap-3 px-3 h-full min-w-0">
+                        <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                            <Home className={cn("h-3.5 w-3.5", isWorkspaceHomeActive ? "text-primary" : "text-slate-400")} />
                         </div>
+                        <span className="text-sm font-bold truncate pt-0.5">Home</span>
                     </Link>
                     
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover/home:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 shrink-0">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="h-7 w-7 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all">
-                                    <Plus className="h-4 w-4" />
+                                <button className="h-7 w-7 rounded-lg hover:bg-slate-200/50 flex items-center justify-center text-slate-400 hover:text-primary transition-all">
+                                    <Plus className="h-3.5 w-3.5" />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white z-[60]">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
                                     <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
                                     Rich Text Document
@@ -380,7 +378,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
                         <button 
                             onClick={() => setIsHomeExpanded(!isHomeExpanded)}
-                            className="h-7 w-7 rounded-lg hover:bg-slate-200 flex items-center justify-center transition-colors text-slate-400"
+                            className="h-7 w-7 rounded-lg hover:bg-slate-200/50 flex items-center justify-center transition-colors text-slate-400"
                         >
                             {isHomeExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </button>
@@ -391,7 +389,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     <div className="pl-6 space-y-0.5 animate-in slide-in-from-top-1 duration-200">
                         <Link href="/workspace/docs">
                             <div className={cn(
-                                "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold transition-all",
                                 pathname === '/workspace/docs' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <FileText className="h-3 w-3 text-blue-500" />
@@ -400,7 +398,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         </Link>
                         <Link href="/workspace/sheets">
                             <div className={cn(
-                                "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold transition-all",
                                 pathname === '/workspace/sheets' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <Grid className="h-3 w-3 text-green-600" />
@@ -409,7 +407,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         </Link>
                         <Link href="/workspace/boards">
                             <div className={cn(
-                                "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold transition-all",
                                 pathname === '/workspace/boards' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <Layout className="h-3 w-3 text-purple-600" />
