@@ -17,15 +17,16 @@ import {
     Lock,
     Users,
     Check,
-    Filter
+    Filter,
+    Separator
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -220,20 +221,24 @@ function AssetCard({ page }: { page: CollabPage }) {
     return (
         <Link href={`/workspace/${page.id}`} className="group block">
             <Card className="border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200">
-                <div className="relative aspect-[1.4/1] w-full bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:border-primary/20 group-hover:bg-slate-50/30">
-                    <div className="relative transition-transform duration-500 group-hover:scale-110">
+                <div className="relative aspect-[1.4/1] w-full bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:border-primary/20 group-hover:bg-slate-50/30 overflow-hidden">
+                    {page.coverImage ? (
+                        <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
+                    )}
+                    
+                    <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
                         {page.icon ? (
-                            <span className="text-5xl drop-shadow-sm select-none">{page.icon}</span>
+                            <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
                         ) : (
-                            <div className="h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-blue-500">
+                            <div className={cn(
+                                "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-blue-500 transition-all",
+                                page.coverImage && "bg-white/90 backdrop-blur-md border-white/50"
+                            )}>
                                 <FileText className="h-8 w-8" />
                             </div>
                         )}
-                    </div>
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <div className="h-7 w-7 rounded-full bg-white/80 backdrop-blur-md shadow-sm flex items-center justify-center">
-                            <Plus className="h-3.5 w-3.5 text-slate-400" />
-                         </div>
                     </div>
                 </div>
 
@@ -265,12 +270,21 @@ function AssetCard({ page }: { page: CollabPage }) {
                         </div>
                         {page.isPublic && (
                              <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-primary">
-                                <Globe className="h-2.5 w-2.5" /> Public link
+                                <Globe className="h-2.5 w-2.5" /> Public
                             </div>
                         )}
                     </div>
                 </CardContent>
             </Card>
         </Link>
+    );
+}
+
+function ArrowUpRight({ className }: { className?: string }) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <line x1="7" y1="17" x2="17" y2="7"></line>
+            <polyline points="7 7 17 7 17 17"></polyline>
+        </svg>
     );
 }

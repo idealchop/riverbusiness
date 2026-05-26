@@ -17,15 +17,18 @@ import {
     Users, 
     TableProperties,
     Filter,
-    Check
+    Check,
+    Separator,
+    Clock,
+    CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -114,7 +117,7 @@ export default function SheetsHubPage() {
                     <Button variant="outline" className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
                         <FolderPlus className="h-4 w-4" /> New folder
                     </Button>
-                    <Button onClick={handleCreate} className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20 bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleCreate} className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20 bg-green-600 hover:bg-green-700 text-white">
                         <Plus className="h-4 w-4" /> New sheet
                     </Button>
                 </div>
@@ -218,12 +221,21 @@ function AssetCard({ page }: { page: CollabPage }) {
     return (
         <Link href={`/workspace/${page.id}`} className="group block">
             <Card className="border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200">
-                <div className="relative aspect-[1.4/1] w-full bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:border-green-600/20 group-hover:bg-slate-50/30">
-                    <div className="relative transition-transform duration-500 group-hover:scale-110">
+                <div className="relative aspect-[1.4/1] w-full bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:border-green-600/20 group-hover:bg-slate-50/30 overflow-hidden">
+                    {page.coverImage ? (
+                        <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
+                    )}
+
+                    <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
                         {page.icon ? (
-                            <span className="text-5xl drop-shadow-sm select-none">{page.icon}</span>
+                            <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
                         ) : (
-                            <div className="h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600">
+                            <div className={cn(
+                                "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600 transition-all",
+                                page.coverImage && "bg-white/90 backdrop-blur-md border-white/50"
+                            )}>
                                 <Grid className="h-8 w-8" />
                             </div>
                         )}
@@ -253,11 +265,11 @@ function AssetCard({ page }: { page: CollabPage }) {
                             {page.isPrivate ? (
                                 <><Lock className="h-2.5 w-2.5" /> Secure</>
                             ) : (
-                                <><Users className="h-2.5 w-2.5" /> Team Sync</>
+                                <><Users className="h-2.5 w-2.5" /> Team</>
                             )}
                         </div>
                         <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-green-600">
-                            <TableProperties className="h-2.5 w-2.5" /> Operational
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Synchronized
                         </div>
                     </div>
                 </CardContent>
