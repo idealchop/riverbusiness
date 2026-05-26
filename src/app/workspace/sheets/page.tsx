@@ -25,6 +25,7 @@ import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -34,7 +35,6 @@ import {
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 
 export default function SheetsHubPage() {

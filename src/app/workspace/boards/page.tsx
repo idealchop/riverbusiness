@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 export default function BoardsHubPage() {
   const { user: authUser } = useUser();
