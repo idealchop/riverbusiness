@@ -181,7 +181,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={handleFavorite}
+                            onFavorite={onFavorite}
                             onTrash={onTrash}
                             onDuplicate={onDuplicate}
                         />
@@ -201,6 +201,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isHomeExpanded, setIsHomeExpanded] = useState(true);
   
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
   const hasSetDefault = useRef(false);
@@ -365,49 +366,59 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
-            {/* High-Fidelity Home Link and Hierarchy */}
+            {/* Collapsible Home Section */}
             <div className="space-y-1">
-                <Link href="/workspace">
-                    <div className={cn(
-                        "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-bold transition-all",
-                        isWorkspaceHomeActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
-                    )}>
-                        <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
-                            <Home className={cn("h-3.5 w-3.5", isWorkspaceHomeActive ? "text-primary" : "text-slate-400")} />
-                        </div>
-                        <span>Home</span>
-                    </div>
-                </Link>
-                
-                <div className="pl-6 space-y-0.5">
-                    <Link href="/workspace/docs">
+                <div className="flex items-center justify-between group/home pr-1">
+                    <Link href="/workspace" className="flex-1">
                         <div className={cn(
-                            "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                            pathname === '/workspace/docs' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                            "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-bold transition-all",
+                            isWorkspaceHomeActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
                         )}>
-                            <FileText className="h-3 w-3 text-blue-500" />
-                            <span>Docs</span>
+                            <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                                <Home className={cn("h-3.5 w-3.5", isWorkspaceHomeActive ? "text-primary" : "text-slate-400")} />
+                            </div>
+                            <span>Home</span>
                         </div>
                     </Link>
-                    <Link href="/workspace/sheets">
-                        <div className={cn(
-                            "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                            pathname === '/workspace/sheets' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
-                        )}>
-                            <Grid className="h-3 w-3 text-green-600" />
-                            <span>Sheets</span>
-                        </div>
-                    </Link>
-                    <Link href="/workspace/boards">
-                        <div className={cn(
-                            "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                            pathname === '/workspace/boards' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
-                        )}>
-                            <Layout className="h-3 w-3 text-purple-600" />
-                            <span>Canvases</span>
-                        </div>
-                    </Link>
+                    <button 
+                        onClick={() => setIsHomeExpanded(!isHomeExpanded)}
+                        className="h-6 w-6 rounded-md hover:bg-slate-200/50 flex items-center justify-center transition-colors text-slate-400"
+                    >
+                        {isHomeExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                    </button>
                 </div>
+                
+                {isHomeExpanded && (
+                    <div className="pl-6 space-y-0.5 animate-in slide-in-from-top-1 duration-200">
+                        <Link href="/workspace/docs">
+                            <div className={cn(
+                                "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                                pathname === '/workspace/docs' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                            )}>
+                                <FileText className="h-3 w-3 text-blue-500" />
+                                <span>Docs</span>
+                            </div>
+                        </Link>
+                        <Link href="/workspace/sheets">
+                            <div className={cn(
+                                "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                                pathname === '/workspace/sheets' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                            )}>
+                                <Grid className="h-3 w-3 text-green-600" />
+                                <span>Sheets</span>
+                            </div>
+                        </Link>
+                        <Link href="/workspace/boards">
+                            <div className={cn(
+                                "flex items-center gap-3 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                                pathname === '/workspace/boards' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
+                            )}>
+                                <Layout className="h-3 w-3 text-purple-600" />
+                                <span>Canvases</span>
+                            </div>
+                        </Link>
+                    </div>
+                )}
             </div>
 
             {favorites.length > 0 && !searchQuery && selectedMemberId === user?.id && (

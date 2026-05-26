@@ -165,6 +165,16 @@ export type SheetFieldType =
   | 'status' 
   | 'formula';
 
+export interface SheetComment {
+    id: string;
+    userId: string;
+    userName: string;
+    userPhoto?: string | null;
+    text: string;
+    timestamp: any;
+    parentId?: string | null;
+}
+
 export interface SheetField {
     id: string;
     name: string;
@@ -182,6 +192,7 @@ export interface SheetRecord {
     createdAt: any;
     updatedAt: any;
     createdBy?: string;
+    comments?: SheetComment[];
 }
 
 export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'list' | 'gantt';
