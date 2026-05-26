@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function BoardsHubPage() {
   const { user: authUser } = useUser();
