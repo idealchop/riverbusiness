@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, Node, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -55,7 +55,8 @@ import {
     Monitor,
     Columns,
     FileText,
-    Search
+    Search,
+    FileX
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -629,7 +630,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10 z-50">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] {isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
                       </div>
                   </div>
               )}
@@ -872,4 +873,3 @@ function AiAction({ icon, label, onClick }: any) {
         </Button>
     );
 }
-import { FileX } from 'lucide-react';
