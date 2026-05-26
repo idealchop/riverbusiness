@@ -181,7 +181,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={onFavorite}
+                            onFavorite={handleFavorite}
                             onTrash={onTrash}
                             onDuplicate={onDuplicate}
                         />
@@ -393,7 +393,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                 pathname === '/workspace/docs' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <FileText className="h-3 w-3 text-blue-500" />
-                                <span>Docs</span>
+                                <span>Documents</span>
                             </div>
                         </Link>
                         <Link href="/workspace/sheets">
