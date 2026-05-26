@@ -35,7 +35,7 @@ import {
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 export default function SheetsHubPage() {
   const { user: authUser } = useUser();
@@ -157,7 +157,7 @@ export default function SheetsHubPage() {
                                             <AvatarImage src={member.photoURL} />
                                             <AvatarFallback className="text-[8px]">{member.name?.charAt(0)}</AvatarFallback>
                                         </Avatar>
-                                        <span className="truncate flex-1">{member.name}</span>
+                                        <span className="truncate flex-1 font-bold">{member.name}</span>
                                         {selectedMemberId === member.id && <Check className="h-3.5 w-3.5 text-green-600" />}
                                     </DropdownMenuItem>
                                 ))}
@@ -215,25 +215,18 @@ function AssetCard({ page }: { page: CollabPage }) {
             ? formatDistanceToNow((page.createdAt as Timestamp).toDate(), { addSuffix: true })
             : 'Recently';
 
-    const fallbackImage = `https://picsum.photos/seed/${page.id}/400/300`;
-
     return (
         <Link href={`/workspace/${page.id}`} className="group block">
-            <Card className="border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200">
-                <div className="relative aspect-[1.6/1] w-full bg-slate-50 overflow-hidden border border-slate-100 rounded-2xl transition-all group-hover:border-green-600/20">
-                    <Image 
-                        src={page.coverImage || fallbackImage} 
-                        alt={page.title} 
-                        fill 
-                        className="object-cover transition-transform duration-700 group-hover:scale-105 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100" 
-                        unoptimized
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
-                    
-                    <div className="absolute top-3 left-3 z-10">
-                        <div className="h-8 w-8 rounded-xl bg-white/90 backdrop-blur-md shadow-sm border border-white/20 flex items-center justify-center">
-                            {page.icon ? <span className="text-sm">{page.icon}</span> : <Grid className="h-4 w-4 text-green-600" />}
-                        </div>
+            <Card className="border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200">
+                <div className="relative aspect-[1.4/1] w-full bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:border-green-600/20 group-hover:bg-slate-50/30">
+                    <div className="relative transition-transform duration-500 group-hover:scale-110">
+                        {page.icon ? (
+                            <span className="text-5xl drop-shadow-sm select-none">{page.icon}</span>
+                        ) : (
+                            <div className="h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600">
+                                <Grid className="h-8 w-8" />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -253,9 +246,6 @@ function AssetCard({ page }: { page: CollabPage }) {
                                 </p>
                             </div>
                         </div>
-                        <button className="p-1 rounded-md text-slate-300 hover:text-slate-900 transition-colors">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </button>
                     </div>
 
                     <div className="flex items-center gap-4 pt-3 border-t border-slate-50">
