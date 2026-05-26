@@ -206,7 +206,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
   const hasSetDefault = useRef(false);
 
-  // Set default contributor filter to current user only once upon load
   useEffect(() => {
     if (user?.id && !hasSetDefault.current) {
         setSelectedMemberId(user.id);
@@ -339,7 +338,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
       <ScrollArea className="flex-1 px-4 pb-10">
         <div className="space-y-8">
-            {/* Collapsible Home Section */}
             <div className="space-y-1">
                 <div className={cn(
                     "group/home flex items-center h-8 rounded-lg transition-all pr-1",
