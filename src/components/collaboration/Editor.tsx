@@ -17,6 +17,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { 
     Bold, 
@@ -52,12 +53,14 @@ import {
     Maximize,
     Minimize2,
     Monitor,
-    Columns
+    Columns,
+    FileText,
+    Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
-import { useStorage, useAuth } from '@/firebase';
+import { useStorage, useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -88,8 +91,78 @@ import { Badge } from '@/components/ui/badge';
 import { useMounted } from '@/hooks/use-mounted';
 import { SheetEditor } from './SheetEditor';
 import { BoardEditor } from './BoardEditor';
+import { query, collection, where } from 'firebase/firestore';
+import type { CollabPage } from '@/lib/types';
+import { ScrollArea } from '../ui/scroll-area';
 
 // --- Custom Interactive Blocks ---
+
+const PageLinkBlock = ({ node, deleteNode }: any) => {
+    const router = useRouter();
+    const { targetPageId, title, icon, type } = node.attrs;
+
+    const handleNavigate = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        router.push(`/workspace/${targetPageId}`);
+    };
+
+    return (
+        <NodeViewWrapper className="my-2 relative group/page-link">
+            <div 
+                onClick={handleNavigate}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 bg-white transition-all group/item cursor-pointer shadow-sm"
+            >
+                <div className="w-8 h-8 shrink-0 flex items-center justify-center bg-slate-50 group-hover/item:bg-white rounded-lg shadow-inner">
+                    {icon ? (
+                        <span className="text-sm select-none">{icon}</span>
+                    ) : (
+                        type === 'sheet' ? <Grid className="h-4 w-4 text-green-600" /> :
+                        type === 'board' ? <Layout className="h-4 w-4 text-purple-600" /> :
+                        <FileText className="h-4 w-4 text-blue-500" />
+                    )}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <span className="text-sm font-bold text-slate-700 truncate block underline-offset-4 group-hover/item:underline decoration-slate-300">
+                        {title || 'Untitled Document'}
+                    </span>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">Linked Document</p>
+                </div>
+                <div className="ml-auto opacity-0 group-hover/page-link:opacity-100 flex items-center gap-1 transition-opacity">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-slate-300 hover:text-red-500 rounded-lg hover:bg-red-50"
+                        onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            deleteNode(); 
+                        }}
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+            </div>
+        </NodeViewWrapper>
+    );
+};
+
+const PageLinkExtension = Node.create({
+    name: 'pageLink',
+    group: 'block',
+    atom: true,
+    addAttributes() {
+        return {
+            targetPageId: { default: '' },
+            title: { default: '' },
+            icon: { default: '' },
+            type: { default: 'doc' }
+        };
+    },
+    parseHTML() { return [{ tag: 'div[data-type="page-link"]' }]; },
+    renderHTML({ HTMLAttributes }) { return ['div', { 'data-type': 'page-link', ...HTMLAttributes }]; },
+    addNodeView() { return ReactNodeViewRenderer(PageLinkBlock); },
+});
 
 const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
     const [isFullSize, setIsFullSize] = useState(false);
@@ -259,6 +332,7 @@ interface EditorProps {
 export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true, companyId }, ref) => {
   const storage = useStorage();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -272,6 +346,27 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const [aiStatus, setAiStatus] = useState('');
   const [customGoal, setCustomGoal] = useState('');
   const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
+
+  // Link Page States
+  const [isLinkPageOpen, setIsLinkPageOpen] = useState(false);
+  const [pageSearch, setPageSearch] = useState('');
+
+  const pagesQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(
+        collection(firestore, 'collaboration_pages'), 
+        where('companyId', '==', companyId),
+        where('isTrashed', '==', false)
+    ) : null, 
+    [firestore, companyId, isLinkPageOpen]
+  );
+  const { data: allPages } = useCollection<CollabPage>(pagesQuery);
+
+  const filteredPages = useMemo(() => {
+    if (!allPages) return [];
+    if (!pageSearch) return allPages;
+    const s = pageSearch.toLowerCase();
+    return allPages.filter(p => p.title?.toLowerCase().includes(s));
+  }, [allPages, pageSearch]);
 
   const CustomImage = ImageExtension.extend({
     addAttributes() {
@@ -333,6 +428,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       Highlight.configure({ multicolor: true }),
       SpreadsheetExtension.configure({ editable }),
       CanvasExtension.configure({ editable }),
+      PageLinkExtension,
       ColumnGroup,
       Column,
     ],
@@ -361,7 +457,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     setIsUploading(true);
     setUploadProgress(0);
     
-    // Crucial: Use organization ID for storage path alignment
     const targetPath = companyId || 'unassigned';
     const path = `collab_images/${targetPath}/${Date.now()}-${file.name}`;
 
@@ -372,11 +467,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       
       if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src: url }).run();
-          toast({ title: 'Image added' });
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      if (isMounted) toast({ variant: 'destructive', title: 'Failed to add image' });
     } finally {
       if (isMounted) {
         setIsUploading(false);
@@ -394,7 +487,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const acceptAiSuggestion = () => {
     if (!aiPreview || !editor) return;
     setAiPreview(null);
-    toast({ title: 'Changes kept' });
   };
 
   const discardAiSuggestion = () => {
@@ -402,7 +494,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     const { from, to, originalText } = aiPreview;
     editor.chain().focus().deleteRange(from, to).insertContentAt(from, originalText).run();
     setAiPreview(null);
-    toast({ title: 'Changes removed' });
   };
 
   useImperativeHandle(ref, () => ({
@@ -445,11 +536,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 }
                 if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
-                    toast({ title: 'Draft ready' });
                 }
             } catch (error) {
                 console.error('Streaming error:', error);
-                if (isMounted) toast({ variant: 'destructive', title: 'Error writing guide' });
             } finally {
                 if (isMounted) {
                     setIsAiProcessing(false);
@@ -468,7 +557,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     const textToProcess = selectedText || editor.getText();
     const context = editor.getText();
     if (!textToProcess.trim()) {
-        toast({ variant: 'destructive', title: 'Select text first' });
         return;
     }
     setIsAiProcessing(true);
@@ -491,10 +579,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           } else {
               editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
           }
-          toast({ title: 'AI finished' });
       }
     } catch (error: any) {
-      if (isMounted) toast({ variant: 'destructive', title: 'AI error' });
+      console.error('AI error:', error);
     } finally {
       if (isMounted) {
           setIsAiProcessing(false);
@@ -509,6 +596,19 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
   const handleInsertCanvas = () => {
     editor.chain().focus().insertContent({ type: 'canvas' }).run();
+  };
+
+  const handleInsertPageLink = (targetPage: CollabPage) => {
+    editor.chain().focus().insertContent({ 
+        type: 'pageLink', 
+        attrs: { 
+            targetPageId: targetPage.id, 
+            title: targetPage.title || 'Untitled', 
+            icon: targetPage.icon || '', 
+            type: targetPage.type 
+        } 
+    }).run();
+    setIsLinkPageOpen(false);
   };
 
   const handleInsertColumns = (count: number) => {
@@ -559,6 +659,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                         </Tooltip>
                         <DropdownMenuContent align="center" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white">
                             <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">New block asset</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setIsLinkPageOpen(true)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><LinkIcon className="h-4 w-4" /></div>
+                                Link to Page
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleInsertSpreadsheet} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-green-50 text-green-600"><Grid className="h-4 w-4" /></div>
                                 Interactive Spreadsheet
@@ -654,6 +758,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
              <TooltipProvider delayDuration={0}>
                 <Tooltip>
                     <TooltipTrigger asChild>
+                        <button onClick={() => setIsLinkPageOpen(true)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all">
+                            <LinkIcon className="h-4 w-4" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="rounded-lg text-[9px] font-black uppercase tracking-widest">Link to Page</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
                         <button onClick={handleInsertSpreadsheet} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-all">
                             <Grid className="h-5 w-5" />
                         </button>
@@ -676,6 +788,61 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       <div className={cn("transition-opacity", (isAiProcessing && editor.isEmpty) ? "opacity-20" : "opacity-100")} onClick={() => editor?.commands.focus()}>
         <EditorContent editor={editor} />
       </div>
+
+      <Dialog open={isLinkPageOpen} onOpenChange={setIsLinkPageOpen}>
+        <DialogContent className="sm:max-w-md rounded-[1.5rem] border-none shadow-3xl bg-white p-0 overflow-hidden">
+            <div className="p-6 bg-slate-50 border-b">
+                <DialogHeader className="mb-4">
+                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Link to Document</DialogTitle>
+                    <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Organizational Asset Index</DialogDescription>
+                </DialogHeader>
+                <div className="relative group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-primary transition-colors" />
+                    <Input 
+                        autoFocus
+                        placeholder="Search team library..." 
+                        value={pageSearch}
+                        onChange={(e) => setPageSearch(e.target.value)}
+                        className="h-11 rounded-xl bg-white border-slate-200 pl-10 font-bold text-sm shadow-none focus-visible:ring-primary"
+                    />
+                </div>
+            </div>
+            <ScrollArea className="h-80">
+                <div className="p-2 space-y-1">
+                    {filteredPages.map(p => (
+                        <button 
+                            key={p.id} 
+                            onClick={() => handleInsertPageLink(p)}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all text-left group"
+                        >
+                            <div className="h-8 w-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center shadow-sm shrink-0">
+                                {p.icon ? (
+                                    <span className="text-sm">{p.icon}</span>
+                                ) : (
+                                    p.type === 'sheet' ? <Grid className="h-3.5 w-3.5 text-green-600" /> :
+                                    p.type === 'board' ? <Layout className="h-3.5 w-3.5 text-purple-600" /> :
+                                    <FileText className="h-3.5 w-3.5 text-blue-500" />
+                                )}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-700 truncate group-hover:text-primary transition-colors">{p.title || 'Untitled'}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">{p.type}</p>
+                            </div>
+                        </button>
+                    ))}
+                    {filteredPages.length === 0 && (
+                        <div className="py-20 text-center opacity-30 flex flex-col items-center gap-3">
+                            <FileX className="h-8 w-8 text-slate-300" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No assets found</p>
+                        </div>
+                    )}
+                </div>
+            </ScrollArea>
+            <DialogFooter className="p-4 bg-slate-50 border-t flex justify-end">
+                <Button variant="ghost" onClick={() => setIsLinkPageOpen(false)} className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
@@ -705,3 +872,4 @@ function AiAction({ icon, label, onClick }: any) {
         </Button>
     );
 }
+import { FileX } from 'lucide-react';
