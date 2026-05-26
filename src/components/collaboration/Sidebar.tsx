@@ -181,7 +181,7 @@ const NavItem = memo(({
                             expandedPages={expandedPages}
                             onToggleExpand={onToggleExpand}
                             onCreatePage={onCreatePage}
-                            onFavorite={handleFavorite}
+                            onFavorite={onFavorite}
                             onTrash={onTrash}
                             onDuplicate={onDuplicate}
                         />
