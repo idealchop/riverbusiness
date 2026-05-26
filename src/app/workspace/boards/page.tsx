@@ -1,11 +1,24 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
-import { Layout, Plus, Search, UserCircle, FolderPlus, ChevronDown, MoreHorizontal, Globe, Lock, Users, Palette, MousePointer2 } from 'lucide-react';
+import { 
+    Layout, 
+    Plus, 
+    Search, 
+    UserCircle, 
+    FolderPlus, 
+    ChevronDown, 
+    MoreHorizontal, 
+    Globe, 
+    Lock, 
+    Users, 
+    Palette, 
+    Filter,
+    Check
+} from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
@@ -13,6 +26,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 
@@ -25,6 +46,7 @@ export default function BoardsHubPage() {
   const companyId = user?.companyId || null;
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('me');
 
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(
@@ -35,15 +57,30 @@ export default function BoardsHubPage() {
     ) : null, 
     [firestore, companyId]
   );
-
   const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
 
+  // Fetch team members for the filter
+  const teamQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    [firestore, companyId]
+  );
+  const { data: teamMembers } = useCollection<AppUser>(teamQuery);
+
   const filteredBoards = useMemo(() => {
-    if (!allPages) return [];
+    if (!allPages || !authUser) return [];
     let list = [...allPages];
+
+    // Apply Member Filter
+    if (selectedMemberId === 'me') {
+        list = list.filter(p => p.createdBy === authUser.uid);
+    } else if (selectedMemberId !== 'all') {
+        list = list.filter(p => p.createdBy === selectedMemberId);
+    }
+
     if (searchTerm) {
         list = list.filter(p => p.title?.toLowerCase().includes(searchTerm.toLowerCase()));
     }
+
     return list.sort((a, b) => {
         const dateA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
         const timeA = dateA || (a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0);
@@ -51,13 +88,19 @@ export default function BoardsHubPage() {
         const timeB = dateB || (b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0);
         return timeB - timeA;
     });
-  }, [allPages, searchTerm]);
+  }, [allPages, searchTerm, selectedMemberId, authUser]);
 
   const handleCreate = () => {
     window.dispatchEvent(new CustomEvent('request-new-collab-page', {
         detail: { type: 'board' }
     }));
   };
+
+  const currentFilterLabel = useMemo(() => {
+    if (selectedMemberId === 'me') return 'My Work';
+    if (selectedMemberId === 'all') return 'Entire Team';
+    return teamMembers?.find(m => m.id === selectedMemberId)?.name || 'Member';
+  }, [selectedMemberId, teamMembers]);
 
   return (
     <div className="min-h-full bg-white flex flex-col font-sans">
@@ -68,31 +111,64 @@ export default function BoardsHubPage() {
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">Canvases</h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200">
+                    <Button variant="outline" className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
                         <FolderPlus className="h-4 w-4" /> New folder
                     </Button>
-                    <Button onClick={handleCreate} className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20 bg-purple-600 hover:bg-purple-700">
+                    <Button onClick={handleCreate} className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20 bg-purple-600 hover:bg-purple-700 text-white border-none">
                         <Plus className="h-4 w-4" /> New canvas
                     </Button>
                 </div>
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
-                <div className="relative w-full md:w-96 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-purple-600 transition-colors" />
-                    <Input 
-                        placeholder="Search for whiteboards, flows, and maps..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="h-10 pl-10 rounded-xl bg-slate-50 border-none shadow-inner font-medium text-sm"
-                    />
+                <div className="flex items-center gap-3 flex-1">
+                    <div className="relative w-full md:w-96 group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-purple-600 transition-colors" />
+                        <Input 
+                            placeholder="Search visual boards..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="h-10 pl-10 rounded-xl bg-slate-50 border-none shadow-inner font-medium text-sm"
+                        />
+                    </div>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-10 rounded-xl px-4 font-bold text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white min-w-[140px]">
+                                <Filter className="h-3.5 w-3.5 text-purple-600" />
+                                {currentFilterLabel}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white z-50">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Filter Library</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setSelectedMemberId('me')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><UserCircle className="h-4 w-4" /></div>
+                                My Canvases
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedMemberId('all')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-slate-50 text-slate-400"><Users className="h-4 w-4" /></div>
+                                All Team Work
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-slate-50" />
+                            <ScrollArea className="h-48">
+                                {teamMembers?.filter(m => m.id !== authUser?.uid).map(member => (
+                                    <DropdownMenuItem key={member.id} onClick={() => setSelectedMemberId(member.id)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                        <Avatar className="h-6 w-6">
+                                            <AvatarImage src={member.photoURL} />
+                                            <AvatarFallback className="text-[8px]">{member.name?.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="truncate flex-1">{member.name}</span>
+                                        {selectedMemberId === member.id && <Check className="h-3.5 w-3.5 text-purple-600" />}
+                                    </DropdownMenuItem>
+                                ))}
+                            </ScrollArea>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
+                
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-bold text-[11px] text-slate-500 uppercase tracking-widest hover:bg-slate-50">
-                        Last edited <ChevronDown className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-bold text-[11px] text-slate-500 uppercase tracking-widest hover:bg-slate-50">
-                        Newest to Oldest <ChevronDown className="h-3 w-3" />
+                        Activity <ChevronDown className="h-3 w-3" />
                     </Button>
                 </div>
             </div>
@@ -117,7 +193,7 @@ export default function BoardsHubPage() {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-black uppercase tracking-[0.4em] text-slate-900 leading-none">Canvas clear</p>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Start a new visual board for strategic planning</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No canvases match this filter</p>
                             </div>
                         </div>
                     )}
@@ -199,4 +275,3 @@ function AssetCard({ page }: { page: CollabPage }) {
         </Link>
     );
 }
-
