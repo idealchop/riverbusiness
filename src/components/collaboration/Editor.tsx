@@ -630,7 +630,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10 z-50">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] {isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                            {isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}
+                          </span>
                       </div>
                   </div>
               )}
