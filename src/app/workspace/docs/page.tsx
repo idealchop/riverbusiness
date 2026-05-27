@@ -17,9 +17,9 @@ import {
     Lock,
     Users,
     Check,
-    Filter,
-    Separator
+    Filter
 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';

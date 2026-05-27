@@ -15,13 +15,12 @@ import {
     Globe, 
     Lock, 
     Users, 
-    TableProperties,
     Filter,
     Check,
-    Separator,
     Clock,
     CheckCircle2
 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
