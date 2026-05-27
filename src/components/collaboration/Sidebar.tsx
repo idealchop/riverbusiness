@@ -59,18 +59,18 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const pathname = usePathname();
   const [isHomeExpanded, setIsHomeExpanded] = useState(true);
 
-  // Trending Logic: Filter by !isTrashed and sort by updatedAt
+  // Active Velocity Protocol: Only show docs that have actual work (updates)
   const trendingPages = useMemo(() => {
     return [...pages]
-      .filter(p => !p.isTrashed)
+      .filter(p => !p.isTrashed && p.updatedAt) // Must have been updated (confirmed work)
       .sort((a, b) => {
         const dateA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
-        const timeA = dateA || (a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0);
+        const timeA = dateA || 0;
         const dateB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
-        const timeB = dateB || (b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0);
+        const timeB = dateB || 0;
         return timeB - timeA;
       })
-      .slice(0, 10); // Show only top 10 trending/active docs
+      .slice(0, 8); // Top 8 active work threads
   }, [pages]);
 
   const isWorkspaceHomeActive = pathname === '/workspace';
@@ -176,13 +176,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 )}
             </div>
 
-            {/* Trending Docs Section */}
+            {/* Work Velocity Section - Strictly active work */}
             <div className="space-y-4">
                 <div className="px-3 flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Trending Docs</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Active now</h4>
                     <TrendingUp className="h-3 w-3 text-primary opacity-50" />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                     {trendingPages.length > 0 ? trendingPages.map(page => (
                         <TrendingItem 
                             key={page.id} 
@@ -192,8 +192,8 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     )) : (
                         <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40 grayscale">
                             <Clock className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                                Quiet Workspace
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed max-w-[120px] mx-auto">
+                                No recent work detected
                             </p>
                         </div>
                     )}
