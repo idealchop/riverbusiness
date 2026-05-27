@@ -44,7 +44,6 @@ import { LogoBlack } from '@/components/icons';
 import { useCollection, useMemoFirebase, useFirestore, useDoc } from '@/firebase';
 import { collection, query, where, doc, Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -232,10 +231,6 @@ function TrendingItem({ page, isActive }: { page: CollabPage, isActive: boolean 
         }
     };
 
-    const timeAgo = page.updatedAt 
-        ? formatDistanceToNow((page.updatedAt as Timestamp).toDate(), { addSuffix: true })
-        : 'Recently';
-
     return (
         <Link href={`/workspace/${page.id}`}>
             <div className={cn(
@@ -252,16 +247,11 @@ function TrendingItem({ page, isActive }: { page: CollabPage, isActive: boolean 
                     )}>
                         {page.title || 'Untitled'}
                     </p>
-                    <div className="flex items-center gap-1.5 mt-1.5 opacity-60">
-                        <Avatar className="h-3 w-3">
-                            <AvatarImage src={creator?.photoURL} />
-                            <AvatarFallback className="text-[5px] font-bold">{creator?.name?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <p className="text-[8px] font-bold uppercase tracking-tight text-slate-400">
-                            {timeAgo}
-                        </p>
-                    </div>
                 </div>
+                <Avatar className="h-4 w-4 shrink-0 opacity-60 border border-white shadow-sm">
+                    <AvatarImage src={creator?.photoURL} />
+                    <AvatarFallback className="text-[6px] font-bold bg-slate-100 text-slate-400">{creator?.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
             </div>
         </Link>
     );
