@@ -22,7 +22,10 @@ import {
     ChevronRight,
     Home,
     FolderOpen,
-    Loader2
+    Loader2,
+    Star,
+    StarOff,
+    Trash2
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -31,6 +34,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
     DropdownMenu, 
@@ -243,7 +247,7 @@ export default function DocsHubPage() {
                 
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-bold text-[11px] text-slate-500 uppercase tracking-widest hover:bg-slate-50">
-                        Date <ChevronDown className="h-3.5 w-3.5" />
+                        Date <ChevronDown className="h-3 w-3" />
                     </Button>
                 </div>
             </div>
@@ -368,7 +372,7 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
                 isFolder ? "bg-slate-100 group-hover:bg-blue-50/50 group-hover:border-blue-200" : "bg-slate-50 group-hover:bg-white"
             )}>
                 {page.coverImage ? (
-                    <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
                 )}
@@ -436,14 +440,5 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
         <Link href={`/workspace/${page.id}`} className="group block">
             {cardContent}
         </Link>
-    );
-}
-
-function ArrowUpRight({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <line x1="7" y1="17" x2="17" y2="7"></line>
-            <polyline points="7 7 17 7 17 17"></polyline>
-        </svg>
     );
 }
