@@ -58,6 +58,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
   const pathname = usePathname();
   const [isHomeExpanded, setIsHomeExpanded] = useState(true);
+  const [isActivityExpanded, setIsActivityExpanded] = useState(false);
 
   // Active Velocity Protocol: Only show docs that have actual work (updates)
   const trendingPages = useMemo(() => {
@@ -176,26 +177,37 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             </div>
 
             <div className="space-y-4">
-                <div className="px-3 flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Active now</h4>
-                    <TrendingUp className="h-3 w-3 text-primary opacity-50" />
-                </div>
-                <div className="space-y-0.5">
-                    {trendingPages.length > 0 ? trendingPages.map(page => (
-                        <TrendingItem 
-                            key={page.id} 
-                            page={page} 
-                            isActive={activePageId === page.id} 
-                        />
-                    )) : (
-                        <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40 grayscale">
-                            <Clock className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed max-w-[120px] mx-auto">
-                                No recent work detected
-                            </p>
-                        </div>
-                    )}
-                </div>
+                <button 
+                    onClick={() => setIsActivityExpanded(!isActivityExpanded)}
+                    className="w-full px-3 flex items-center justify-between group outline-none"
+                >
+                    <div className="flex items-center gap-2">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 group-hover:text-slate-600 transition-colors">Active now</h4>
+                        <TrendingUp className="h-3 w-3 text-primary opacity-30 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <div className="h-6 w-6 rounded-lg hover:bg-slate-200/50 flex items-center justify-center text-slate-300">
+                        {isActivityExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    </div>
+                </button>
+                
+                {isActivityExpanded && (
+                    <div className="space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {trendingPages.length > 0 ? trendingPages.map(page => (
+                            <TrendingItem 
+                                key={page.id} 
+                                page={page} 
+                                isActive={activePageId === page.id} 
+                            />
+                        )) : (
+                            <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40 grayscale">
+                                <Clock className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed max-w-[120px] mx-auto">
+                                    No recent work detected
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
       </ScrollArea>
@@ -248,9 +260,6 @@ function TrendingItem({ page, isActive }: { page: CollabPage, isActive: boolean 
                     </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">
-                        {page.updatedAt ? formatDistanceToNow((page.updatedAt as Timestamp).toDate(), { addSuffix: false }).replace('about ', '').replace('less than a minute', 'now') : ''}
-                    </span>
                     <Avatar className="h-4 w-4 border border-white shadow-sm ring-1 ring-slate-100">
                         <AvatarImage src={creator?.photoURL} />
                         <AvatarFallback className="text-[6px] font-bold bg-slate-100 text-slate-400">{creator?.name?.charAt(0)}</AvatarFallback>
