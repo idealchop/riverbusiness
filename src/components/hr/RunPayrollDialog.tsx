@@ -34,8 +34,8 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft, UserCircle } from 'lucide-react';
-import type { HRPayrollBreakdownItem, AppUser } from '@/lib/types';
+import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft, UserCircle, Briefcase, Clock } from 'lucide-react';
+import type { HRPayrollBreakdownItem, AppUser, HRAttendanceLog } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, startOfMonth, parseISO } from 'date-fns';
@@ -97,6 +97,8 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     
     try {
       const values = form.getValues();
+      
+      // 1. Fetch all active employees
       const employeesQuery = query(
         collection(firestore, 'users'), 
         where('companyId', '==', companyId),
@@ -109,55 +111,64 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         toast({ 
           variant: 'destructive', 
           title: 'No employees found', 
-          description: 'Ensure you have registered employees in your directory.' 
+          description: 'Ensure you have registered employees in your workforce directory.' 
         });
         setIsComputing(false);
         return;
       }
 
+      // 2. Fetch all attendance logs for this period
       const attendanceQuery = query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('date', '>=', values.periodStart),
         where('date', '<=', values.periodEnd)
       );
       const attendanceSnap = await getDocs(attendanceQuery);
-      const allLogs = attendanceSnap.docs.map(doc => doc.data());
+      const allLogs = attendanceSnap.docs.map(doc => doc.data() as HRAttendanceLog);
 
       const breakdown: HRPayrollBreakdownItem[] = [];
 
-      employees.forEach((emp: any) => {
+      // 3. Compute per-employee logic
+      employees.forEach((emp) => {
         const profile = emp?.hrProfile;
         if (!profile) return;
 
         let employeeSalary = 0;
         const rate = Number(profile?.rate) || 0;
-        let daysWorked = 0;
+        
+        // Count UNIQUE days worked (ignores multiple clock-ins per day)
+        const employeeLogs = allLogs.filter(log => log.employeeId === emp.id);
+        const uniqueDaysWorked = new Set(employeeLogs.map(log => log.date)).size;
         
         if (profile.salaryType === 'daily') {
-          daysWorked = allLogs.filter(log => log?.employeeId === emp.id).length;
-          employeeSalary = daysWorked * rate;
+          employeeSalary = uniqueDaysWorked * rate;
+        } else if (profile.salaryType === 'weekly') {
+            // Simplified weekly logic for MVP
+            employeeSalary = rate; 
+        } else if (profile.salaryType === 'bimonthly') {
+            employeeSalary = rate;
         } else {
+          // Default: Monthly Fixed
           employeeSalary = rate;
         }
 
-        if (employeeSalary >= 0) {
-            breakdown.push({
-                employeeId: emp.id,
-                employeeName: emp.name || 'Anonymous',
-                employeeNumber: profile.employeeNumber || 'ID Pending',
-                amount: employeeSalary,
-                rate: rate,
-                type: profile.salaryType,
-                daysWorked: profile.salaryType === 'daily' ? daysWorked : undefined,
-                adjustment: 0,
-                adjustmentRemarks: ''
-            });
-        }
+        breakdown.push({
+            employeeId: emp.id,
+            employeeName: emp.name || 'Anonymous',
+            employeeNumber: profile.employeeNumber || 'ID Pending',
+            amount: employeeSalary,
+            rate: rate,
+            type: profile.salaryType,
+            daysWorked: uniqueDaysWorked,
+            adjustment: 0,
+            adjustmentRemarks: ''
+        });
       });
 
       setComputedBreakdown(breakdown);
       setStep(1);
       setCurrentPage(1);
+      toast({ title: 'Computation Complete', description: `Verified logs for ${breakdown.length} staff members.` });
     } catch (error) {
       console.error("Error computing payroll:", error);
       toast({ variant: 'destructive', title: 'Computation Error' });
@@ -170,12 +181,6 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
       const num = parseFloat(value) || 0;
       setComputedBreakdown(prev => prev.map(item => 
           item.employeeId === employeeId ? { ...item, adjustment: num } : item
-      ));
-  };
-
-  const handleRemarksChange = (employeeId: string, value: string) => {
-      setComputedBreakdown(prev => prev.map(item => 
-          item.employeeId === employeeId ? { ...item, adjustmentRemarks: value } : item
       ));
   };
 
@@ -246,7 +251,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             <DollarSign className="h-6 w-6" />
                         </div>
                         <div>
-                            <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Run Payroll</DialogTitle>
+                            <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Payroll Engine</DialogTitle>
                             <DialogDescription className="text-slate-500 font-medium">
                                 {step === 0 ? "Select period to begin automated computation." : "Review details and apply final adjustments per employee."}
                             </DialogDescription>
@@ -329,10 +334,10 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                 <div className="p-6 rounded-[2rem] bg-blue-50 border border-blue-100 space-y-3">
                                     <div className="flex items-center gap-3">
                                         <Calculator className="h-5 w-5 text-primary" />
-                                        <p className="text-sm font-black uppercase text-blue-900 tracking-tight">Run Logic Active</p>
+                                        <p className="text-sm font-black uppercase text-blue-900 tracking-tight">Computation Logic</p>
                                     </div>
                                     <p className="text-xs font-medium text-blue-800/70 leading-relaxed">
-                                        Selecting "Compute Ledger" will cross-reference the selected period with current employee rate profiles and verified attendance terminal logs.
+                                        The engine will now cross-reference the selected period with verified **Attendance Terminal** logs to compute workload for daily staff.
                                     </p>
                                 </div>
                             </div>
@@ -343,13 +348,15 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                 {step === 1 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-500">
                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Review & Finalize</h4>
-                            <Badge className="bg-primary/10 text-primary border-none font-bold">{computedBreakdown.length} Profiles Computed</Badge>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Review computed results</h4>
+                            <Badge className="bg-primary/10 text-primary border-none font-bold uppercase text-[9px] tracking-widest px-3 h-6">
+                                {computedBreakdown.length} Profiles Integrated
+                            </Badge>
                         </div>
 
                         <div className="space-y-4">
                             {paginatedBreakdown.map((item) => (
-                                <Card key={item.employeeId} className="border border-slate-100 shadow-none rounded-3xl overflow-hidden group hover:border-primary/20 transition-all relative">
+                                <Card key={item.employeeId} className="border border-slate-100 shadow-none rounded-[2rem] overflow-hidden group hover:border-primary/20 transition-all relative">
                                     <button 
                                         onClick={() => handleRemoveEmployee(item.employeeId)}
                                         className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors z-10"
@@ -366,24 +373,34 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-black text-slate-900 leading-tight">{item.employeeName}</p>
                                                 <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">{item.employeeNumber}</p>
-                                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">{item.type} Basis • ₱{item.rate.toLocaleString()}</p>
+                                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">{item.type} Profile • ₱{item.rate.toLocaleString()}</p>
                                             </div>
                                         </div>
                                         <div className="md:col-span-2 text-center md:text-left border-l border-slate-50 pl-6">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1">Computed Base</p>
-                                            <p className="text-sm font-bold text-slate-900">₱{item.amount.toLocaleString()}</p>
-                                            {item.type === 'daily' && (
-                                                <Badge variant="outline" className="text-[8px] font-black border-slate-100 mt-1">{item.daysWorked} Days Logged</Badge>
-                                            )}
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1.5 flex items-center gap-1.5">
+                                                <Clock className="h-3 w-3" /> Workload
+                                            </p>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-black text-slate-900">₱{item.amount.toLocaleString()}</p>
+                                                {item.type === 'daily' ? (
+                                                    <Badge variant="outline" className="text-[8px] font-black border-slate-100 bg-white px-1.5 h-4">
+                                                        {item.daysWorked} Verified Days
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-[8px] font-black border-slate-100 bg-white px-1.5 h-4">
+                                                        Fixed Cycle
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="md:col-span-3 space-y-2">
-                                             <div className="relative">
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-40">
+                                             <div className="relative group">
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-40 group-focus-within:opacity-100 transition-opacity">
                                                      <Plus className="h-3 w-3" /><span className="text-xs font-bold">₱</span>
                                                 </div>
                                                 <Input 
                                                     type="number" 
-                                                    placeholder="Adjustment" 
+                                                    placeholder="Adjust..." 
                                                     value={item.adjustment || ''} 
                                                     onChange={(e) => handleAdjustmentChange(item.employeeId, e.target.value)}
                                                     className="h-10 pl-10 rounded-xl bg-slate-50 border-none font-bold text-xs shadow-inner"
@@ -391,7 +408,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                              </div>
                                         </div>
                                         <div className="md:col-span-3 text-right">
-                                            <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em] mb-1">Net disbursement</p>
+                                            <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em] mb-1">Final Payout</p>
                                             <p className="text-xl font-black text-slate-900 tabular-nums">
                                                 ₱{(item.amount + (item.adjustment || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                             </p>
@@ -400,9 +417,10 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                 </Card>
                             ))}
                             {computedBreakdown.length === 0 && (
-                                <div className="py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No employees in this run</p>
-                                    <Button variant="link" onClick={() => setStep(0)} className="text-primary mt-2">Back to Period Selection</Button>
+                                <div className="py-24 text-center bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-100 grayscale opacity-40">
+                                    <Briefcase className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No integrated profiles</p>
+                                    <Button variant="link" onClick={() => setStep(0)} className="text-primary mt-2">Modify Period Parameters</Button>
                                 </div>
                             )}
                         </div>
@@ -410,27 +428,26 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         {computedBreakdown.length > ITEMS_PER_PAGE && (
                             <div className="flex items-center justify-between px-2 pt-4">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                    Showing {paginatedBreakdown.length} of {computedBreakdown.length} Profiles
+                                    Page {currentPage} of {totalPages}
                                 </p>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                                        className="h-8 px-4 rounded-xl font-bold text-[10px] uppercase shadow-sm bg-white"
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
                                     >
-                                        <ChevronLeft className="mr-1 h-3 w-3" /> Previous
+                                        Prev
                                     </Button>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase">{currentPage} / {totalPages}</span>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                                        className="h-8 px-4 rounded-xl font-bold text-[10px] uppercase shadow-sm bg-white"
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
                                     >
-                                        Next <ChevronRight className="ml-1 h-3 w-3" />
+                                        Next
                                     </Button>
                                 </div>
                             </div>
@@ -440,10 +457,10 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
             </div>
         </ScrollArea>
 
-        <DialogFooter className="p-8 bg-white border-t flex flex-col md:flex-row items-center justify-between gap-4">
+        <DialogFooter className="p-8 bg-white border-t flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
             <div className="flex items-center gap-3">
-                <div className={cn("h-2.5 w-2.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
-                <div className={cn("h-2.5 w-2.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
+                <div className={cn("h-1.5 w-1.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
+                <div className={cn("h-1.5 w-1.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step + 1} of 2</span>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
@@ -453,9 +470,8 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                 
                 {step === 0 ? (
                     <Button onClick={handleCompute} disabled={isComputing} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px]">
-                        {isComputing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isComputing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calculator className="mr-2 h-4 w-4" />}
                         {isComputing ? "Computing Ledger..." : "Compute Ledger"}
-                        {!isComputing && <ChevronRight className="ml-2 h-4 w-4" />}
                     </Button>
                 ) : (
                     <Button onClick={onSubmit} disabled={isSubmitting || computedBreakdown.length === 0} className="rounded-2xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90 min-w-[240px]">
