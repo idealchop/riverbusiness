@@ -328,7 +328,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [clipboard, setClipboard] = setClipboard(useState<BoardElement[]>([]));
+  const [clipboard, setClipboard] = useState<BoardElement[]>([]);
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<'select' | 'hand' | 'arrow' | 'pen'>('select');
@@ -340,17 +340,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [isSelectingMarquee, setIsSelectingMarquee] = useState(false);
   const [marqueeBox, setMarqueeBox] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null);
   
-  const [dragId, setDragId] = setDragId(useState<string | null>(null));
-  const [dragOffset, setDragOffset] = setDragOffset(useState({ x: 0, y: 0 }));
-  const [lastMousePos, setLastMousePos] = setLastMousePos(useState({ x: 0, y: 0 }));
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   
-  const [pendingConnFrom, setPendingConnFrom] = setPendingConnFrom(useState<string | null>(null));
-  const [currentMouseCoords, setCurrentMouseCoords] = setCurrentMouseCoords(useState<{ x: number, y: number } | null>(null));
+  const [pendingConnFrom, setPendingConnFrom] = useState<string | null>(null);
+  const [currentMouseCoords, setCurrentMouseCoords] = useState<{ x: number, y: number } | null>(null);
   
-  const [currentPath, setCurrentPath] = setCurrentPath(useState<string | null>(null));
-  const [penColor, setPenColor] = setPenColor(useState('#3b82f6'));
-  const [penSize, setPenSize] = setPenSize(useState(4));
-  const [assetSearch, setAssetSearch] = setAssetSearch(useState(''));
+  const [currentPath, setCurrentPath] = useState<string | null>(null);
+  const [penColor, setPenColor] = useState('#3b82f6');
+  const [penSize, setPenSize] = useState(4);
+  const [assetSearch, setAssetSearch] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -722,7 +722,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       sync(nextElements, connections);
   };
 
-  const updateSelectedConnection = (data: Partial<BoardConnection>) => {
+  const updateSelectedConnection = async (data: Partial<BoardConnection>) => {
     if (selectedIds.length === 0 || !editable) return;
     pushHistory();
     
