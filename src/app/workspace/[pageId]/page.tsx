@@ -5,7 +5,6 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteField, collection, getDoc, Timestamp } from 'firebase/firestore';
 import { Editor } from '@/components/collaboration/Editor';
-import { SheetEditor } from '@/components/collaboration/SheetEditor';
 import { BoardEditor } from '@/components/collaboration/BoardEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +29,6 @@ import {
   Copy, 
   CheckCircle2,
   MoreHorizontal,
-  UserCircle,
   Users
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
@@ -131,11 +129,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
         
         await onUpdate(updates);
         setIsUpdating(false);
-        
-        toast({
-            title: enabled ? 'Sharing active' : 'Public access revoked',
-            description: enabled ? 'The secure shareable link has been generated.' : 'The document is now restricted to internal organization members.'
-        });
+        toast({ title: enabled ? 'Sharing active' : 'Public access revoked' });
     };
 
     const handleExpiryChange = async (value: string) => {
@@ -144,7 +138,6 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
         if (value === '24h') expiresAt = Timestamp.fromDate(addHours(now, 24));
         if (value === '7d') expiresAt = Timestamp.fromDate(addDays(now, 7));
         await onUpdate({ expiresAt });
-        toast({ title: 'Expiry updated', description: `Public access will conclude ${value === 'never' ? 'manually' : `in ${value}`}.` });
     };
 
     const togglePassword = async (enabled: boolean) => {
@@ -152,27 +145,19 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
         if (!enabled) {
             setPassword('');
             await onUpdate({ sharePassword: deleteField() });
-            toast({ title: 'Encryption removed', description: 'Access key is no longer required for guest viewers.' });
         }
     };
 
     const savePassword = async () => {
         if (!password.trim()) return;
         await onUpdate({ sharePassword: password });
-        toast({ 
-            title: 'Security protocol active', 
-            description: 'The document is now encrypted with your custom access key.' 
-        });
     };
 
     const copyLink = () => {
         navigator.clipboard.writeText(shareUrl);
-        setHasCopied(false);
+        setHasCopied(true);
         setTimeout(() => setHasCopied(false), 2000);
-        toast({ 
-            title: 'Link copied', 
-            description: 'The secure shareable link is now in your clipboard.' 
-        });
+        toast({ title: 'Link copied' });
     };
 
     if (isMobile) {
@@ -475,10 +460,6 @@ function PageEditorContent() {
                 <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-3xl sm:text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
                 <div className="delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
             </>
-        )}
-
-        {pageType === 'sheet' && (
-            <SheetEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
         )}
 
         {pageType === 'board' && (

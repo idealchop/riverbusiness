@@ -116,7 +116,7 @@ export interface CollabWorkspace {
     createdAt: any;
 }
 
-export type CollabPageType = 'doc' | 'sheet' | 'board' | 'folder';
+export type CollabPageType = 'doc' | 'board' | 'folder';
 
 export interface BoardElement {
     id: string;
@@ -149,75 +149,6 @@ export interface BoardConnection {
     endMarker?: 'arrow' | 'circle' | 'diamond' | 'none';
 }
 
-// --- Sheet Specific Types ---
-
-export type SheetFieldType = 
-  | 'text' 
-  | 'longtext'
-  | 'number' 
-  | 'date' 
-  | 'checkbox' 
-  | 'select' 
-  | 'multiselect' 
-  | 'attachment' 
-  | 'email' 
-  | 'phone' 
-  | 'url' 
-  | 'user' 
-  | 'currency' 
-  | 'status' 
-  | 'formula';
-
-export interface SheetComment {
-    id: string;
-    userId: string;
-    userName: string;
-    userPhoto?: string | null;
-    text: string;
-    timestamp: any;
-    parentId?: string | null;
-}
-
-export interface SheetField {
-    id: string;
-    name: string;
-    type: SheetFieldType;
-    options?: { label: string; color: string }[]; // For select/status
-    width?: number;
-    required?: boolean;
-    isPrimary?: boolean;
-    currencySymbol?: string;
-}
-
-export interface SheetRecord {
-    id: string;
-    values: Record<string, any>;
-    createdAt: any;
-    updatedAt: any;
-    createdBy?: string;
-    comments?: SheetComment[];
-}
-
-export type SheetViewType = 'grid' | 'kanban' | 'calendar' | 'list' | 'gantt';
-export type RowHeight = 'short' | 'medium' | 'tall' | 'extra-tall';
-
-export interface SheetView {
-    id: string;
-    name: string;
-    type: SheetViewType;
-    config?: {
-        kanbanFieldId?: string; // For Kanban grouping
-        calendarFieldId?: string; // For Calendar mapping
-        galleryCoverId?: string; // Legacy
-        hiddenFields?: string[];
-        filters?: any[];
-        sorts?: any[];
-        groupByFieldId?: string; // NEW: Field to group by in grid view
-        rowHeight?: RowHeight;
-        wrapHeaders?: boolean;
-    };
-}
-
 export interface CollabPage {
     id: string;
     companyId: string;
@@ -227,12 +158,12 @@ export interface CollabPage {
     title: string;
     icon?: string;
     coverImage?: string;
-    content?: any; // Dynamic content based on type (Doc content, Sheet data, or Board elements)
+    content?: any; // Dynamic content based on type (Doc content or Board elements)
     createdBy: string;
     createdAt: any;
     updatedAt?: any;
     isFavorite?: boolean;
-    isPrivate?: boolean; // NEW: Toggle between "Only Me" and "Team Access"
+    isPrivate?: boolean; 
     isPublic?: boolean;
     shareToken?: string;
     sharePassword?: string;

@@ -40,19 +40,13 @@ import {
     AlignLeft,
     AlignCenter,
     AlignRight,
-    Grid,
     Plus,
     Trash2,
     Underline as UnderlineIcon,
     Maximize2,
-    PlusCircle,
     Layout,
-    ChevronDown,
-    MoreHorizontal,
     Image as ImageIcon,
     Maximize,
-    Minimize2,
-    Monitor,
     Columns,
     FileText,
     Search,
@@ -60,7 +54,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Card } from '@/components/ui/card';
 import { useStorage, useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
@@ -90,7 +83,6 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useMounted } from '@/hooks/use-mounted';
-import { SheetEditor } from './SheetEditor';
 import { BoardEditor } from './BoardEditor';
 import { query, collection, where } from 'firebase/firestore';
 import type { CollabPage } from '@/lib/types';
@@ -118,7 +110,6 @@ const PageLinkBlock = ({ node, deleteNode }: any) => {
                     {icon ? (
                         <span className="text-sm select-none">{icon}</span>
                     ) : (
-                        type === 'sheet' ? <Grid className="h-4 w-4 text-green-600" /> :
                         type === 'board' ? <Layout className="h-4 w-4 text-purple-600" /> :
                         <FileText className="h-4 w-4 text-blue-500" />
                     )}
@@ -164,61 +155,6 @@ const PageLinkExtension = Node.create({
     renderHTML({ HTMLAttributes }) { return ['div', { 'data-type': 'page-link', ...HTMLAttributes }]; },
     addNodeView() { return ReactNodeViewRenderer(PageLinkBlock); },
 });
-
-const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
-    const [isFullSize, setIsFullSize] = useState(false);
-
-    return (
-        <NodeViewWrapper className="my-10 relative border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white">
-            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5">
-                <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Sheet</Badge>
-                <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900"
-                    onClick={() => setIsFullSize(true)}
-                >
-                    <Maximize className="h-4 w-4" />
-                </Button>
-                <Button 
-                    variant="destructive" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-xl shadow-lg"
-                    onClick={() => deleteNode()}
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-            </div>
-            <div className="h-[500px]">
-                <SheetEditor 
-                    initialData={node.attrs.data} 
-                    onContentChange={(data) => updateAttributes({ data })}
-                    editable={extension.options.editable}
-                />
-            </div>
-
-            <Dialog open={isFullSize} onOpenChange={setIsFullSize}>
-                <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 overflow-hidden border-none shadow-3xl rounded-[2.5rem] bg-white flex flex-col">
-                    <div className="h-14 border-b px-6 flex items-center justify-between shrink-0 bg-slate-50/50">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-xl bg-white shadow-sm text-green-600">
-                                <Grid className="h-4 w-4" />
-                            </div>
-                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Full-Screen Workspace</h4>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                        <SheetEditor 
-                            initialData={node.attrs.data} 
-                            onContentChange={(data) => updateAttributes({ data })}
-                            editable={extension.options.editable}
-                        />
-                    </div>
-                </DialogContent>
-            </Dialog>
-        </NodeViewWrapper>
-    );
-};
 
 const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => {
     const [isFullSize, setIsFullSize] = useState(false);
@@ -275,20 +211,6 @@ const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => 
     );
 };
 
-const SpreadsheetExtension = Node.create({
-    name: 'spreadsheet',
-    group: 'block',
-    atom: true,
-    addAttributes() {
-        return {
-            data: { default: { fields: [], records: [], views: [], activeViewId: '' } }
-        };
-    },
-    parseHTML() { return [{ tag: 'div[data-type="spreadsheet"]' }]; },
-    renderHTML({ HTMLAttributes }) { return ['div', { 'data-type': 'spreadsheet', ...HTMLAttributes }]; },
-    addNodeView() { return ReactNodeViewRenderer(SpreadsheetBlock); },
-});
-
 const CanvasExtension = Node.create({
     name: 'canvas',
     group: 'block',
@@ -320,8 +242,6 @@ const Column = Node.create({
     renderHTML() { return ['div', { 'data-type': 'column', class: 'tiptap-column' }, 0]; },
 });
 
-// --- Main Editor Component ---
-
 interface EditorProps {
   initialContent: any;
   initialPrompt?: string | null;
@@ -341,14 +261,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const [uploadProgress, setUploadProgress] = useState(0);
   const isMounted = useMounted();
   
-  // AI States
   const [showAiToolbar, setShowAiToolbar] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiStatus, setAiStatus] = useState('');
   const [customGoal, setCustomGoal] = useState('');
   const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
 
-  // Link Page States
   const [isLinkPageOpen, setIsLinkPageOpen] = useState(false);
   const [pageSearch, setPageSearch] = useState('');
 
@@ -427,7 +345,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       TableCell,
       TableHeader,
       Highlight.configure({ multicolor: true }),
-      SpreadsheetExtension.configure({ editable }),
       CanvasExtension.configure({ editable }),
       PageLinkExtension,
       ColumnGroup,
@@ -557,9 +474,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     const selectedText = editor.state.doc.textBetween(from, to, ' ');
     const textToProcess = selectedText || editor.getText();
     const context = editor.getText();
-    if (!textToProcess.trim()) {
-        return;
-    }
+    if (!textToProcess.trim()) return;
     setIsAiProcessing(true);
     setShowAiToolbar(false);
     setAiStatus('AI is working...');
@@ -589,10 +504,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
           setAiStatus('');
       }
     }
-  };
-
-  const handleInsertSpreadsheet = () => {
-    editor.chain().focus().insertContent({ type: 'spreadsheet' }).run();
   };
 
   const handleInsertCanvas = () => {
@@ -665,10 +576,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                             <DropdownMenuItem onClick={() => setIsLinkPageOpen(true)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><LinkIcon className="h-4 w-4" /></div>
                                 Link to Page
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleInsertSpreadsheet} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
-                                <div className="p-1.5 rounded-lg bg-green-50 text-green-600"><Grid className="h-4 w-4" /></div>
-                                Interactive Spreadsheet
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleInsertCanvas} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
@@ -769,14 +676,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 </Tooltip>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <button onClick={handleInsertSpreadsheet} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100">
-                            <Grid className="h-5 w-5" />
-                        </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="rounded-lg text-[9px] font-black uppercase tracking-widest">Embedded Spreadsheet</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
                         <button onClick={handleInsertCanvas} className="h-10 w-10 flex items-center justify-center rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100">
                             <Layout className="h-5 w-5" />
                         </button>
@@ -822,7 +721,6 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                                 {p.icon ? (
                                     <span className="text-sm">{p.icon}</span>
                                 ) : (
-                                    p.type === 'sheet' ? <Grid className="h-3.5 w-3.5 text-green-600" /> :
                                     p.type === 'board' ? <Layout className="h-3.5 w-3.5 text-purple-600" /> :
                                     <FileText className="h-3.5 w-3.5 text-blue-500" />
                                 )}

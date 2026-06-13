@@ -3,23 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
-    Plus, 
     Sparkles, 
     Loader2, 
     ArrowUp, 
-    Image as ImageIcon, 
-    Pencil, 
-    Globe,
-    Grid,
     Layout,
-    FileText,
-    ChevronRight,
-    ArrowRight
+    FileText
 } from 'lucide-react';
 import { LogoBlack } from '@/components/icons';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
 
 const SUGGESTIONS = [
   "Draft a project proposal...",
@@ -33,10 +24,8 @@ export default function WorkspaceLandingPage() {
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Rotate suggestions
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % SUGGESTIONS.length);
@@ -44,7 +33,6 @@ export default function WorkspaceLandingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-expand textarea height
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -52,7 +40,7 @@ export default function WorkspaceLandingPage() {
     }
   }, [prompt]);
 
-  const handleCreate = (type: 'doc' | 'sheet' | 'board') => {
+  const handleCreate = (type: 'doc' | 'board') => {
     window.dispatchEvent(new CustomEvent('request-new-collab-page', {
         detail: { type }
     }));
@@ -62,7 +50,6 @@ export default function WorkspaceLandingPage() {
     if (!prompt.trim()) return;
     setIsProcessing(true);
     
-    // Trigger creation via layout event with the initial prompt
     window.dispatchEvent(new CustomEvent('request-new-collab-page', { 
         detail: { 
             title: prompt.trim().substring(0, 40),
@@ -129,11 +116,6 @@ export default function WorkspaceLandingPage() {
                     onClick={() => handleCreate('doc')}
                     icon={<FileText className="h-4 w-4 text-blue-500" />}
                     label="Write Document"
-                />
-                <QuickActionButton 
-                    onClick={() => handleCreate('sheet')}
-                    icon={<Grid className="h-4 w-4 text-green-600" />}
-                    label="Operational Sheet"
                 />
                 <QuickActionButton 
                     onClick={() => handleCreate('board')}

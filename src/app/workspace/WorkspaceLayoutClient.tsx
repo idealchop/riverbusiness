@@ -4,12 +4,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, addDoc, deleteDoc, serverTimestamp, updateDoc, or, and, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, serverTimestamp, updateDoc, or, and, getDoc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Menu, Building2 } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import type { CollabPage, AppUser, SecurityRuleContext, CollabPageType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -45,8 +45,6 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
   const companyId = user?.companyId || null;
 
-  // Fetch organizational pages scoped by companyId
-  // Shows pages that are NOT private OR pages created by the current user
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId && authUser) ? query(
         collection(firestore, 'collaboration_pages'), 
@@ -63,7 +61,6 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
   const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
-  // Active pages for the main navigation
   const pages = useMemo(() => {
       if (!rawPages) return [];
       return [...rawPages]
@@ -81,16 +78,11 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
   }, [sharingPageId, rawPages]);
 
   const handleCreatePage = useCallback(async (parentId: string | null = null, title: string = 'Untitled', type: CollabPageType = 'doc', initialPrompt?: string) => {
-    if (!firestore || !authUser || !companyId) {
-        toast({ title: "Initializing", description: "Please wait a moment while the workspace prepares your environment." });
-        return;
-    }
+    if (!firestore || !authUser || !companyId) return;
 
     const pagesCol = collection(firestore, 'collaboration_pages');
     
-    // Initialize content based on type
     let initialContent: any = { type: "doc", content: [{ type: "paragraph" }] };
-    if (type === 'sheet') initialContent = { rows: 20, cols: 10, data: {} };
     if (type === 'board') initialContent = { elements: [] };
     if (type === 'folder') initialContent = {};
 
@@ -115,13 +107,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
             router.push(redirectUrl);
         }
         setIsMobileSidebarOpen(false);
-        
-        if (!initialPrompt) {
-            toast({ 
-                title: 'Asset initialized', 
-                description: `A new ${type} has been established for your organization.` 
-            });
-        }
+        if (!initialPrompt) toast({ title: 'Asset initialized' });
       })
       .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -140,7 +126,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
             parentId: targetParentId,
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'Item Moved', description: 'The organization hierarchy has been updated.' });
+        toast({ title: 'Item Moved' });
     } catch (error) {
         console.error("Error moving page:", error);
     }
@@ -148,11 +134,9 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
   const handleDuplicatePage = useCallback(async (pageId: string) => {
     if (!firestore || !authUser || !companyId) return;
-    
     try {
       const sourceRef = doc(firestore, 'collaboration_pages', pageId);
       const sourceSnap = await getDoc(sourceRef);
-      
       if (sourceSnap.exists()) {
         const sourceData = sourceSnap.data() as CollabPage;
         const newPage = {
@@ -163,19 +147,14 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
           updatedAt: serverTimestamp(),
           isFavorite: false,
           isTrashed: false,
-          parentId: null, // Clones are created at root for clear access
+          parentId: null,
         };
-        
         const docRef = await addDoc(collection(firestore, 'collaboration_pages'), newPage);
         router.push(`/workspace/${docRef.id}`);
-        toast({ 
-            title: 'Document duplicated', 
-            description: 'A professional copy has been created and attributed to you.' 
-        });
+        toast({ title: 'Document duplicated' });
       }
     } catch (error) {
       console.error("Duplication failed:", error);
-      toast({ variant: 'destructive', title: 'Action failed', description: 'The server was unable to clone this document.' });
     }
   }, [firestore, authUser, companyId, router, toast]);
 
@@ -183,18 +162,9 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     if (!firestore) return;
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
-        await updateDoc(pageRef, {
-            isTrashed: true,
-            trashedAt: serverTimestamp()
-        });
-        
-        if (pathname.includes(pageId)) {
-            router.push('/workspace');
-        }
-        toast({ 
-            title: 'Document archived', 
-            description: 'The file has been moved to the trash bin.' 
-        });
+        await updateDoc(pageRef, { isTrashed: true, trashedAt: serverTimestamp() });
+        if (pathname.includes(pageId)) router.push('/workspace');
+        toast({ title: 'Document archived' });
     } catch (error) {
         console.error("Error moving to trash:", error);
     }
@@ -204,14 +174,8 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     if (!firestore) return;
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
-        await updateDoc(pageRef, {
-            isTrashed: false,
-            trashedAt: null
-        });
-        toast({ 
-            title: 'Asset restored', 
-            description: 'The document has been successfully moved back to the active directory.' 
-        });
+        await updateDoc(pageRef, { isTrashed: false, trashedAt: null });
+        toast({ title: 'Asset restored' });
     } catch (error) {
         console.error("Error restoring page:", error);
     }
@@ -221,10 +185,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
-        toast({ 
-            title: 'Protocol: Data Purge', 
-            description: 'This document has been permanently removed.' 
-        });
+        toast({ title: 'Document permanently removed' });
     } catch (error) {
         console.error("Error deleting permanently:", error);
     }
@@ -235,9 +196,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isFavorite });
-        toast({ 
-            title: isFavorite ? 'Added to favorites' : 'Removed from favorites'
-        });
+        toast({ title: isFavorite ? 'Added to favorites' : 'Removed from favorites' });
     } catch (error) {
         console.error("Error toggling favorite:", error);
     }
@@ -256,51 +215,37 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
     const handleRequestTrashPage = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            handleSoftDelete(customEvent.detail.pageId);
-        }
+        if (customEvent.detail?.pageId) handleSoftDelete(customEvent.detail.pageId);
     };
 
     const handleRequestRestorePage = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            handleRestorePage(customEvent.detail.pageId);
-        }
+        if (customEvent.detail?.pageId) handleRestorePage(customEvent.detail.pageId);
     };
 
     const handleRequestPermanentDelete = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            handlePermanentDelete(customEvent.detail.pageId);
-        }
+        if (customEvent.detail?.pageId) handlePermanentDelete(customEvent.detail.pageId);
     };
 
     const handleRequestFavorite = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            handleFavoriteToggle(customEvent.detail.pageId, customEvent.detail.isFavorite);
-        }
+        if (customEvent.detail?.pageId) handleFavoriteToggle(customEvent.detail.pageId, customEvent.detail.isFavorite);
     };
 
     const handleRequestShare = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            setSharingPageId(customEvent.detail.pageId);
-        }
+        if (customEvent.detail?.pageId) setSharingPageId(customEvent.detail.pageId);
     };
 
     const handleRequestDuplicate = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            handleDuplicatePage(customEvent.detail.pageId);
-        }
+        if (customEvent.detail?.pageId) handleDuplicatePage(customEvent.detail.pageId);
     };
 
     const handleRequestMove = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail?.pageId) {
-            handleMovePage(customEvent.detail.pageId, customEvent.detail.targetParentId);
-        }
+        if (customEvent.detail?.pageId) handleMovePage(customEvent.detail.pageId, customEvent.detail.targetParentId);
     };
 
     window.addEventListener('request-new-collab-page', handleRequestNewPage);
@@ -337,7 +282,6 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
       await signOut(auth);
       router.push('/login');
     } catch (error) {
-      console.error("Logout failed", error);
       setIsLoggingOut(false);
     }
   };

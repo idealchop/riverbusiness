@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, memo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -9,27 +9,15 @@ import {
     Plus, 
     FileText, 
     Home, 
-    Search, 
-    Star, 
     Trash2, 
-    MoreHorizontal,
     PanelLeftClose,
-    X,
-    Grid,
     Layout,
-    UserCircle,
-    Users,
-    Check,
-    History,
-    Lock,
-    Copy,
     TrendingUp,
     Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import type { CollabPage, AppUser, CollabPageType } from '@/lib/types';
 import { 
     DropdownMenu, 
@@ -37,14 +25,11 @@ import {
     DropdownMenuItem, 
     DropdownMenuTrigger,
     DropdownMenuLabel,
-    DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { LogoBlack } from '@/components/icons';
-import { useCollection, useMemoFirebase, useFirestore, useDoc } from '@/firebase';
-import { collection, query, where, doc, Timestamp } from 'firebase/firestore';
+import { useMemoFirebase, useFirestore, useDoc } from '@/firebase';
+import { doc, Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -60,7 +45,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
   const [isHomeExpanded, setIsHomeExpanded] = useState(true);
   const [isActivityExpanded, setIsActivityExpanded] = useState(false);
 
-  // Active Velocity Protocol: Only show docs that have actual work (updates)
   const trendingPages = useMemo(() => {
     return [...pages]
       .filter(p => !p.isTrashed && p.updatedAt)
@@ -123,10 +107,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                     <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
                                     Rich Text Document
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Sheet', 'sheet')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
-                                    <div className="p-1.5 rounded-lg bg-green-50 text-green-600"><Grid className="h-4 w-4" /></div>
-                                    Operational Sheet
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Board', 'board')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
                                     <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
                                     Visual Whiteboard
@@ -152,15 +132,6 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                             )}>
                                 <FileText className="h-3.5 w-3.5 text-blue-500" />
                                 <span>Documents</span>
-                            </div>
-                        </Link>
-                        <Link href="/workspace/sheets">
-                            <div className={cn(
-                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold",
-                                pathname === '/workspace/sheets' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
-                            )}>
-                                <Grid className="h-3.5 w-3.5 text-green-600" />
-                                <span>Sheets</span>
                             </div>
                         </Link>
                         <Link href="/workspace/boards">
@@ -236,7 +207,6 @@ function TrendingItem({ page, isActive }: { page: CollabPage, isActive: boolean 
     const getIcon = () => {
         if (page.icon) return <span className="text-sm leading-none">{page.icon}</span>;
         switch (page.type) {
-            case 'sheet': return <Grid className="h-3.5 w-3.5 text-green-600" />;
             case 'board': return <Layout className="h-3.5 w-3.5 text-purple-600" />;
             default: return <FileText className="h-3.5 w-3.5 text-blue-500" />;
         }
