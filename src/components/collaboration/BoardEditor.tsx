@@ -87,6 +87,7 @@ import {
     CornerDownRight,
     Triangle,
     ChevronDown,
+    ChevronRight,
     Zap,
     Minus,
     MoreHorizontal,
