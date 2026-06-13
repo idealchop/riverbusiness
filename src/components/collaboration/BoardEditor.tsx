@@ -84,7 +84,10 @@ import {
     AlignLeft,
     AlignRight,
     Type as TypeIcon,
-    CornerDownRight
+    CornerDownRight,
+    Triangle,
+    ChevronDown,
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -199,6 +202,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<'select' | 'hand' | 'arrow' | 'pen'>('select');
+  const [arrowType, setArrowType] = useState<'straight' | 'curved' | 'step'>('curved');
   
   const [isPanning, setIsPanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -522,7 +526,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           });
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
-              const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnFrom, toId: targetHit.id, type: 'curved' };
+              const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnFrom, toId: targetHit.id, type: arrowType };
               setConnections(prev => {
                   const next = [...prev, newConn];
                   setTimeout(() => sync(elements, next), 0);
@@ -571,7 +575,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       sync(nextElements, connections);
   };
 
-  const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string) => {
+  const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string, type: 'straight' | 'curved' | 'step' = 'curved') => {
       const from = elements.find(e => e.id === fromId);
       if (!from) return '';
       const x1 = from.x + from.width / 2;
@@ -581,6 +585,16 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const to = elements.find(e => e.id === toId);
           if (to) { x2 = to.x + to.width / 2; y2 = to.y + to.height / 2; }
       }
+
+      if (type === 'straight') {
+          return `M ${x1} ${y1} L ${x2} ${y2}`;
+      }
+
+      if (type === 'step') {
+          const midX = x1 + (x2 - x1) / 2;
+          return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+      }
+
       const cp1x = x1 + (x2 - x1) / 2, cp1y = y1, cp2x = x1 + (x2 - x1) / 2, cp2y = y2;
       return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
   };
@@ -596,7 +610,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none h-full font-sans">
         {/* Left Toolbar */}
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-4">
                 <DraggableTool icon={<TypeIcon className="h-5 w-5 text-slate-900" />} type="text" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} />
                 <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} />
                 <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} />
@@ -606,24 +620,26 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <Popover onOpenChange={() => setAssetSearch('')}>
                     <PopoverTrigger asChild>
                         <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm text-primary">
-                            <Sparkles className="h-5 w-5" />
+                            <Plus className="h-5 w-5" />
                         </button>
                     </PopoverTrigger>
                     <PopoverContent side="right" className="w-80 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2 overflow-hidden z-50">
                         <div className="p-4 bg-slate-50 border-b">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">More Tools</p>
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                                <Input placeholder="Search assets..." className="pl-8 h-9 text-xs rounded-xl bg-white border-none shadow-inner" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} />
+                                <Input placeholder="Find assets..." className="pl-8 h-9 text-xs rounded-xl bg-white border-none shadow-inner" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} />
                             </div>
                         </div>
-                        <ScrollArea className="h-[400px]">
+                        <ScrollArea className="h-[480px]">
                             <div className="p-4 space-y-6">
                                 <div className="space-y-3">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Emojis</p>
-                                    <div className="grid grid-cols-6 gap-2">
-                                        {filteredAssets.emojis.map(emoji => (
-                                            <div key={emoji} draggable onDragStart={(e) => { e.dataTransfer.setData('elType', 'text'); e.dataTransfer.setData('elText', emoji); e.dataTransfer.setData('elFontSize', '48'); }} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl cursor-grab transition-colors">{emoji}</div>
-                                        ))}
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Flow Shapes</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        <DraggableTool variant="mini" icon={<Triangle className="h-4 w-4" />} type="triangle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'triangle')} />
+                                        <DraggableTool variant="mini" icon={<LayoutTemplate className="h-4 w-4" />} type="parallelogram" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'parallelogram')} />
+                                        <DraggableTool variant="mini" icon={<Database className="h-4 w-4" />} type="cylinder" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cylinder')} />
+                                        <DraggableTool variant="mini" icon={<PlusCircle className="h-4 w-4" />} type="capsule" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'capsule')} />
                                     </div>
                                 </div>
                                 <div className="space-y-3">
@@ -631,6 +647,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     <div className="grid grid-cols-6 gap-2">
                                         {filteredAssets.icons.map(asset => (
                                             <div key={asset.name} draggable onDragStart={(e) => { e.dataTransfer.setData('elType', 'icon'); e.dataTransfer.setData('iconName', asset.name); }} className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-grab transition-all group"><asset.icon className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" /></div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Emojis</p>
+                                    <div className="grid grid-cols-6 gap-2">
+                                        {filteredAssets.emojis.map(emoji => (
+                                            <div key={emoji} draggable onDragStart={(e) => { e.dataTransfer.setData('elType', 'text'); e.dataTransfer.setData('elText', emoji); e.dataTransfer.setData('elFontSize', '48'); }} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl cursor-grab transition-colors">{emoji}</div>
                                         ))}
                                     </div>
                                 </div>
@@ -645,7 +669,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
                 <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
-                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
+                <div className="flex flex-col gap-1">
+                    <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
+                    {tool === 'arrow' && (
+                        <div className="flex flex-col gap-1 p-1 bg-slate-100 rounded-lg animate-in slide-in-from-top-1 duration-200">
+                             <button onClick={() => setArrowType('curved')} className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'curved' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                                <Repeat className="h-3 w-3" />
+                             </button>
+                             <button onClick={() => setArrowType('straight')} className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'straight' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                                <Minus className="h-3 w-3" />
+                             </button>
+                             <button onClick={() => setArrowType('step')} className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'step' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                                <CornerDownRight className="h-3 w-3" />
+                             </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </aside>
 
@@ -679,12 +718,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     </defs>
                     {connections.map(conn => (
                         <g key={conn.id} className="group/conn pointer-events-none">
-                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} fill="none" stroke="transparent" strokeWidth="20" className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setConnections(prev => prev.filter(c => c.id !== conn.id)); sync(elements, connections.filter(c => c.id !== conn.id)); }} />
-                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} fill="none" stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" className="transition-colors" />
+                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId, conn.type)} fill="none" stroke="transparent" strokeWidth="20" className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setConnections(prev => prev.filter(c => c.id !== conn.id)); sync(elements, connections.filter(c => c.id !== conn.id)); }} />
+                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId, conn.type)} fill="none" stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" className="transition-colors" />
                         </g>
                     ))}
                     {pendingConnFrom && currentMouseCoords && (
-                        <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#arrowhead)" />
+                        <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y, undefined, arrowType)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#arrowhead)" />
                     )}
                     {elements.filter(el => el.type === 'path').map(el => (
                         <path key={el.id} d={el.path} fill="none" stroke={el.color || '#3b82f6'} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" />
@@ -698,17 +737,38 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     const IconComp = el.type === 'icon' ? ASSET_ICONS.find(i => i.name === el.iconName)?.icon : null;
                     return (
                         <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
-                            <div className={cn("w-full h-full p-4 flex flex-col items-center justify-center relative overflow-hidden shadow-lg", el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg", el.type === 'rect' && "border-2 border-slate-900 rounded-xl", el.type === 'circle' && "border-2 border-slate-900 rounded-full", el.type === 'diamond' && "border-2 border-slate-900 rotate-45", (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none")} style={{ backgroundColor: (el.type === 'text' || el.type === 'icon') ? 'transparent' : el.color }}>
-                                <div className={cn("w-full h-full flex flex-col justify-center", el.type === 'diamond' && "-rotate-45")}>
+                            <div className={cn(
+                                "w-full h-full flex flex-col items-center justify-center relative overflow-hidden shadow-lg", 
+                                el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg", 
+                                el.type === 'rect' && "border-2 border-slate-900 rounded-xl", 
+                                el.type === 'circle' && "border-2 border-slate-900 rounded-full", 
+                                el.type === 'diamond' && "border-2 border-slate-900 rotate-45",
+                                el.type === 'triangle' && "bg-transparent border-none p-0 shadow-none",
+                                el.type === 'parallelogram' && "border-2 border-slate-900",
+                                el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
+                                el.type === 'capsule' && "border-2 border-slate-900 rounded-full",
+                                (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none"
+                            )} style={{ 
+                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'triangle') ? 'transparent' : el.color,
+                                clipPath: el.type === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : undefined,
+                                transform: el.type === 'parallelogram' ? 'skewX(-20deg)' : undefined
+                            }}>
+                                {el.type === 'triangle' && <div className="absolute inset-0 border-2 border-slate-900" style={{ backgroundColor: el.color, clipPath: 'inherit' }} />}
+                                
+                                <div className={cn(
+                                    "w-full h-full flex flex-col justify-center relative z-10", 
+                                    el.type === 'diamond' && "-rotate-45",
+                                    el.type === 'parallelogram' && "skew-x-[20deg]"
+                                )}>
                                     {el.type === 'icon' && IconComp ? (
                                         <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
                                     ) : (
-                                        <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
+                                        <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap p-2" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
                                             {el.text}
                                         </div>
                                     )}
                                 </div>
-                                {isSelected && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
+                                {isSelected && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
                             </div>
                             {(isHovered || isSelected) && !isDragging && <div className="absolute inset-0 pointer-events-none"><Port side="top" id={el.id} /><Port side="right" id={el.id} /><Port side="bottom" id={el.id} /><Port side="left" id={el.id} /></div>}
                         </div>
@@ -817,9 +877,12 @@ function ToolbarItem({ icon, active = false, onClick }: any) {
     );
 }
 
-function DraggableTool({ icon, type, onDragStart }: any) {
+function DraggableTool({ icon, type, onDragStart, variant = 'default' }: any) {
     return (
-        <div draggable onDragStart={onDragStart} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative">
+        <div draggable onDragStart={onDragStart} className={cn(
+            "flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
+            variant === 'default' ? "w-10 h-10" : "w-12 h-12"
+        )}>
             {icon}
         </div>
     );
