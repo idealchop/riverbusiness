@@ -76,13 +76,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
   return (
     <div className={cn(
-      "bg-slate-50/80 border-r transition-all duration-300 flex flex-col h-full group/sidebar shrink-0 relative",
+      "bg-slate-50/80 border-r flex flex-col h-full group/sidebar shrink-0 relative",
       isOpen ? "w-72" : "w-0 overflow-hidden border-none"
     )}>
       <div className="p-6 shrink-0 space-y-6">
         <div className="flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-3">
-                <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
+                <LogoBlack className="h-10 w-10" />
                 <div className="flex flex-col">
                     <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Collab</span>
                     <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Workspace</span>
@@ -99,7 +99,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
             {/* Quick Navigation Hub */}
             <div className="space-y-1">
                 <div className={cn(
-                    "group/home flex items-center h-8 rounded-lg transition-all pr-1",
+                    "group/home flex items-center h-8 rounded-lg pr-1",
                     isWorkspaceHomeActive ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50"
                 )}>
                     <Link href="/workspace" className="flex-1 flex items-center gap-3 px-3 h-full min-w-0">
@@ -112,7 +112,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                     <div className="flex items-center gap-0.5 shrink-0">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="h-7 w-7 rounded-lg hover:bg-slate-200/50 flex items-center justify-center text-slate-400 hover:text-primary transition-all">
+                                <button className="h-7 w-7 rounded-lg hover:bg-slate-200/50 flex items-center justify-center text-slate-400 hover:text-primary">
                                     <Plus className="h-3.5 w-3.5" />
                                 </button>
                             </DropdownMenuTrigger>
@@ -135,7 +135,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
 
                         <button 
                             onClick={() => setIsHomeExpanded(!isHomeExpanded)}
-                            className="h-7 w-7 rounded-lg hover:bg-slate-200/50 flex items-center justify-center transition-colors text-slate-400"
+                            className="h-7 w-7 rounded-lg hover:bg-slate-200/50 flex items-center justify-center text-slate-400"
                         >
                             {isHomeExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </button>
@@ -143,10 +143,10 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                 </div>
                 
                 {isHomeExpanded && (
-                    <div className="pl-6 space-y-0.5 animate-in slide-in-from-top-1 duration-200">
+                    <div className="pl-6 space-y-0.5">
                         <Link href="/workspace/docs">
                             <div className={cn(
-                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold transition-all",
+                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold",
                                 pathname === '/workspace/docs' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <FileText className="h-3 w-3 text-blue-500" />
@@ -155,7 +155,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         </Link>
                         <Link href="/workspace/sheets">
                             <div className={cn(
-                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold transition-all",
+                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold",
                                 pathname === '/workspace/sheets' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <Grid className="h-3 w-3 text-green-600" />
@@ -164,7 +164,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                         </Link>
                         <Link href="/workspace/boards">
                             <div className={cn(
-                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold transition-all",
+                                "flex items-center h-8 gap-3 px-3 rounded-lg text-xs font-semibold",
                                 pathname === '/workspace/boards' ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"
                             )}>
                                 <Layout className="h-3 w-3 text-purple-600" />
@@ -234,7 +234,7 @@ function TrendingItem({ page, isActive }: { page: CollabPage, isActive: boolean 
     return (
         <Link href={`/workspace/${page.id}`}>
             <div className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group",
+                "flex items-center gap-3 px-3 py-2 rounded-xl group",
                 isActive ? "bg-white shadow-sm ring-1 ring-slate-100" : "hover:bg-white hover:shadow-sm"
             )}>
                 <div className="w-4 h-4 shrink-0 flex items-center justify-center">

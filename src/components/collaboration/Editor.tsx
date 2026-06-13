@@ -109,12 +109,12 @@ const PageLinkBlock = ({ node, deleteNode }: any) => {
     };
 
     return (
-        <NodeViewWrapper className="my-2 relative group/page-link">
+        <NodeViewWrapper className="my-2 relative">
             <div 
                 onClick={handleNavigate}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 bg-white transition-all group/item cursor-pointer shadow-sm"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-white group/item cursor-pointer shadow-sm"
             >
-                <div className="w-8 h-8 shrink-0 flex items-center justify-center bg-slate-50 group-hover/item:bg-white rounded-lg shadow-inner">
+                <div className="w-8 h-8 shrink-0 flex items-center justify-center bg-slate-50 rounded-lg shadow-inner">
                     {icon ? (
                         <span className="text-sm select-none">{icon}</span>
                     ) : (
@@ -124,12 +124,12 @@ const PageLinkBlock = ({ node, deleteNode }: any) => {
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold text-slate-700 truncate block underline-offset-4 group-hover/item:underline decoration-slate-300">
+                    <span className="text-sm font-bold text-slate-700 truncate block underline-offset-4 decoration-slate-300">
                         {title || 'Untitled Document'}
                     </span>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">Linked Document</p>
                 </div>
-                <div className="ml-auto opacity-0 group-hover/page-link:opacity-100 flex items-center gap-1 transition-opacity">
+                <div className="ml-auto flex items-center gap-1">
                     <Button 
                         variant="ghost" 
                         size="icon" 
@@ -169,13 +169,13 @@ const SpreadsheetBlock = ({ node, updateAttributes, deleteNode, extension }: any
     const [isFullSize, setIsFullSize] = useState(false);
 
     return (
-        <NodeViewWrapper className="my-10 relative group/block border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white transition-all">
-            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-opacity">
+        <NodeViewWrapper className="my-10 relative border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white">
+            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5">
                 <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Sheet</Badge>
                 <Button 
                     variant="secondary" 
                     size="icon" 
-                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900 hover:bg-white"
+                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900"
                     onClick={() => setIsFullSize(true)}
                 >
                     <Maximize className="h-4 w-4" />
@@ -224,13 +224,13 @@ const CanvasBlock = ({ node, updateAttributes, deleteNode, extension }: any) => 
     const [isFullSize, setIsFullSize] = useState(false);
 
     return (
-        <NodeViewWrapper className="my-10 relative group/block border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white transition-all">
-            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-opacity">
+        <NodeViewWrapper className="my-10 relative border border-slate-100 rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-white">
+            <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5">
                 <Badge className="bg-slate-900/80 backdrop-blur-md text-white border-none font-bold uppercase text-[8px] tracking-widest px-3 h-6">Canvas</Badge>
                 <Button 
                     variant="secondary" 
                     size="icon" 
-                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900 hover:bg-white"
+                    className="h-8 w-8 rounded-xl shadow-lg bg-white/90 backdrop-blur-md text-slate-900"
                     onClick={() => setIsFullSize(true)}
                 >
                     <Maximize className="h-4 w-4" />
@@ -625,9 +625,9 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
       {editable && !editor.isDestroyed && (
         <TooltipProvider delayDuration={0}>
-          <div className="sticky top-14 z-30 mx-auto w-full sm:w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl p-1.5 rounded-2xl sm:rounded-[2rem] flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-all hover:opacity-100 mb-4 animate-in fade-in duration-500 overflow-hidden">
+          <div className="sticky top-14 z-30 mx-auto w-full sm:w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-lg p-1.5 rounded-2xl sm:rounded-[2rem] flex flex-col items-center gap-1 mb-4 overflow-hidden">
               {(isAiProcessing || isUploading) && (
-                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap animate-in slide-in-from-bottom-2 duration-300 shadow-xl border border-white/10 z-50">
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap shadow-xl border border-white/10 z-50">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">
@@ -639,7 +639,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
               <div className="flex items-center w-full overflow-x-auto scrollbar-none px-2 sm:px-0 gap-0.5">
                   <div className="flex items-center px-1 shrink-0">
-                      <Button onClick={() => setShowAiToolbar(!showAiToolbar)} className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-widest transition-all", showAiToolbar ? "bg-primary text-white shadow-lg scale-105" : "bg-slate-900 text-white hover:bg-slate-800")}>
+                      <Button onClick={() => setShowAiToolbar(!showAiToolbar)} className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-widest", showAiToolbar ? "bg-primary text-white shadow-lg" : "bg-slate-900 text-white hover:bg-slate-800")}>
                           <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} /> Assistant
                       </Button>
                   </div>
@@ -651,8 +651,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 transition-all group">
-                                        <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100 group">
+                                        <Plus className="h-5 w-5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                             </TooltipTrigger>
@@ -723,14 +723,14 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
               </div>
 
               {showAiToolbar && (
-                  <div className="w-full px-2 py-1.5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                  <div className="w-full px-2 py-1.5 flex flex-col gap-2">
                       <div className="flex items-center gap-1.5 w-full overflow-x-auto scrollbar-none px-2">
                         <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
                         <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
                       </div>
                       <div className="flex items-center gap-2 px-2 pb-1 w-full">
-                          <Input placeholder="Ask AI to do something..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0" />
+                          <Input placeholder="Ask AI to do something..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0 shadow-none" />
                           <Button disabled={!customGoal.trim()} onClick={() => callAiAssistant('custom', customGoal)} size="icon" className="h-9 w-9 rounded-xl shrink-0"><Send className="h-3.5 w-3.5" /></Button>
                       </div>
                   </div>
@@ -740,7 +740,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       )}
 
       {aiPreview && (
-          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-500 w-[90%] sm:w-auto">
+          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] w-[90%] sm:w-auto">
               <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-4 sm:px-6 flex items-center gap-6 border border-white/10">
                 <div className="flex items-center gap-3">
                     <div className="p-1.5 sm:p-2 rounded-full bg-primary/20 text-primary shrink-0"><Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>
@@ -757,11 +757,11 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
       {editable && !editor.isDestroyed && (
         <FloatingMenu editor={editor} tippyOptions={{ duration: 100 }}>
-          <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-1 animate-in zoom-in-95 duration-200">
+          <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-1">
              <TooltipProvider delayDuration={0}>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <button onClick={() => setIsLinkPageOpen(true)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all">
+                        <button onClick={() => setIsLinkPageOpen(true)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100">
                             <LinkIcon className="h-4 w-4" />
                         </button>
                     </TooltipTrigger>
@@ -769,7 +769,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 </Tooltip>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <button onClick={handleInsertSpreadsheet} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-all">
+                        <button onClick={handleInsertSpreadsheet} className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-100">
                             <Grid className="h-5 w-5" />
                         </button>
                     </TooltipTrigger>
@@ -777,7 +777,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 </Tooltip>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <button onClick={handleInsertCanvas} className="h-10 w-10 flex items-center justify-center rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all">
+                        <button onClick={handleInsertCanvas} className="h-10 w-10 flex items-center justify-center rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100">
                             <Layout className="h-5 w-5" />
                         </button>
                     </TooltipTrigger>
@@ -788,7 +788,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         </FloatingMenu>
       )}
 
-      <div className={cn("transition-opacity", (isAiProcessing && editor.isEmpty) ? "opacity-20" : "opacity-100")} onClick={() => editor?.commands.focus()}>
+      <div onClick={() => editor?.commands.focus()}>
         <EditorContent editor={editor} />
       </div>
 
@@ -800,7 +800,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                     <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Organizational Asset Index</DialogDescription>
                 </DialogHeader>
                 <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-primary transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                     <Input 
                         autoFocus
                         placeholder="Search team library..." 
@@ -816,7 +816,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                         <button 
                             key={p.id} 
                             onClick={() => handleInsertPageLink(p)}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all text-left group"
+                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-left group"
                         >
                             <div className="h-8 w-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center shadow-sm shrink-0">
                                 {p.icon ? (
@@ -828,7 +828,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                                 )}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-700 truncate group-hover:text-primary transition-colors">{p.title || 'Untitled'}</p>
+                                <p className="text-sm font-bold text-slate-700 truncate group-hover:text-primary">{p.title || 'Untitled'}</p>
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">{p.type}</p>
                             </div>
                         </button>
@@ -857,7 +857,7 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); onClick(); }} disabled={disabled}
-                    className={cn("h-8 w-8 rounded-xl transition-all shrink-0", active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100")}>
+                    className={cn("h-8 w-8 rounded-xl shrink-0", active ? "bg-primary text-white shadow-lg" : "text-slate-500 hover:bg-slate-100")}>
                     {icon}
                 </Button>
             </TooltipTrigger>
@@ -870,7 +870,7 @@ function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
 
 function AiAction({ icon, label, onClick }: any) {
     return (
-        <Button variant="ghost" size="sm" onClick={onClick} className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary transition-all shrink-0 whitespace-nowrap">
+        <Button variant="ghost" size="sm" onClick={onClick} className="h-8 rounded-xl px-3 gap-2 font-bold text-[9px] uppercase tracking-widest text-slate-500 hover:bg-white hover:text-primary shrink-0 whitespace-nowrap">
             {icon} {label}
         </Button>
     );

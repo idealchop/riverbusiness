@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -152,7 +152,7 @@ export default function SheetsHubPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        <button onClick={() => setCurrentFolderId(null)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 transition-colors">
+                        <button onClick={() => setCurrentFolderId(null)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400">
                             <Home className="h-4 w-4" />
                         </button>
                         <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
@@ -179,7 +179,7 @@ export default function SheetsHubPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
                 <div className="flex items-center gap-3 flex-1">
                     <div className="relative w-full md:w-96 group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-green-600 transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-green-600" />
                         <Input 
                             placeholder="Search ledgers and data..." 
                             value={searchTerm}
@@ -237,7 +237,7 @@ export default function SheetsHubPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                     {isLoading ? (
                         Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="aspect-[4/5] rounded-[1.5rem] bg-slate-50 animate-pulse" />
+                            <div key={i} className="aspect-[4/5] rounded-[1.5rem] bg-slate-50" />
                         ))
                     ) : filteredAssets.map(asset => (
                         <AssetCard 
@@ -339,26 +339,26 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
             onDragLeave={() => setIsOver(false)}
             onDrop={handleDrop}
             className={cn(
-                "border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200",
-                isOver && "ring-2 ring-primary ring-offset-2 scale-[1.02] bg-blue-50/30"
+                "border-none shadow-none bg-white rounded-2xl overflow-hidden",
+                isOver && "ring-2 ring-primary ring-offset-2 bg-blue-50/30"
             )}
         >
             <div className={cn(
-                "relative aspect-[1.4/1] w-full border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:bg-slate-50/30 overflow-hidden",
-                isFolder ? "bg-slate-100 group-hover:border-green-600/20" : "bg-slate-50 group-hover:border-green-600/20"
+                "relative aspect-[1.4/1] w-full border border-slate-100 rounded-2xl flex items-center justify-center overflow-hidden",
+                isFolder ? "bg-slate-100" : "bg-slate-50"
             )}>
                 {page.coverImage ? (
-                    <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <Image src={page.coverImage} alt={page.title} fill className="object-cover" />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
                 )}
 
-                <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
+                <div className="relative z-10">
                     {page.icon ? (
                         <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
                     ) : (
                         <div className={cn(
-                            "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600 transition-all",
+                            "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600",
                             page.coverImage && "bg-white/90 backdrop-blur-md border-white/50"
                         )}>
                             {isFolder ? <Folder className="h-8 w-8 fill-current" /> : <Grid className="h-8 w-8" />}
@@ -370,7 +370,7 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
             <CardContent className="p-4 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight group-hover:text-green-600 transition-colors">
+                        <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight">
                             {page.title || 'Untitled ledger'}
                         </h3>
                         <div className="flex items-center gap-2 mt-1.5">

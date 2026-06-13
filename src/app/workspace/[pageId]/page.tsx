@@ -186,7 +186,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors">
+                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center">
                     <Share2 className="h-4 w-4" />
                 </button>
             </PopoverTrigger>
@@ -215,7 +215,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Shareable link</Label>
                                 <div className="flex gap-2">
                                     <Input readOnly value={shareUrl} className="h-11 rounded-xl bg-slate-50 border-slate-100 font-mono text-[10px] shadow-inner truncate" />
-                                    <Button onClick={copyLink} variant="outline" className={cn("h-11 px-4 rounded-xl border-slate-100 shadow-sm font-bold text-xs shrink-0 transition-all", hasCopied ? "bg-green-50 text-green-700 border-green-100" : "bg-white")}>
+                                    <Button onClick={copyLink} variant="outline" className={cn("h-11 px-4 rounded-xl border-slate-100 shadow-sm font-bold text-xs shrink-0", hasCopied ? "bg-green-50 text-green-700 border-green-100" : "bg-white")}>
                                         {hasCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                     </Button>
                                 </div>
@@ -442,7 +442,7 @@ function PageEditorContent() {
     )}>
         {pageType === 'doc' && (
             <>
-                {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-4xl sm:text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6 opacity-0 group/icon:opacity-100"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
+                {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-4xl sm:text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
                 {!page.isTrashed && (
                     <div className="flex flex-wrap items-center gap-6 mb-6 mt-4">
                         <div className="flex items-center gap-2.5">
@@ -569,7 +569,7 @@ function PageEditorContent() {
                             <button 
                                 onClick={() => handleUpdateMeta({ isPrivate: !page.isPrivate })}
                                 className={cn(
-                                    "h-8 w-8 rounded-lg transition-all flex items-center justify-center",
+                                    "h-8 w-8 rounded-lg flex items-center justify-center",
                                     page.isPrivate ? "bg-amber-50 text-amber-600" : "text-slate-400 hover:text-slate-900 hover:bg-slate-50"
                                 )}
                             >
@@ -608,11 +608,11 @@ function PageEditorContent() {
                     </DropdownMenu>
                 ) : (
                     <>
-                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"><FilePlus className="h-4 w-4" /></button>
-                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors"><Copy className="h-4 w-4" /></button>
-                        <button className={cn("h-8 w-8 rounded-lg transition-colors flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button>
+                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button>
+                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><Copy className="h-4 w-4" /></button>
+                        <button className={cn("h-8 w-8 rounded-lg flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button>
                         <SharePopover page={page} onUpdate={handleUpdateMeta} />
-                        <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
+                        <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
                     </>
                 )}
             </div>
@@ -626,7 +626,7 @@ function PageEditorContent() {
                   {page.coverImage && (
                       <div className="h-[20vh] sm:h-[30vh] w-full relative group">
                           <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
-                          {!page.isTrashed && <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest">Change</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
+                          {!page.isTrashed && <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-8 flex gap-2"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest">Change</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
                       </div>
                   )}
                   {editorContainer}
