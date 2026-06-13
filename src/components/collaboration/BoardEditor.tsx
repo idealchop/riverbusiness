@@ -78,7 +78,12 @@ import {
     ListTodo,
     Compass,
     Keyboard,
-    Command
+    Command,
+    Type,
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    Type as TypeIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -101,6 +106,8 @@ import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
 interface BoardEditorProps {
   initialData: any;
@@ -175,47 +182,12 @@ const BLUEPRINTS = [
             { id: 'c3', fromId: 'center', toId: 'b3', type: 'curved' },
             { id: 'c4', fromId: 'center', toId: 'b4', type: 'curved' }
         ]
-    },
-    {
-        id: 'bp-journey',
-        name: 'User Journey',
-        description: 'Map customer experience phases.',
-        icon: Map,
-        elements: [
-            { id: 'j1', type: 'circle', x: 50, y: 200, width: 100, height: 100, text: 'Awareness', color: '#f1f5f9', bold: true },
-            { id: 'j2', type: 'circle', x: 250, y: 200, width: 100, height: 100, text: 'Consideration', color: '#f1f5f9', bold: true },
-            { id: 'j3', type: 'circle', x: 450, y: 200, width: 100, height: 100, text: 'Conversion', color: '#f1f5f9', bold: true },
-            { id: 'j4', type: 'circle', x: 650, y: 200, width: 100, height: 100, text: 'Loyalty', color: '#f1f5f9', bold: true }
-        ],
-        connections: [
-            { id: 'jc1', fromId: 'j1', toId: 'j2', type: 'straight' },
-            { id: 'jc2', fromId: 'j2', toId: 'j3', type: 'straight' },
-            { id: 'jc3', fromId: 'j3', toId: 'j4', type: 'straight' }
-        ]
-    },
-    {
-        id: 'bp-workflow',
-        name: 'Logic Flow',
-        description: 'Decision tree for operations.',
-        icon: Workflow,
-        elements: [
-            { id: 'start', type: 'circle', x: 100, y: 200, width: 100, height: 100, text: 'Start', color: '#f1f5f9', bold: true },
-            { id: 'step1', type: 'rect', x: 280, y: 175, width: 180, height: 150, text: 'Task 1', color: '#ffffff', bold: true },
-            { id: 'decision', type: 'diamond', x: 540, y: 175, width: 150, height: 150, text: 'Decision?', color: '#f3e8ff', bold: true },
-            { id: 'end', type: 'circle', x: 800, y: 200, width: 100, height: 100, text: 'End', color: '#f1f5f9', bold: true }
-        ],
-        connections: [
-            { id: 'c1', fromId: 'start', toId: 'step1', type: 'curved' },
-            { id: 'c2', fromId: 'step1', toId: 'decision', type: 'curved' },
-            { id: 'c3', fromId: 'decision', toId: 'end', type: 'curved' }
-        ]
     }
 ];
 
 const EMOJIS = [
     '🚀', '💡', '✅', '⚠️', '📊', '🏢', '💧', '🌊', '⭐', '🔥', '⚡', '🎨', '💬', '📍', '🎯', '💰', '🚛', '🏗️', '🛠️', '🛡️',
-    '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆',
-    '🌈', '💎', '🌍', '🏠', '🔔', '📢', '💼', '📦', '🖊️', '✒️', '📈', '📊', '💹', '⚙️', '⛏️', '🔧', '🔨'
+    '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆'
 ];
 
 const ASSET_ICONS = [
@@ -304,6 +276,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const selectedElement = useMemo(() => {
+    if (selectedIds.length !== 1) return null;
+    return elements.find(el => el.id === selectedIds[0]);
+  }, [selectedIds, elements]);
+
   useEffect(() => {
       if (initialData?.elements) setElements(initialData.elements);
       if (initialData?.connections) setConnections(initialData.connections);
@@ -329,8 +306,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     setElements(prevState.elements);
     setConnections(prevState.connections);
     sync(prevState.elements, prevState.connections);
-    toast({ title: 'Undo successful', description: 'Previous action has been reversed.' });
-  }, [history, editable, sync, toast]);
+  }, [history, editable, sync]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -377,61 +353,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       return id;
   };
 
-  const deleteConnection = useCallback((id: string) => {
-      if (!editable) return;
-      pushHistory();
-      setConnections(prev => {
-          const next = prev.filter(c => c.id !== id);
-          setTimeout(() => sync(elements, next), 0);
-          return next;
-      });
-      toast({ title: 'Link removed', description: 'Connection between elements has been deleted.' });
-  }, [editable, elements, sync, pushHistory, toast]);
-
-  const applyBlueprint = (blueprint: typeof BLUEPRINTS[0]) => {
-      if (!editable) return;
-      pushHistory();
-      
-      const offsetX = (100 - viewport.x) / viewport.scale;
-      const offsetY = (100 - viewport.y) / viewport.scale;
-      const timestamp = Date.now();
-      const randomSuffix = () => Math.random().toString(36).substr(2, 5);
-
-      const newElements: BoardElement[] = blueprint.elements.map(el => ({
-          ...el,
-          id: `${el.id}-${timestamp}-${randomSuffix()}`,
-          x: el.x + offsetX,
-          y: el.y + offsetY,
-          type: el.type as any,
-          text: el.text || '',
-          color: el.color || '#ffffff',
-          width: el.width || 150,
-          height: el.height || 150
-        }));
-
-      const newConnections: BoardConnection[] = blueprint.connections.map(conn => {
-          const fromIdx = blueprint.elements.findIndex(e => e.id === conn.fromId);
-          const toIdx = blueprint.elements.findIndex(e => e.id === conn.toId);
-          
-          if (fromIdx === -1 || toIdx === -1) return null;
-
-          return {
-              ...conn,
-              id: `${conn.id}-${timestamp}-${randomSuffix()}`,
-              fromId: newElements[fromIdx].id,
-              toId: newElements[toIdx].id,
-              type: conn.type as any
-          };
-      }).filter((c): c is BoardConnection => c !== null);
-
-      const finalElements = [...elements, ...newElements];
-      const finalConnections = [...connections, ...newConnections];
-
-      setElements(finalElements);
-      setConnections(finalConnections);
-      sync(finalElements, finalConnections);
-  };
-
   const deleteSelected = useCallback(() => {
       if (!editable || selectedIds.length === 0) return;
       pushHistory();
@@ -445,8 +366,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return next;
       });
       setSelectedIds([]);
-      toast({ title: 'Elements deleted', description: 'Selected items have been removed from the canvas.' });
-  }, [editable, selectedIds, sync, pushHistory, toast]);
+  }, [editable, selectedIds, sync, pushHistory]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -475,39 +395,24 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       setSelectedIds(newElements.map(el => el.id));
   }, [clipboard, editable, connections, sync, pushHistory]);
 
-  const handleDuplicate = useCallback(() => {
-      if (selectedIds.length === 0 || !editable) return;
-      handleCopy();
-      handlePaste();
-  }, [selectedIds, editable, handleCopy, handlePaste]);
-
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           const activeElement = document.activeElement;
           const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
           if (!isInput) {
-            // Tool selection shortcuts
             if (e.key.toLowerCase() === 's') { e.preventDefault(); setTool('select'); }
             if (e.key.toLowerCase() === 'p') { e.preventDefault(); setTool('pen'); }
             if (e.key.toLowerCase() === 'h') { e.preventDefault(); setTool('hand'); }
             if (e.key.toLowerCase() === 'l') { e.preventDefault(); setTool('arrow'); }
-
-            // Zoom shortcuts
-            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) { e.preventDefault(); handleZoom(0.2); }
-            if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) { e.preventDefault(); handleZoom(-0.2); }
-            if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setViewport(v => ({ ...v, scale: 1 })); }
-
-            // Operational shortcuts
             if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteSelected(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'c') { e.preventDefault(); handleCopy(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'v') { e.preventDefault(); handlePaste(); }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'd') { e.preventDefault(); handleDuplicate(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
           }
       };
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedIds, deleteSelected, handleCopy, handlePaste, handleDuplicate, undo, handleZoom]);
+  }, [selectedIds, deleteSelected, handleCopy, handlePaste, undo]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
@@ -654,7 +559,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           });
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
-              const newConn: BoardConnection = { id: `conn-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, fromId: pendingConnFrom, toId: targetHit.id, type: 'curved' };
+              const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnFrom, toId: targetHit.id, type: 'curved' };
               setConnections(prev => {
                   const next = [...prev, newConn];
                   setTimeout(() => sync(elements, next), 0);
@@ -726,8 +631,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   return (
     <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none h-full font-sans">
+        {/* Left Toolbar */}
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
             <div className="flex flex-col gap-5">
+                <DraggableTool icon={<TypeIcon className="h-5 w-5 text-slate-900" />} type="text" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} />
                 <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} />
                 <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} />
                 <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} />
@@ -735,20 +642,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 
                 <Popover onOpenChange={() => setAssetSearch('')}>
                     <PopoverTrigger asChild>
-                        <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm hover:scale-105 transition-all text-primary">
+                        <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm text-primary">
                             <Sparkles className="h-5 w-5" />
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent side="right" className="w-80 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2 overflow-hidden">
+                    <PopoverContent side="right" className="w-80 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2 overflow-hidden z-50">
                         <div className="p-4 bg-slate-50 border-b">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                                <Input 
-                                    placeholder="Search assets..." 
-                                    className="pl-8 h-9 text-xs rounded-xl bg-white border-none shadow-inner"
-                                    value={assetSearch}
-                                    onChange={(e) => setAssetSearch(e.target.value)}
-                                />
+                                <Input placeholder="Search assets..." className="pl-8 h-9 text-xs rounded-xl bg-white border-none shadow-inner" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} />
                             </div>
                         </div>
                         <ScrollArea className="h-[400px]">
@@ -757,18 +659,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Emojis</p>
                                     <div className="grid grid-cols-6 gap-2">
                                         {filteredAssets.emojis.map(emoji => (
-                                            <div 
-                                                key={emoji} 
-                                                draggable
-                                                onDragStart={(e) => {
-                                                    e.dataTransfer.setData('elType', 'text');
-                                                    e.dataTransfer.setData('elText', emoji);
-                                                    e.dataTransfer.setData('elFontSize', '48');
-                                                }}
-                                                className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl cursor-grab active:cursor-grabbing transition-colors"
-                                            >
-                                                {emoji}
-                                            </div>
+                                            <div key={emoji} draggable onDragStart={(e) => { e.dataTransfer.setData('elType', 'text'); e.dataTransfer.setData('elText', emoji); e.dataTransfer.setData('elFontSize', '48'); }} className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-2xl cursor-grab transition-colors">{emoji}</div>
                                         ))}
                                     </div>
                                 </div>
@@ -776,17 +667,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Icons</p>
                                     <div className="grid grid-cols-6 gap-2">
                                         {filteredAssets.icons.map(asset => (
-                                            <div 
-                                                key={asset.name} 
-                                                draggable
-                                                onDragStart={(e) => {
-                                                    e.dataTransfer.setData('elType', 'icon');
-                                                    e.dataTransfer.setData('iconName', asset.name);
-                                                }}
-                                                className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-grab active:cursor-grabbing transition-all group"
-                                            >
-                                                <asset.icon className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" />
-                                            </div>
+                                            <div key={asset.name} draggable onDragStart={(e) => { e.dataTransfer.setData('elType', 'icon'); e.dataTransfer.setData('iconName', asset.name); }} className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-grab transition-all group"><asset.icon className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" /></div>
                                         ))}
                                     </div>
                                 </div>
@@ -803,32 +684,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
                 <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
             </div>
-
-            <div className="mt-auto">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 transition-all">
-                            <LayoutTemplate className="h-5 w-5" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Templates</DropdownMenuLabel>
-                        <ScrollArea className="h-[400px]">
-                            {BLUEPRINTS.map(bp => (
-                                <DropdownMenuItem key={bp.id} onClick={() => applyBlueprint(bp)} className="flex flex-col items-start gap-1 p-3 rounded-xl cursor-pointer">
-                                    <div className="flex items-center gap-2 w-full">
-                                        <bp.icon className="h-4 w-4 text-primary" />
-                                        <span className="font-bold text-sm text-slate-900">{bp.name}</span>
-                                    </div>
-                                    <p className="text-[10px] font-medium text-slate-400">{bp.description}</p>
-                                </DropdownMenuItem>
-                            ))}
-                        </ScrollArea>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
         </aside>
 
+        {/* Main Canvas */}
         <div className="flex-1 relative overflow-hidden" 
              onMouseDown={handleMouseDown}
              onMouseMove={handleMouseMove} 
@@ -843,20 +701,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 const iconName = e.dataTransfer.getData('iconName');
                 if (type) {
                     const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-                    addElement(type, x - 75, y - (type === 'text' ? 20 : 75), { 
-                        text: text || undefined, 
-                        fontSize: fontSize ? parseInt(fontSize) : undefined,
-                        iconName: iconName || undefined,
-                        width: type === 'icon' ? 100 : undefined,
-                        height: type === 'icon' ? 100 : undefined
-                    });
+                    addElement(type, x - 75, y - (type === 'text' ? 20 : 75), { text: text || undefined, fontSize: fontSize ? parseInt(fontSize) : undefined, iconName: iconName || undefined, width: type === 'icon' ? 100 : undefined, height: type === 'icon' ? 100 : undefined });
                 }
              }}
-             style={{ 
-                 backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', 
-                 backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`,
-                 backgroundPosition: `${viewport.x}px ${viewport.y}px`
-             }}
+             style={{ backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`, backgroundPosition: `${viewport.x}px ${viewport.y}px` }}
              ref={containerRef}>
             
             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
@@ -868,26 +716,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     </defs>
                     {connections.map(conn => (
                         <g key={conn.id} className="group/conn pointer-events-none">
-                            {/* Transparent hit area for easy unlinking */}
-                            <path 
-                                d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} 
-                                fill="none" 
-                                stroke="transparent" 
-                                strokeWidth="20" 
-                                className="pointer-events-auto cursor-pointer"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteConnection(conn.id);
-                                }}
-                            />
-                            <path 
-                                d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} 
-                                fill="none" 
-                                stroke="#cbd5e1" 
-                                strokeWidth="2" 
-                                markerEnd="url(#arrowhead)" 
-                                className="group-hover/conn:stroke-red-400 transition-colors"
-                            />
+                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} fill="none" stroke="transparent" strokeWidth="20" className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setConnections(prev => prev.filter(c => c.id !== conn.id)); sync(elements, connections.filter(c => c.id !== conn.id)); }} />
+                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId)} fill="none" stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" className="transition-colors" />
                         </g>
                     ))}
                     {pendingConnFrom && currentMouseCoords && (
@@ -904,25 +734,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     const isHovered = hoveredId === el.id;
                     const IconComp = el.type === 'icon' ? ASSET_ICONS.find(i => i.name === el.iconName)?.icon : null;
                     return (
-                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto transition-all", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
-                            <div className={cn("w-full h-full p-4 flex flex-col items-center justify-center relative transition-all overflow-hidden shadow-lg", el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg", el.type === 'rect' && "border-2 border-slate-900 rounded-xl", el.type === 'circle' && "border-2 border-slate-900 rounded-full", el.type === 'diamond' && "border-2 border-slate-900 rotate-45", el.type === 'text' && "bg-transparent border-none p-0 shadow-none", el.type === 'icon' && "bg-transparent border-none p-0 shadow-none")} style={{ backgroundColor: (el.type === 'text' || el.type === 'icon') ? 'transparent' : el.color }}>
+                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
+                            <div className={cn("w-full h-full p-4 flex flex-col items-center justify-center relative overflow-hidden shadow-lg", el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg", el.type === 'rect' && "border-2 border-slate-900 rounded-xl", el.type === 'circle' && "border-2 border-slate-900 rounded-full", el.type === 'diamond' && "border-2 border-slate-900 rotate-45", (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none")} style={{ backgroundColor: (el.type === 'text' || el.type === 'icon') ? 'transparent' : el.color }}>
                                 <div className={cn("w-full h-full flex flex-col justify-center", el.type === 'diamond' && "-rotate-45")}>
                                     {el.type === 'icon' && IconComp ? (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} />
-                                        </div>
+                                        <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
                                     ) : (
-                                        <textarea 
-                                            value={el.text}
-                                            placeholder="..."
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setElements(prev => prev.map(item => item.id === el.id ? { ...item, text: val } : item));
-                                                sync(elements, connections);
-                                            }}
-                                            className="w-full h-full bg-transparent border-none focus:ring-0 resize-none p-0 text-center font-bold overflow-hidden leading-tight"
-                                            style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}
-                                        />
+                                        <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
+                                            {el.text}
+                                        </div>
                                     )}
                                 </div>
                                 {isSelected && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
@@ -935,76 +755,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 {marqueeBox && <div className="absolute border-2 border-primary bg-primary/10 rounded-sm pointer-events-none" style={{ left: Math.min(marqueeBox.x1, marqueeBox.x2), top: Math.min(marqueeBox.y1, marqueeBox.y2), width: Math.abs(marqueeBox.x2 - marqueeBox.x1), height: Math.abs(marqueeBox.y2 - marqueeBox.y1) }} />}
             </div>
 
-            {selectedIds.length > 0 && (
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 p-2 bg-slate-900 text-white shadow-2xl rounded-2xl animate-in slide-in-from-bottom-4 duration-300 border border-white/10" onMouseDown={e => e.stopPropagation()}>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-9 px-3 gap-2 rounded-xl text-white font-bold text-[10px] uppercase"><Palette className="h-4 w-4" /> Color</Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-white shadow-2xl">
-                            {COLORS.map(c => (<button key={c.value} onClick={(e) => { e.stopPropagation(); updateSelectedElements({ color: c.value }); }} className="h-6 w-6 rounded-lg border hover:scale-110 transition-transform" style={{ backgroundColor: c.value }} />))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Separator orientation="vertical" className="h-5 bg-white/10" />
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCopy(); }} className="h-9 w-9 rounded-xl hover:bg-white/10 text-white"><Copy className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteSelected(); }} className="h-9 w-9 rounded-xl hover:bg-red-500/20 text-red-400"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                </div>
-            )}
-
-            {tool === 'pen' && (
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-3 bg-white shadow-2xl rounded-[1.5rem] animate-in slide-in-from-bottom-4 border border-slate-100" onMouseDown={e => e.stopPropagation()}>
-                    <div className="flex items-center gap-2 pr-4 border-r border-slate-100"><div className="p-2 rounded-lg bg-slate-50 text-slate-400"><Pencil className="h-4 w-4" /></div><p className="text-[10px] font-black uppercase text-slate-900">Inking</p></div>
-                    <div className="flex items-center gap-2">
-                        {PEN_COLORS.map(c => (<button key={c.value} onClick={() => setPenColor(c.value)} className={cn("h-7 w-7 rounded-full border-2 border-white transition-all", penColor === c.value ? "ring-2 ring-primary scale-110" : "hover:scale-105")} style={{ backgroundColor: c.value }} />))}
-                    </div>
-                    <Separator orientation="vertical" className="h-6 bg-slate-100" />
-                    <div className="flex items-center gap-4 px-2">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-black text-slate-400 uppercase">Weight</span>
-                            <input type="range" min="1" max="20" value={penSize} onChange={(e) => setPenSize(parseInt(e.target.value))} className="w-20" />
-                        </div>
-                    </div>
-                    <Separator orientation="vertical" className="h-6 bg-slate-100" />
-                    <Button variant="ghost" size="icon" onClick={() => setTool('select')} className="h-8 w-8 rounded-lg text-slate-300 hover:text-red-500"><X className="h-4 w-4" /></Button>
-                </div>
-            )}
-
+            {/* Bottom Controls */}
             <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2 animate-in slide-in-from-right-4 duration-700">
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button className="h-10 px-4 rounded-xl bg-white border border-slate-200 shadow-lg text-slate-400 hover:text-primary transition-all flex items-center gap-3 active:scale-95">
-                            <Command className="h-4 w-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Protocol Guide</span>
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" align="end" className="w-72 p-0 overflow-hidden rounded-[1.5rem] border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white">
-                        <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Keyboard Shortcuts</p>
-                        </div>
-                        <ScrollArea className="h-80">
-                            <div className="p-4 space-y-4">
-                                <ShortcutSection title="Tools">
-                                    <ShortcutRow label="Pointer / Select" keys={['S']} />
-                                    <ShortcutRow label="Drawing Pen" keys={['P']} />
-                                    <ShortcutRow label="Hand / Pan" keys={['H']} />
-                                    <ShortcutRow label="Arrow / Link" keys={['L']} />
-                                </ShortcutSection>
-                                <ShortcutSection title="Workspace">
-                                    <ShortcutRow label="Zoom In" keys={['Ctrl', '+']} />
-                                    <ShortcutRow label="Zoom Out" keys={['Ctrl', '-']} />
-                                    <ShortcutRow label="Reset View" keys={['Ctrl', '0']} />
-                                </ShortcutSection>
-                                <ShortcutSection title="Operations">
-                                    <ShortcutRow label="Undo" keys={['Ctrl', 'Z']} />
-                                    <ShortcutRow label="Duplicate" keys={['Ctrl', 'D']} />
-                                    <ShortcutRow label="Copy / Paste" keys={['Ctrl', 'C/V']} />
-                                    <ShortcutRow label="Delete" keys={['Del']} />
-                                </ShortcutSection>
-                            </div>
-                        </ScrollArea>
-                    </PopoverContent>
-                </Popover>
-
                 <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-white border border-slate-200 shadow-lg">
                     <button onClick={() => handleZoom(-0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">-</button>
                     <span className="text-[9px] font-black text-slate-900 w-10 text-center uppercase tracking-widest">{Math.round(viewport.scale * 100)}%</span>
@@ -1012,30 +764,86 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 </div>
             </div>
         </div>
+
+        {/* Right Side Panel - Properties Inspector */}
+        {selectedElement && (
+            <aside className="w-80 border-l bg-white flex flex-col shrink-0 z-50 animate-in slide-in-from-right duration-300">
+                <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-white shadow-sm text-primary">
+                            <Settings className="h-4 w-4" />
+                        </div>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Properties</h3>
+                    </div>
+                    <button onClick={() => setSelectedIds([])} className="text-slate-400 hover:text-slate-900 transition-colors"><X className="h-4 w-4" /></button>
+                </div>
+                
+                <ScrollArea className="flex-1">
+                    <div className="p-6 space-y-8 pb-32">
+                        <div className="space-y-4">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Content</Label>
+                            <Textarea 
+                                value={selectedElement.text}
+                                onChange={(e) => updateSelectedElements({ text: e.target.value })}
+                                placeholder="Enter text content..."
+                                className="min-h-[140px] rounded-2xl bg-slate-50 border-none font-bold text-sm leading-relaxed p-4 shadow-inner resize-none"
+                            />
+                        </div>
+
+                        <Separator className="bg-slate-50" />
+
+                        <div className="space-y-6">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Typography</Label>
+                            <div className="grid grid-cols-1 gap-6">
+                                <div className="space-y-3">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Font Size: {selectedElement.fontSize || 14}px</p>
+                                    <input type="range" min="8" max="120" value={selectedElement.fontSize || 14} onChange={(e) => updateSelectedElements({ fontSize: parseInt(e.target.value) })} className="w-full" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'left' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'left' && "bg-primary/10 border-primary text-primary")}><AlignLeft className="h-4 w-4" /></Button>
+                                    <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'center' })} className={cn("flex-1 h-9 rounded-xl", (selectedElement.textAlign === 'center' || !selectedElement.textAlign) && "bg-primary/10 border-primary text-primary")}><AlignCenter className="h-4 w-4" /></Button>
+                                    <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'right' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'right' && "bg-primary/10 border-primary text-primary")}><AlignRight className="h-4 w-4" /></Button>
+                                </div>
+                                <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ bold: !selectedElement.bold })} className={cn("w-full h-9 rounded-xl font-black uppercase tracking-widest text-[10px]", selectedElement.bold && "bg-primary/10 border-primary text-primary")}>Bold Weight</Button>
+                            </div>
+                        </div>
+
+                        <Separator className="bg-slate-50" />
+
+                        <div className="space-y-4">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Theme & Style</Label>
+                            <div className="grid grid-cols-5 gap-2">
+                                {COLORS.map(c => (
+                                    <button 
+                                        key={c.value} 
+                                        onClick={() => updateSelectedElements({ color: c.value })} 
+                                        className={cn(
+                                            "h-8 w-full rounded-xl border border-slate-100 transition-all",
+                                            selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2 z-10"
+                                        )} 
+                                        style={{ backgroundColor: c.value }} 
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <Separator className="bg-slate-50" />
+
+                        <div className="pt-4 flex flex-col gap-3">
+                            <Button variant="outline" onClick={handleDuplicate} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 border-slate-200 bg-white shadow-sm"><Copy className="h-3.5 w-3.5" /> Duplicate</Button>
+                            <Button variant="ghost" onClick={deleteSelected} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove Object</Button>
+                        </div>
+                    </div>
+                </ScrollArea>
+                
+                <div className="p-6 border-t bg-slate-50/50 flex flex-col items-center gap-3 shrink-0">
+                    <Badge variant="outline" className="bg-white border-slate-100 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] h-5 px-2">ID: {selectedElement.id.split('-').pop()}</Badge>
+                    <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-none">River Canvas Protocol</p>
+                </div>
+            </aside>
+        )}
     </div>
   );
-}
-
-function ShortcutSection({ title, children }: { title: string, children: React.ReactNode }) {
-    return (
-        <div className="space-y-2">
-            <h5 className="text-[8px] font-black uppercase tracking-widest text-slate-300 ml-1">{title}</h5>
-            <div className="space-y-1">{children}</div>
-        </div>
-    );
-}
-
-function ShortcutRow({ label, keys }: { label: string, keys: string[] }) {
-    return (
-        <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
-            <span className="text-[10px] font-bold text-slate-500">{label}</span>
-            <div className="flex items-center gap-1">
-                {keys.map(key => (
-                    <kbd key={key} className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded border border-slate-200 bg-white text-[9px] font-black text-slate-900 shadow-sm">{key}</kbd>
-                ))}
-            </div>
-        </div>
-    );
 }
 
 function ToolbarItem({ icon, active = false, onClick }: any) {
@@ -1048,7 +856,7 @@ function ToolbarItem({ icon, active = false, onClick }: any) {
 
 function DraggableTool({ icon, type, onDragStart }: any) {
     return (
-        <div draggable onDragStart={onDragStart} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-105 transition-all group relative">
+        <div draggable onDragStart={onDragStart} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative">
             {icon}
         </div>
     );
