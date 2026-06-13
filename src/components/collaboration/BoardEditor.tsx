@@ -114,7 +114,7 @@ import { Input } from '../ui/input';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
 import type { BoardElement, BoardConnection } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, deleteField } from 'firebase/firestore';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
@@ -192,6 +192,132 @@ const EMOJIS = [
     '🚀', '💡', '✅', '⚠️', '📊', '🏢', '💧', '🌊', '⭐', '🔥', '⚡', '🎨', '💬', '📍', '🎯', '💰', '🚛', '🏗️', '🛠️', '🛡️',
     '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆'
 ];
+
+function SharePopover({ page, onUpdate, isMobile = false }: { page: any, onUpdate: (data: Partial<BoardConnection>) => Promise<void>, isMobile?: boolean }) {
+    const [isUpdating, setIsUpdating] = useState(false);
+    const { toast } = useToast();
+
+    const handleUpdate = async (updates: Partial<BoardConnection>) => {
+        setIsUpdating(true);
+        await onUpdate(updates);
+        setIsUpdating(false);
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Connection Label</Label>
+                <Input 
+                    value={page.label || ''} 
+                    onChange={(e) => handleUpdate({ label: e.target.value })}
+                    placeholder="Add label..."
+                    className="h-11 rounded-xl bg-slate-50 border-none font-bold text-sm shadow-inner"
+                />
+            </div>
+
+            <Separator className="bg-slate-50" />
+
+            <div className="space-y-6">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Routing Mode</Label>
+                <div className="grid grid-cols-5 gap-2">
+                    {[
+                        { type: 'curved', icon: Repeat, label: 'Curve' },
+                        { type: 'straight', icon: Minus, label: 'Line' },
+                        { type: 'step', icon: CornerDownRight, label: 'Step' },
+                        { type: 'rounded-step', icon: CornerDownRight, label: 'Round' },
+                        { type: 'bezier', icon: Slash, label: 'Bez.' }
+                    ].map(m => (
+                        <button 
+                            key={m.type}
+                            onClick={() => handleUpdate({ type: m.type as any })}
+                            className={cn(
+                                "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                                page.type === m.type ? "border-primary bg-primary/5 text-primary" : "border-slate-100 text-slate-400 hover:bg-slate-50"
+                            )}
+                        >
+                            <m.icon className={cn("h-4 w-4", m.type === 'bezier' && "rotate-45")} />
+                            <span className="text-[7px] font-black uppercase tracking-tighter">{m.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <Separator className="bg-slate-50" />
+
+            <div className="space-y-6">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Line Protocol</Label>
+                <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-3">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Stroke Weight: {page.strokeWidth || 2}px</p>
+                        <input type="range" min="1" max="12" value={page.strokeWidth || 2} onChange={(e) => handleUpdate({ strokeWidth: parseInt(e.target.value) })} className="w-full" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { id: 'solid', label: 'Solid', value: '' },
+                            { id: 'dashed', label: 'Dashed', value: '8 8' },
+                            { id: 'dotted', label: 'Dotted', value: '2 4' }
+                        ].map(s => (
+                            <Button 
+                                key={s.id}
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleUpdate({ dashArray: s.value })}
+                                className={cn("h-8 rounded-lg text-[8px] font-black uppercase tracking-widest", page.dashArray === s.value ? "bg-primary/10 border-primary text-primary" : "border-slate-100")}
+                            >
+                                {s.label}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <Separator className="bg-slate-50" />
+
+            <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">End Marker</Label>
+                <div className="grid grid-cols-4 gap-2">
+                    {[
+                        { id: 'arrow', label: 'Arrow', icon: ChevronRight },
+                        { id: 'circle', label: 'Circle', icon: Circle },
+                        { id: 'diamond', label: 'Diamond', icon: Diamond },
+                        { id: 'none', label: 'None', icon: Minus }
+                    ].map(m => (
+                        <button 
+                            key={m.id}
+                            onClick={() => handleUpdate({ endMarker: m.id as any })}
+                            className={cn(
+                                "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                                page.endMarker === m.id ? "border-primary bg-primary/5 text-primary" : "border-slate-100 text-slate-400 hover:bg-slate-50"
+                            )}
+                        >
+                            <m.icon className="h-3.5 w-3.5" />
+                            <span className="text-[7px] font-black uppercase tracking-tighter">{m.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <Separator className="bg-slate-50" />
+
+            <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stroke Color</Label>
+                <div className="grid grid-cols-5 gap-2">
+                    {COLORS.map(c => (
+                        <button 
+                            key={c.value} 
+                            onClick={() => handleUpdate({ color: c.value })} 
+                            className={cn(
+                                "h-7 w-full rounded-full border border-slate-100 transition-all",
+                                page.color === c.value && "ring-2 ring-primary ring-offset-1"
+                            )} 
+                            style={{ backgroundColor: c.value }} 
+                        />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
@@ -440,7 +566,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           // Check hit for connections if not clicking an element
           const connHit = connections.find(c => {
               // Very simple hit check for connections (closest to center point for now)
-              // In production we'd use better path distance algorithms
               return false; // Selection handled by individual path onClick for better precision
           });
 
@@ -721,28 +846,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
                 <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
-                <div className="flex flex-col gap-1">
-                    <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
-                    {tool === 'arrow' && (
-                        <div className="flex flex-col gap-1 p-1 bg-slate-100 rounded-lg animate-in slide-in-from-top-1 duration-200 shadow-inner">
-                             <button onClick={() => setArrowType('curved')} title="Curved" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'curved' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
-                                <Repeat className="h-3 w-3" />
-                             </button>
-                             <button onClick={() => setArrowType('straight')} title="Straight" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'straight' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
-                                <Minus className="h-3 w-3" />
-                             </button>
-                             <button onClick={() => setArrowType('step')} title="Step" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'step' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
-                                <CornerDownRight className="h-3 w-3" />
-                             </button>
-                             <button onClick={() => setArrowType('rounded-step')} title="Rounded Step" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'rounded-step' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
-                                <div className="h-3 w-3 border-b-2 border-l-2 rounded-bl-sm border-current" />
-                             </button>
-                             <button onClick={() => setArrowType('bezier')} title="Bezier" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'bezier' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
-                                <Slash className="h-3 w-3 rotate-45" />
-                             </button>
-                        </div>
-                    )}
-                </div>
+                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
             </div>
         </aside>
 
@@ -858,6 +962,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 el.type === 'triangle' && "bg-transparent border-none p-0 shadow-none",
                                 el.type === 'parallelogram' && "border-2 border-slate-900",
                                 el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
+                                el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
                                 el.type === 'capsule' && "border-2 border-slate-900 rounded-full",
                                 (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
@@ -967,118 +1072,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         )}
 
                         {selectedConnection && (
-                            <>
-                                <div className="space-y-6">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Connection Label</Label>
-                                    <Input 
-                                        value={selectedConnection.label || ''} 
-                                        onChange={(e) => updateSelectedConnection({ label: e.target.value })}
-                                        placeholder="Add label..."
-                                        className="h-11 rounded-xl bg-slate-50 border-none font-bold text-sm shadow-inner"
-                                    />
-                                </div>
-
-                                <Separator className="bg-slate-50" />
-
-                                <div className="space-y-6">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Routing Mode</Label>
-                                    <div className="grid grid-cols-5 gap-2">
-                                        {[
-                                            { type: 'curved', icon: Repeat, label: 'Curve' },
-                                            { type: 'straight', icon: Minus, label: 'Line' },
-                                            { type: 'step', icon: CornerDownRight, label: 'Step' },
-                                            { type: 'rounded-step', icon: CornerDownRight, label: 'Round' },
-                                            { type: 'bezier', icon: Slash, label: 'Bez.' }
-                                        ].map(m => (
-                                            <button 
-                                                key={m.type}
-                                                onClick={() => updateSelectedConnection({ type: m.type as any })}
-                                                className={cn(
-                                                    "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
-                                                    selectedConnection.type === m.type ? "border-primary bg-primary/5 text-primary" : "border-slate-100 text-slate-400 hover:bg-slate-50"
-                                                )}
-                                            >
-                                                <m.icon className={cn("h-4 w-4", m.type === 'bezier' && "rotate-45")} />
-                                                <span className="text-[7px] font-black uppercase tracking-tighter">{m.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <Separator className="bg-slate-50" />
-
-                                <div className="space-y-6">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Line Protocol</Label>
-                                    <div className="grid grid-cols-1 gap-6">
-                                        <div className="space-y-3">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Stroke Weight: {selectedConnection.strokeWidth || 2}px</p>
-                                            <input type="range" min="1" max="12" value={selectedConnection.strokeWidth || 2} onChange={(e) => updateSelectedConnection({ strokeWidth: parseInt(e.target.value) })} className="w-full" />
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {[
-                                                { id: 'solid', label: 'Solid', value: '' },
-                                                { id: 'dashed', label: 'Dashed', value: '8 8' },
-                                                { id: 'dotted', label: 'Dotted', value: '2 4' }
-                                            ].map(s => (
-                                                <Button 
-                                                    key={s.id}
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => updateSelectedConnection({ dashArray: s.value })}
-                                                    className={cn("h-8 rounded-lg text-[8px] font-black uppercase tracking-widest", selectedConnection.dashArray === s.value ? "bg-primary/10 border-primary text-primary" : "border-slate-100")}
-                                                >
-                                                    {s.label}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator className="bg-slate-50" />
-
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">End Marker</Label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[
-                                            { id: 'arrow', label: 'Arrow', icon: ChevronRight },
-                                            { id: 'circle', label: 'Circle', icon: Circle },
-                                            { id: 'diamond', label: 'Diamond', icon: Diamond },
-                                            { id: 'none', label: 'None', icon: Minus }
-                                        ].map(m => (
-                                            <button 
-                                                key={m.id}
-                                                onClick={() => updateSelectedConnection({ endMarker: m.id as any })}
-                                                className={cn(
-                                                    "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
-                                                    selectedConnection.endMarker === m.id ? "border-primary bg-primary/5 text-primary" : "border-slate-100 text-slate-400 hover:bg-slate-50"
-                                                )}
-                                            >
-                                                <m.icon className="h-3.5 w-3.5" />
-                                                <span className="text-[7px] font-black uppercase tracking-tighter">{m.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <Separator className="bg-slate-50" />
-
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stroke Color</Label>
-                                    <div className="grid grid-cols-5 gap-2">
-                                        {COLORS.map(c => (
-                                            <button 
-                                                key={c.value} 
-                                                onClick={() => updateSelectedConnection({ color: c.value })} 
-                                                className={cn(
-                                                    "h-7 w-full rounded-full border border-slate-100 transition-all",
-                                                    selectedConnection.color === c.value && "ring-2 ring-primary ring-offset-1"
-                                                )} 
-                                                style={{ backgroundColor: c.value }} 
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            </>
+                            <SharePopover 
+                                page={selectedConnection} 
+                                onUpdate={async (data) => updateSelectedConnection(data)} 
+                            />
                         )}
 
                         <div className="pt-4 flex flex-col gap-3">
