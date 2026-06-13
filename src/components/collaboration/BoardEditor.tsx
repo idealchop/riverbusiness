@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { 
     MousePointer2, 
@@ -83,7 +83,8 @@ import {
     AlignCenter,
     AlignLeft,
     AlignRight,
-    Type as TypeIcon
+    Type as TypeIcon,
+    CornerDownRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -108,6 +109,7 @@ import type { BoardElement, BoardConnection } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Badge } from '../ui/badge';
 
 interface BoardEditorProps {
   initialData: any;
@@ -125,69 +127,6 @@ const COLORS = [
     { name: 'Slate', value: '#f1f5f9' },
     { name: 'White', value: '#ffffff' },
     { name: 'Black', value: '#0f172a' }
-];
-
-const PEN_COLORS = [
-    { name: 'Blue', value: '#3b82f6' },
-    { name: 'Red', value: '#ef4444' },
-    { name: 'Green', value: '#22c55e' },
-    { name: 'Amber', value: '#f59e0b' },
-    { name: 'Slate', value: '#64748b' },
-    { name: 'Black', value: '#0f172a' }
-];
-
-const BLUEPRINTS = [
-    {
-        id: 'bp-kanban',
-        name: 'Agile Kanban',
-        description: 'Standard 4-column delivery board.',
-        icon: ListTodo,
-        elements: [
-            { id: 'k1', type: 'rect', x: 0, y: 0, width: 220, height: 500, text: 'Backlog', color: '#f8fafc', bold: true, fontSize: 16 },
-            { id: 'k2', type: 'rect', x: 240, y: 0, width: 220, height: 500, text: 'In Progress', color: '#f8fafc', bold: true, fontSize: 16 },
-            { id: 'k3', type: 'rect', x: 480, y: 0, width: 220, height: 500, text: 'Review', color: '#f8fafc', bold: true, fontSize: 16 },
-            { id: 'k4', type: 'rect', x: 720, y: 0, width: 220, height: 500, text: 'Done', color: '#dcfce7', bold: true, fontSize: 16 },
-            { id: 'n1', type: 'note', x: 20, y: 60, width: 180, height: 100, text: 'High Priority Item', color: '#fef08a', bold: true }
-        ],
-        connections: []
-    },
-    {
-        id: 'bp-swot',
-        name: 'SWOT Matrix',
-        description: 'Analyze strengths and weaknesses.',
-        icon: Target,
-        elements: [
-            { id: 's1', type: 'rect', x: 100, y: 50, width: 350, height: 250, text: 'Strengths', color: '#dcfce7', bold: true, fontSize: 18 },
-            { id: 's2', type: 'rect', x: 460, y: 50, width: 350, height: 250, text: 'Weaknesses', color: '#fee2e2', bold: true, fontSize: 18 },
-            { id: 's3', type: 'rect', x: 100, y: 310, width: 350, height: 250, text: 'Opportunities', color: '#dbeafe', bold: true, fontSize: 18 },
-            { id: 's4', type: 'rect', x: 460, y: 310, width: 350, height: 250, text: 'Threats', color: '#ffedd5', bold: true, fontSize: 18 }
-        ],
-        connections: []
-    },
-    {
-        id: 'bp-mindmap',
-        name: 'Strategy Mind Map',
-        description: 'Central concept with branches.',
-        icon: Compass,
-        elements: [
-            { id: 'center', type: 'circle', x: 400, y: 250, width: 160, height: 160, text: 'Core Goal', color: '#3b82f6', fontColor: '#ffffff', bold: true, fontSize: 16 },
-            { id: 'b1', type: 'rect', x: 150, y: 100, width: 140, height: 80, text: 'Market', color: '#ffffff', bold: true },
-            { id: 'b2', type: 'rect', x: 650, y: 100, width: 140, height: 80, text: 'Logistics', color: '#ffffff', bold: true },
-            { id: 'b3', type: 'rect', x: 150, y: 400, width: 140, height: 80, text: 'Growth', color: '#ffffff', bold: true },
-            { id: 'b4', type: 'rect', x: 650, y: 400, width: 140, height: 80, text: 'People', color: '#ffffff', bold: true }
-        ],
-        connections: [
-            { id: 'c1', fromId: 'center', toId: 'b1', type: 'curved' },
-            { id: 'c2', fromId: 'center', toId: 'b2', type: 'curved' },
-            { id: 'c3', fromId: 'center', toId: 'b3', type: 'curved' },
-            { id: 'c4', fromId: 'center', toId: 'b4', type: 'curved' }
-        ]
-    }
-];
-
-const EMOJIS = [
-    '🚀', '💡', '✅', '⚠️', '📊', '🏢', '💧', '🌊', '⭐', '🔥', '⚡', '🎨', '💬', '📍', '🎯', '💰', '🚛', '🏗️', '🛠️', '🛡️',
-    '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆'
 ];
 
 const ASSET_ICONS = [
@@ -241,6 +180,11 @@ const ASSET_ICONS = [
     { name: 'Hammer', icon: Hammer }
 ];
 
+const EMOJIS = [
+    '🚀', '💡', '✅', '⚠️', '📊', '🏢', '💧', '🌊', '⭐', '🔥', '⚡', '🎨', '💬', '📍', '🎯', '💰', '🚛', '🏗️', '🛠️', '🛡️',
+    '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆'
+];
+
 export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
   const isMounted = useMounted();
   const { toast } = useToast();
@@ -280,11 +224,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     if (selectedIds.length !== 1) return null;
     return elements.find(el => el.id === selectedIds[0]);
   }, [selectedIds, elements]);
-
-  useEffect(() => {
-      if (initialData?.elements) setElements(initialData.elements);
-      if (initialData?.connections) setConnections(initialData.connections);
-  }, [initialData]);
 
   const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
       if (!editable) return;
@@ -366,7 +305,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return next;
       });
       setSelectedIds([]);
-  }, [editable, selectedIds, sync, pushHistory]);
+  }, [editable, selectedIds, sync, pushHistory, connections]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -394,6 +333,30 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       });
       setSelectedIds(newElements.map(el => el.id));
   }, [clipboard, editable, connections, sync, pushHistory]);
+
+  const handleDuplicate = useCallback(() => {
+    if (selectedIds.length === 0 || !editable) return;
+    pushHistory();
+    const offset = 20;
+    const timestamp = Date.now();
+    const randomSuffix = () => Math.random().toString(36).substr(2, 5);
+
+    const newElements = elements
+        .filter(el => selectedIds.includes(el.id))
+        .map(el => ({
+            ...el,
+            id: `el-${timestamp}-${randomSuffix()}`,
+            x: el.x + offset,
+            y: el.y + offset
+        }));
+    
+    setElements(prev => {
+        const next = [...prev, ...newElements];
+        setTimeout(() => sync(next, connections), 0);
+        return next;
+    });
+    setSelectedIds(newElements.map(el => el.id));
+  }, [selectedIds, elements, editable, connections, sync, pushHistory]);
 
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -756,7 +719,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
 
             {/* Bottom Controls */}
-            <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2 animate-in slide-in-from-right-4 duration-700">
+            <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2">
                 <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-white border border-slate-200 shadow-lg">
                     <button onClick={() => handleZoom(-0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">-</button>
                     <span className="text-[9px] font-black text-slate-900 w-10 text-center uppercase tracking-widest">{Math.round(viewport.scale * 100)}%</span>
