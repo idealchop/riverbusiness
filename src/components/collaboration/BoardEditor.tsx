@@ -22,7 +22,6 @@ import {
     Pencil,
     LayoutTemplate,
     Sparkles,
-    Workflow,
     User,
     Users,
     Settings,
@@ -74,11 +73,6 @@ import {
     Hammer,
     Check,
     Loader2,
-    Map,
-    ListTodo,
-    Compass,
-    Keyboard,
-    Command,
     Type,
     AlignCenter,
     AlignLeft,
@@ -94,7 +88,11 @@ import {
     Activity,
     Slash,
     Hexagon,
-    Cloud as CloudIcon
+    Cloud as CloudIcon,
+    FileText,
+    Settings2,
+    Layers,
+    Binary
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -813,7 +811,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         <ScrollArea className="h-[480px]">
                             <div className="p-4 space-y-6">
                                 <div className="space-y-3">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Flow Shapes</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Fulfillment & Logic</p>
                                     <div className="grid grid-cols-4 gap-2">
                                         <DraggableTool variant="mini" icon={<Triangle className="h-4 w-4" />} type="triangle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'triangle')} />
                                         <DraggableTool variant="mini" icon={<LayoutTemplate className="h-4 w-4" />} type="parallelogram" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'parallelogram')} />
@@ -821,6 +819,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         <DraggableTool variant="mini" icon={<PlusCircle className="h-4 w-4" />} type="capsule" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'capsule')} />
                                         <DraggableTool variant="mini" icon={<Hexagon className="h-4 w-4" />} type="hexagon" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'hexagon')} />
                                         <DraggableTool variant="mini" icon={<CloudIcon className="h-4 w-4" />} type="cloud" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cloud')} />
+                                        <DraggableTool variant="mini" icon={<FileText className="h-4 w-4" />} type="document" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'document')} />
+                                        <DraggableTool variant="mini" icon={<Settings2 className="h-4 w-4" />} type="predefined" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'predefined')} />
+                                        <DraggableTool variant="mini" icon={<Binary className="h-4 w-4" />} type="manual-input" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'manual-input')} />
                                         <DraggableTool variant="mini" icon={<Star className="h-4 w-4" />} type="star" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'star')} />
                                         <DraggableTool variant="mini" icon={<AlertTriangle className="h-4 w-4" />} type="octagon" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'octagon')} />
                                     </div>
@@ -958,6 +959,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     const isSelected = selectedIds.includes(el.id);
                     const isHovered = hoveredId === el.id;
                     const IconComp = el.type === 'icon' ? ASSET_ICONS.find(i => i.name === el.iconName)?.icon : null;
+                    
+                    const isCustomClipped = ['triangle', 'hexagon', 'octagon', 'star', 'document', 'manual-input', 'parallelogram', 'predefined'].includes(el.type);
+
                     return (
                         <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
                             <div className={cn(
@@ -966,32 +970,39 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 el.type === 'rect' && "border-2 border-slate-900 rounded-xl", 
                                 el.type === 'circle' && "border-2 border-slate-900 rounded-full", 
                                 el.type === 'diamond' && "border-2 border-slate-900 rotate-45",
-                                el.type === 'triangle' && "bg-transparent border-none p-0 shadow-none",
                                 el.type === 'parallelogram' && "border-2 border-slate-900",
                                 el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
                                 el.type === 'capsule' && "border-2 border-slate-900 rounded-full",
-                                el.type === 'hexagon' && "border-none shadow-none",
-                                el.type === 'octagon' && "border-none shadow-none",
-                                el.type === 'cloud' && "border-none shadow-none",
-                                el.type === 'star' && "border-none shadow-none",
+                                el.type === 'document' && "border-2 border-slate-900 rounded-t-lg",
+                                el.type === 'predefined' && "border-y-2 border-slate-900 relative",
+                                isCustomClipped && "bg-transparent border-none p-0 shadow-none",
                                 (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
-                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'triangle' || el.type === 'hexagon' || el.type === 'octagon' || el.type === 'cloud' || el.type === 'star') ? 'transparent' : el.color,
+                                backgroundColor: (el.type === 'text' || el.type === 'icon' || isCustomClipped || el.type === 'cloud') ? 'transparent' : el.color,
                                 clipPath: el.type === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 
                                           el.type === 'hexagon' ? 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' :
                                           el.type === 'octagon' ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' :
                                           el.type === 'cloud' ? 'path("M 25,60 a 20,20 1 0,0 0,40 h 50 a 20,20 1 0,0 0,-40 a 10,10 1 0,0 -15,-10 a 15,15 1 0,0 -35,10 z")' :
                                           el.type === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                                          el.type === 'document' ? 'polygon(0% 0%, 100% 0%, 100% 85%, 85% 95%, 65% 85%, 50% 95%, 35% 85%, 15% 95%, 0% 85%)' :
+                                          el.type === 'manual-input' ? 'polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%)' :
+                                          el.type === 'parallelogram' ? 'polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)' :
                                           undefined,
-                                transform: el.type === 'parallelogram' ? 'skewX(-20deg)' : undefined
                             }}>
-                                {(el.type === 'triangle' || el.type === 'hexagon' || el.type === 'octagon' || el.type === 'star') && <div className="absolute inset-0 border-2 border-slate-900" style={{ backgroundColor: el.color, clipPath: 'inherit' }} />}
-                                {el.type === 'cloud' && <div className="absolute inset-0 bg-blue-50 border-2 border-blue-200" style={{ backgroundColor: el.color }} />}
+                                {isCustomClipped && <div className="absolute inset-0 border-2 border-slate-900" style={{ backgroundColor: el.color, clipPath: 'inherit' }} />}
+                                {el.type === 'predefined' && (
+                                    <>
+                                        <div className="absolute inset-0" style={{ backgroundColor: el.color }} />
+                                        <div className="absolute inset-y-0 left-3 w-0.5 bg-slate-900" />
+                                        <div className="absolute inset-y-0 right-3 w-0.5 bg-slate-900" />
+                                        <div className="absolute inset-0 border-x-2 border-slate-900" />
+                                    </>
+                                )}
+                                {el.type === 'cloud' && <div className="absolute inset-0 bg-blue-50 border-2 border-slate-900" style={{ backgroundColor: el.color }} />}
                                 
                                 <div className={cn(
                                     "w-full h-full flex flex-col justify-center relative z-10", 
                                     el.type === 'diamond' && "-rotate-45",
-                                    el.type === 'parallelogram' && "skew-x-[20deg]"
                                 )}>
                                     {el.type === 'icon' && IconComp ? (
                                         <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
