@@ -32,8 +32,25 @@ import {
 } from '@/components/ui/form';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft, UserCircle, Briefcase, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { 
+    DollarSign, 
+    Loader2, 
+    Calendar as CalendarIcon, 
+    ChevronRight, 
+    ArrowLeft, 
+    CheckCircle2, 
+    CheckCircle,
+    Calculator, 
+    Plus, 
+    X, 
+    ChevronLeft, 
+    UserCircle, 
+    Briefcase, 
+    Clock, 
+    AlertTriangle, 
+    ShieldAlert 
+} from 'lucide-react';
 import type { HRPayrollBreakdownItem, AppUser, HRAttendanceLog } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
