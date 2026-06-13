@@ -401,6 +401,7 @@ export interface HRPayrollBreakdownItem {
     employeeNumber?: string;
     amount: number;
     daysWorked?: number;
+    absentDays?: number;
     rate: number;
     type: 'daily' | 'weekly' | 'monthly' | 'bimonthly';
     adjustment?: number;

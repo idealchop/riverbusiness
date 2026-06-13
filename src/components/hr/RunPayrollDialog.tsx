@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -34,11 +33,11 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft, UserCircle, Briefcase, Clock } from 'lucide-react';
+import { DollarSign, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowLeft, CheckCircle2, Calculator, Plus, X, ChevronLeft, UserCircle, Briefcase, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { HRPayrollBreakdownItem, AppUser, HRAttendanceLog } from '@/lib/types';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format, startOfMonth, parseISO } from 'date-fns';
+import { format, startOfMonth, parseISO, eachDayOfInterval, isSunday, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -97,7 +96,14 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     
     try {
       const values = form.getValues();
+      const start = parseISO(values.periodStart);
+      const end = parseISO(values.periodEnd);
       
+      // Calculate all potential workdays (excluding Sundays)
+      const allDaysInRange = eachDayOfInterval({ start, end });
+      const workdaysInRange = allDaysInRange.filter(day => !isSunday(day));
+      const totalWorkdaysCount = workdaysInRange.length;
+
       // 1. Fetch all active employees
       const employeesQuery = query(
         collection(firestore, 'users'), 
@@ -128,38 +134,51 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
       const breakdown: HRPayrollBreakdownItem[] = [];
 
-      // 3. Compute per-employee logic
+      // 3. Compute per-employee logic with Absence Detection
       employees.forEach((emp) => {
         const profile = emp?.hrProfile;
         if (!profile) return;
 
-        let employeeSalary = 0;
         const rate = Number(profile?.rate) || 0;
-        
-        // Count UNIQUE days worked (ignores multiple clock-ins per day)
         const employeeLogs = allLogs.filter(log => log.employeeId === emp.id);
-        const uniqueDaysWorked = new Set(employeeLogs.map(log => log.date)).size;
         
+        let daysWorked = 0;
+        let absentDays = 0;
+
+        workdaysInRange.forEach(workday => {
+            const hasLog = employeeLogs.some(log => {
+                const logDate = parseISO(log.date);
+                return isSameDay(logDate, workday);
+            });
+
+            if (hasLog) {
+                daysWorked++;
+            } else {
+                absentDays++;
+            }
+        });
+
+        let computedAmount = 0;
         if (profile.salaryType === 'daily') {
-          employeeSalary = uniqueDaysWorked * rate;
-        } else if (profile.salaryType === 'weekly') {
-            // Simplified weekly logic for MVP
-            employeeSalary = rate; 
-        } else if (profile.salaryType === 'bimonthly') {
-            employeeSalary = rate;
+            // Daily employees only get paid for days they worked
+            computedAmount = daysWorked * rate;
         } else {
-          // Default: Monthly Fixed
-          employeeSalary = rate;
+            // Monthly/Fixed employees have a base rate, but we deduct for absences
+            // Assuming the rate provided is the rate for the whole cycle (e.g. monthly or bimonthly)
+            const dailyRateEquivalent = totalWorkdaysCount > 0 ? rate / totalWorkdaysCount : 0;
+            const totalDeduction = absentDays * dailyRateEquivalent;
+            computedAmount = Math.max(0, rate - totalDeduction);
         }
 
         breakdown.push({
             employeeId: emp.id,
             employeeName: emp.name || 'Anonymous',
             employeeNumber: profile.employeeNumber || 'ID Pending',
-            amount: employeeSalary,
+            amount: computedAmount,
             rate: rate,
             type: profile.salaryType,
-            daysWorked: uniqueDaysWorked,
+            daysWorked,
+            absentDays,
             adjustment: 0,
             adjustmentRemarks: ''
         });
@@ -168,7 +187,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
       setComputedBreakdown(breakdown);
       setStep(1);
       setCurrentPage(1);
-      toast({ title: 'Computation Complete', description: `Verified logs for ${breakdown.length} staff members.` });
+      toast({ title: 'Computation Complete', description: `Verified logs for ${breakdown.length} staff members. Found absences automatically deducted.` });
     } catch (error) {
       console.error("Error computing payroll:", error);
       toast({ variant: 'destructive', title: 'Computation Error' });
@@ -243,7 +262,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleReset(); onOpenChange(open); }}>
       <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden bg-white shadow-3xl flex flex-col h-[90vh]">
-        <div className="p-8 border-b bg-slate-50/50">
+        <div className="p-8 border-b bg-slate-50/50 shrink-0">
             <DialogHeader>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -253,7 +272,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         <div>
                             <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Payroll Engine</DialogTitle>
                             <DialogDescription className="text-slate-500 font-medium">
-                                {step === 0 ? "Select period to begin automated computation." : "Review details and apply final adjustments per employee."}
+                                {step === 0 ? "Automated salary computation with absence deduction protocol." : "Verify individual computations and handle final adjustments."}
                             </DialogDescription>
                         </div>
                     </div>
@@ -274,7 +293,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div className="space-y-4">
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
-                                    <CalendarIcon className="h-3.5 w-3.5" /> 1. Visual Selection
+                                    <CalendarIcon className="h-3.5 w-3.5" /> 1. Boundary Matrix
                                 </Label>
                                 <div className="border rounded-[2rem] p-4 bg-slate-50 shadow-inner flex justify-center">
                                     <Calendar
@@ -287,7 +306,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             </div>
                             <div className="space-y-8">
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">2. Boundary Verification</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">2. Period Authentication</Label>
                                     <div className="grid gap-4">
                                         <FormField
                                             control={form.control}
@@ -297,7 +316,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                                     <FormLabel className="text-xs font-bold text-slate-600">Start date</FormLabel>
                                                     <Popover>
                                                         <PopoverTrigger asChild>
-                                                            <Button variant="outline" className="h-12 justify-start text-left font-bold rounded-xl bg-slate-50 border-slate-100">
+                                                            <Button variant="outline" className="h-12 justify-start text-left font-bold rounded-xl bg-slate-50 border-slate-100 shadow-none">
                                                                 <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
                                                                 {field.value ? format(parseISO(field.value), "PPP") : <span>Pick a date</span>}
                                                             </Button>
@@ -317,7 +336,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                                     <FormLabel className="text-xs font-bold text-slate-600">End date</FormLabel>
                                                     <Popover>
                                                         <PopoverTrigger asChild>
-                                                            <Button variant="outline" className="h-12 justify-start text-left font-bold rounded-xl bg-slate-50 border-slate-100">
+                                                            <Button variant="outline" className="h-12 justify-start text-left font-bold rounded-xl bg-slate-50 border-slate-100 shadow-none">
                                                                 <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
                                                                 {field.value ? format(parseISO(field.value), "PPP") : <span>Pick a date</span>}
                                                             </Button>
@@ -331,14 +350,25 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                         />
                                     </div>
                                 </div>
-                                <div className="p-6 rounded-[2rem] bg-blue-50 border border-blue-100 space-y-3">
-                                    <div className="flex items-center gap-3">
-                                        <Calculator className="h-5 w-5 text-primary" />
-                                        <p className="text-sm font-black uppercase text-blue-900 tracking-tight">Computation Logic</p>
+                                <div className="p-6 rounded-[2rem] bg-blue-50 border border-blue-100 space-y-4">
+                                    <div className="flex items-center gap-3 text-blue-900">
+                                        <ShieldAlert className="h-5 w-5" />
+                                        <p className="text-sm font-black uppercase tracking-tight">Audit Logic Active</p>
                                     </div>
-                                    <p className="text-xs font-medium text-blue-800/70 leading-relaxed">
-                                        The engine will now cross-reference the selected period with verified **Attendance Terminal** logs to compute workload for daily staff.
-                                    </p>
+                                    <ul className="space-y-2">
+                                        <li className="flex items-start gap-2 text-xs font-medium text-blue-800/70">
+                                            <div className="h-1 w-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                            <span>Reviews all <strong>Terminal Logs</strong> for "Time In" verification.</span>
+                                        </li>
+                                        <li className="flex items-start gap-2 text-xs font-medium text-blue-800/70">
+                                            <div className="h-1 w-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                            <span>Identifies <strong>Absences</strong> (Mon-Sat) with automated deductions.</span>
+                                        </li>
+                                        <li className="flex items-start gap-2 text-xs font-medium text-blue-800/70">
+                                            <div className="h-1 w-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                            <span>Synchronizes with individual <strong>Benefit Deductions</strong>.</span>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -346,11 +376,11 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                 )}
 
                 {step === 1 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-500">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-2 duration-500">
                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Review computed results</h4>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Individual Audit Breakdown</h4>
                             <Badge className="bg-primary/10 text-primary border-none font-bold uppercase text-[9px] tracking-widest px-3 h-6">
-                                {computedBreakdown.length} Profiles Integrated
+                                {computedBreakdown.length} Disbursable Profiles
                             </Badge>
                         </div>
 
@@ -367,48 +397,47 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                                     
                                     <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                                         <div className="md:col-span-4 flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                            <div className="h-11 w-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 shadow-inner">
                                                 <UserCircle className="h-6 w-6" />
                                             </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-black text-slate-900 leading-tight">{item.employeeName}</p>
+                                            <div className="space-y-0.5 overflow-hidden">
+                                                <p className="text-sm font-black text-slate-900 leading-tight truncate">{item.employeeName}</p>
                                                 <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">{item.employeeNumber}</p>
-                                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">{item.type} Profile • ₱{item.rate.toLocaleString()}</p>
+                                                <Badge variant="outline" className="text-[8px] font-black uppercase border-slate-100 bg-slate-50 px-2 h-4">{item.type}</Badge>
                                             </div>
                                         </div>
-                                        <div className="md:col-span-2 text-center md:text-left border-l border-slate-50 pl-6">
-                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1.5 flex items-center gap-1.5">
-                                                <Clock className="h-3 w-3" /> Workload
-                                            </p>
+                                        <div className="md:col-span-3 grid grid-cols-2 gap-4 border-x border-slate-50 px-6">
                                             <div className="space-y-1">
-                                                <p className="text-sm font-black text-slate-900">₱{item.amount.toLocaleString()}</p>
-                                                {item.type === 'daily' ? (
-                                                    <Badge variant="outline" className="text-[8px] font-black border-slate-100 bg-white px-1.5 h-4">
-                                                        {item.daysWorked} Verified Days
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="text-[8px] font-black border-slate-100 bg-white px-1.5 h-4">
-                                                        Fixed Cycle
-                                                    </Badge>
-                                                )}
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter flex items-center gap-1.5">
+                                                    <CheckCircle className="h-2.5 w-2.5 text-green-500" /> Pres.
+                                                </p>
+                                                <p className="text-sm font-black text-slate-900 tabular-nums">{item.daysWorked}d</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter flex items-center gap-1.5">
+                                                    <AlertTriangle className="h-2.5 w-2.5 text-red-500" /> Abs.
+                                                </p>
+                                                <p className={cn("text-sm font-black tabular-nums", (item.absentDays || 0) > 0 ? "text-red-500" : "text-slate-900")}>
+                                                    {item.absentDays}d
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="md:col-span-3 space-y-2">
+                                        <div className="md:col-span-2 space-y-2 px-2">
                                              <div className="relative group">
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-40 group-focus-within:opacity-100 transition-opacity">
-                                                     <Plus className="h-3 w-3" /><span className="text-xs font-bold">₱</span>
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-40 group-focus-within:opacity-100">
+                                                     <span className="text-[10px] font-black text-slate-400">₱</span>
                                                 </div>
                                                 <Input 
                                                     type="number" 
-                                                    placeholder="Adjust..." 
+                                                    placeholder="Adjust" 
                                                     value={item.adjustment || ''} 
                                                     onChange={(e) => handleAdjustmentChange(item.employeeId, e.target.value)}
-                                                    className="h-10 pl-10 rounded-xl bg-slate-50 border-none font-bold text-xs shadow-inner"
+                                                    className="h-9 pl-6 rounded-xl bg-slate-50 border-none font-bold text-xs shadow-inner"
                                                 />
                                              </div>
                                         </div>
                                         <div className="md:col-span-3 text-right">
-                                            <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em] mb-1">Final Payout</p>
+                                            <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em] mb-1">Audit Approved</p>
                                             <p className="text-xl font-black text-slate-900 tabular-nums">
                                                 ₱{(item.amount + (item.adjustment || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                             </p>
@@ -428,7 +457,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                         {computedBreakdown.length > ITEMS_PER_PAGE && (
                             <div className="flex items-center justify-between px-2 pt-4">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                    Page {currentPage} of {totalPages}
+                                    Displaying page {currentPage} of {totalPages}
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -457,26 +486,26 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
             </div>
         </ScrollArea>
 
-        <DialogFooter className="p-8 bg-white border-t flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
+        <DialogFooter className="p-8 bg-white border-t flex flex-col md:flex-row items-center justify-between gap-4 shrink-0 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
             <div className="flex items-center gap-3">
-                <div className={cn("h-1.5 w-1.5 rounded-full", step >= 0 ? "bg-primary" : "bg-slate-200")} />
-                <div className={cn("h-1.5 w-1.5 rounded-full", step >= 1 ? "bg-primary" : "bg-slate-200")} />
+                <div className={cn("h-1.5 w-1.5 rounded-full transition-all duration-500", step >= 0 ? "bg-primary w-6" : "bg-slate-200")} />
+                <div className={cn("h-1.5 w-1.5 rounded-full transition-all duration-500", step >= 1 ? "bg-primary w-6" : "bg-slate-200")} />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phase {step + 1} of 2</span>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
                 <Button variant="ghost" onClick={() => step > 0 ? setStep(step - 1) : onOpenChange(false)} className="rounded-xl h-12 px-8 font-bold text-xs" disabled={isSubmitting || isComputing}>
-                    {step === 0 ? "Cancel" : <><ArrowLeft className="mr-2 h-4 w-4" /> Back</>}
+                    {step === 0 ? "Discard" : <><ArrowLeft className="mr-2 h-4 w-4" /> Reset</>}
                 </Button>
                 
                 {step === 0 ? (
-                    <Button onClick={handleCompute} disabled={isComputing} className="rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px]">
+                    <Button onClick={handleCompute} disabled={isComputing} className="flex-1 md:flex-none rounded-2xl h-12 px-12 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 min-w-[200px] bg-primary text-white">
                         {isComputing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calculator className="mr-2 h-4 w-4" />}
-                        {isComputing ? "Computing Ledger..." : "Compute Ledger"}
+                        {isComputing ? "Analyzing logs..." : "Compute Ledger"}
                     </Button>
                 ) : (
-                    <Button onClick={onSubmit} disabled={isSubmitting || computedBreakdown.length === 0} className="rounded-2xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90 min-w-[240px]">
+                    <Button onClick={onSubmit} disabled={isSubmitting || computedBreakdown.length === 0} className="flex-1 md:flex-none rounded-2xl h-12 px-16 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/30 bg-primary hover:bg-primary/90 text-white min-w-[240px]">
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                        {isSubmitting ? "Finalizing Ledger..." : "Finalize & Disburse"}
+                        {isSubmitting ? "Syncing..." : "Finalize & Disburse"}
                     </Button>
                 )}
             </div>
