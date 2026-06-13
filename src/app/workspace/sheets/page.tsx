@@ -18,7 +18,10 @@ import {
     Filter,
     Check,
     Clock,
-    CheckCircle2
+    CheckCircle2,
+    Folder,
+    Home,
+    ChevronRight
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -36,12 +39,24 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription,
+    DialogFooter,
+    DialogClose 
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 export default function SheetsHubPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
@@ -49,30 +64,45 @@ export default function SheetsHubPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState<string>('me');
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
 
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(
         collection(firestore, 'collaboration_pages'), 
         where('companyId', '==', companyId),
-        where('type', '==', 'sheet'),
         where('isTrashed', '==', false)
     ) : null, 
     [firestore, companyId]
   );
   const { data: allPages, isLoading } = useCollection<CollabPage>(pagesQuery);
 
-  // Fetch team members for the filter
   const teamQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
   );
   const { data: teamMembers } = useCollection<AppUser>(teamQuery);
 
-  const filteredSheets = useMemo(() => {
-    if (!allPages || !authUser) return [];
-    let list = [...allPages];
+  const folderPath = useMemo(() => {
+    if (!currentFolderId || !allPages) return [];
+    const path = [];
+    let curr: any = allPages.find(p => p.id === currentFolderId);
+    while (curr) {
+        path.unshift(curr);
+        const parentId = curr.parentId;
+        curr = allPages.find(p => p.id === parentId);
+    }
+    return path;
+  }, [currentFolderId, allPages]);
 
-    // Apply Member Filter
+  const filteredAssets = useMemo(() => {
+    if (!allPages || !authUser) return [];
+    let list = allPages.filter(p => p.parentId === currentFolderId);
+
+    // Sheets and Folders only
+    list = list.filter(p => p.type === 'sheet' || p.type === 'folder');
+
     if (selectedMemberId === 'me') {
         list = list.filter(p => p.createdBy === authUser.uid);
     } else if (selectedMemberId !== 'all') {
@@ -84,18 +114,30 @@ export default function SheetsHubPage() {
     }
 
     return list.sort((a, b) => {
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+
         const dateA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0);
         const timeA = dateA || (a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0);
         const dateB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : 0);
         const timeB = dateB || (b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0);
         return timeB - timeA;
     });
-  }, [allPages, searchTerm, selectedMemberId, authUser]);
+  }, [allPages, searchTerm, selectedMemberId, authUser, currentFolderId]);
 
   const handleCreate = () => {
     window.dispatchEvent(new CustomEvent('request-new-collab-page', {
-        detail: { type: 'sheet' }
+        detail: { type: 'sheet', parentId: currentFolderId }
     }));
+  };
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    window.dispatchEvent(new CustomEvent('request-new-collab-page', {
+        detail: { type: 'folder', title: newFolderName.trim(), parentId: currentFolderId }
+    }));
+    setNewFolderName('');
+    setIsNewFolderOpen(false);
   };
 
   const currentFilterLabel = useMemo(() => {
@@ -109,11 +151,23 @@ export default function SheetsHubPage() {
         <div className="px-8 py-6 space-y-6 shrink-0">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Library</p>
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <button onClick={() => setCurrentFolderId(null)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 transition-colors">
+                            <Home className="h-4 w-4" />
+                        </button>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Library</span>
+                        {folderPath.map((folder, idx) => (
+                            <React.Fragment key={folder.id}>
+                                <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                                <button onClick={() => setCurrentFolderId(folder.id)} className={cn("text-[10px] font-bold uppercase tracking-widest whitespace-nowrap truncate max-w-[120px]", idx === folderPath.length - 1 ? "text-slate-900" : "text-slate-400 hover:text-slate-900")}>{folder.title}</button>
+                            </React.Fragment>
+                        ))}
+                    </div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">Sheets</h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
+                    <Button variant="outline" onClick={() => setIsNewFolderOpen(true)} className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
                         <FolderPlus className="h-4 w-4" /> New folder
                     </Button>
                     <Button onClick={handleCreate} className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20 bg-green-600 hover:bg-green-700 text-white">
@@ -185,31 +239,71 @@ export default function SheetsHubPage() {
                         Array.from({ length: 8 }).map((_, i) => (
                             <div key={i} className="aspect-[4/5] rounded-[1.5rem] bg-slate-50 animate-pulse" />
                         ))
-                    ) : filteredSheets.map(page => (
-                        <AssetCard key={page.id} page={page} />
+                    ) : filteredAssets.map(asset => (
+                        <AssetCard 
+                            key={asset.id} 
+                            page={asset} 
+                            onNavigate={() => asset.type === 'folder' ? setCurrentFolderId(asset.id) : null}
+                        />
                     ))}
-                    {!isLoading && filteredSheets.length === 0 && (
+                    {!isLoading && filteredAssets.length === 0 && (
                         <div className="col-span-full py-40 text-center flex flex-col items-center gap-6 opacity-30 grayscale">
                             <div className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100 shadow-inner">
                                 <Grid className="h-16 w-16 text-slate-200" />
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-black uppercase tracking-[0.4em] text-slate-900 leading-none">Ledger clear</p>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No sheets match this filter</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No assets found matching this filter</p>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
         </ScrollArea>
+
+        {/* New Folder Dialog */}
+        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
+            <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-3xl p-8 bg-white">
+                <DialogHeader className="space-y-4">
+                    <div className="p-3 w-fit rounded-xl bg-blue-50 text-blue-600">
+                        <FolderPlus className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New Folder</DialogTitle>
+                        <DialogDescription className="text-slate-400 font-semibold text-xs mt-1">
+                            Create a shared container for spreadsheets.
+                        </DialogDescription>
+                    </div>
+                </DialogHeader>
+                <div className="py-6">
+                    <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder Name</Label>
+                    <Input 
+                        autoFocus
+                        placeholder="e.g. Finance 2025" 
+                        className="h-12 rounded-xl bg-slate-50 border-slate-100 font-semibold px-4 mt-2 text-sm shadow-inner"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                    />
+                </div>
+                <DialogFooter className="gap-2">
+                    <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
+                    <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
+                        Confirm Folder
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
 
-function AssetCard({ page }: { page: CollabPage }) {
+function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => void }) {
     const firestore = useFirestore();
     const creatorQuery = useMemoFirebase(() => (firestore && page.createdBy) ? doc(firestore, 'users', page.createdBy) : null, [firestore, page.createdBy]);
     const { data: creator } = useDoc<AppUser>(creatorQuery);
+    
+    const [isOver, setIsOver] = useState(false);
 
     const timeAgo = page.updatedAt 
         ? formatDistanceToNow((page.updatedAt as Timestamp).toDate(), { addSuffix: true })
@@ -217,62 +311,107 @@ function AssetCard({ page }: { page: CollabPage }) {
             ? formatDistanceToNow((page.createdAt as Timestamp).toDate(), { addSuffix: true })
             : 'Recently';
 
-    return (
-        <Link href={`/workspace/${page.id}`} className="group block">
-            <Card className="border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200">
-                <div className="relative aspect-[1.4/1] w-full bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:border-green-600/20 group-hover:bg-slate-50/30 overflow-hidden">
-                    {page.coverImage ? (
-                        <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                    ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
-                    )}
+    const isFolder = page.type === 'folder';
 
-                    <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
-                        {page.icon ? (
-                            <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
-                        ) : (
-                            <div className={cn(
-                                "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600 transition-all",
-                                page.coverImage && "bg-white/90 backdrop-blur-md border-white/50"
-                            )}>
-                                <Grid className="h-8 w-8" />
-                            </div>
-                        )}
+    const handleDragStart = (e: React.DragEvent) => {
+        if (isFolder) return;
+        e.dataTransfer.setData('pageId', page.id);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        if (!isFolder) return;
+        e.preventDefault();
+        setIsOver(false);
+        const sourceId = e.dataTransfer.getData('pageId');
+        if (sourceId && sourceId !== page.id) {
+            window.dispatchEvent(new CustomEvent('request-move-collab-page', {
+                detail: { pageId: sourceId, targetParentId: page.id }
+            }));
+        }
+    };
+
+    const cardContent = (
+        <Card 
+            draggable={!isFolder && !page.isTrashed}
+            onDragStart={handleDragStart}
+            onDragOver={(e) => { if (isFolder) { e.preventDefault(); setIsOver(true); } }}
+            onDragLeave={() => setIsOver(false)}
+            onDrop={handleDrop}
+            className={cn(
+                "border-none shadow-none bg-white rounded-2xl overflow-hidden transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-slate-200",
+                isOver && "ring-2 ring-primary ring-offset-2 scale-[1.02] bg-blue-50/30"
+            )}
+        >
+            <div className={cn(
+                "relative aspect-[1.4/1] w-full border border-slate-100 rounded-2xl flex items-center justify-center transition-all group-hover:bg-slate-50/30 overflow-hidden",
+                isFolder ? "bg-slate-100 group-hover:border-green-600/20" : "bg-slate-50 group-hover:border-green-600/20"
+            )}>
+                {page.coverImage ? (
+                    <Image src={page.coverImage} alt={page.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
+                )}
+
+                <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
+                    {page.icon ? (
+                        <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
+                    ) : (
+                        <div className={cn(
+                            "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-green-600 transition-all",
+                            page.coverImage && "bg-white/90 backdrop-blur-md border-white/50"
+                        )}>
+                            {isFolder ? <Folder className="h-8 w-8 fill-current" /> : <Grid className="h-8 w-8" />}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <CardContent className="p-4 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight group-hover:text-green-600 transition-colors">
+                            {page.title || 'Untitled ledger'}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <Avatar className="h-4 w-4 shadow-sm shrink-0 border border-white ring-1 ring-slate-100">
+                                <AvatarImage src={creator?.photoURL} />
+                                <AvatarFallback className="text-[6px] font-black">{creator?.name?.charAt(0) || '?'}</AvatarFallback>
+                            </Avatar>
+                            <p className="text-[10px] font-bold text-slate-400 truncate">
+                                {creator?.name || 'Member'} • {timeAgo}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <CardContent className="p-4 space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight group-hover:text-green-600 transition-colors">
-                                {page.title || 'Untitled ledger'}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-1.5">
-                                <Avatar className="h-4 w-4 shadow-sm shrink-0 border border-white ring-1 ring-slate-100">
-                                    <AvatarImage src={creator?.photoURL} />
-                                    <AvatarFallback className="text-[6px] font-black">{creator?.name?.charAt(0) || '?'}</AvatarFallback>
-                                </Avatar>
-                                <p className="text-[10px] font-bold text-slate-400 truncate">
-                                    {creator?.name || 'Member'} • {timeAgo}
-                                </p>
-                            </div>
-                        </div>
+                <div className="flex items-center gap-4 pt-3 border-t border-slate-50">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-slate-400">
+                        {page.isPrivate ? (
+                            <><Lock className="h-2.5 w-2.5" /> Secure</>
+                        ) : (
+                            <><Users className="h-2.5 w-2.5" /> Team</>
+                        )}
                     </div>
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-green-600">
+                        <CheckCircle2 className="h-2.5 w-2.5" /> Synchronized
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
 
-                    <div className="flex items-center gap-4 pt-3 border-t border-slate-50">
-                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-slate-400">
-                            {page.isPrivate ? (
-                                <><Lock className="h-2.5 w-2.5" /> Secure</>
-                            ) : (
-                                <><Users className="h-2.5 w-2.5" /> Team</>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-green-600">
-                            <CheckCircle2 className="h-2.5 w-2.5" /> Synchronized
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+    if (isFolder) {
+        return (
+            <button onClick={onNavigate} className="group block text-left outline-none">
+                {cardContent}
+            </button>
+        );
+    }
+
+    return (
+        <Link href={`/workspace/${page.id}`} className="group block">
+            {cardContent}
         </Link>
     );
 }

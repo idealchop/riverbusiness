@@ -116,7 +116,7 @@ export interface CollabWorkspace {
     createdAt: any;
 }
 
-export type CollabPageType = 'doc' | 'sheet' | 'board';
+export type CollabPageType = 'doc' | 'sheet' | 'board' | 'folder';
 
 export interface BoardElement {
     id: string;

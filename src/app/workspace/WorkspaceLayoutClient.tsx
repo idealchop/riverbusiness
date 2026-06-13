@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -93,6 +92,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     let initialContent: any = { type: "doc", content: [{ type: "paragraph" }] };
     if (type === 'sheet') initialContent = { rows: 20, cols: 10, data: {} };
     if (type === 'board') initialContent = { elements: [] };
+    if (type === 'folder') initialContent = {};
 
     const newPage = {
       companyId,
@@ -110,14 +110,16 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
     addDoc(pagesCol, newPage)
       .then((docRef) => {
-        const redirectUrl = `/workspace/${docRef.id}${initialPrompt ? `?prompt=${encodeURIComponent(initialPrompt)}` : ''}`;
-        router.push(redirectUrl);
+        if (type !== 'folder') {
+            const redirectUrl = `/workspace/${docRef.id}${initialPrompt ? `?prompt=${encodeURIComponent(initialPrompt)}` : ''}`;
+            router.push(redirectUrl);
+        }
         setIsMobileSidebarOpen(false);
         
         if (!initialPrompt) {
             toast({ 
                 title: 'Asset initialized', 
-                description: `A new ${type} workspace has been established for your organization.` 
+                description: `A new ${type} has been established for your organization.` 
             });
         }
       })
@@ -129,6 +131,20 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
         } satisfies SecurityRuleContext));
       });
   }, [firestore, authUser, companyId, router, toast]);
+
+  const handleMovePage = useCallback(async (pageId: string, targetParentId: string | null) => {
+    if (!firestore) return;
+    try {
+        const pageRef = doc(firestore, 'collaboration_pages', pageId);
+        await updateDoc(pageRef, {
+            parentId: targetParentId,
+            updatedAt: serverTimestamp()
+        });
+        toast({ title: 'Item Moved', description: 'The organization hierarchy has been updated.' });
+    } catch (error) {
+        console.error("Error moving page:", error);
+    }
+  }, [firestore, toast]);
 
   const handleDuplicatePage = useCallback(async (pageId: string) => {
     if (!firestore || !authUser || !companyId) return;
@@ -280,6 +296,13 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
         }
     };
 
+    const handleRequestMove = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) {
+            handleMovePage(customEvent.detail.pageId, customEvent.detail.targetParentId);
+        }
+    };
+
     window.addEventListener('request-new-collab-page', handleRequestNewPage);
     window.addEventListener('request-delete-collab-page', handleRequestTrashPage);
     window.addEventListener('request-restore-collab-page', handleRequestRestorePage);
@@ -287,6 +310,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     window.addEventListener('request-favorite-collab-page', handleRequestFavorite);
     window.addEventListener('request-share-collab-page', handleRequestShare);
     window.addEventListener('request-duplicate-collab-page', handleRequestDuplicate);
+    window.addEventListener('request-move-collab-page', handleRequestMove);
     
     return () => {
         window.removeEventListener('request-new-collab-page', handleRequestNewPage);
@@ -296,8 +320,9 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
         window.removeEventListener('request-favorite-collab-page', handleRequestFavorite);
         window.removeEventListener('request-share-collab-page', handleRequestShare);
         window.removeEventListener('request-duplicate-collab-page', handleRequestDuplicate);
+        window.removeEventListener('request-move-collab-page', handleRequestMove);
     };
-  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle, handleDuplicatePage]);
+  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle, handleDuplicatePage, handleMovePage]);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
