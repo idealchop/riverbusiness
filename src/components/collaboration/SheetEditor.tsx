@@ -35,7 +35,8 @@ import {
     Send,
     MessageSquare,
     UserCircle,
-    CornerDownRight
+    CornerDownRight,
+    Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCollection, useMemoFirebase, useFirestore, useUser, useDoc } from '@/firebase';
-import { collection, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { createClientNotification } from '@/lib/notifications';
 
@@ -99,19 +100,6 @@ interface SheetEditorProps {
   onContentChange: (json: any) => void;
   editable?: boolean;
   companyId?: string;
-}
-
-interface FilterRule {
-    id: string;
-    fieldId: string;
-    operator: 'contains' | 'is' | 'is_not' | 'is_empty';
-    value: string;
-}
-
-interface SortRule {
-    id: string;
-    fieldId: string;
-    direction: 'asc' | 'desc';
 }
 
 export function SheetEditor({ initialData, onContentChange, editable = true, companyId }: SheetEditorProps) {
@@ -159,26 +147,16 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   
-  const [sortRules, setSortRules] = useState<SortRule[]>(initialData?.views?.find((v: any) => v.id === initialData?.activeViewId)?.config?.sorts || []);
-  const [filters, setFilters] = useState<FilterRule[]>([]);
-  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
-
-  const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState('');
-  const [replyingToId, setReplyingToId] = useState<string | null>(null);
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const [tagSearch, setTagSearch] = useState('');
-
-  const detailRecord = useMemo(() => records.find(r => r.id === detailRecordId), [records, detailRecordId]);
+  const [activeView, setActiveView] = useState<SheetView>(() => views.find(v => v.id === activeViewId) || views[0]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const activeView = useMemo(() => {
-    if (!views || views.length === 0) return { id: 'v1', type: 'grid', config: {} } as SheetView;
-    return views.find(v => v.id === activeViewId) || views[0];
+  useEffect(() => {
+    const v = views.find(v => v.id === activeViewId) || views[0];
+    setActiveView(v);
   }, [views, activeViewId]);
 
   const sync = useCallback((newFields: SheetField[], newRecords: SheetRecord[], newViews: SheetView[], newViewId: string) => {
@@ -187,6 +165,38 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
       onContentChange({ fields: newFields, records: newRecords, views: newViews, activeViewId: newViewId });
       setTimeout(() => setIsSyncing(false), 500);
   }, [onContentChange, editable]);
+
+  const handleCreateField = useCallback(() => {
+      const id = `f-${Date.now()}`;
+      const newField: SheetField = {
+          id,
+          name: 'New Column',
+          type: 'text',
+          width: 180
+      };
+      const nextFields = [...fields, newField];
+      setFields(nextFields);
+      sync(nextFields, records, views, activeViewId);
+      toast({ title: 'Column Established', description: 'A new data attribute has been added to the schema.' });
+  }, [fields, records, views, activeViewId, sync, toast]);
+
+  const handleUpdateField = useCallback((fieldId: string, updates: Partial<SheetField>) => {
+      const nextFields = fields.map(f => f.id === fieldId ? { ...f, ...updates } : f);
+      setFields(nextFields);
+      sync(nextFields, records, views, activeViewId);
+  }, [fields, records, views, activeViewId, sync]);
+
+  const handleDeleteField = useCallback((fieldId: string) => {
+      const field = fields.find(f => f.id === fieldId);
+      if (field?.isPrimary) {
+          toast({ variant: 'destructive', title: 'Protocol Denied', description: 'The primary column is required for object identity.' });
+          return;
+      }
+      const nextFields = fields.filter(f => f.id !== fieldId);
+      setFields(nextFields);
+      sync(nextFields, records, views, activeViewId);
+      toast({ title: 'Schema Updated', description: 'The column has been removed from the ledger.' });
+  }, [fields, records, views, activeViewId, sync, toast]);
 
   const addRecord = useCallback((index?: number) => {
     const newRecord: SheetRecord = {
@@ -227,6 +237,14 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
       sync(fields, next, views, activeViewId);
   }, [records, fields, views, activeViewId, sync]);
 
+  const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
+
+  const detailRecord = useMemo(() => records.find(r => r.id === detailRecordId), [records, detailRecordId]);
+
   const handleAddComment = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!commentText.trim() || !detailRecordId || !user || !currentUserProfile) return;
@@ -252,21 +270,6 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
     sync(fields, nextRecords, views, activeViewId);
     setCommentText('');
     setReplyingToId(null);
-
-    // Notify tagged members
-    if (commentText.includes('@')) {
-        const mentioned = teamMembers?.filter(m => commentText.includes(`@${m.name}`));
-        mentioned?.forEach(m => {
-            if (m.id !== user.uid && effectiveCompanyId) {
-                createClientNotification(firestore!, m.id, {
-                    type: 'general',
-                    title: 'Tagged in record',
-                    description: `${currentUserProfile.name} mentioned you in a collaborative record discussion.`,
-                    data: { pageId: initialData.id, recordId: detailRecordId }
-                });
-            }
-        });
-    }
   };
 
   const handleSwitchView = useCallback((id: string) => {
@@ -331,13 +334,59 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                             <span className="text-[10px] font-black text-slate-300">#</span>
                         </div>
                         {visibleFields.map((field) => (
-                            <div key={field.id} style={{ width: field.width }} className="border-r flex items-center justify-between px-3 shrink-0 group">
-                                <div className="flex items-center gap-2 truncate">
-                                    {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3.5 w-3.5 text-slate-400 shrink-0" })}
-                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest truncate">{field.name}</span>
-                                </div>
+                            <div key={field.id} style={{ width: field.width }} className="border-r flex items-center justify-between px-3 shrink-0 group relative overflow-visible">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="flex-1 h-full flex items-center gap-2 truncate outline-none hover:bg-slate-100 transition-colors -mx-3 px-3">
+                                            {React.createElement(FIELD_ICONS[field.type] || Type, { className: "h-3.5 w-3.5 text-slate-400 shrink-0" })}
+                                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest truncate">{field.name}</span>
+                                            <ChevronDown className="h-2.5 w-2.5 text-slate-300 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white">
+                                        <div className="p-3 space-y-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Column Label</Label>
+                                                <Input 
+                                                    value={field.name} 
+                                                    onChange={(e) => handleUpdateField(field.id, { name: e.target.value })}
+                                                    className="h-8 rounded-lg bg-slate-50 border-none font-bold text-xs shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Data Classification</Label>
+                                                <Select value={field.type} onValueChange={(val: any) => handleUpdateField(field.id, { type: val })}>
+                                                    <SelectTrigger className="h-8 rounded-lg bg-slate-50 border-none font-bold text-xs shadow-none">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        {FIELD_TYPES.map(t => (
+                                                            <SelectItem key={t.type} value={t.type} className="text-xs font-bold py-2">{t.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DropdownMenuSeparator className="bg-slate-50" />
+                                        <DropdownMenuItem 
+                                            onClick={() => handleDeleteField(field.id)}
+                                            disabled={field.isPrimary}
+                                            className="gap-3 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-xl cursor-pointer"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" /> Purge Column
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         ))}
+                        {editable && (
+                            <button 
+                                onClick={handleCreateField}
+                                className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-slate-100 transition-all border-r border-b"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </button>
+                        )}
                         <div className="flex-1" />
                     </div>
 
@@ -355,11 +404,18 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                                         </div>
                                         {visibleFields.map((field) => (
                                             <div key={field.id} style={{ width: field.width }} className="border-r shrink-0 flex items-center overflow-hidden">
-                                                <CellRenderer field={field} value={record.values[field.id]} onChange={(val: any) => {
-                                                    const next = records.map(r => r.id === record.id ? { ...r, values: { ...r.values, [field.id]: val }, updatedAt: new Date().toISOString() } : r);
-                                                    setRecords(next);
-                                                    sync(fields, next, views, activeViewId);
-                                                }} onExpand={() => setDetailRecordId(record.id)} editable={editable} />
+                                                <CellRenderer 
+                                                    field={field} 
+                                                    value={record.values[field.id]} 
+                                                    onChange={(val: any) => {
+                                                        const next = records.map(r => r.id === record.id ? { ...r, values: { ...r.values, [field.id]: val }, updatedAt: new Date().toISOString() } : r);
+                                                        setRecords(next);
+                                                        sync(fields, next, views, activeViewId);
+                                                    }} 
+                                                    onExpand={() => setDetailRecordId(record.id)} 
+                                                    onUpdateField={handleUpdateField}
+                                                    editable={editable} 
+                                                />
                                             </div>
                                         ))}
                                         <div className="flex-1" />
@@ -411,11 +467,18 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                                             </Label>
                                         </div>
                                         <div className="min-h-[44px] rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white transition-all shadow-none">
-                                            <CellRenderer field={field} value={detailRecord?.values[field.id]} onChange={(val: any) => {
-                                                const next = records.map(r => r.id === detailRecordId ? { ...r, values: { ...r.values, [field.id]: val }, updatedAt: new Date().toISOString() } : r);
-                                                setRecords(next);
-                                                sync(fields, next, views, activeViewId);
-                                            }} isExpanded={true} editable={editable} />
+                                            <CellRenderer 
+                                                field={field} 
+                                                value={detailRecord?.values[field.id]} 
+                                                onChange={(val: any) => {
+                                                    const next = records.map(r => r.id === detailRecordId ? { ...r, values: { ...r.values, [field.id]: val }, updatedAt: new Date().toISOString() } : r);
+                                                    setRecords(next);
+                                                    sync(fields, next, views, activeViewId);
+                                                }} 
+                                                isExpanded={true} 
+                                                onUpdateField={handleUpdateField}
+                                                editable={editable} 
+                                            />
                                         </div>
                                     </div>
                                 ))}
