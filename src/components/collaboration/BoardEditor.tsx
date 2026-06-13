@@ -539,8 +539,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       // Check hit for elements
       const hit = [...elements].reverse().find(el => {
           if (el.type === 'path') {
-              // Very rough bounding box check for path selection
-              return false; // Better to let marquee select them for now
+              return false; 
           } 
           return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
       });
@@ -595,7 +594,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const yMax = Math.max(marqueeBox.y1, y);
           
           const inBox = elements.map(el => {
-              if (el.type === 'path') return null; // Path selection via marquee is harder to visualze without bounding box stored
+              if (el.type === 'path') return null; 
               if (el.x < xMax && el.x + el.width > xMin && el.y < yMax && el.y + el.height > yMin) return el.id;
               return null;
           }).filter(id => id !== null) as string[];
@@ -771,7 +770,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
         return `M ${x1} ${y1} C ${x1 + dist} ${y1}, ${x2 - dist} ${y2}, ${x2} ${y2}`;
       }
 
-      // Default curved
       const cp1x = x1 + (x2 - x1) / 2, cp1y = y1, cp2x = x1 + (x2 - x1) / 2, cp2y = y2;
       return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
   };
@@ -785,7 +783,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   return (
     <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none h-full font-sans">
-        {/* Left Toolbar */}
         <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
             <div className="flex flex-col gap-4">
                 <DraggableTool icon={<TypeIcon className="h-5 w-5 text-slate-900" />} type="text" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} />
@@ -857,7 +854,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
         </aside>
 
-        {/* Main Canvas */}
         <div className="flex-1 relative overflow-hidden" 
              onMouseDown={handleMouseDown}
              onMouseMove={handleMouseMove} 
@@ -962,34 +958,44 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     
                     const isCustomClipped = ['triangle', 'hexagon', 'octagon', 'star', 'document', 'manual-input', 'parallelogram', 'predefined'].includes(el.type);
 
+                    const getClipPath = (type: string) => {
+                        switch (type) {
+                            case 'triangle': return 'polygon(50% 0%, 0% 100%, 100% 100%)';
+                            case 'hexagon': return 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
+                            case 'octagon': return 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)';
+                            case 'cloud': return 'path("M 25,60 a 20,20 1 0,0 0,40 h 50 a 20,20 1 0,0 0,-40 a 10,10 1 0,0 -15,-10 a 15,15 1 0,0 -35,10 z")';
+                            case 'star': return 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+                            case 'document': return 'polygon(0% 0%, 100% 0%, 100% 85%, 85% 95%, 65% 85%, 50% 95%, 35% 85%, 15% 95%, 0% 85%)';
+                            case 'manual-input': return 'polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%)';
+                            case 'parallelogram': return 'polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)';
+                            default: return undefined;
+                        }
+                    };
+
+                    const clipPath = getClipPath(el.type);
+
                     return (
                         <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
                             <div className={cn(
-                                "w-full h-full flex flex-col items-center justify-center relative overflow-hidden shadow-lg transition-shadow", 
-                                el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg", 
-                                el.type === 'rect' && "border-2 border-slate-900 rounded-xl", 
-                                el.type === 'circle' && "border-2 border-slate-900 rounded-full", 
-                                el.type === 'diamond' && "border-2 border-slate-900 rotate-45",
-                                el.type === 'parallelogram' && "border-2 border-slate-900",
-                                el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
-                                el.type === 'capsule' && "border-2 border-slate-900 rounded-full",
-                                el.type === 'document' && "border-2 border-slate-900 rounded-t-lg",
-                                el.type === 'predefined' && "border-y-2 border-slate-900 relative",
+                                "w-full h-full flex flex-col items-center justify-center relative overflow-hidden transition-shadow", 
+                                el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg border-2 border-slate-900 shadow-lg", 
+                                el.type === 'rect' && "border-2 border-slate-900 rounded-xl shadow-lg", 
+                                el.type === 'circle' && "border-2 border-slate-900 rounded-full shadow-lg", 
+                                el.type === 'diamond' && "border-2 border-slate-900 rotate-45 shadow-lg",
+                                el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%] shadow-lg",
+                                el.type === 'capsule' && "border-2 border-slate-900 rounded-full shadow-lg",
+                                el.type === 'predefined' && "border-y-2 border-slate-900 relative shadow-lg",
                                 isCustomClipped && "bg-transparent border-none p-0 shadow-none",
                                 (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
                                 backgroundColor: (el.type === 'text' || el.type === 'icon' || isCustomClipped || el.type === 'cloud') ? 'transparent' : el.color,
-                                clipPath: el.type === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 
-                                          el.type === 'hexagon' ? 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' :
-                                          el.type === 'octagon' ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' :
-                                          el.type === 'cloud' ? 'path("M 25,60 a 20,20 1 0,0 0,40 h 50 a 20,20 1 0,0 0,-40 a 10,10 1 0,0 -15,-10 a 15,15 1 0,0 -35,10 z")' :
-                                          el.type === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
-                                          el.type === 'document' ? 'polygon(0% 0%, 100% 0%, 100% 85%, 85% 95%, 65% 85%, 50% 95%, 35% 85%, 15% 95%, 0% 85%)' :
-                                          el.type === 'manual-input' ? 'polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%)' :
-                                          el.type === 'parallelogram' ? 'polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)' :
-                                          undefined,
                             }}>
-                                {isCustomClipped && <div className="absolute inset-0 border-2 border-slate-900" style={{ backgroundColor: el.color, clipPath: 'inherit' }} />}
+                                {isCustomClipped && (
+                                    <>
+                                        <div className="absolute inset-0 bg-slate-900" style={{ clipPath }} />
+                                        <div className="absolute inset-[2px] border-none" style={{ backgroundColor: el.color, clipPath }} />
+                                    </>
+                                )}
                                 {el.type === 'predefined' && (
                                     <>
                                         <div className="absolute inset-0" style={{ backgroundColor: el.color }} />
@@ -998,7 +1004,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         <div className="absolute inset-0 border-x-2 border-slate-900" />
                                     </>
                                 )}
-                                {el.type === 'cloud' && <div className="absolute inset-0 bg-blue-50 border-2 border-slate-900" style={{ backgroundColor: el.color }} />}
+                                {el.type === 'cloud' && (
+                                    <>
+                                        <div className="absolute inset-0 bg-slate-900" style={{ clipPath }} />
+                                        <div className="absolute inset-[2px] bg-blue-50" style={{ backgroundColor: el.color, clipPath }} />
+                                    </>
+                                )}
                                 
                                 <div className={cn(
                                     "w-full h-full flex flex-col justify-center relative z-10", 
@@ -1007,7 +1018,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     {el.type === 'icon' && IconComp ? (
                                         <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
                                     ) : (
-                                        <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap p-2" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
+                                        <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap p-3" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
                                             {el.text}
                                         </div>
                                     )}
@@ -1022,7 +1033,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 {marqueeBox && <div className="absolute border-2 border-primary bg-primary/10 rounded-sm pointer-events-none" style={{ left: Math.min(marqueeBox.x1, marqueeBox.x2), top: Math.min(marqueeBox.y1, marqueeBox.y2), width: Math.abs(marqueeBox.x2 - marqueeBox.x1), height: Math.abs(marqueeBox.y2 - marqueeBox.y1) }} />}
             </div>
 
-            {/* Bottom Controls */}
             <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2">
                 <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-white border border-slate-200 shadow-lg">
                     <button onClick={() => handleZoom(-0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">-</button>
@@ -1032,9 +1042,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
         </div>
 
-        {/* Right Side Panel - Properties Inspector */}
         {(selectedElement || selectedConnection) && (
-            <aside className="w-80 border-l bg-white flex flex-col shrink-0 z-50 animate-in slide-in-from-right duration-300">
+            <aside className="w-80 border-l bg-white flex flex-col shrink-0 z-50">
                 <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-xl bg-white shadow-sm text-primary">
