@@ -88,7 +88,10 @@ import {
     Triangle,
     ChevronDown,
     Zap,
-    Minus
+    Minus,
+    MoreHorizontal,
+    Activity,
+    Slash
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -203,7 +206,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<'select' | 'hand' | 'arrow' | 'pen'>('select');
-  const [arrowType, setArrowType] = useState<'straight' | 'curved' | 'step'>('curved');
+  const [arrowType, setArrowType] = useState<BoardConnection['type']>('curved');
   
   const [isPanning, setIsPanning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -229,6 +232,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     if (selectedIds.length !== 1) return null;
     return elements.find(el => el.id === selectedIds[0]);
   }, [selectedIds, elements]);
+
+  const selectedConnection = useMemo(() => {
+    if (selectedIds.length !== 1) return null;
+    return connections.find(c => c.id === selectedIds[0]);
+  }, [selectedIds, connections]);
 
   const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
       if (!editable) return;
@@ -300,17 +308,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const deleteSelected = useCallback(() => {
       if (!editable || selectedIds.length === 0) return;
       pushHistory();
-      setElements(prev => {
-          const next = prev.filter(el => !selectedIds.includes(el.id));
-          setConnections(prevConn => {
-              const nextConn = prevConn.filter(c => !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
-              setTimeout(() => sync(next, nextConn), 0);
-              return nextConn;
-          });
-          return next;
-      });
+      
+      const newElements = elements.filter(el => !selectedIds.includes(el.id));
+      const newConnections = connections.filter(c => !selectedIds.includes(c.id) && !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
+      
+      setElements(newElements);
+      setConnections(newConnections);
+      sync(newElements, newConnections);
       setSelectedIds([]);
-  }, [editable, selectedIds, sync, pushHistory, connections]);
+  }, [editable, selectedIds, sync, pushHistory, elements, connections]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -404,6 +410,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
+      // Check hit for elements
       const hit = [...elements].reverse().find(el => {
           if (el.type === 'path') return false; 
           return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
@@ -429,6 +436,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               setDragOffset({ x: x - hit.x, y: y - hit.y }); 
           }
       } else {
+          // Check hit for connections if not clicking an element
+          const connHit = connections.find(c => {
+              // Very simple hit check for connections (closest to center point for now)
+              // In production we'd use better path distance algorithms
+              return false; // Selection handled by individual path onClick for better precision
+          });
+
           if (!e.shiftKey) setSelectedIds([]);
           setIsSelectingMarquee(true);
           setMarqueeBox({ x1: x, y1: y, x2: x, y2: y });
@@ -527,7 +541,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           });
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
-              const newConn: BoardConnection = { id: `conn-${Date.now()}`, fromId: pendingConnFrom, toId: targetHit.id, type: arrowType };
+              const newConn: BoardConnection = { 
+                id: `conn-${Date.now()}`, 
+                fromId: pendingConnFrom, 
+                toId: targetHit.id, 
+                type: arrowType,
+                strokeWidth: 2,
+                endMarker: 'arrow'
+              };
               setConnections(prev => {
                   const next = [...prev, newConn];
                   setTimeout(() => sync(elements, next), 0);
@@ -576,7 +597,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       sync(nextElements, connections);
   };
 
-  const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string, type: 'straight' | 'curved' | 'step' = 'curved') => {
+  const updateSelectedConnection = (data: Partial<BoardConnection>) => {
+    if (selectedIds.length === 0 || !editable) return;
+    pushHistory();
+    
+    const nextConnections = connections.map(conn => {
+        if (selectedIds.includes(conn.id)) {
+            return { ...conn, ...data };
+        }
+        return conn;
+    });
+
+    setConnections(nextConnections);
+    sync(elements, nextConnections);
+  };
+
+  const getConnectorPath = (fromId: string, toX: number, toY: number, toId?: string, type: BoardConnection['type'] = 'curved') => {
       const from = elements.find(e => e.id === fromId);
       if (!from) return '';
       const x1 = from.x + from.width / 2;
@@ -596,6 +632,20 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
       }
 
+      if (type === 'rounded-step') {
+        const midX = x1 + (x2 - x1) / 2;
+        const radius = 12;
+        const dirY = y2 > y1 ? 1 : -1;
+        const dirX = x2 > x1 ? 1 : -1;
+        return `M ${x1} ${y1} L ${midX - radius * dirX} ${y1} Q ${midX} ${y1}, ${midX} ${y1 + radius * dirY} L ${midX} ${y2 - radius * dirY} Q ${midX} ${y2}, ${midX + radius * dirX} ${y2} L ${x2} ${y2}`;
+      }
+
+      if (type === 'bezier') {
+        const dist = Math.sqrt((x2-x1)**2 + (y2-y1)**2) / 2;
+        return `M ${x1} ${y1} C ${x1 + dist} ${y1}, ${x2 - dist} ${y2}, ${x2} ${y2}`;
+      }
+
+      // Default curved
       const cp1x = x1 + (x2 - x1) / 2, cp1y = y1, cp2x = x1 + (x2 - x1) / 2, cp2y = y2;
       return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
   };
@@ -673,15 +723,21 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <div className="flex flex-col gap-1">
                     <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
                     {tool === 'arrow' && (
-                        <div className="flex flex-col gap-1 p-1 bg-slate-100 rounded-lg animate-in slide-in-from-top-1 duration-200">
-                             <button onClick={() => setArrowType('curved')} className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'curved' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                        <div className="flex flex-col gap-1 p-1 bg-slate-100 rounded-lg animate-in slide-in-from-top-1 duration-200 shadow-inner">
+                             <button onClick={() => setArrowType('curved')} title="Curved" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'curved' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
                                 <Repeat className="h-3 w-3" />
                              </button>
-                             <button onClick={() => setArrowType('straight')} className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'straight' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                             <button onClick={() => setArrowType('straight')} title="Straight" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'straight' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
                                 <Minus className="h-3 w-3" />
                              </button>
-                             <button onClick={() => setArrowType('step')} className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'step' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                             <button onClick={() => setArrowType('step')} title="Step" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'step' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
                                 <CornerDownRight className="h-3 w-3" />
+                             </button>
+                             <button onClick={() => setArrowType('rounded-step')} title="Rounded Step" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'rounded-step' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                                <div className="h-3 w-3 border-b-2 border-l-2 rounded-bl-sm border-current" />
+                             </button>
+                             <button onClick={() => setArrowType('bezier')} title="Bezier" className={cn("h-6 w-6 rounded-md flex items-center justify-center transition-all", arrowType === 'bezier' ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-900")}>
+                                <Slash className="h-3 w-3 rotate-45" />
                              </button>
                         </div>
                     )}
@@ -713,18 +769,72 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
                 <svg className="absolute inset-0 overflow-visible w-full h-full">
                     <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                            <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1" />
+                        <marker id="marker-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
                         </marker>
+                        <marker id="marker-circle" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                            <circle cx="4" cy="4" r="3" fill="currentColor" />
+                        </marker>
+                        <marker id="marker-diamond" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                            <rect x="0" y="0" width="7" height="7" transform="rotate(45 5 5)" fill="currentColor" />
+                        </marker>
+                        
+                        {/* Glow Filter for Selections */}
+                        <filter id="selection-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="3" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
                     </defs>
-                    {connections.map(conn => (
-                        <g key={conn.id} className="group/conn pointer-events-none">
-                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId, conn.type)} fill="none" stroke="transparent" strokeWidth="20" className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setConnections(prev => prev.filter(c => c.id !== conn.id)); sync(elements, connections.filter(c => c.id !== conn.id)); }} />
-                            <path d={getConnectorPath(conn.fromId, 0, 0, conn.toId, conn.type)} fill="none" stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" className="transition-colors" />
-                        </g>
-                    ))}
+
+                    {connections.map(conn => {
+                        const isSelected = selectedIds.includes(conn.id);
+                        const path = getConnectorPath(conn.fromId, 0, 0, conn.toId, conn.type);
+                        const strokeColor = conn.color || '#cbd5e1';
+                        
+                        return (
+                            <g key={conn.id} className="group/conn pointer-events-none">
+                                {/* Interaction Hitbox */}
+                                <path 
+                                    d={path} 
+                                    fill="none" 
+                                    stroke="transparent" 
+                                    strokeWidth="12" 
+                                    className="pointer-events-auto cursor-pointer" 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setSelectedIds([conn.id]);
+                                    }} 
+                                />
+                                
+                                {/* Selection Indicator */}
+                                {isSelected && (
+                                    <path 
+                                        d={path} 
+                                        fill="none" 
+                                        stroke="hsl(var(--primary))" 
+                                        strokeWidth={6} 
+                                        strokeOpacity="0.2"
+                                        filter="url(#selection-glow)"
+                                    />
+                                )}
+
+                                {/* Main Path */}
+                                <path 
+                                    d={path} 
+                                    fill="none" 
+                                    stroke={isSelected ? 'hsl(var(--primary))' : strokeColor} 
+                                    strokeWidth={conn.strokeWidth || 2} 
+                                    strokeDasharray={conn.dashArray || ""}
+                                    markerEnd={conn.endMarker && conn.endMarker !== 'none' ? `url(#marker-${conn.endMarker})` : "url(#marker-arrow)"}
+                                    className="transition-colors duration-300"
+                                    style={{ color: isSelected ? 'hsl(var(--primary))' : strokeColor }}
+                                />
+                            </g>
+                        );
+                    })}
+
                     {pendingConnFrom && currentMouseCoords && (
-                        <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y, undefined, arrowType)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#arrowhead)" />
+                        <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y, undefined, arrowType)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#marker-arrow)" style={{ color: 'hsl(var(--primary))' }} />
                     )}
                     {elements.filter(el => el.type === 'path').map(el => (
                         <path key={el.id} d={el.path} fill="none" stroke={el.color || '#3b82f6'} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" />
@@ -739,7 +849,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     return (
                         <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
                             <div className={cn(
-                                "w-full h-full flex flex-col items-center justify-center relative overflow-hidden shadow-lg", 
+                                "w-full h-full flex flex-col items-center justify-center relative overflow-hidden shadow-lg transition-shadow", 
                                 el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg", 
                                 el.type === 'rect' && "border-2 border-slate-900 rounded-xl", 
                                 el.type === 'circle' && "border-2 border-slate-900 rounded-full", 
@@ -790,7 +900,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
         </div>
 
         {/* Right Side Panel - Properties Inspector */}
-        {selectedElement && (
+        {(selectedElement || selectedConnection) && (
             <aside className="w-80 border-l bg-white flex flex-col shrink-0 z-50 animate-in slide-in-from-right duration-300">
                 <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -804,64 +914,181 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 
                 <ScrollArea className="flex-1">
                     <div className="p-6 space-y-8 pb-32">
-                        <div className="space-y-4">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Content</Label>
-                            <Textarea 
-                                value={selectedElement.text}
-                                onChange={(e) => updateSelectedElements({ text: e.target.value })}
-                                placeholder="Enter text content..."
-                                className="min-h-[140px] rounded-2xl bg-slate-50 border-none font-bold text-sm leading-relaxed p-4 shadow-inner resize-none"
-                            />
-                        </div>
-
-                        <Separator className="bg-slate-50" />
-
-                        <div className="space-y-6">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Typography</Label>
-                            <div className="grid grid-cols-1 gap-6">
-                                <div className="space-y-3">
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Font Size: {selectedElement.fontSize || 14}px</p>
-                                    <input type="range" min="8" max="120" value={selectedElement.fontSize || 14} onChange={(e) => updateSelectedElements({ fontSize: parseInt(e.target.value) })} className="w-full" />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'left' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'left' && "bg-primary/10 border-primary text-primary")}><AlignLeft className="h-4 w-4" /></Button>
-                                    <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'center' })} className={cn("flex-1 h-9 rounded-xl", (selectedElement.textAlign === 'center' || !selectedElement.textAlign) && "bg-primary/10 border-primary text-primary")}><AlignCenter className="h-4 w-4" /></Button>
-                                    <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'right' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'right' && "bg-primary/10 border-primary text-primary")}><AlignRight className="h-4 w-4" /></Button>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ bold: !selectedElement.bold })} className={cn("w-full h-9 rounded-xl font-black uppercase tracking-widest text-[10px]", selectedElement.bold && "bg-primary/10 border-primary text-primary")}>Bold Weight</Button>
-                            </div>
-                        </div>
-
-                        <Separator className="bg-slate-50" />
-
-                        <div className="space-y-4">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Theme & Style</Label>
-                            <div className="grid grid-cols-5 gap-2">
-                                {COLORS.map(c => (
-                                    <button 
-                                        key={c.value} 
-                                        onClick={() => updateSelectedElements({ color: c.value })} 
-                                        className={cn(
-                                            "h-8 w-full rounded-xl border border-slate-100 transition-all",
-                                            selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2 z-10"
-                                        )} 
-                                        style={{ backgroundColor: c.value }} 
+                        {selectedElement && (
+                            <>
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Content</Label>
+                                    <Textarea 
+                                        value={selectedElement.text}
+                                        onChange={(e) => updateSelectedElements({ text: e.target.value })}
+                                        placeholder="Enter text content..."
+                                        className="min-h-[140px] rounded-2xl bg-slate-50 border-none font-bold text-sm leading-relaxed p-4 shadow-inner resize-none"
                                     />
-                                ))}
-                            </div>
-                        </div>
+                                </div>
 
-                        <Separator className="bg-slate-50" />
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-6">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Typography</Label>
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div className="space-y-3">
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Font Size: {selectedElement.fontSize || 14}px</p>
+                                            <input type="range" min="8" max="120" value={selectedElement.fontSize || 14} onChange={(e) => updateSelectedElements({ fontSize: parseInt(e.target.value) })} className="w-full" />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'left' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'left' && "bg-primary/10 border-primary text-primary")}><AlignLeft className="h-4 w-4" /></Button>
+                                            <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'center' })} className={cn("flex-1 h-9 rounded-xl", (selectedElement.textAlign === 'center' || !selectedElement.textAlign) && "bg-primary/10 border-primary text-primary")}><AlignCenter className="h-4 w-4" /></Button>
+                                            <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'right' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'right' && "bg-primary/10 border-primary text-primary")}><AlignRight className="h-4 w-4" /></Button>
+                                        </div>
+                                        <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ bold: !selectedElement.bold })} className={cn("w-full h-9 rounded-xl font-black uppercase tracking-widest text-[10px]", selectedElement.bold && "bg-primary/10 border-primary text-primary")}>Bold Weight</Button>
+                                    </div>
+                                </div>
+
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Theme & Style</Label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {COLORS.map(c => (
+                                            <button 
+                                                key={c.value} 
+                                                onClick={() => updateSelectedElements({ color: c.value })} 
+                                                className={cn(
+                                                    "h-8 w-full rounded-xl border border-slate-100 transition-all",
+                                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2 z-10"
+                                                )} 
+                                                style={{ backgroundColor: c.value }} 
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {selectedConnection && (
+                            <>
+                                <div className="space-y-6">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Connection Label</Label>
+                                    <Input 
+                                        value={selectedConnection.label || ''} 
+                                        onChange={(e) => updateSelectedConnection({ label: e.target.value })}
+                                        placeholder="Add label..."
+                                        className="h-11 rounded-xl bg-slate-50 border-none font-bold text-sm shadow-inner"
+                                    />
+                                </div>
+
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-6">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Routing Mode</Label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {[
+                                            { type: 'curved', icon: Repeat, label: 'Curve' },
+                                            { type: 'straight', icon: Minus, label: 'Line' },
+                                            { type: 'step', icon: CornerDownRight, label: 'Step' },
+                                            { type: 'rounded-step', icon: CornerDownRight, label: 'Round' },
+                                            { type: 'bezier', icon: Slash, label: 'Bez.' }
+                                        ].map(m => (
+                                            <button 
+                                                key={m.type}
+                                                onClick={() => updateSelectedConnection({ type: m.type as any })}
+                                                className={cn(
+                                                    "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                                                    selectedConnection.type === m.type ? "border-primary bg-primary/5 text-primary" : "border-slate-100 text-slate-400 hover:bg-slate-50"
+                                                )}
+                                            >
+                                                <m.icon className={cn("h-4 w-4", m.type === 'bezier' && "rotate-45")} />
+                                                <span className="text-[7px] font-black uppercase tracking-tighter">{m.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-6">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Line Protocol</Label>
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div className="space-y-3">
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Stroke Weight: {selectedConnection.strokeWidth || 2}px</p>
+                                            <input type="range" min="1" max="12" value={selectedConnection.strokeWidth || 2} onChange={(e) => updateSelectedConnection({ strokeWidth: parseInt(e.target.value) })} className="w-full" />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                                { id: 'solid', label: 'Solid', value: '' },
+                                                { id: 'dashed', label: 'Dashed', value: '8 8' },
+                                                { id: 'dotted', label: 'Dotted', value: '2 4' }
+                                            ].map(s => (
+                                                <Button 
+                                                    key={s.id}
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    onClick={() => updateSelectedConnection({ dashArray: s.value })}
+                                                    className={cn("h-8 rounded-lg text-[8px] font-black uppercase tracking-widest", selectedConnection.dashArray === s.value ? "bg-primary/10 border-primary text-primary" : "border-slate-100")}
+                                                >
+                                                    {s.label}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">End Marker</Label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[
+                                            { id: 'arrow', label: 'Arrow', icon: ChevronRight },
+                                            { id: 'circle', label: 'Circle', icon: Circle },
+                                            { id: 'diamond', label: 'Diamond', icon: Diamond },
+                                            { id: 'none', label: 'None', icon: Minus }
+                                        ].map(m => (
+                                            <button 
+                                                key={m.id}
+                                                onClick={() => updateSelectedConnection({ endMarker: m.id as any })}
+                                                className={cn(
+                                                    "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                                                    selectedConnection.endMarker === m.id ? "border-primary bg-primary/5 text-primary" : "border-slate-100 text-slate-400 hover:bg-slate-50"
+                                                )}
+                                            >
+                                                <m.icon className="h-3.5 w-3.5" />
+                                                <span className="text-[7px] font-black uppercase tracking-tighter">{m.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <Separator className="bg-slate-50" />
+
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stroke Color</Label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {COLORS.map(c => (
+                                            <button 
+                                                key={c.value} 
+                                                onClick={() => updateSelectedConnection({ color: c.value })} 
+                                                className={cn(
+                                                    "h-7 w-full rounded-full border border-slate-100 transition-all",
+                                                    selectedConnection.color === c.value && "ring-2 ring-primary ring-offset-1"
+                                                )} 
+                                                style={{ backgroundColor: c.value }} 
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         <div className="pt-4 flex flex-col gap-3">
-                            <Button variant="outline" onClick={handleDuplicate} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 border-slate-200 bg-white shadow-sm"><Copy className="h-3.5 w-3.5" /> Duplicate</Button>
-                            <Button variant="ghost" onClick={deleteSelected} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove Object</Button>
+                            {selectedElement && <Button variant="outline" onClick={handleDuplicate} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 border-slate-200 bg-white shadow-sm"><Copy className="h-3.5 w-3.5" /> Duplicate</Button>}
+                            <Button variant="ghost" onClick={deleteSelected} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove {selectedConnection ? 'Connection' : 'Object'}</Button>
                         </div>
                     </div>
                 </ScrollArea>
                 
                 <div className="p-6 border-t bg-slate-50/50 flex flex-col items-center gap-3 shrink-0">
-                    <Badge variant="outline" className="bg-white border-slate-100 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] h-5 px-2">ID: {selectedElement.id.split('-').pop()}</Badge>
+                    <Badge variant="outline" className="bg-white border-slate-100 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] h-5 px-2">ID: {(selectedElement || selectedConnection)?.id.split('-').pop()}</Badge>
                     <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-none">River Canvas Protocol</p>
                 </div>
             </aside>

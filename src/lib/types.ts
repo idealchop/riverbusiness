@@ -141,9 +141,12 @@ export interface BoardConnection {
     id: string;
     fromId: string;
     toId: string;
-    type: 'straight' | 'curved' | 'step';
+    type: 'straight' | 'curved' | 'step' | 'bezier' | 'rounded-step';
     color?: string;
     label?: string;
+    strokeWidth?: number;
+    dashArray?: string;
+    endMarker?: 'arrow' | 'circle' | 'diamond' | 'none';
 }
 
 // --- Sheet Specific Types ---
