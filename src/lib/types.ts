@@ -120,7 +120,7 @@ export type CollabPageType = 'doc' | 'sheet' | 'board' | 'folder';
 
 export interface BoardElement {
     id: string;
-    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image' | 'path' | 'icon' | 'triangle' | 'parallelogram' | 'cylinder' | 'capsule';
+    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image' | 'path' | 'icon' | 'triangle' | 'parallelogram' | 'cylinder' | 'capsule' | 'cloud' | 'hexagon' | 'octagon' | 'star';
     x: number;
     y: number;
     text: string;

@@ -92,7 +92,9 @@ import {
     Minus,
     MoreHorizontal,
     Activity,
-    Slash
+    Slash,
+    Hexagon,
+    Cloud as CloudIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -193,9 +195,8 @@ const EMOJIS = [
     '📈', '📉', '📅', '📋', '📝', '🔍', '🔒', '🔑', '🛒', '💳', '💻', '📱', '🔋', '📡', '🔗', '🤝', '👤', '👥', '🏆'
 ];
 
-function SharePopover({ page, onUpdate, isMobile = false }: { page: any, onUpdate: (data: Partial<BoardConnection>) => Promise<void>, isMobile?: boolean }) {
+function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Partial<BoardConnection>) => Promise<void> }) {
     const [isUpdating, setIsUpdating] = useState(false);
-    const { toast } = useToast();
 
     const handleUpdate = async (updates: Partial<BoardConnection>) => {
         setIsUpdating(true);
@@ -539,7 +540,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       // Check hit for elements
       const hit = [...elements].reverse().find(el => {
-          if (el.type === 'path') return false; 
+          if (el.type === 'path') {
+              // Very rough bounding box check for path selection
+              return false; // Better to let marquee select them for now
+          } 
           return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
       });
       
@@ -563,12 +567,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               setDragOffset({ x: x - hit.x, y: y - hit.y }); 
           }
       } else {
-          // Check hit for connections if not clicking an element
-          const connHit = connections.find(c => {
-              // Very simple hit check for connections (closest to center point for now)
-              return false; // Selection handled by individual path onClick for better precision
-          });
-
           if (!e.shiftKey) setSelectedIds([]);
           setIsSelectingMarquee(true);
           setMarqueeBox({ x1: x, y1: y, x2: x, y2: y });
@@ -597,10 +595,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const xMax = Math.max(marqueeBox.x1, x);
           const yMin = Math.min(marqueeBox.y1, y);
           const yMax = Math.max(marqueeBox.y1, y);
-          const inBox = elements.filter(el => {
-              if (el.type === 'path') return false;
-              return el.x < xMax && el.x + el.width > xMin && el.y < yMax && el.y + el.height > yMin;
-          }).map(el => el.id);
+          
+          const inBox = elements.map(el => {
+              if (el.type === 'path') return null; // Path selection via marquee is harder to visualze without bounding box stored
+              if (el.x < xMax && el.x + el.width > xMin && el.y < yMax && el.y + el.height > yMin) return el.id;
+              return null;
+          }).filter(id => id !== null) as string[];
+
           setSelectedIds(inBox);
           return;
       }
@@ -711,8 +712,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const nextElements = elements.map(el => {
           if (selectedIds.includes(el.id)) {
               const updates: any = { ...data };
-              if (data.color && (el.type === 'icon' || el.type === 'text')) {
+              if (data.color && (el.type === 'icon' || el.type === 'text' || el.type === 'path')) {
                   updates.fontColor = data.color;
+                  if (el.type === 'path') updates.color = data.color;
               }
               return { ...el, ...updates };
           }
@@ -817,6 +819,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         <DraggableTool variant="mini" icon={<LayoutTemplate className="h-4 w-4" />} type="parallelogram" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'parallelogram')} />
                                         <DraggableTool variant="mini" icon={<Database className="h-4 w-4" />} type="cylinder" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cylinder')} />
                                         <DraggableTool variant="mini" icon={<PlusCircle className="h-4 w-4" />} type="capsule" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'capsule')} />
+                                        <DraggableTool variant="mini" icon={<Hexagon className="h-4 w-4" />} type="hexagon" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'hexagon')} />
+                                        <DraggableTool variant="mini" icon={<CloudIcon className="h-4 w-4" />} type="cloud" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cloud')} />
+                                        <DraggableTool variant="mini" icon={<Star className="h-4 w-4" />} type="star" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'star')} />
+                                        <DraggableTool variant="mini" icon={<AlertTriangle className="h-4 w-4" />} type="octagon" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'octagon')} />
                                     </div>
                                 </div>
                                 <div className="space-y-3">
@@ -884,7 +890,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                             <rect x="0" y="0" width="7" height="7" transform="rotate(45 5 5)" fill="currentColor" />
                         </marker>
                         
-                        {/* Glow Filter for Selections */}
                         <filter id="selection-glow" x="-20%" y="-20%" width="140%" height="140%">
                             <feGaussianBlur stdDeviation="3" result="blur" />
                             <feComposite in="SourceGraphic" in2="blur" operator="over" />
@@ -898,7 +903,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         
                         return (
                             <g key={conn.id} className="group/conn pointer-events-none">
-                                {/* Interaction Hitbox */}
                                 <path 
                                     d={path} 
                                     fill="none" 
@@ -910,8 +914,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         setSelectedIds([conn.id]);
                                     }} 
                                 />
-                                
-                                {/* Selection Indicator */}
                                 {isSelected && (
                                     <path 
                                         d={path} 
@@ -922,8 +924,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                         filter="url(#selection-glow)"
                                     />
                                 )}
-
-                                {/* Main Path */}
                                 <path 
                                     d={path} 
                                     fill="none" 
@@ -941,9 +941,16 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     {pendingConnFrom && currentMouseCoords && (
                         <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y, undefined, arrowType)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#marker-arrow)" style={{ color: 'hsl(var(--primary))' }} />
                     )}
-                    {elements.filter(el => el.type === 'path').map(el => (
-                        <path key={el.id} d={el.path} fill="none" stroke={el.color || '#3b82f6'} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" />
-                    ))}
+                    {elements.filter(el => el.type === 'path').map(el => {
+                        const isSelected = selectedIds.includes(el.id);
+                        return (
+                            <g key={el.id} className="pointer-events-auto group/drawing cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedIds([el.id]); }}>
+                                <path d={el.path} fill="none" stroke="transparent" strokeWidth={Math.max(10, (el.strokeWidth || 4) * 2)} />
+                                <path d={el.path} fill="none" stroke={isSelected ? 'hsl(var(--primary))' : (el.color || '#3b82f6')} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" />
+                                {isSelected && <path d={el.path} fill="none" stroke="hsl(var(--primary))" strokeWidth={el.strokeWidth ? el.strokeWidth + 4 : 8} strokeOpacity="0.1" />}
+                            </g>
+                        );
+                    })}
                     {currentPath && <path d={currentPath} fill="none" stroke={penColor} strokeWidth={penSize} strokeLinecap="round" strokeLinejoin="round" />}
                 </svg>
 
@@ -962,15 +969,24 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 el.type === 'triangle' && "bg-transparent border-none p-0 shadow-none",
                                 el.type === 'parallelogram' && "border-2 border-slate-900",
                                 el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
-                                el.type === 'cylinder' && "border-2 border-slate-900 rounded-t-[100%] rounded-b-[100%]",
                                 el.type === 'capsule' && "border-2 border-slate-900 rounded-full",
+                                el.type === 'hexagon' && "border-none shadow-none",
+                                el.type === 'octagon' && "border-none shadow-none",
+                                el.type === 'cloud' && "border-none shadow-none",
+                                el.type === 'star' && "border-none shadow-none",
                                 (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
-                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'triangle') ? 'transparent' : el.color,
-                                clipPath: el.type === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : undefined,
+                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'triangle' || el.type === 'hexagon' || el.type === 'octagon' || el.type === 'cloud' || el.type === 'star') ? 'transparent' : el.color,
+                                clipPath: el.type === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 
+                                          el.type === 'hexagon' ? 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' :
+                                          el.type === 'octagon' ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' :
+                                          el.type === 'cloud' ? 'path("M 25,60 a 20,20 1 0,0 0,40 h 50 a 20,20 1 0,0 0,-40 a 10,10 1 0,0 -15,-10 a 15,15 1 0,0 -35,10 z")' :
+                                          el.type === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                                          undefined,
                                 transform: el.type === 'parallelogram' ? 'skewX(-20deg)' : undefined
                             }}>
-                                {el.type === 'triangle' && <div className="absolute inset-0 border-2 border-slate-900" style={{ backgroundColor: el.color, clipPath: 'inherit' }} />}
+                                {(el.type === 'triangle' || el.type === 'hexagon' || el.type === 'octagon' || el.type === 'star') && <div className="absolute inset-0 border-2 border-slate-900" style={{ backgroundColor: el.color, clipPath: 'inherit' }} />}
+                                {el.type === 'cloud' && <div className="absolute inset-0 bg-blue-50 border-2 border-blue-200" style={{ backgroundColor: el.color }} />}
                                 
                                 <div className={cn(
                                     "w-full h-full flex flex-col justify-center relative z-10", 
@@ -1035,8 +1051,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 <Separator className="bg-slate-50" />
 
                                 <div className="space-y-6">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Typography</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Appearance</Label>
                                     <div className="grid grid-cols-1 gap-6">
+                                        {selectedElement.type === 'path' && (
+                                            <div className="space-y-3">
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Stroke Size: {selectedElement.strokeWidth || 4}px</p>
+                                                <input type="range" min="1" max="20" value={selectedElement.strokeWidth || 4} onChange={(e) => updateSelectedElements({ strokeWidth: parseInt(e.target.value) })} className="w-full" />
+                                            </div>
+                                        )}
                                         <div className="space-y-3">
                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Font Size: {selectedElement.fontSize || 14}px</p>
                                             <input type="range" min="8" max="120" value={selectedElement.fontSize || 14} onChange={(e) => updateSelectedElements({ fontSize: parseInt(e.target.value) })} className="w-full" />
@@ -1061,7 +1083,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                                 onClick={() => updateSelectedElements({ color: c.value })} 
                                                 className={cn(
                                                     "h-8 w-full rounded-xl border border-slate-100 transition-all",
-                                                    selectedElement.color === c.value && "ring-2 ring-primary ring-offset-2 z-10"
+                                                    (selectedElement.color === c.value || selectedElement.fontColor === c.value) && "ring-2 ring-primary ring-offset-2 z-10"
                                                 )} 
                                                 style={{ backgroundColor: c.value }} 
                                             />
@@ -1072,7 +1094,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         )}
 
                         {selectedConnection && (
-                            <SharePopover 
+                            <ConnectionPopover 
                                 page={selectedConnection} 
                                 onUpdate={async (data) => updateSelectedConnection(data)} 
                             />
