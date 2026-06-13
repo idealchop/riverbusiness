@@ -47,9 +47,11 @@ import {
   Loader2,
   Sparkles,
   BarChart3,
-  CheckCircle
+  CheckCircle,
+  LogIn,
+  LogOut
 } from 'lucide-react';
-import { format, subMonths, getYear, getMonth, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, subMonths, getYear, getMonth, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -76,8 +78,15 @@ const toSafeDate = (val: any): Date | null => {
     if (val instanceof Timestamp) return val.toDate();
     if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
     if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
+    if (typeof val === 'string') {
+        // Handle YYYY-MM-DD specifically to avoid local time offset issues
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+            return parseISO(val);
+        }
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
 };
 
 const formatDuration = (minutes?: number) => {
@@ -102,25 +111,44 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
   
   const companyId = employee?.companyId || 'default';
   
+  // NOTE: We remove the orderBy here to ensure the query works without manual indexing in prototypes.
+  // We will handle the sorting on the client side.
   const attendanceQuery = useMemoFirebase(
     () => (firestore && employee?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
-        where('employeeId', '==', employee.id),
-        orderBy('date', 'desc')
+        where('employeeId', '==', employee.id)
     ) : null,
     [firestore, employee?.id, companyId]
   );
-  const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
+  const { data: rawAttendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
     () => (firestore && employee?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'leaveRequests'),
-        where('employeeId', '==', employee.id),
-        orderBy('appliedAt', 'desc')
+        where('employeeId', '==', employee.id)
     ) : null,
     [firestore, employee?.id, companyId]
   );
-  const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
+  const { data: rawLeaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
+
+  // Client-side sorting for maximum reliability
+  const attendanceLogs = useMemo(() => {
+      if (!rawAttendanceLogs) return [];
+      return [...rawAttendanceLogs].sort((a, b) => {
+          const dateA = toSafeDate(a.timeIn)?.getTime() || toSafeDate(a.date)?.getTime() || 0;
+          const dateB = toSafeDate(b.timeIn)?.getTime() || toSafeDate(b.date)?.getTime() || 0;
+          return dateB - dateA;
+      });
+  }, [rawAttendanceLogs]);
+
+  const leaveRequests = useMemo(() => {
+      if (!rawLeaveRequests) return [];
+      return [...rawLeaveRequests].sort((a, b) => {
+          const dateA = toSafeDate(a.appliedAt)?.getTime() || 0;
+          const dateB = toSafeDate(b.appliedAt)?.getTime() || 0;
+          return dateB - dateA;
+      });
+  }, [rawLeaveRequests]);
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(false);
@@ -731,91 +759,117 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                     </TabsContent>
 
                     <TabsContent value="attendance" className="mt-0 animate-in fade-in duration-500">
-                         <div className="rounded-2xl md:rounded-3xl border border-slate-50 overflow-hidden bg-slate-50/20">
-                            {/* Desktop Attendance Table */}
-                            <Table className="hidden md:table">
-                                <TableHeader className="bg-slate-50/50">
-                                    <TableRow className="border-none">
-                                        <TableHead className="text-xs font-bold text-slate-400 pl-6">Work Date</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400">Clock In</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400">Clock Out</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400">Duration</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400 text-right pr-6">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
+                         <div className="space-y-6">
+                            <Card className="border-none bg-blue-50/50 p-6 rounded-3xl flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-2xl bg-white shadow-sm text-primary"><Clock className="h-6 w-6" /></div>
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Shift depth analysis</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total {attendanceLogs.length} verified sessions</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-black text-primary tabular-nums">{performanceMetrics.hoursWorked.toFixed(1)} <span className="text-[10px] uppercase">Hrs</span></p>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Cumulative time</p>
+                                </div>
+                            </Card>
+
+                            <div className="rounded-2xl md:rounded-3xl border border-slate-50 overflow-hidden bg-white shadow-sm">
+                                {/* Desktop Attendance Table */}
+                                <Table className="hidden md:table">
+                                    <TableHeader className="bg-slate-50/50">
+                                        <TableRow className="border-none">
+                                            <TableHead className="text-[10px] font-black uppercase text-slate-400 pl-6 py-4">Work Date</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-slate-400">Clock In</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-slate-400">Clock Out</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-slate-400">Duration</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-slate-400 text-right pr-6">Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loadingAttendance ? (
+                                            <TableRow><TableCell colSpan={5} className="text-center py-12 opacity-50 font-bold uppercase text-[10px]">Syncing logs...</TableCell></TableRow>
+                                        ) : attendanceLogs && attendanceLogs.length > 0 ? (
+                                            attendanceLogs.map(log => {
+                                                const workDate = toSafeDate(log.date);
+                                                const timeIn = toSafeDate(log.timeIn);
+                                                const timeOut = toSafeDate(log.timeOut);
+                                                return (
+                                                    <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
+                                                        <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">
+                                                        {workDate ? format(workDate, 'MMM d, yyyy') : 'No Date'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <LogIn className="h-3 w-3 text-green-400" />
+                                                                <span className="text-sm font-semibold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <LogOut className="h-3 w-3 text-blue-400" />
+                                                                <span className="text-sm font-semibold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-xs font-black text-primary uppercase tracking-tighter">
+                                                            {formatDuration(log.totalMinutes)}
+                                                        </TableCell>
+                                                        <TableCell className="text-right pr-6">
+                                                            <Badge className={cn(
+                                                                "text-[10px] font-bold uppercase border-none px-3 py-1 shadow-none",
+                                                                log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                                                            )}>
+                                                                {log.status || 'N/A'}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })
+                                        ) : (
+                                            <TableRow><TableCell colSpan={5} className="text-center py-20 text-sm font-medium text-slate-300 uppercase tracking-widest">No Logs Found.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+
+                                {/* Mobile Attendance View */}
+                                <div className="md:hidden divide-y divide-slate-100">
                                     {loadingAttendance ? (
-                                        <TableRow><TableCell colSpan={5} className="text-center py-12 opacity-50 font-bold uppercase text-[10px]">Syncing logs...</TableCell></TableRow>
+                                        <p className="text-center py-12 opacity-50 font-bold uppercase text-[9px]">Syncing...</p>
                                     ) : attendanceLogs && attendanceLogs.length > 0 ? (
                                         attendanceLogs.map(log => {
                                             const workDate = toSafeDate(log.date);
                                             const timeIn = toSafeDate(log.timeIn);
                                             const timeOut = toSafeDate(log.timeOut);
                                             return (
-                                                <TableRow key={log.id} className="hover:bg-white transition-colors border-b border-slate-50 last:border-0 group">
-                                                    <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">
-                                                      {workDate ? format(workDate, 'MMM d, yyyy') : 'No Date'}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm font-semibold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
-                                                    <TableCell className="text-sm font-semibold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
-                                                    <TableCell className="text-xs font-black text-primary uppercase tracking-tighter">
-                                                        {formatDuration(log.totalMinutes)}
-                                                    </TableCell>
-                                                    <TableCell className="text-right pr-6">
+                                                <div key={log.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <p className="text-sm font-black text-slate-900">{workDate ? format(workDate, 'MMM d, yyyy') : 'N/A'}</p>
                                                         <Badge className={cn(
-                                                            "text-[10px] font-bold uppercase border-none px-3 py-1 shadow-none",
+                                                            "text-[9px] font-black uppercase border-none px-2 h-5",
                                                             log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                                                        )}>
-                                                            {log.status || 'N/A'}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
+                                                        )}>{log.status || 'present'}</Badge>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                                        <div className="space-y-1">
+                                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">In</p>
+                                                            <p className="text-xs font-bold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Out</p>
+                                                            <p className="text-xs font-bold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</p>
+                                                        </div>
+                                                        <div className="space-y-1 border-l border-slate-50">
+                                                            <p className="text-[8px] font-black text-primary uppercase tracking-widest">Duration</p>
+                                                            <p className="text-xs font-black text-primary">{formatDuration(log.totalMinutes)}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             )
                                         })
                                     ) : (
-                                        <TableRow><TableCell colSpan={5} className="text-center py-20 text-sm font-medium text-slate-300 uppercase tracking-widest">No Logs Found.</TableCell></TableRow>
+                                        <p className="text-center py-12 text-xs font-bold text-slate-300 uppercase tracking-widest">No Logs Found</p>
                                     )}
-                                </TableBody>
-                            </Table>
-
-                            {/* Mobile Attendance View */}
-                            <div className="md:hidden divide-y divide-slate-100">
-                                {loadingAttendance ? (
-                                    <p className="text-center py-12 opacity-50 font-bold uppercase text-[9px]">Syncing...</p>
-                                ) : attendanceLogs && attendanceLogs.length > 0 ? (
-                                    attendanceLogs.map(log => {
-                                        const workDate = toSafeDate(log.date);
-                                        const timeIn = toSafeDate(log.timeIn);
-                                        const timeOut = toSafeDate(log.timeOut);
-                                        return (
-                                            <div key={log.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <p className="text-sm font-black text-slate-900">{workDate ? format(workDate, 'MMM d, yyyy') : 'N/A'}</p>
-                                                    <Badge className={cn(
-                                                        "text-[9px] font-black uppercase border-none px-2 h-5",
-                                                        log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                                                    )}>{log.status || 'present'}</Badge>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-2 text-center">
-                                                    <div className="space-y-1">
-                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">In</p>
-                                                        <p className="text-xs font-bold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</p>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Out</p>
-                                                        <p className="text-xs font-bold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</p>
-                                                    </div>
-                                                    <div className="space-y-1 border-l border-slate-50">
-                                                        <p className="text-[8px] font-black text-primary uppercase tracking-widest">Duration</p>
-                                                        <p className="text-xs font-black text-primary">{formatDuration(log.totalMinutes)}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                ) : (
-                                    <p className="text-center py-12 text-xs font-bold text-slate-300 uppercase tracking-widest">No Logs Found</p>
-                                )}
+                                </div>
                             </div>
                          </div>
                     </TabsContent>
@@ -855,8 +909,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange, initialT
                                     );
                                 })
                             ) : (
-                                <div className="py-24 text-center opacity-20">
-                                    <p className="text-sm font-bold uppercase tracking-widest">History Clear</p>
+                                <div className="py-24 text-center opacity-20 flex flex-col items-center gap-4">
+                                    <CalendarDays className="h-12 w-12 text-slate-300" />
+                                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">History Clear</p>
                                 </div>
                             )}
                          </div>
