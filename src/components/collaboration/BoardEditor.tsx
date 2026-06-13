@@ -328,7 +328,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [clipboard, setClipboard] = useState<BoardElement[]>([]);
+  const [clipboard, setClipboard] = setClipboard(useState<BoardElement[]>([]));
   
   const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<'select' | 'hand' | 'arrow' | 'pen'>('select');
@@ -340,17 +340,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [isSelectingMarquee, setIsSelectingMarquee] = useState(false);
   const [marqueeBox, setMarqueeBox] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null);
   
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const [dragId, setDragId] = setDragId(useState<string | null>(null));
+  const [dragOffset, setDragOffset] = setDragOffset(useState({ x: 0, y: 0 }));
+  const [lastMousePos, setLastMousePos] = setLastMousePos(useState({ x: 0, y: 0 }));
   
-  const [pendingConnFrom, setPendingConnFrom] = useState<string | null>(null);
-  const [currentMouseCoords, setCurrentMouseCoords] = useState<{ x: number, y: number } | null>(null);
+  const [pendingConnFrom, setPendingConnFrom] = setPendingConnFrom(useState<string | null>(null));
+  const [currentMouseCoords, setCurrentMouseCoords] = setCurrentMouseCoords(useState<{ x: number, y: number } | null>(null));
   
-  const [currentPath, setCurrentPath] = useState<string | null>(null);
-  const [penColor, setPenColor] = useState('#3b82f6');
-  const [penSize, setPenSize] = useState(4);
-  const [assetSearch, setAssetSearch] = useState('');
+  const [currentPath, setCurrentPath] = setCurrentPath(useState<string | null>(null));
+  const [penColor, setPenColor] = setPenColor(useState('#3b82f6'));
+  const [penSize, setPenSize] = setPenSize(useState(4));
+  const [assetSearch, setAssetSearch] = setAssetSearch(useState(''));
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -1126,11 +1126,6 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </div>
                     </div>
                 </ScrollArea>
-                
-                <div className="p-6 border-t bg-slate-50/50 flex flex-col items-center gap-3 shrink-0">
-                    <Badge variant="outline" className="bg-white border-slate-100 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] h-5 px-2">ID: {(selectedElement || selectedConnection)?.id.split('-').pop()}</Badge>
-                    <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-none">River Canvas Protocol</p>
-                </div>
             </aside>
         )}
     </div>
