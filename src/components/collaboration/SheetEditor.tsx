@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -89,7 +90,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { createClientNotification } from '@/lib/notifications';
 
 // Specialized Sub-Modules
-import { FIELD_ICONS, VIEW_ICONS, FIELD_TYPES, CURRENCY_SYMBOLS, ROW_HEIGHT_OPTIONS } from './sheet/constants';
+import { FIELD_ICONS, VIEW_ICONS, FIELD_TYPES, CURRENCY_SYMBOLS, ROW_HEIGHT_OPTIONS, OPTION_COLORS } from './sheet/constants';
 import { CellRenderer } from './sheet/CellRenderer';
 import { KanbanView } from './sheet/KanbanView';
 import { CalendarView } from './sheet/CalendarView';
@@ -113,7 +114,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
 
   const effectiveCompanyId = companyId || currentUserProfile?.companyId;
 
-  const teamQuery = useMemoFirebase(() => effectiveCompanyId ? query(collection(firestore!, 'users'), where('companyId', '==', effectiveCompanyId)) : null, [firestore, effectiveCompanyId]);
+  const teamQuery = useMemoFirebase(() => (firestore && effectiveCompanyId) ? query(collection(firestore, 'users'), where('companyId', '==', effectiveCompanyId)) : null, [firestore, effectiveCompanyId]);
   const { data: teamMembers } = useCollection<AppUser>(teamQuery);
 
   const [fields, setFields] = useState<SheetField[]>(() => {
@@ -197,6 +198,39 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
       sync(nextFields, records, views, activeViewId);
       toast({ title: 'Schema Updated', description: 'The column has been removed from the ledger.' });
   }, [fields, records, views, activeViewId, sync, toast]);
+
+  const handleAddOption = useCallback((fieldId: string, label: string) => {
+    const field = fields.find(f => f.id === fieldId);
+    if (!field) return;
+    const newOption = { label, color: OPTION_COLORS[Math.floor(Math.random() * OPTION_COLORS.length)].value };
+    const nextFields = fields.map(f => f.id === fieldId ? { ...f, options: [...(f.options || []), newOption] } : f);
+    setFields(nextFields);
+    sync(nextFields, records, views, activeViewId);
+  }, [fields, records, views, activeViewId, sync]);
+
+  const handleUpdateOption = useCallback((fieldId: string, oldLabel: string, newLabel: string, color: string) => {
+    const nextFields = fields.map(f => {
+      if (f.id === fieldId) {
+        const nextOptions = (f.options || []).map(o => o.label === oldLabel ? { label: newLabel, color } : o);
+        return { ...f, options: nextOptions };
+      }
+      return f;
+    });
+    setFields(nextFields);
+    sync(nextFields, records, views, activeViewId);
+  }, [fields, records, views, activeViewId, sync]);
+
+  const handleDeleteOption = useCallback((fieldId: string, label: string) => {
+    const nextFields = fields.map(f => {
+      if (f.id === fieldId) {
+        const nextOptions = (f.options || []).filter(o => o.label !== label);
+        return { ...f, options: nextOptions };
+      }
+      return f;
+    });
+    setFields(nextFields);
+    sync(nextFields, records, views, activeViewId);
+  }, [fields, records, views, activeViewId, sync]);
 
   const addRecord = useCallback((index?: number) => {
     const newRecord: SheetRecord = {
@@ -414,6 +448,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                                                     }} 
                                                     onExpand={() => setDetailRecordId(record.id)} 
                                                     onUpdateField={handleUpdateField}
+                                                    onAddOption={(label: string) => handleAddOption(field.id, label)}
+                                                    onUpdateOption={handleUpdateOption}
+                                                    onDeleteOption={handleDeleteOption}
                                                     editable={editable} 
                                                 />
                                             </div>
@@ -477,6 +514,9 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                                                 }} 
                                                 isExpanded={true} 
                                                 onUpdateField={handleUpdateField}
+                                                onAddOption={(label: string) => handleAddOption(field.id, label)}
+                                                onUpdateOption={handleUpdateOption}
+                                                onDeleteOption={handleDeleteOption}
                                                 editable={editable} 
                                             />
                                         </div>
@@ -618,3 +658,4 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
     </div>
   );
 }
+
