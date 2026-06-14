@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -85,19 +84,6 @@ const apps = [
       ],
       href: '/business-insurance', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
-    },
-    { 
-      id: '06', 
-      name: 'Upgrades', 
-      description: 'Continuous digital and physical infrastructure evolution.',
-      features: [
-          'Solar energy infrastructure monitoring',
-          'Automated corporate benefit systems',
-          'Advanced business intelligence modules',
-          'Custom operational scalability upgrades'
-      ],
-      href: '/solar-upgrades', 
-      iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
     },
 ];
 

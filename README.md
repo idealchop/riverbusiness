@@ -123,23 +123,6 @@ Store and protect critical business data securely inside the ecosystem.
 
 ---
 
-## 6. 🚀 Upgrades (Platform Evolution Layer)
-
-A system layer that continuously improves and extends River Apps.
-
-### Features:
-- Feature rollout system (per company or global)
-- Module activation/deactivation
-- Premium feature unlocking
-- A/B testing for features
-- Versioned system upgrades
-- Scalable architecture expansion
-
-### Goal:
-Allow River Apps to evolve without breaking existing systems.
-
----
-
 # 🧬 System Architecture
 
 [ Client Apps ]
@@ -152,7 +135,6 @@ Allow River Apps to evolve without breaking existing systems.
 | Collaboration System |
 | File Management System |
 | Vault Security System |
-| Upgrade & Feature System |
   ↓
 
 [ PostgreSQL + Object Storage ]
@@ -193,17 +175,6 @@ River Apps aims to become:
 > A complete operating system for real-world businesses.
 
 From water refilling stations to enterprise teams, River Apps connects operations, people, and data into one intelligent platform.
-
----
-
-# ⚙️ Tech Direction (High-Level)
-
-- Backend: Modular Monolith (NestJS)
-- Database: PostgreSQL
-- Storage: S3-compatible object storage
-- Auth: JWT + RBAC
-- Realtime: WebSockets
-- Frontend: React / Next.js
 
 ---
 
