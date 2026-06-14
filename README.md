@@ -2,7 +2,7 @@
 
 > The all-in-one business operating system built for real-world operations, modern teams, and scalable companies.
 
-River Apps is a unified platform that connects **operations, people, collaboration, security, and digital infrastructure** into one ecosystem.
+River Apps is a unified platform that connects **operations, people, collaboration, and digital infrastructure** into one ecosystem.
 
 Instead of juggling multiple tools, River Apps gives businesses one place to run everything.
 
@@ -105,24 +105,6 @@ Provide a secure, controlled, and professional file infrastructure for businesse
 
 ---
 
-## 5. 🔐 PS Vault (Private Secure Vault)
-
-A high-security data storage layer for sensitive business information.
-
-### Features:
-- Encrypted credential storage
-- Secure notes and secrets management
-- Access-controlled vault entries
-- Audit logs (who accessed what and when)
-- Role-restricted visibility
-- Time-based access controls (optional)
-- Emergency access recovery system
-
-### Goal:
-Store and protect critical business data securely inside the ecosystem.
-
----
-
 # 🧬 System Architecture
 
 [ Client Apps ]
@@ -134,7 +116,6 @@ Store and protect critical business data securely inside the ecosystem.
 | HR Management System |
 | Collaboration System |
 | File Management System |
-| Vault Security System |
   ↓
 
 [ PostgreSQL + Object Storage ]
@@ -146,7 +127,7 @@ Store and protect critical business data securely inside the ecosystem.
 
 - Every data record is isolated by `company_id`
 - Role-Based Access Control (RBAC) enforced everywhere
-- Encrypted sensitive storage (Vault + Files)
+- Encrypted sensitive storage (Files)
 - Signed URLs for file access
 - Expiring share links
 - Full audit logging system
@@ -184,4 +165,4 @@ River Apps is not just software.
 
 It is:
 
-> A unified business operating system that connects operations, people, collaboration, files, and security into one intelligent ecosystem.
+> A unified business operating system that connects operations, people, collaboration, and files into one intelligent ecosystem.

@@ -18,7 +18,6 @@ export const metadata: Metadata = {
     'water refill business',
     'collaboration workspace',
     'secure file sharing',
-    'corporate security',
     'River Apps',
     'Philippines SaaS',
   ],

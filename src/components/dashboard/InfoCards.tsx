@@ -72,19 +72,6 @@ const apps = [
       href: '/files', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FFiles.svg?alt=media&token=7f746199-877e-455f-a96f-91b619f9c66a' 
     },
-    { 
-      id: '05', 
-      name: 'PS Vault', 
-      description: 'Private secure vault for sensitive corporate data protection.',
-      features: [
-          'Encrypted credential and secrets vault',
-          'High-security business notes and records',
-          'Granular role-based access controls',
-          'Full audit logging and recovery systems'
-      ],
-      href: '/business-insurance', 
-      iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
-    },
 ];
 
 export function InfoCards() {

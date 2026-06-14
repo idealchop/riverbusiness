@@ -41,12 +41,6 @@ const apps = [
     href: '/files', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FFiles.svg?alt=media&token=7f746199-877e-455f-a96f-91b619f9c66a' 
   },
-  { 
-    id: '05', 
-    name: 'PS Vault', 
-    href: '/business-insurance', 
-    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
-  },
 ];
 
 export function AppLauncher() {
@@ -69,7 +63,7 @@ export function AppLauncher() {
               <h3 className="text-xl font-bold text-slate-800 tracking-tight">Your Apps</h3>
           </div>
           
-          <div className="grid grid-cols-3 gap-y-10 gap-x-2">
+          <div className="grid grid-cols-2 gap-y-10 gap-x-2">
             {apps.map((app) => {
               const isActive = pathname === app.href || (app.href === '/dashboard' && pathname.startsWith('/admin'));
               
