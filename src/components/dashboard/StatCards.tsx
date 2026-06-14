@@ -29,7 +29,8 @@ import {
   X,
   ChevronRight,
   Loader2,
-  Save
+  Save,
+  Hourglass
 } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth, addDays } from 'date-fns';
@@ -48,7 +49,7 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 /**
  * A sophisticated vertical water tank visual component.
  */
-const WaterTankVisual = ({ percentage, isUnlimited = false }: { percentage: number, isUnlimited?: boolean }) => {
+const WaterTankVisual = ({ percentage, isUnlimited = false, isPending = false }: { percentage: number, isUnlimited?: boolean, isPending?: boolean }) => {
   return (
     <div className="relative w-16 h-28 bg-slate-50 rounded-[1.5rem] border-2 border-slate-100 overflow-hidden shadow-inner shrink-0 group">
       {/* Background reflection */}
@@ -58,12 +59,12 @@ const WaterTankVisual = ({ percentage, isUnlimited = false }: { percentage: numb
       <div 
         className={cn(
             "absolute bottom-0 left-0 right-0 bg-gradient-to-t transition-all duration-1000 ease-in-out z-10",
-            isUnlimited ? "from-blue-600 to-blue-400 h-full" : "from-primary to-primary-light"
+            (isUnlimited || isPending) ? "from-blue-600 to-blue-400 h-full" : "from-primary to-primary-light"
         )}
-        style={{ height: isUnlimited ? '100%' : `${Math.max(2, percentage)}%` }}
+        style={{ height: (isUnlimited || isPending) ? '100%' : `${Math.max(2, percentage)}%` }}
       >
         {/* Surface Wave Effect */}
-        {!isUnlimited && (
+        {!isUnlimited && !isPending && (
             <div className="absolute -top-1 left-0 right-0 h-2 bg-white/20 animate-pulse blur-[1px]" />
         )}
         
@@ -352,10 +353,11 @@ export function StatCards({
                 <WaterTankVisual 
                     percentage={remainingBalancePercentage} 
                     isUnlimited={(isFlowPlan || isBranchAccount) && isActivated} 
+                    isPending={isPending}
                 />
                 
                 <div className="flex-1 space-y-4">
-                    {!isActivated ? (
+                    {!isActivated && !isPending ? (
                         <div>
                             <p className="text-2xl font-black text-slate-900 tracking-tight">
                                 Drinking Water
@@ -363,6 +365,25 @@ export function StatCards({
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                                 Subscribe to access water refills.
                             </p>
+                        </div>
+                    ) : isPending ? (
+                        <div>
+                            <p className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                <Hourglass className="h-5 w-5 text-primary animate-pulse" />
+                                Processing
+                            </p>
+                            <div className="space-y-2 mt-1">
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none">
+                                    Activation protocol started
+                                </p>
+                                <Button 
+                                    variant="link" 
+                                    className="p-0 h-auto text-[10px] font-black text-primary uppercase tracking-tight"
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-subscription-onboarding'))}
+                                >
+                                    Track status <ChevronRight className="h-3 w-3" />
+                                </Button>
+                            </div>
                         </div>
                     ) : (isFlowPlan || isBranchAccount) ? (
                         <div>

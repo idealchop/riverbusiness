@@ -347,7 +347,7 @@ export function SubscriptionOnboardingDialog({ isOpen, onOpenChange, user }: Sub
             {isIntroStep ? (
                 /* Step 0: Value Proposition (No Plan View) - Optimized for Mobile */
                 <div className="flex flex-col md:flex-row max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-hidden animate-in fade-in duration-500">
-                    <div className="flex-1 p-6 sm:p-8 md:p-14 space-y-8 md:space-y-12">
+                    <div className="flex-1 p-6 sm:p-8 md:p-14 space-y-8 md:max-y-12">
                         <div className="space-y-4">
                             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-slate-900 leading-tight">
                                 Unlock intelligent <br/><span className="text-primary">hydration infrastructure.</span>
