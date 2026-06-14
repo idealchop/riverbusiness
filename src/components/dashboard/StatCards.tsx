@@ -164,8 +164,8 @@ export function StatCards({
     const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
         
     let monthlyEquipmentCost = 0;
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+    if (user.customPlanDetails?.gallonPrice && user.customPlanDetails?.gallonPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+    if (user.customPlanDetails?.dispenserPrice && user.customPlanDetails?.dispenserPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
 
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
@@ -567,7 +567,7 @@ export function StatCards({
                         }}
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" /> 
-                        {isActivated ? 'Schedule One-Time' : isPending ? 'Setup Required' : 'Avail Water Refill'}
+                        {isActivated ? 'Schedule One-Time' : isPending ? 'Setup Required' : 'Find Water Provider'}
                     </Button>
                 )}
               </div>
