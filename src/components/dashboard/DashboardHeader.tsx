@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { BellRing, ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { BellRing, ShieldCheck, AlertTriangle, CheckCircle2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -13,6 +13,7 @@ interface DashboardHeaderProps {
   hasPendingRefill: boolean;
   onPartnerNoticeClick: () => void;
   stationStatus?: 'Operational' | 'Under Maintenance';
+  isActivated?: boolean;
 }
 
 export function DashboardHeader({
@@ -23,6 +24,7 @@ export function DashboardHeader({
   hasPendingRefill,
   onPartnerNoticeClick,
   stationStatus,
+  isActivated = true,
 }: DashboardHeaderProps) {
   const isMaintenance = stationStatus === 'Under Maintenance';
 
@@ -34,43 +36,59 @@ export function DashboardHeader({
             <p className="text-sm sm:text-base text-muted-foreground">
               Here is your hydration snapshot for today.
             </p>
-            <div className="h-1 w-1 rounded-full bg-slate-300 hidden sm:block" />
-            <button 
-                onClick={onPartnerNoticeClick}
-                className={cn(
-                    "flex items-center justify-center h-6 w-6 rounded-full transition-all border shadow-sm hover:scale-110 active:scale-95",
-                    isMaintenance 
-                        ? "bg-amber-50 text-amber-600 border-amber-200 animate-pulse" 
-                        : "bg-green-50 text-green-600 border-green-200"
-                )}
-                title={`Station Status: ${stationStatus || 'Operational'}`}
-            >
-                {isMaintenance ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-            </button>
+            {isActivated && (
+                <>
+                    <div className="h-1 w-1 rounded-full bg-slate-300 hidden sm:block" />
+                    <button 
+                        onClick={onPartnerNoticeClick}
+                        className={cn(
+                            "flex items-center justify-center h-6 w-6 rounded-full transition-all border shadow-sm hover:scale-110 active:scale-95",
+                            isMaintenance 
+                                ? "bg-amber-50 text-amber-600 border-amber-200 animate-pulse" 
+                                : "bg-green-50 text-green-600 border-green-200"
+                        )}
+                        title={`Station Status: ${stationStatus || 'Operational'}`}
+                    >
+                        {isMaintenance ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    </button>
+                </>
+            )}
         </div>
       </div>
       
       <div className="flex items-center gap-3 w-full sm:w-auto">
         <Button
-          variant={hasPendingRefill ? "secondary" : "default"}
+          variant={isActivated && hasPendingRefill ? "secondary" : "default"}
           className={cn(
             "flex-1 sm:flex-none rounded-full h-11 px-6 font-bold shadow-lg transition-transform active:scale-95",
-            !hasPendingRefill && "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+            (!isActivated || !hasPendingRefill) && "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
           )}
           onClick={onRefillRequest}
         >
-          <BellRing className={cn("mr-2 h-4 w-4", hasPendingRefill && "text-blue-500")} />
-          {hasPendingRefill ? 'Refill Status' : 'Request Refill'}
+          {!isActivated ? (
+            <>
+              <Search className="mr-2 h-4 w-4" />
+              Find Water Provider
+            </>
+          ) : (
+            <>
+              <BellRing className={cn("mr-2 h-4 w-4", hasPendingRefill && "text-blue-500")} />
+              {hasPendingRefill ? 'Refill Status' : 'Request Refill'}
+            </>
+          )}
         </Button>
-        <Button
-          variant="outline"
-          className="flex-1 sm:flex-none rounded-full h-11 px-6 font-bold bg-background shadow-sm border-slate-200 hover:bg-slate-50 transition-transform active:scale-95"
-          onClick={onComplianceClick}
-        >
-          <ShieldCheck className="h-4 w-4 sm:mr-2 text-primary" />
-          <span className="hidden sm:inline">Compliance & Sanitation</span>
-          <span className="sm:hidden text-xs">Quality</span>
-        </Button>
+        
+        {isActivated && (
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none rounded-full h-11 px-6 font-bold bg-background shadow-sm border-slate-200 hover:bg-slate-50 transition-transform active:scale-95"
+              onClick={onComplianceClick}
+            >
+              <ShieldCheck className="h-4 w-4 sm:mr-2 text-primary" />
+              <span className="hidden sm:inline">Compliance & Sanitation</span>
+              <span className="sm:hidden text-xs">Quality</span>
+            </Button>
+        )}
       </div>
     </div>
   );

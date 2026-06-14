@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -159,6 +158,7 @@ export default function DashboardPage() {
           onRefillRequest={() => handleDispatchDialogEvent(hasPendingRefill ? 'open-refill-status' : 'request-asap-refill')}
           onComplianceClick={() => handleDispatchDialogEvent('open-compliance')}
           onPartnerNoticeClick={() => handleDispatchDialogEvent('open-partner-notice')}
+          isActivated={user?.plan && user?.subscriptionStatus === 'activated'}
         />
         
         <StatCards
