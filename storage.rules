@@ -3,51 +3,47 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // --- HELPER FUNCTIONS ---
-
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
-    function isSameCompany(companyId) {
-      return isAuthenticated() && (
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyId == companyId ||
-        isAdmin()
-      );
+    function underFileLimit() {
+      return request.resource.size < 500 * 1024 * 1024;
     }
 
-    // --- SHARED CLOUD STORAGE ---
-    // Allow public read to support shareable links and frictionless team collaboration.
-    // Allow any authenticated user to write/upload to facilitate an open organizational drive.
-    match /cloud_storage/{companyId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if isSameCompany(companyId);
-    }
-
-    // --- COLLABORATION ASSETS ---
-    // Strictly enforced organizational isolation for images embedded in documents.
-    match /collab_images/{companyId}/{allPaths=**} {
+    // Shared team drive. Membership is enforced in Cloud Functions + Firestore companyId.
+    match /workspaces/{companyId}/files/{allPaths=**} {
       allow read: if isAuthenticated();
-      allow write: if isSameCompany(companyId);
+      allow write: if isAuthenticated() && underFileLimit();
     }
 
-    // --- FLEXIBLE ASSETS ---
-    // Allow users to manage their own specific profile and chat assets.
+    match /cloud_storage/{companyId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && underFileLimit();
+    }
+
+    match /collab_images/{companyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /users/{userId}/collab_images/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     match /users/{userId}/{allPaths=**} {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
-    
+
     match /chats/{userId}/{allPaths=**} {
-        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
-    
-    // --- SECURE ADMINISTRATIVE ASSETS ---
-    // Only admins can manage official station documents, contracts, and internal uploads.
+
     match /admin_uploads/{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
@@ -61,15 +57,10 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // --- PUBLIC MARKETING ASSETS ---
-    match /Sales Portal/{allPaths=**} {
-      allow read: if true;
-    }
-    match /River Mobile/{allPaths=**} {
-      allow read: if true;
+    match /{folder}/{allPaths=**} {
+      allow read: if folder == 'Sales Portal' || folder == 'River Mobile';
     }
 
-    // Fallback rule: any authenticated user can read, only admins can write to root/other paths
     match /{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

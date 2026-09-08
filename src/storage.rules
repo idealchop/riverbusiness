@@ -3,37 +3,38 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // --- HELPER FUNCTIONS ---
-
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
-    function isSameCompany(companyId) {
-      return isAuthenticated() && (
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyId == companyId ||
-        isAdmin()
-      );
+    function underFileLimit() {
+      return request.resource.size < 500 * 1024 * 1024;
     }
 
-    // --- SHARED CLOUD STORAGE ---
-    match /cloud_storage/{companyId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if isSameCompany(companyId);
-    }
-
-    // --- COLLABORATION ASSETS ---
-    match /collab_images/{companyId}/{allPaths=**} {
+    match /workspaces/{companyId}/files/{allPaths=**} {
       allow read: if isAuthenticated();
-      allow write: if isSameCompany(companyId);
+      allow write: if isAuthenticated() && underFileLimit();
     }
 
-    // --- FLEXIBLE ASSETS ---
+    match /cloud_storage/{companyId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && underFileLimit();
+    }
+
+    match /collab_images/{companyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /users/{userId}/collab_images/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     match /users/{userId}/{allPaths=**} {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
@@ -42,7 +43,6 @@ service firebase.storage {
         allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
     
-    // --- SECURE ADMINISTRATIVE ASSETS ---
     match /admin_uploads/{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
@@ -56,12 +56,8 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // --- PUBLIC MARKETING ASSETS ---
-    match /Sales Portal/{allPaths=**} {
-      allow read: if true;
-    }
-    match /River Mobile/{allPaths=**} {
-      allow read: if true;
+    match /{folder}/{allPaths=**} {
+      allow read: if folder == 'Sales Portal' || folder == 'River Mobile';
     }
 
     match /{allPaths=**} {

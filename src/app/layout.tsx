@@ -1,49 +1,70 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { SeoJsonLd } from '@/components/seo-json-ld';
+import {
+  LOGO_PATH,
+  MARKETING_URL,
+  SEO_KEYWORDS,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+} from '@/lib/seo';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'River Business | AI-powered operations platform for modern businesses',
-    template: '%s',
+    default: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: 'AI-powered operations platform for modern businesses.',
-  keywords: [
-    'business operating system',
-    'workforce management',
-    'HR software',
-    'operations management',
-    'water refill business',
-    'collaboration workspace',
-    'secure file sharing',
-    'River Apps',
-    'Philippines SaaS',
-  ],
-  authors: [{ name: 'RiverPH', url: 'https://riverph.com' }],
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: SEO_KEYWORDS,
+  authors: [{ name: 'RiverPH', url: MARKETING_URL }],
+  creator: 'RiverPH',
+  publisher: 'RiverPH',
+  category: 'business',
+  alternates: {
+    canonical: SITE_URL,
+  },
+  icons: {
+    icon: [{ url: LOGO_PATH, type: 'image/png' }],
+    shortcut: LOGO_PATH,
+    apple: [{ url: '/apple-icon.png', type: 'image/png' }],
+  },
   openGraph: {
-    title: 'River Business | AI-powered operations platform for modern businesses',
-    description: 'AI-powered operations platform for modern businesses.',
-    url: 'https://riverph.com',
-    siteName: 'River Business',
-    images: [
-      {
-        url: 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a',
-        width: 1200,
-        height: 630,
-        alt: 'River Business Platform - Workforce & Operations OS',
-      },
-    ],
-    locale: 'en_US',
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: 'en_PH',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'River Business | AI-powered operations platform for modern businesses',
-    description: 'AI-powered operations platform for modern businesses.',
-    images: ['https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a'],
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0F172A',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -56,9 +77,10 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased")}>
+        <SeoJsonLd />
         <FirebaseClientProvider>
           {children}
         </FirebaseClientProvider>

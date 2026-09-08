@@ -44,6 +44,9 @@ exports.getEmployeeInvitationTemplate = getEmployeeInvitationTemplate;
 exports.getSanitationScheduledTemplate = getSanitationScheduledTemplate;
 exports.getSanitationReportTemplate = getSanitationReportTemplate;
 exports.getPaymentReminderTemplate = getPaymentReminderTemplate;
+exports.getStationRefillNoticeTemplate = getStationRefillNoticeTemplate;
+exports.getEmployeePayslipTemplate = getEmployeePayslipTemplate;
+exports.getLeaveStatusTemplate = getLeaveStatusTemplate;
 const nodemailer = __importStar(require("nodemailer"));
 const logger = __importStar(require("firebase-functions/logger"));
 const BRAND_PRIMARY = '#538ec2';
@@ -211,15 +214,15 @@ function getDeliveryStatusTemplate(businessName, status, trackingId, volume) {
 function getPaymentStatusTemplate(businessName, invoiceId, amount, status) {
     const isPaid = status === 'Paid';
     const content = `
-    <p class="body-text">Hi ${businessName}, ${isPaid ? "your financial status is confirmed. Your account remains in excellent standing within the River ecosystem." : "we've received your settlement proof and our audit team is currently verifying the transaction."}</p>
-    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; margin-top: 24px; border: 1px solid #e2e8f0;">
-      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Amount Processed</p>
+    <p class="greeting">Hi ${businessName}, ${isPaid ? "your payment is confirmed." : "we've received your proof of payment."}</p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Amount Processed</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
   `;
     return {
-        subject: isPaid ? `Financial Verification Complete ✅` : `Settlement Logged ⏳`,
-        html: getEmailWrapper(content, isPaid ? 'Transaction Verified' : 'Processing Settlement', `<p style="text-align: center; color: #64748b; font-size: 14px;">Invoice ID: ${invoiceId}</p>`)
+        subject: isPaid ? `Payment Confirmed ✅` : `Processing Payment ⏳`,
+        html: getEmailWrapper(content, isPaid ? 'Payment Successful' : 'Review in Progress', `<p style="text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px;">Invoice: ${invoiceId}</p>`)
     };
 }
 function getTopUpConfirmationTemplate(businessName, amount) {
@@ -310,6 +313,62 @@ function getPaymentReminderTemplate(businessName, amount, period) {
     return {
         subject: `Action Required: Statement for ${period} 🌊`,
         html: getEmailWrapper(content, 'Financial Follow-up', '', 'Settle via Workspace')
+    };
+}
+function getStationRefillNoticeTemplate(stationName, businessName, address, day, time) {
+    const content = `
+    <p class="body-text">Hello <strong>${stationName}</strong>,</p>
+    <p class="body-text">
+      This is a reminder for a scheduled water delivery tomorrow.
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin: 24px 0;">
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Client:</span> ${businessName}</div>
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Day:</span> Tomorrow, ${day}</div>
+      <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Time:</span> ${time}</div>
+      <div style="font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Address:</span> ${address}</div>
+    </div>
+    <p class="body-text">
+      Please prepare the containers for delivery. You can check more details in the dashboard.
+    </p>
+  `;
+    return {
+        subject: `Delivery Reminder: ${businessName} Tomorrow 💧`,
+        html: getEmailWrapper(content, 'Refill Schedule', `<p style="text-align: center; color: #64748b; font-size: 13px;">Scheduled Delivery</p>`, 'Open Hub')
+    };
+}
+function getEmployeePayslipTemplate(employeeName, businessName, period, amount) {
+    const content = `
+    <p class="body-text">Hello <strong>${employeeName}</strong>,</p>
+    <p class="body-text">
+      Transparency and operational excellence are core to the River ecosystem. Your official payslip for the cycle <strong>${period}</strong> has been generated and verified by <strong>${businessName}</strong>.
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; margin-top: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Net Disbursement</p>
+      <p style="margin: 4px 0 0 0; font-size: 32px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    </div>
+    <p class="body-text" style="margin-top: 24px;">
+      Attached to this email is a high-fidelity PDF copy of your disbursement record for your personal files and bank confirmation purposes.
+    </p>
+  `;
+    return {
+        subject: `Employee Payslip: ${businessName} — ${period} 🌊`,
+        html: getEmailWrapper(content, 'Payroll Disbursement Verified', `<p style="text-align: center; color: #64748b; font-size: 14px;">Authorized Digital Record</p>`, 'View Team Workspace')
+    };
+}
+function getLeaveStatusTemplate(employeeName, type, period, status) {
+    const isApproved = status === 'approved';
+    const content = `
+    <p class="body-text">Hello ${employeeName},</p>
+    <p class="body-text">Your application for <strong>${type}</strong> for the period of <strong>${period}</strong> has been processed by your administrator.</p>
+    <div style="text-align: center; margin: 32px 0;">
+      <div style="background-color: ${isApproved ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${isApproved ? '#bbf7d0' : '#fecaca'}; color: ${isApproved ? '#15803d' : '#b91c1c'}; padding: 12px 24px; border-radius: 50px; font-weight: 800; display: inline-block; font-size: 14px; text-transform: uppercase;">
+        ${status}
+      </div>
+    </div>
+  `;
+    return {
+        subject: `Update: Your Leave Application for ${period} 🗓️`,
+        html: getEmailWrapper(content, 'Application Resolved', '', 'View History', 'https://app.riverph.com/hr-dashboard/attendance')
     };
 }
 //# sourceMappingURL=email.js.map

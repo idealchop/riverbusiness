@@ -130,7 +130,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
             <div className="flex-1 flex flex-col items-center justify-center text-center p-20 gap-4 opacity-40">
                 <GanttChart className="h-16 w-16 text-slate-300" />
                 <div className="space-y-1">
-                    <p className="text-sm font-black uppercase tracking-widest text-slate-900">Timeline Logic Required</p>
+                    <p className="text-sm font-black uppercase tracking-widest text-slate-900">Add start and end dates</p>
                     <p className="text-xs font-bold text-slate-400">Add a 'Date' column to authorize the Gantt Chart protocol.</p>
                 </div>
             </div>
@@ -144,7 +144,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                 <div className="flex items-center gap-8">
                     <div className="space-y-0.5">
                         <h3 className="text-lg font-black uppercase tracking-widest text-slate-900 leading-none">{format(viewDate, 'MMMM yyyy')}</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Organization Timeline</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Timeline</p>
                     </div>
                     <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl shadow-inner">
                         <button 
@@ -176,7 +176,7 @@ export function GanttView({ fields, records, onRecordUpdate, onRecordClick }: Ga
                 {/* Fixed Sidebar for Record Titles */}
                 <div className="w-64 border-r bg-slate-50/50 flex flex-col shrink-0">
                     <div className="h-12 border-b bg-slate-100/50 flex items-center px-6 shrink-0">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Object Title</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Title</span>
                     </div>
                     <ScrollArea className="flex-1">
                         <div className="divide-y divide-slate-100">

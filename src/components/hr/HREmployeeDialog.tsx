@@ -215,6 +215,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusin
       inviterBusinessName: inviterBusinessName || 'Your Team',
       companyId: companyId,
       hrRole: 'employee',
+      workspaceKind: 'company',
       role: 'User',
       accountStatus: 'Active',
       createdAt: serverTimestamp(),

@@ -14,12 +14,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { CheckCircle, ArrowRight, ArrowLeft, Building2, Droplets, Users, Layout, ChevronRight, Info } from 'lucide-react';
+import { CheckCircle, ArrowRight, ArrowLeft, Building2, Droplets, Users, Layout, Info, User } from 'lucide-react';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { getHomePath } from '@/lib/workspace-access';
 
 const claimSchema = z.object({
   clientId: z.string().min(1, { message: 'Client ID is required.' }),
@@ -33,8 +34,15 @@ const registerWorkspaceSchema = z.object({
   interests: z.array(z.string()).min(1, { message: 'Select at least one interest.' }),
 });
 
+const individualSchema = z.object({
+  name: z.string().min(2, { message: 'Full name is required.' }),
+  workspaceName: z.string().optional(),
+});
+
 type ClaimFormValues = z.infer<typeof claimSchema>;
 type RegisterWorkspaceValues = z.infer<typeof registerWorkspaceSchema>;
+type IndividualFormValues = z.infer<typeof individualSchema>;
+type SetupPath = 'choose' | 'company' | 'claim' | 'create' | 'individual';
 
 const INDUSTRIES = [
   'Retail',
@@ -62,7 +70,7 @@ export default function ClaimAccountPage() {
   
   const [claimedProfile, setClaimedProfile] = useState<AppUser | null>(null);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
-  const [mode, setMode] = useState<'claim' | 'create'>('create');
+  const [setupPath, setSetupPath] = useState<SetupPath>('choose');
   const [setupStep, setSetupStep] = useState(1);
 
   const claimForm = useForm<ClaimFormValues>({
@@ -74,6 +82,11 @@ export default function ClaimAccountPage() {
     defaultValues: {
       interests: [],
     }
+  });
+
+  const individualForm = useForm<IndividualFormValues>({
+    resolver: zodResolver(individualSchema),
+    defaultValues: { name: '', workspaceName: '' },
   });
 
   useEffect(() => {
@@ -132,6 +145,7 @@ export default function ClaimAccountPage() {
         role: unclaimedData?.role || 'User',
         hrRole: unclaimedData?.hrRole || 'owner',
         companyId: normalizedClientId,
+        workspaceKind: 'company',
       } as AppUser;
       
       batch.set(userProfileRef, newUserData);
@@ -164,6 +178,7 @@ export default function ClaimAccountPage() {
         companyId: generatedClientId,
         role: 'User',
         hrRole: 'owner',
+        workspaceKind: 'company',
         onboardingComplete: true,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
@@ -180,6 +195,56 @@ export default function ClaimAccountPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not set up your workspace.' });
     }
   };
+
+  const onIndividualSubmit = async (data: IndividualFormValues) => {
+    if (!firestore || !authUser) return;
+    try {
+      const batch = writeBatch(firestore);
+      const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+      const generatedClientId = `RIVER-${randomSuffix}`;
+      const userProfileRef = doc(firestore, 'users', authUser.uid);
+      const workspaceName = data.workspaceName?.trim() || `${data.name}'s workspace`;
+
+      const newUserData: AppUser = {
+        id: authUser.uid,
+        clientId: generatedClientId,
+        name: data.name,
+        email: authUser.email!.toLowerCase().trim(),
+        businessName: workspaceName,
+        interests: ['Collaboration'],
+        companyId: generatedClientId,
+        role: 'User',
+        hrRole: 'owner',
+        workspaceKind: 'individual',
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        accountStatus: 'Active',
+        totalConsumptionLiters: 0,
+      } as AppUser;
+
+      batch.set(userProfileRef, newUserData);
+      await batch.commit();
+      toast({ title: 'Workspace ready' });
+      setClaimedProfile(newUserData);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not set up your workspace.' });
+    }
+  };
+
+  const heading =
+    setupPath === 'choose' ? 'How will you use River?' :
+    setupPath === 'company' ? 'Company workspace' :
+    setupPath === 'claim' ? 'Link your account' :
+    setupPath === 'individual' ? 'Personal workspace' :
+    'Set up your company';
+
+  const description =
+    setupPath === 'choose' ? 'Choose the account type that matches how you work.' :
+    setupPath === 'company' ? 'Use an existing Client ID or start a new company workspace.' :
+    setupPath === 'claim' ? 'Enter your Client ID to link your provisioned account.' :
+    setupPath === 'individual' ? 'Documents and files only. Team Hub and Water Refill stay locked.' :
+    'Tell us a bit about your business.';
 
   if (isUserLoading || isCheckingProfile) return <FullScreenLoader text="Verifying..." />;
 
@@ -214,7 +279,9 @@ export default function ClaimAccountPage() {
               </div>
               <CardTitle className="text-2xl font-bold">You're all set!</CardTitle>
               <CardDescription className="text-sm">
-                Your workspace for <strong>{claimedProfile.businessName}</strong> is ready.
+                {claimedProfile.workspaceKind === 'individual'
+                  ? 'Your personal workspace is ready. Documents and files are unlocked.'
+                  : <>Your workspace for <strong>{claimedProfile.businessName}</strong> is ready.</>}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 py-6">
@@ -224,8 +291,9 @@ export default function ClaimAccountPage() {
                 </div>
             </CardContent>
             <CardFooter className="pb-10">
-              <Button onClick={() => router.push('/dashboard')} className="w-full h-14 rounded-2xl font-bold text-base shadow-xl">
-                Open Workspace <ArrowRight className="ml-2 h-5 w-5" />
+              <Button onClick={() => router.push(getHomePath(claimedProfile))} className="w-full h-14 rounded-2xl font-bold text-base shadow-xl">
+                {claimedProfile.workspaceKind === 'individual' ? 'Open Documents' : claimedProfile.hrRole === 'employee' ? 'Open Team Hub' : 'Open Workspace'}
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </CardFooter>
           </Card>
@@ -233,17 +301,90 @@ export default function ClaimAccountPage() {
           <Card className="w-full border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
             <CardHeader className="text-center pt-10 pb-6">
               <LogoBlack className="h-12 w-12 mx-auto mb-6" />
-              <CardTitle className="text-2xl font-bold">
-                {mode === 'create' ? 'Set up your workspace' : 'Link your account'}
-              </CardTitle>
-              <CardDescription className="text-sm">
-                {mode === 'create' ? 'Tell us a bit about your business.' : 'Enter your Client ID to link your existing account.'}
-              </CardDescription>
+              <CardTitle className="text-2xl font-bold">{heading}</CardTitle>
+              <CardDescription className="text-sm">{description}</CardDescription>
             </CardHeader>
 
             <CardContent className="px-8 pb-8">
-              {mode === 'claim' ? (
-                <form onSubmit={claimForm.handleSubmit(onClaimSubmit)} className="space-y-6">
+              {setupPath === 'choose' && (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setSetupPath('company')}
+                    className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                  >
+                    <div className="h-11 w-11 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm">
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900">Company</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Existing Client ID or start from scratch. Water refill, Team Hub, documents, and files.</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-300 mt-1 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSetupPath('individual')}
+                    className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                  >
+                    <div className="h-11 w-11 rounded-xl bg-white flex items-center justify-center text-slate-700 shadow-sm">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900">Individual</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Personal documents and files. Team Hub and Water Refill stay visible but disabled.</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-300 mt-1 shrink-0" />
+                  </button>
+                </div>
+              )}
+
+              {setupPath === 'company' && (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setSetupPath('claim')}
+                    className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900">Existing Client ID</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Link a company profile River already provisioned for you.</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-300 mt-1 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSetupPath('create'); setSetupStep(1); }}
+                    className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900">From scratch</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Create a new company workspace as a new customer.</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-300 mt-1 shrink-0" />
+                  </button>
+                </div>
+              )}
+
+              {setupPath === 'individual' && (
+                <form onSubmit={individualForm.handleSubmit(onIndividualSubmit)} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-400 ml-1">Your name</Label>
+                    <Input placeholder="Full name" className="h-12 rounded-xl bg-slate-50 border-slate-100" {...individualForm.register('name')} />
+                    {individualForm.formState.errors.name && <p className="text-xs text-red-500 ml-1">{individualForm.formState.errors.name.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-400 ml-1">Workspace name (optional)</Label>
+                    <Input placeholder="Defaults to your name" className="h-12 rounded-xl bg-slate-50 border-slate-100" {...individualForm.register('workspaceName')} />
+                  </div>
+                  <Button type="submit" className="w-full h-12 rounded-xl font-bold" disabled={individualForm.formState.isSubmitting}>
+                    {individualForm.formState.isSubmitting ? <Loader /> : 'Create workspace'}
+                  </Button>
+                </form>
+              )}
+
+              {setupPath === 'claim' && (
+                <form onSubmit={claimForm.handleSubmit(onClaimSubmit)} className="space-y-6 mt-2">
                   <div className="space-y-2">
                     <Label htmlFor="clientId" className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wide">Client ID</Label>
                     <Input 
@@ -265,7 +406,9 @@ export default function ClaimAccountPage() {
                     {claimForm.formState.isSubmitting ? <Loader /> : 'Link Account'}
                   </Button>
                 </form>
-              ) : (
+              )}
+
+              {setupPath === 'create' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                     {setupStep === 1 && (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
@@ -340,9 +483,28 @@ export default function ClaimAccountPage() {
             <CardFooter className="flex flex-col gap-6 pb-10 px-8">
                <Separator className="bg-slate-50" />
                <div className="flex items-center justify-between w-full">
-                    <button onClick={() => { setMode(mode === 'claim' ? 'create' : 'claim'); setSetupStep(1); }} className="text-xs font-bold text-blue-500 hover:underline">
-                        {mode === 'claim' ? "Create New Workspace" : "Already have a Client ID?"}
-                    </button>
+                    {setupPath === 'choose' ? (
+                      <span />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (setupPath === 'create' && setupStep === 2) {
+                            setSetupStep(1);
+                            return;
+                          }
+                          if (setupPath === 'claim' || setupPath === 'create') {
+                            setSetupPath('company');
+                            setSetupStep(1);
+                            return;
+                          }
+                          setSetupPath('choose');
+                        }}
+                        className="text-xs font-bold text-blue-500 hover:underline"
+                      >
+                        Back
+                      </button>
+                    )}
                     <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">River Support</p>
                </div>
             </CardFooter>

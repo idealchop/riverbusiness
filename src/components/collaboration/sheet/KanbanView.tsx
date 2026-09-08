@@ -19,7 +19,7 @@ export function KanbanView({ fields, records, onRecordClick, onRecordUpdate }: a
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-20 gap-4 opacity-40">
                 <AlertCircle className="h-12 w-12 text-slate-300" />
-                <p className="text-sm font-black uppercase tracking-widest">Kanban Requires Status Field</p>
+                <p className="text-sm font-semibold">Add a Status column</p>
                 <p className="text-xs font-bold text-slate-400">Add a 'Status' or 'Select' column to visualize work stacks.</p>
             </div>
         );

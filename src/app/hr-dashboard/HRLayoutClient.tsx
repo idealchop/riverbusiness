@@ -38,6 +38,7 @@ import { signOut } from 'firebase/auth';
 import type { Notification as NotificationType, AppUser } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useMounted } from '@/hooks/use-mounted';
+import { getHomePath, isIndividualWorkspace } from '@/lib/workspace-access';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 export default function HRLayoutClient({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,12 @@ export default function HRLayoutClient({ children }: { children: React.ReactNode
     }
   }, [authUser, isUserLoading, router, isLoggingOut]);
 
+  React.useEffect(() => {
+    if (user && isIndividualWorkspace(user)) {
+      router.replace(getHomePath(user));
+    }
+  }, [user, router]);
+
   const handleLogout = async () => {
     if (!auth) return;
     setIsLoggingOut(true);
@@ -89,6 +96,10 @@ export default function HRLayoutClient({ children }: { children: React.ReactNode
 
   if (isUserLoading || isUserDocLoading || !isMounted || isLoggingOut) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
+  }
+
+  if (user && isIndividualWorkspace(user)) {
+    return <FullScreenLoader text="Opening your workspace..." />;
   }
 
   // IDENTIFIER: Workspace Owner is defined as the user with a "Current active plan"
@@ -108,7 +119,7 @@ export default function HRLayoutClient({ children }: { children: React.ReactNode
   const SidebarContentArea = () => (
     <div className="flex flex-col h-full overflow-hidden">
         <div className="p-6 flex-1 overflow-y-auto">
-            <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
+            <Link href="/hr-dashboard" className="flex items-center gap-3 group mb-8">
                 <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
                 <div className="flex flex-col">
                 <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Team</span>

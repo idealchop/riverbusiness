@@ -157,6 +157,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                 isPrepaid: values.isPrepaid,
                 customPlanDetails: { ...values.customPlanDetails },
                 hrRole: 'owner',
+                workspaceKind: 'company',
                 companyId: normalizedClientId,
                 accountStatus: 'Active',
                 totalConsumptionLiters: (selectedAccountType !== 'Parent' && !plan.isConsumptionBased) ? (values.customPlanDetails?.litersPerMonth || 0) : 0,

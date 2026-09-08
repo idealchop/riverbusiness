@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, subDays, subMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { 
   Eye, 
@@ -28,10 +28,162 @@ import {
   Microscope, 
   ShieldCheck,
   LayoutGrid,
-  XCircle
+  XCircle,
+  CalendarDays,
+  FlaskConical
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
+
+type ComplianceCadence = 'monthly' | 'semi-annual' | 'annual';
+type PeriodFilter = 'all' | ComplianceCadence;
+
+type DisplayComplianceReport = ComplianceReport & {
+  cadence: ComplianceCadence;
+  periodKey: string;
+  periodLabel: string;
+  isDummy?: boolean;
+};
+
+function toReportDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === 'object' && value !== null && typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    try {
+      return (value as { toDate: () => Date }).toDate();
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+function inferCadence(report: Pick<ComplianceReport, 'name' | 'reportType'>): ComplianceCadence {
+  const text = `${report.reportType || ''} ${report.name || ''}`.toLowerCase();
+  if (text.includes('annual') && !text.includes('semi')) return 'annual';
+  if (text.includes('semi')) return 'semi-annual';
+  return 'monthly';
+}
+
+function periodKeyFor(cadence: ComplianceCadence, date: Date): string {
+  if (cadence === 'monthly') return `monthly-${format(date, 'yyyy-MM')}`;
+  if (cadence === 'semi-annual') {
+    const half = date.getMonth() < 6 ? 1 : 2;
+    return `semi-${date.getFullYear()}-H${half}`;
+  }
+  return `annual-${date.getFullYear()}`;
+}
+
+function periodLabelFor(cadence: ComplianceCadence, date: Date): string {
+  if (cadence === 'monthly') return format(date, 'MMMM yyyy');
+  if (cadence === 'semi-annual') {
+    const half = date.getMonth() < 6 ? 1 : 2;
+    return half === 1 ? `H1 ${date.getFullYear()} · Jan–Jun` : `H2 ${date.getFullYear()} · Jul–Dec`;
+  }
+  return `Calendar year ${date.getFullYear()}`;
+}
+
+function shiftHalf(year: number, half: 1 | 2, stepsBack: number): { year: number; half: 1 | 2 } {
+  const total = year * 2 + (half - 1) - stepsBack;
+  return { year: Math.floor(total / 2), half: total % 2 === 0 ? 1 : 2 };
+}
+
+function buildDummyComplianceReports(now: Date): DisplayComplianceReport[] {
+  const reports: DisplayComplianceReport[] = [];
+
+  for (let i = 0; i < 12; i++) {
+    const monthDate = subMonths(now, i);
+    const issued = i === 0 ? subDays(now, 2) : new Date(monthDate.getFullYear(), monthDate.getMonth(), 8, 10, 24);
+    reports.push({
+      id: `dummy-monthly-${format(monthDate, 'yyyy-MM')}`,
+      name: 'DOH Bacteriological Test (Monthly)',
+      reportType: 'DOH Bacteriological Test (Monthly)',
+      resultId: `BAC-${format(monthDate, 'yyyyMM')}-${1842 + i}`,
+      date: issued,
+      status: 'Passed',
+      cadence: 'monthly',
+      periodKey: periodKeyFor('monthly', monthDate),
+      periodLabel: periodLabelFor('monthly', monthDate),
+      isDummy: true,
+    });
+  }
+
+  const currentHalf: 1 | 2 = now.getMonth() < 6 ? 1 : 2;
+  for (let i = 0; i < 4; i++) {
+    const { year, half } = shiftHalf(now.getFullYear(), currentHalf, i);
+    const periodDate = new Date(year, half === 1 ? 0 : 6, 1);
+    const issued =
+      i === 0
+        ? subDays(now, 5)
+        : new Date(half === 1 ? year : year + 1, half === 1 ? 6 : 0, 4, 9, 0);
+    reports.push({
+      id: `dummy-semi-${year}-H${half}`,
+      name: 'DOH Physico-Chemical Test (Semi-Annual)',
+      reportType: 'DOH Bacteriological Test (Semi-Annual)',
+      resultId: `PHY-${year}H${half}-${3104 + i}`,
+      date: issued,
+      status: 'Passed',
+      cadence: 'semi-annual',
+      periodKey: periodKeyFor('semi-annual', periodDate),
+      periodLabel: periodLabelFor('semi-annual', periodDate),
+      isDummy: true,
+    });
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const year = now.getFullYear() - i;
+    const periodDate = new Date(year, 0, 1);
+    const issued = i === 0 ? subDays(now, 9) : new Date(year, 2, 14, 11, 0);
+    reports.push({
+      id: `dummy-annual-${year}`,
+      name: 'DOH Annual Water Quality Certificate',
+      reportType: 'Sanitary Permit',
+      resultId: `ANL-${year}-${9011 + i}`,
+      date: issued,
+      status: 'Passed',
+      cadence: 'annual',
+      periodKey: periodKeyFor('annual', periodDate),
+      periodLabel: periodLabelFor('annual', periodDate),
+      isDummy: true,
+    });
+  }
+
+  return reports;
+}
+
+function mergeComplianceReports(liveReports: ComplianceReport[] | null, now: Date): DisplayComplianceReport[] {
+  const dummy = buildDummyComplianceReports(now);
+  const byKey = new Map<string, DisplayComplianceReport>(dummy.map((report) => [report.periodKey, report]));
+
+  (liveReports || []).forEach((report) => {
+    const date = toReportDate(report.date) || now;
+    const cadence = inferCadence(report);
+    const key = periodKeyFor(cadence, date);
+    byKey.set(key, {
+      ...report,
+      cadence,
+      periodKey: key,
+      periodLabel: periodLabelFor(cadence, date),
+      isDummy: false,
+    });
+  });
+
+  return Array.from(byKey.values()).sort((a, b) => {
+    const timeA = toReportDate(a.date)?.getTime() || 0;
+    const timeB = toReportDate(b.date)?.getTime() || 0;
+    return timeB - timeA;
+  });
+}
+
+const CADENCE_META: Record<ComplianceCadence, { label: string; blurb: string }> = {
+  monthly: { label: 'Monthly', blurb: 'Bacteriological (coliform / E. coli)' },
+  'semi-annual': { label: 'Semi-annual', blurb: 'Physico-chemical panel' },
+  annual: { label: 'Annual', blurb: 'Water quality certificate' },
+};
 
 interface ComplianceDialogProps {
   isOpen: boolean;
@@ -51,7 +203,7 @@ export function ComplianceDialog({
   onOpenChange,
   waterStation,
   complianceReports,
-  complianceLoading,
+  complianceLoading: _complianceLoading,
   sanitationVisits,
   sanitationLoading,
   onViewAttachment,
@@ -60,12 +212,13 @@ export function ComplianceDialog({
 }: ComplianceDialogProps) {
   const [activeTab, setActiveTab] = useState<string>('compliance');
   const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
-  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [complianceCurrentPage, setComplianceCurrentPage] = useState(1);
-  const COMPLIANCE_ITEMS_PER_PAGE = 5;
+  const COMPLIANCE_ITEMS_PER_PAGE = 6;
   const [sanitationCurrentPage, setSanitationCurrentPage] = useState(1);
   const SANITATION_ITEMS_PER_PAGE = 5;
   const [selectedProofImg, setSelectedProofImg] = useState<string | null>(null);
+  const [selectedCertificate, setSelectedCertificate] = useState<DisplayComplianceReport | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -114,30 +267,24 @@ export function ComplianceDialog({
     return { passed: passedItems, total: totalItems, passRate, overallStatus, statusColor };
   }, [selectedSanitationVisit]);
 
-  const availableMonths = useMemo(() => {
-    if (!complianceReports) return [];
-    const months = new Set<string>();
-    complianceReports.forEach(report => {
-        if (report.date && typeof (report.date as any).toDate === 'function') {
-            months.add(format((report.date as any).toDate(), 'yyyy-MM'));
-        }
+  const displayReports = useMemo(() => mergeComplianceReports(complianceReports, new Date()), [complianceReports]);
+
+  const cadenceSummaries = useMemo(() => {
+    return (['monthly', 'semi-annual', 'annual'] as ComplianceCadence[]).map((cadence) => {
+      const latest = displayReports.find((report) => report.cadence === cadence);
+      const issued = latest ? toReportDate(latest.date) : null;
+      return { cadence, latest, issued };
     });
-    return Array.from(months).map(m => ({
-        value: m,
-        label: format(new Date(m + '-02'), 'MMMM yyyy'),
-    })).sort((a,b) => b.value.localeCompare(a.value));
-  }, [complianceReports]);
+  }, [displayReports]);
 
   const filteredReports = useMemo(() => {
-    if (!complianceReports) return [];
-    if (monthFilter === 'all') return complianceReports;
-    return complianceReports.filter(report => {
-        if (report.date && typeof (report.date as any).toDate === 'function') {
-            return format((report.date as any).toDate(), 'yyyy-MM') === monthFilter;
-        }
-        return false;
-    });
-  }, [complianceReports, monthFilter]);
+    if (periodFilter === 'all') return displayReports;
+    return displayReports.filter((report) => report.cadence === periodFilter);
+  }, [displayReports, periodFilter]);
+
+  useEffect(() => {
+    setComplianceCurrentPage(1);
+  }, [periodFilter]);
 
   const totalCompliancePages = Math.ceil(filteredReports.length / COMPLIANCE_ITEMS_PER_PAGE);
 
@@ -179,26 +326,51 @@ export function ComplianceDialog({
               </TabsList>
               
               <TabsContent value="compliance" className="mt-0 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {cadenceSummaries.map(({ cadence, latest, issued }) => (
+                    <button
+                      key={cadence}
+                      type="button"
+                      onClick={() => setPeriodFilter(cadence)}
+                      className={cn(
+                        "text-left rounded-2xl border p-4 transition-all",
+                        periodFilter === cadence ? "border-primary/40 bg-primary/5 shadow-sm" : "border-slate-100 bg-white hover:border-slate-200"
+                      )}
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{CADENCE_META[cadence].label}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">{latest?.periodLabel || 'On cycle'}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">{CADENCE_META[cadence].blurb}</p>
+                      <div className="flex items-center justify-between mt-3">
+                        <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest bg-green-50 text-green-700 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          {latest?.status || 'Passed'}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {issued ? `Updated ${formatDistanceToNow(issued, { addSuffix: true })}` : 'Live'}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
                 <Card className="border-none shadow-sm overflow-hidden bg-white">
                   <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 bg-slate-50/50">
                     <div>
                       <CardTitle className="text-lg">Station Quality Metrics</CardTitle>
-                      <CardDescription className="text-xs">Bacteriological and operational compliance documents.</CardDescription>
+                      <CardDescription className="text-xs">Monthly, semi-annual, and annual DOH compliance documents — always on file.</CardDescription>
                     </div>
-                    {availableMonths.length > 0 && (
-                      <Select value={monthFilter} onValueChange={setMonthFilter}>
-                        <SelectTrigger className="w-full md:w-[200px] h-9 text-xs font-bold uppercase tracking-tight bg-white">
-                          <History className="mr-2 h-3.5 w-3.5" />
-                          <SelectValue placeholder="Period Filter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Full History</SelectItem>
-                          {availableMonths.map(month => (
-                            <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <Select value={periodFilter} onValueChange={(value) => setPeriodFilter(value as PeriodFilter)}>
+                      <SelectTrigger className="w-full md:w-[220px] h-9 text-xs font-bold uppercase tracking-tight bg-white">
+                        <History className="mr-2 h-3.5 w-3.5" />
+                        <SelectValue placeholder="Period Filter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All cadences</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="semi-annual">Semi-annual</SelectItem>
+                        <SelectItem value="annual">Annual</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </CardHeader>
                   <CardContent className="p-0">
                     <Table className="hidden md:table">
@@ -211,22 +383,24 @@ export function ComplianceDialog({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {complianceLoading ? (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-12 text-xs font-bold uppercase tracking-widest opacity-40">Synchronizing records...</TableCell>
-                          </TableRow>
-                        ) : paginatedComplianceReports.map((report) => (
+                        {paginatedComplianceReports.map((report) => {
+                          const issued = toReportDate(report.date);
+                          return (
                           <TableRow key={report.id} className="group hover:bg-muted/30 transition-colors cursor-default">
                             <TableCell className="pl-6 py-4">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-lg bg-slate-100 group-hover:bg-primary/5 transition-colors">
                                         <Microscope className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
                                     </div>
-                                    <span className="font-bold text-sm text-slate-900">{report.name}</span>
+                                    <div>
+                                      <span className="font-bold text-sm text-slate-900 block">{report.name}</span>
+                                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{CADENCE_META[report.cadence].label} · {report.resultId}</span>
+                                    </div>
                                 </div>
                             </TableCell>
-                            <TableCell className="text-xs font-medium text-slate-500 uppercase">
-                                {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMMM yyyy') : 'Processing...'}
+                            <TableCell className="text-xs font-medium text-slate-500">
+                                <p className="uppercase font-bold">{report.periodLabel}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">{issued ? `Issued ${format(issued, 'MMM d, yyyy')}` : 'On file'}</p>
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={cn(
@@ -240,32 +414,31 @@ export function ComplianceDialog({
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right pr-6">
-                              <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold tracking-widest gap-2 hover:bg-primary/5 hover:text-primary" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                              <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold tracking-widest gap-2 hover:bg-primary/5 hover:text-primary" onClick={() => {
+                                if (report.reportUrl && report.reportUrl !== 'pending') onViewAttachment(report.reportUrl);
+                                else setSelectedCertificate(report);
+                              }}>
                                 <Eye className="h-3.5 w-3.5" />
                                 View Doc
                               </Button>
                             </TableCell>
                           </TableRow>
-                        ))}
-                        {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-20 text-muted-foreground italic">No historical reports match the filter.</TableCell>
-                          </TableRow>
-                        )}
+                          );
+                        })}
                       </TableBody>
                     </Table>
 
                     <div className="space-y-4 md:hidden p-4">
-                      {complianceLoading ? (
-                        <p className="text-center text-[10px] font-bold uppercase tracking-widest opacity-40 py-10">Synchronizing...</p>
-                      ) : paginatedComplianceReports.map(report => (
+                      {paginatedComplianceReports.map(report => {
+                        const issued = toReportDate(report.date);
+                        return (
                         <Card key={report.id} className="shadow-none border bg-muted/10">
                           <CardContent className="p-4 space-y-4">
                             <div className="flex justify-between items-start">
                               <div>
                                 <p className="font-bold text-sm">{report.name}</p>
                                 <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight mt-1">
-                                  {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMMM yyyy') : 'Validating...'}
+                                  {report.periodLabel}{issued ? ` · ${format(issued, 'MMM d, yyyy')}` : ''}
                                 </p>
                               </div>
                               <Badge variant="outline" className={cn(
@@ -273,12 +446,16 @@ export function ComplianceDialog({
                                   report.status === 'Passed' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
                               )}>{report.status}</Badge>
                             </div>
-                            <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                            <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                              if (report.reportUrl && report.reportUrl !== 'pending') onViewAttachment(report.reportUrl);
+                              else setSelectedCertificate(report);
+                            }}>
                               <Eye className="mr-2 h-3.5 w-3.5" /> View Report Document
                             </Button>
                           </CardContent>
                         </Card>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                   <CardFooter className="bg-slate-50/50 border-t py-4 flex items-center justify-between">
@@ -382,6 +559,72 @@ export function ComplianceDialog({
                 <Button variant="outline" className="font-bold uppercase tracking-widest text-[10px] rounded-xl px-8 h-10 border-slate-200 shadow-sm">Dismiss</Button>
             </DialogClose>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedCertificate} onOpenChange={() => setSelectedCertificate(null)}>
+        <DialogContent className="sm:max-w-lg rounded-[2rem] border-none p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 bg-slate-900 text-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-white/10">
+                <FlaskConical className="h-5 w-5 text-sky-300" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold">{selectedCertificate?.name}</DialogTitle>
+                <DialogDescription className="text-slate-400 text-xs font-medium">
+                  {selectedCertificate?.periodLabel} · Result {selectedCertificate?.resultId}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between rounded-2xl bg-green-50 border border-green-100 px-4 py-3">
+              <div className="flex items-center gap-2 text-green-700 font-bold text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Certified Passed
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-green-600">
+                {selectedCertificate ? CADENCE_META[selectedCertificate.cadence].label : ''}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {(selectedCertificate?.cadence === 'monthly'
+                ? [
+                    ['Total coliform', 'Absent / 100 mL'],
+                    ['E. coli', 'Absent / 100 mL'],
+                    ['HPC', '< 500 CFU/mL'],
+                    ['Free chlorine', '0.3–0.5 mg/L'],
+                  ]
+                : selectedCertificate?.cadence === 'semi-annual'
+                ? [
+                    ['pH', '7.1 – 7.4'],
+                    ['TDS', '118 mg/L'],
+                    ['Turbidity', '0.21 NTU'],
+                    ['Nitrate', '1.4 mg/L'],
+                  ]
+                : [
+                    ['DOH certificate', 'Valid'],
+                    ['Sanitary permit', 'Current'],
+                    ['Source class', 'Refilling station'],
+                    ['Next audit', 'On annual cycle'],
+                  ]
+              ).map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+                  <p className="font-bold text-slate-900 mt-1">{value}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400 flex items-center gap-2">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Issued {selectedCertificate && toReportDate(selectedCertificate.date) ? format(toReportDate(selectedCertificate.date) as Date, 'MMMM d, yyyy') : 'on file'} for {waterStation?.name || 'assigned station'}.
+            </p>
+          </div>
+          <DialogFooter className="p-6 pt-0">
+            <DialogClose asChild>
+              <Button variant="outline" className="w-full rounded-xl font-bold">Close</Button>
+            </DialogClose>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       

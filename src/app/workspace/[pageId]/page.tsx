@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp, setDoc, deleteField, collection, getDoc, Timestamp } from 'firebase/firestore';
@@ -19,7 +19,7 @@ import {
   AlertTriangle, 
   RotateCcw, 
   FilePlus, 
-  Home, 
+  ArrowLeft, 
   X, 
   Search, 
   Loader2, 
@@ -29,12 +29,19 @@ import {
   Copy, 
   CheckCircle2,
   MoreHorizontal,
-  Users
+  Users,
+  FileDown,
+  Rows3,
+  Columns2,
+  Minus,
+  Plus,
+  Home
 } from 'lucide-react';
 import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getCollabBackHref, getCollabFolderHref, getCollabShareUrl, getCollabTypeHomeHref, getCollabTypeHomeLabel } from '@/lib/workspace-access';
 import { useToast } from '@/hooks/use-toast';
 import { addHours, addDays } from 'date-fns';
 import Link from 'next/link';
@@ -118,18 +125,26 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
     const [password, setPassword] = useState(page.sharePassword || '');
     const { toast } = useToast();
 
-    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/${page.shareToken || page.id}` : '';
+    const shareUrl = getCollabShareUrl(page);
 
     const handleTogglePublic = async (enabled: boolean) => {
         setIsUpdating(true);
         const shareToken = page.shareToken || Math.random().toString(36).substring(2, 15);
         const updates: any = { isPublic: enabled };
         if (enabled) updates.shareToken = shareToken;
-        else updates.shareToken = deleteField();
-        
-        await onUpdate(updates);
-        setIsUpdating(false);
-        toast({ title: enabled ? 'Sharing active' : 'Public access revoked' });
+        else {
+            updates.shareToken = deleteField();
+            updates.sharePassword = deleteField();
+            updates.expiresAt = deleteField();
+        }
+        try {
+            await onUpdate(updates);
+            toast({ title: enabled ? 'Link sharing is on' : 'Link sharing is off' });
+        } catch {
+            // toast handled by onUpdate
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     const handleExpiryChange = async (value: string) => {
@@ -162,7 +177,10 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
 
     if (isMobile) {
       return (
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+        <DropdownMenuItem
+            onSelect={() => window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }))}
+            className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer"
+        >
             <Share2 className="h-4 w-4" /> Share Access
         </DropdownMenuItem>
       );
@@ -171,21 +189,21 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center">
+                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center" title="Share">
                     <Share2 className="h-4 w-4" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl bg-white">
-                <div className="p-6 space-y-6">
-                    <div className="space-y-1">
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Share Document</h4>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Access Control Protocol</p>
+            <PopoverContent align="end" className="w-[360px] p-0 overflow-hidden border border-slate-200 shadow-xl rounded-2xl bg-white">
+                <div className="p-5 space-y-4">
+                    <div>
+                        <h4 className="text-[15px] font-semibold text-slate-900 tracking-tight">Share</h4>
+                        <p className="text-[13px] text-slate-500 mt-0.5">People with the link can view this page.</p>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
-                        <div className="space-y-0.5">
-                            <p className="text-xs font-bold text-slate-900">Public Access</p>
-                            <p className="text-[9px] text-slate-400 font-medium">Allow anyone with link</p>
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-3">
+                        <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-slate-900">Anyone with the link</p>
+                            <p className="text-[12px] text-slate-500">{page.isPublic ? 'Can view' : 'Off — only your team'}</p>
                         </div>
                         <Switch 
                             checked={page.isPublic || false} 
@@ -195,47 +213,38 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
                     </div>
 
                     {page.isPublic && (
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Shareable link</Label>
-                                <div className="flex gap-2">
-                                    <Input readOnly value={shareUrl} className="h-11 rounded-xl bg-slate-50 border-slate-100 font-mono text-[10px] shadow-inner truncate" />
-                                    <Button onClick={copyLink} variant="outline" className={cn("h-11 px-4 rounded-xl border-slate-100 shadow-sm font-bold text-xs shrink-0", hasCopied ? "bg-green-50 text-green-700 border-green-100" : "bg-white")}>
-                                        {hasCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                    </Button>
-                                </div>
+                        <div className="space-y-4">
+                            <div className="flex gap-2">
+                                <Input readOnly value={shareUrl} className="h-10 rounded-lg bg-slate-50 border-slate-200 font-mono text-[11px] truncate" />
+                                <Button onClick={copyLink} className={cn("h-10 px-3 rounded-lg shrink-0 text-[13px] font-medium", hasCopied ? "bg-green-600 hover:bg-green-600" : "")}>
+                                    {hasCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    <span className="ml-1.5">{hasCopied ? 'Copied' : 'Copy'}</span>
+                                </Button>
                             </div>
 
-                            <div className="space-y-4 pt-4 border-t border-slate-50">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="h-3.5 w-3.5 text-slate-400" />
-                                        <p className="text-[11px] font-bold text-slate-600">Link Expiry</p>
-                                    </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] font-medium text-slate-500">Expires</Label>
                                     <Select onValueChange={handleExpiryChange} defaultValue={page.expiresAt ? "active" : "never"}>
-                                        <SelectTrigger className="w-[100px] h-8 rounded-lg text-[9px] font-bold uppercase tracking-widest border-slate-100 shadow-none">
+                                        <SelectTrigger className="h-9 rounded-lg text-[12px] border-slate-200">
                                             <SelectValue placeholder="Expires" />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-xl">
-                                            <SelectItem value="never" className="text-[9px] font-bold uppercase">Never</SelectItem>
-                                            <SelectItem value="24h" className="text-[9px] font-bold uppercase">24 Hours</SelectItem>
-                                            <SelectItem value="7d" className="text-[9px] font-bold uppercase">7 Days</SelectItem>
+                                            <SelectItem value="never">Never</SelectItem>
+                                            <SelectItem value="24h">24 hours</SelectItem>
+                                            <SelectItem value="7d">7 days</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div className="space-y-3">
+                                <div className="space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Lock className="h-3.5 w-3.5 text-slate-400" />
-                                            <p className="text-[11px] font-bold text-slate-600">Encryption</p>
-                                        </div>
-                                        <Switch checked={isPasswordEnabled} onCheckedChange={togglePassword} disabled={isUpdating} />
+                                        <Label className="text-[11px] font-medium text-slate-500">Password</Label>
+                                        <Switch checked={isPasswordEnabled} onCheckedChange={togglePassword} disabled={isUpdating} className="scale-90" />
                                     </div>
                                     {isPasswordEnabled && (
-                                        <div className="flex gap-2">
-                                            <Input placeholder="Access key..." value={password} onChange={(e) => setPassword(e.target.value)} className="h-9 rounded-lg bg-slate-50 border-slate-100 text-[11px] font-bold px-3" disabled={isUpdating} />
-                                            <Button size="sm" onClick={savePassword} className="h-9 rounded-lg px-3 font-bold text-[9px] uppercase tracking-widest" disabled={isUpdating}>Set</Button>
+                                        <div className="flex gap-1">
+                                            <Input placeholder="Key" value={password} onChange={(e) => setPassword(e.target.value)} className="h-9 rounded-lg text-[12px]" disabled={isUpdating} />
+                                            <Button size="sm" onClick={savePassword} className="h-9 rounded-lg px-2" disabled={isUpdating}>Set</Button>
                                         </div>
                                     )}
                                 </div>
@@ -266,6 +275,18 @@ function PageEditorContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [emojiSearch, setEmojiSearch] = useState('');
   const [isEditingBreadcrumbTitle, setIsEditingBreadcrumbTitle] = useState(false);
+  const [pageLayout, setPageLayout] = useState<'vertical' | 'horizontal'>(() => {
+    if (typeof window === 'undefined') return 'vertical';
+    try {
+      const saved = window.localStorage.getItem('river-docs-page-layout');
+      const layout = saved === 'horizontal' || saved === 'vertical' ? saved : 'vertical';
+      document.documentElement.dataset.docsLayout = layout;
+      return layout;
+    } catch {
+      return 'vertical';
+    }
+  });
+  const [pageZoom, setPageZoom] = useState(100);
   
   const [localIsTyping, setLocalIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -375,6 +396,45 @@ function PageEditorContent() {
     };
   }, [firestore, pageId, router, user, userProfile, forceSave]);
 
+  useLayoutEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('river-docs-page-layout');
+      const layout = saved === 'horizontal' || saved === 'vertical' ? saved : 'vertical';
+      setPageLayout(layout);
+      document.documentElement.dataset.docsLayout = layout;
+      const zoom = Number(window.localStorage.getItem('river-docs-zoom'));
+      if (zoom >= 50 && zoom <= 150) setPageZoom(zoom);
+    } catch {
+      document.documentElement.dataset.docsLayout = 'vertical';
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.docsLayout = pageLayout;
+    window.dispatchEvent(new Event('docs-page-layout'));
+  }, [pageLayout]);
+
+  const setDocsPageLayout = (next: 'vertical' | 'horizontal') => {
+    document.documentElement.dataset.docsLayout = next;
+    setPageLayout(next);
+    try {
+      window.localStorage.setItem('river-docs-page-layout', next);
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new Event('docs-page-layout'));
+  };
+
+  const setDocsZoom = (next: number) => {
+    const zoom = Math.min(150, Math.max(50, next));
+    setPageZoom(zoom);
+    try {
+      window.localStorage.setItem('river-docs-zoom', String(zoom));
+    } catch {
+      /* ignore */
+    }
+  };
+
   const handleUpdateTitle = useCallback((newTitle: string) => {
     if (!firestore || !pageId || !page || page.isTrashed) return;
     latestTitleRef.current = newTitle;
@@ -398,15 +458,24 @@ function PageEditorContent() {
     }, 1000);
   }, [firestore, pageId, page?.isTrashed, triggerTypingIndicator]);
 
-  const handleUpdateMeta = async (data: Partial<CollabPage>) => {
-    if (firestore && page) {
-        updateDoc(doc(firestore, 'collaboration_pages', page.id), { ...data, updatedAt: serverTimestamp() });
+  const handleUpdateMeta = async (data: Partial<CollabPage> | Record<string, any>) => {
+    if (!firestore || !page) return;
+    try {
+        await updateDoc(doc(firestore, 'collaboration_pages', page.id), { ...data, updatedAt: serverTimestamp() });
         if (data.isPrivate !== undefined) {
             toast({
                 title: data.isPrivate ? 'Set to private' : 'Open to team',
                 description: data.isPrivate ? 'This document is now visible only to you.' : 'Everyone in your organization can now collaborate on this document.'
             });
         }
+    } catch (error: any) {
+        console.error('Document update failed:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Could not update document',
+            description: error?.code === 'permission-denied' ? 'You do not have permission to change this document.' : (error?.message || 'Please try again.'),
+        });
+        throw error;
     }
   };
 
@@ -415,21 +484,41 @@ function PageEditorContent() {
   const setIcon = (icon: string) => handleUpdateMeta({ icon });
   const removeIcon = () => handleUpdateMeta({ icon: '' });
 
-  if (isDeleting || (loading && !page)) return isDeleting ? <div className="h-full flex flex-col items-center justify-center bg-white space-y-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Syncing Changes...</p></div> : <PageSkeleton />;
+  if (isDeleting || (loading && !page)) return isDeleting ? <div className="h-full flex flex-col items-center justify-center bg-white space-y-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-xs font-semibold text-slate-400">Deleting...</p></div> : <PageSkeleton />;
   if (!page) return <PageSkeleton />;
 
   const pageType = page.type || 'doc';
+  const typeHomeHref = getCollabTypeHomeHref(pageType);
+  const typeHomeLabel = getCollabTypeHomeLabel(pageType);
+  const backHref = getCollabBackHref(page, parentPage);
+
+  const createNewDocument = () => {
+    window.dispatchEvent(new CustomEvent('request-new-collab-page', {
+      detail: { parentId: page.parentId ?? null, type: 'doc' }
+    }));
+  };
+
+  const toggleFavorite = () => {
+    const next = !page.isFavorite;
+    setPage(prev => prev ? { ...prev, isFavorite: next } : prev);
+    window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: next } }));
+  };
+
+  const trashDocument = () => {
+    if (!window.confirm('Move this document to trash? You can restore it later.')) return;
+    window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
+  };
 
   const editorContainer = (
     <div className={cn(
-        "flex-1 flex flex-col min-h-0",
-        pageType === 'doc' && "max-w-4xl mx-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-32 w-full"
+        pageType === 'doc' ? cn("docs-paper docs-print-root", pageLayout === 'horizontal' ? "w-max" : "w-full") : "flex-1 flex flex-col min-h-0 h-full"
     )}>
         {pageType === 'doc' && (
-            <>
+            <div className="docs-paper-body">
+                <div className="docs-title-sheet">
                 {page.icon && <div className="relative group/icon z-10 w-fit"><div className="text-4xl sm:text-5xl select-none pt-4">{page.icon}</div>{!page.isTrashed && <div className="absolute -top-2 -right-6"><Button size="icon" onClick={removeIcon} className="h-6 w-6 rounded-full bg-white shadow-lg text-red-500"><X className="h-3 w-3" /></Button></div>}</div>}
                 {!page.isTrashed && (
-                    <div className="flex flex-wrap items-center gap-6 mb-6 mt-4">
+                    <div className="flex flex-wrap items-center gap-6 mb-6 mt-4 docs-no-print">
                         <div className="flex items-center gap-2.5">
                             <Avatar className="h-5 w-5 border border-slate-100 shadow-sm">
                                 <AvatarImage src={creatorProfile?.photoURL} />
@@ -457,9 +546,33 @@ function PageEditorContent() {
                         </div>
                     </div>
                 )}
-                <input value={page.title} placeholder="Untitled" onKeyDown={(e) => e.key === 'Enter' && editorRef.current?.focus()} onChange={(e) => handleUpdateTitle(e.target.value)} className="appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 font-black text-3xl sm:text-4xl h-auto bg-transparent placeholder:text-slate-100 mb-6 w-full text-slate-900 block" readOnly={page.isTrashed} />
-                <div className="delay-200"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
-            </>
+                <textarea
+                  value={page.title}
+                  placeholder="Untitled"
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      editorRef.current?.focus();
+                    }
+                  }}
+                  onChange={(e) => {
+                    handleUpdateTitle(e.target.value);
+                    const el = e.currentTarget;
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  }}
+                  ref={(el) => {
+                    if (!el) return;
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  }}
+                  className="docs-doc-title appearance-none border-0 shadow-none ring-0 focus:ring-0 focus:outline-none p-0 bg-transparent placeholder:text-slate-300 mb-4 w-full max-w-full block resize-none overflow-hidden"
+                  readOnly={page.isTrashed}
+                />
+                </div>
+                <div className="docs-editor-sheet"><Editor ref={editorRef} key={page.id} initialContent={page.content} initialPrompt={initialPrompt} onContentChange={handleUpdateContent} editable={!page.isTrashed} companyId={page.companyId} /></div>
+            </div>
         )}
 
         {pageType === 'board' && (
@@ -469,7 +582,7 @@ function PageEditorContent() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-white relative overflow-hidden">
+    <div className={cn("h-full min-h-0 flex flex-col relative overflow-hidden", pageType === 'doc' ? "docs-canvas" : "bg-white")}>
       {page.isTrashed && (
           <div className="bg-red-50 p-4 border-b border-red-100 flex items-center justify-between px-4 sm:px-8 shrink-0">
               <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 text-red-600 shrink-0" /><p className="text-[10px] sm:text-xs font-bold text-red-900 leading-none">Archived in Trash</p></div>
@@ -482,10 +595,30 @@ function PageEditorContent() {
           </div>
       )}
 
-      <div className="sticky top-0 z-20 px-4 sm:px-8 py-3 flex items-center justify-between bg-white/95 border-b backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          {!isMobile && <Link href="/workspace"><div className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"><Home className="h-4 w-4" /></div></Link>}
-          {parentPage && <><ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" /><Link href={`/workspace/${parentPage.id}`} className="min-w-0"><span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[80px] sm:max-w-[120px] truncate block">{parentPage.title || 'Untitled'}</span></Link></>}
+      <div className="sticky top-0 z-20 px-4 sm:px-8 py-3 flex items-center justify-between gap-3 bg-white/95 border-b backdrop-blur-sm shrink-0 docs-no-print">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+          <Link
+            href="/workspace"
+            aria-label="Workspace home"
+            className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50 shrink-0"
+          >
+            <Home className="h-4 w-4" />
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <Link href={typeHomeHref} className="text-xs font-semibold text-slate-400 hover:text-slate-900 truncate shrink-0">
+            {typeHomeLabel}
+          </Link>
+          {parentPage && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <Link
+                href={parentPage.type === 'folder' ? getCollabFolderHref(pageType, parentPage.id) : `/workspace/${parentPage.id}`}
+                className="min-w-0"
+              >
+                <span className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-colors max-w-[80px] sm:max-w-[120px] truncate block">{parentPage.title || 'Untitled'}</span>
+              </Link>
+            </>
+          )}
           <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
           {isEditingBreadcrumbTitle ? (
               <input
@@ -504,9 +637,15 @@ function PageEditorContent() {
                   {page.title || 'Untitled'}
               </span>
           )}
+          <Button asChild variant="ghost" size="sm" className="h-8 rounded-xl px-2 gap-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 shrink-0 ml-1">
+            <Link href={backHref}>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-xs font-bold">Back</span>
+            </Link>
+          </Button>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <div className="flex -space-x-1.5 mr-1 sm:mr-4">
               {collaborators?.filter(c => c.userId !== user?.uid).slice(0, 3).map(collab => (
                   <TooltipProvider key={collab.userId}>
@@ -518,7 +657,7 @@ function PageEditorContent() {
                           </TooltipTrigger>
                           <TooltipContent className="rounded-2xl px-4 py-3 border-slate-100 shadow-3xl bg-white/80 backdrop-blur-xl border">
                               <p className="text-xs font-black text-slate-900 leading-none">{collab.name}</p>
-                              <p className="text-[10px] font-black text-primary leading-none mt-1">{collab.isTyping ? 'Typing currently...' : 'Viewing now'}</p>
+                              <p className="text-[10px] font-black text-primary leading-none mt-1">{collab.isTyping ? 'Typing...' : 'Online'}</p>
                           </TooltipContent>
                       </Tooltip>
                   </TooltipProvider>
@@ -571,29 +710,38 @@ function PageEditorContent() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100">
-                             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
-                                <FilePlus className="h-4 w-4 text-blue-500" /> New Sub-page
+                             <DropdownMenuItem onClick={createNewDocument} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                                <FilePlus className="h-4 w-4 text-blue-500" /> New document
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
                                 <Copy className="h-4 w-4 text-slate-500" /> Duplicate Document
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                            <DropdownMenuItem onClick={toggleFavorite} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
                                 <Star className={cn("h-4 w-4", page.isFavorite && "fill-amber-500 text-amber-500")} /> {page.isFavorite ? 'Unfavorite' : 'Add to Favorites'}
                             </DropdownMenuItem>
                             <SharePopover page={page} onUpdate={handleUpdateMeta} isMobile />
+                            <DropdownMenuItem onClick={() => window.print()} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                                <FileDown className="h-4 w-4" /> Download PDF
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-50" />
-                            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
+                            <DropdownMenuItem onClick={trashDocument} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
                                 <Trash2 className="h-4 w-4" /> Move to Trash
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 ) : (
                     <>
-                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-new-collab-page', { detail: { parentId: page.id, type: pageType } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><FilePlus className="h-4 w-4" /></button>
-                        <button onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 flex items-center justify-center"><Copy className="h-4 w-4" /></button>
-                        <button className={cn("h-8 w-8 rounded-lg flex items-center justify-center", page.isFavorite ? "text-amber-500" : "text-slate-400")} onClick={() => window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }))}><Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} /></button>
+                        <HeaderAction icon={<FilePlus className="h-4 w-4" />} label="New document" onClick={createNewDocument} />
+                        <HeaderAction icon={<Copy className="h-4 w-4" />} label="Duplicate" onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} />
+                        <HeaderAction
+                            icon={<Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} />}
+                            label={page.isFavorite ? 'Remove favorite' : 'Favorite'}
+                            onClick={toggleFavorite}
+                            className={page.isFavorite ? "text-amber-500" : undefined}
+                        />
                         <SharePopover page={page} onUpdate={handleUpdateMeta} />
-                        <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 flex items-center justify-center" onClick={() => window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }))}><Trash2 className="h-4 w-4" /></button>
+                        <HeaderAction icon={<FileDown className="h-4 w-4" />} label="Download PDF" onClick={() => window.print()} />
+                        <HeaderAction icon={<Trash2 className="h-4 w-4" />} label="Move to trash" onClick={trashDocument} hoverClass="hover:text-red-600" />
                     </>
                 )}
             </div>
@@ -603,17 +751,67 @@ function PageEditorContent() {
 
       <div className="flex-1 overflow-hidden flex flex-col relative">
           {pageType === 'doc' ? (
-              <ScrollArea className="flex-1">
+              <div className={cn("flex-1 overflow-auto docs-canvas docs-canvas-scroll", pageLayout === 'horizontal' && "docs-layout-horizontal")}>
+                  <div id="docs-editor-toolbar-slot" className="docs-editor-toolbar-slot docs-no-print sticky top-0 left-0 z-40 flex justify-center px-3 pt-3 pb-2 pointer-events-none w-full max-w-full box-border" />
                   {page.coverImage && (
-                      <div className="h-[20vh] sm:h-[30vh] w-full relative group">
+                      <div className="h-[20vh] sm:h-[30vh] w-full max-w-full relative group shrink-0 sticky left-0">
                           <Image src={page.coverImage} alt="Cover" fill className="object-cover" />
                           {!page.isTrashed && <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-8 flex gap-2"><Button variant="secondary" size="sm" onClick={addRandomCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest">Change</Button><Button variant="secondary" size="sm" onClick={removeCover} className="h-7 sm:h-8 rounded-lg bg-white/90 backdrop-blur-md font-bold text-[9px] sm:text-[10px] uppercase tracking-widest text-red-600">Remove</Button></div>}
                       </div>
                   )}
-                  {editorContainer}
-              </ScrollArea>
+                  <div
+                    className={cn(pageLayout === 'horizontal' ? "px-4 sm:px-6 min-w-max" : "px-4 sm:px-10")}
+                    style={{ zoom: pageZoom / 100 }}
+                  >
+                    {editorContainer}
+                  </div>
+              </div>
           ) : (
               editorContainer
+          )}
+          {pageType === 'doc' && (
+            <div className="docs-no-print absolute bottom-4 right-4 z-50 flex items-center gap-0.5 rounded-2xl border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur-md">
+              <button
+                type="button"
+                aria-label="Pages down"
+                title="Pages down"
+                onClick={() => setDocsPageLayout('vertical')}
+                className={cn("h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50", pageLayout === 'vertical' && "text-slate-900 bg-slate-100")}
+              >
+                <Rows3 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Pages across"
+                title="Pages across"
+                onClick={() => setDocsPageLayout('horizontal')}
+                className={cn("h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50", pageLayout === 'horizontal' && "text-slate-900 bg-slate-100")}
+              >
+                <Columns2 className="h-4 w-4" />
+              </button>
+              <div className="w-px h-5 bg-slate-200 mx-1" />
+              <button
+                type="button"
+                aria-label="Zoom out"
+                title="Zoom out"
+                onClick={() => setDocsZoom(pageZoom - 10)}
+                disabled={pageZoom <= 50}
+                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="min-w-[2.5rem] text-center text-[10px] font-bold text-slate-600 tabular-nums">{pageZoom}%</span>
+              <button
+                type="button"
+                aria-label="Zoom in"
+                title="Zoom in"
+                onClick={() => setDocsZoom(pageZoom + 10)}
+                disabled={pageZoom >= 150}
+                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
           )}
       </div>
     </div>
@@ -622,4 +820,26 @@ function PageEditorContent() {
 
 export default function PageEditor() {
   return <Suspense fallback={<PageSkeleton />}><PageEditorContent /></Suspense>;
+}
+
+function HeaderAction({ icon, label, onClick, className, hoverClass }: { icon: React.ReactNode; label: string; onClick: () => void; className?: string; hoverClass?: string }) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onClick}
+            aria-label={label}
+            className={cn("h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center", hoverClass, className)}
+          >
+            {icon}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="rounded-xl font-bold text-[9px] uppercase tracking-widest bg-slate-900 text-white border-none px-3 py-1.5 shadow-2xl">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }

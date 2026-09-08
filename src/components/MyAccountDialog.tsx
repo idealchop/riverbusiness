@@ -3,8 +3,11 @@
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose
 } from "@/components/ui/dialog";
+import {
+  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger
+} from "@/components/ui/sheet";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -27,7 +30,7 @@ import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimes
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
 import type { AppUser, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ImagePlaceholder } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail, CreditCard, LogOut, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans, clientTypes } from '@/lib/plans';
@@ -37,6 +40,8 @@ import { Logo } from '@/components/icons';
 import { Progress } from './ui/progress';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
+import { LandingGlowBackdrop } from '@/components/landing-glow';
+import { PaymentPanel } from '@/components/dashboard/PaymentPanel';
 
 
 // State Management with useReducer
@@ -171,6 +176,20 @@ const includedFeatures = [
     },
 ];
 
+function subscriptionMeta(status?: AppUser['subscriptionStatus'], variant: 'dark' | 'light' = 'dark') {
+  const isDark = variant === 'dark';
+  switch (status) {
+    case 'activated':
+      return { label: 'Active', className: isDark ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    case 'discovery_call':
+      return { label: 'Discovery call', className: isDark ? 'bg-amber-500/15 text-amber-200 border-amber-400/20' : 'bg-amber-50 text-amber-800 border-amber-200' };
+    case 'pending_activation':
+      return { label: 'Pending activation', className: isDark ? 'bg-sky-500/15 text-sky-200 border-sky-400/20' : 'bg-sky-50 text-sky-800 border-sky-200' };
+    default:
+      return { label: 'Not activated', className: isDark ? 'bg-white/10 text-white/70 border-white/10' : 'bg-slate-100 text-slate-600 border-slate-200' };
+  }
+}
+
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 const toSafeDate = (timestamp: any): Date | null => {
@@ -191,419 +210,272 @@ const toSafeDate = (timestamp: any): Date | null => {
 };
 
 
-// Refactored Tab Components
-const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveChanges, isEditingDetails, setIsEditingDetails, handleFileSelect, handleProfilePhotoDelete, isPending, copyToClipboard, workspaceBusinessName }: any) => {
+function invoiceStatusClass(status: string, isCurrentEst?: boolean) {
+  if (status === 'Covered by Parent Account') return 'bg-violet-50 text-violet-700 border-violet-100';
+  if (isCurrentEst) return 'bg-primary/10 text-primary border-primary/10';
+  if (status === 'Paid') return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (status === 'Overdue') return 'bg-red-50 text-red-700 border-red-100';
+  if (status === 'Pending Review') return 'bg-amber-50 text-amber-800 border-amber-100';
+  if (status === 'Upcoming') return 'bg-sky-50 text-sky-700 border-sky-100';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+}
+
+function invoiceAction(invoice: any, isCurrentEst: boolean, onPayNow: (invoice: any) => void, handleViewInvoice: (invoice: any) => void) {
+  if (invoice.status === 'Covered by Parent Account') {
+    return <Button size="sm" variant="outline" className="w-full h-10 rounded-xl font-bold" onClick={() => handleViewInvoice(invoice)}>View invoice</Button>;
+  }
+  if (isCurrentEst || invoice.status === 'Upcoming' || invoice.status === 'Overdue') {
+    const isPrimary = isCurrentEst || invoice.status === 'Overdue';
+    return (
+      <Button size="sm" variant={isPrimary ? 'default' : 'outline'} className="w-full h-10 rounded-xl font-bold" onClick={() => onPayNow(invoice)}>
+        Pay now
+      </Button>
+    );
+  }
+  if (invoice.status === 'Paid') {
+    return <Button size="sm" variant="outline" className="w-full h-10 rounded-xl font-bold" onClick={() => handleViewInvoice(invoice)}>View invoice</Button>;
+  }
+  return null;
+}
+
+const AccountTab = ({ user, state, dispatch, handleSaveChanges, isEditingDetails, setIsEditingDetails, copyToClipboard, workspaceBusinessName }: any) => {
+  const { toast } = useToast();
   const isEmployee = user?.hrRole === 'employee';
+  const isOwner = user?.hrRole === 'owner';
 
   return (
-    <Card>
-      <CardContent className="pt-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="relative group cursor-pointer">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
-                  <AvatarFallback className="text-3xl">{user?.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                {(isPending) && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                        <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
-                    </div>
-                )}
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Label htmlFor="photo-upload-input-user" className="w-full cursor-pointer">
-                  <Upload className="mr-2 h-4 w-4" /> Upload new photo
-                </Label>
-              </DropdownMenuItem>
-              {displayPhoto && (
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" /> Remove photo
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
-          <div className="space-y-1">
-            <h4 className="font-semibold">{user?.name}</h4>
-            <p className="text-sm text-muted-foreground">Update your account details.</p>
+    <div className="space-y-4">
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-sm border border-slate-100 space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Profile</p>
+              <h4 className="text-lg font-black tracking-tight text-slate-900 mt-1">Your details</h4>
+            </div>
+            {!isEditingDetails && (
+              <Button variant="outline" size="sm" className="rounded-full h-9 font-bold" onClick={() => setIsEditingDetails(true)}>
+                <Edit className="mr-2 h-3.5 w-3.5" />Edit
+              </Button>
+            )}
           </div>
-        </div>
-        <Separator />
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-semibold">Your Details</h4>
-            {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                  <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!isEditingDetails} />
+          <div className="grid grid-cols-1 gap-4">
+            {[
+              { id: 'fullName', label: 'Full name', name: 'name', value: state.editableFormData.name || '', disabled: !isEditingDetails },
+              { id: 'email', label: 'Login email', name: 'email', value: state.editableFormData.email || '', disabled: true, type: 'email' },
+              { id: 'businessEmail', label: 'Business email', name: 'businessEmail', value: state.editableFormData.businessEmail || '', disabled: !isEditingDetails, type: 'email' },
+              { id: 'businessName', label: 'Business name', name: 'businessName', value: isEmployee ? workspaceBusinessName : (state.editableFormData.businessName || ''), disabled: !isEditingDetails || isEmployee },
+              { id: 'address', label: 'Address', name: 'address', value: state.editableFormData.address || '', disabled: !isEditingDetails },
+              { id: 'contactNumber', label: 'Contact number', name: 'contactNumber', value: state.editableFormData.contactNumber || '', disabled: !isEditingDetails, type: 'tel' },
+            ].map((field) => (
+              <div key={field.id} className="space-y-1.5 group">
+                <Label htmlFor={field.id} className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-primary">{field.label}</Label>
+                <Input
+                  id={field.id}
+                  name={field.name}
+                  type={field.type || 'text'}
+                  value={field.value}
+                  disabled={field.disabled}
+                  onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: field.name as keyof AppUser, value: e.target.value}})}
+                  className="h-12 rounded-2xl bg-slate-50 border-slate-200 font-bold px-4"
+                />
               </div>
-              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  <Label htmlFor="email" className="text-right">Login Email</Label>
-                  <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
-              </div>
-              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
-                  <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!isEditingDetails} />
-              </div>
-              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  <Label htmlFor="businessName" className="text-right">Business Name</Label>
-                  <Input 
-                    id="businessName" 
-                    name="businessName" 
-                    value={isEmployee ? workspaceBusinessName : (state.editableFormData.businessName || '')} 
-                    onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} 
-                    disabled={!isEditingDetails || isEmployee}
-                  />
-              </div>
-              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  <Label htmlFor="address" className="text-right">Address</Label>
-                  <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!isEditingDetails}/>
-              </div>
-              <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                  <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!isEditingDetails}/>
-              </div>
+            ))}
           </div>
           {isEditingDetails && (
-              <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user || {}}) }}>Cancel</Button>
-                  <Button onClick={handleSaveChanges}>Save Changes</Button>
-              </div>
-          )}
-        </div>
-        <Separator />
-        <div>
-          <h4 className="font-semibold mb-4">Security</h4>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-            <Button variant="outline" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: true })}><Mail className="mr-2 h-4 w-4" />Update Login Email</Button>
-            <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
-          </div>
-        </div>
-        <Separator />
-        <div>
-            <h4 className="font-semibold mb-4">Account Identifiers</h4>
-            <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
-                    <div className="flex items-center gap-2">
-                        <Input id="uid" value={user?.id || ''} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user?.id && copyToClipboard(user.id, 'User ID')}>
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
-                    <div className="flex items-center gap-2">
-                        <Input id="clientId" value={isEmployee ? user.companyId : (user?.clientId || 'N/A')} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => (isEmployee ? user.companyId : user.clientId) && copyToClipboard(isEmployee ? user.companyId : user.clientId, 'Client ID')} disabled={isEmployee ? !user.companyId : !user?.clientId}>
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" className="rounded-full font-bold" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user || {}}) }}>Cancel</Button>
+              <Button className="rounded-full font-bold" onClick={handleSaveChanges}>Save changes</Button>
             </div>
-        </div>
-      </CardContent>
-    </Card>
+          )}
+      </section>
+
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-sm border border-slate-100 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Security</p>
+          <div className="flex flex-col gap-2">
+            <Button className="justify-start rounded-2xl h-12 font-bold" onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update password</Button>
+            <Button variant="outline" className="justify-start rounded-2xl h-12 font-bold" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: true })}><Mail className="mr-2 h-4 w-4" />Update login email</Button>
+            <Button variant="outline" className="justify-start rounded-2xl h-12 font-bold" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
+            {isOwner && user?.workspaceKind !== 'individual' && (
+              <Button variant="outline" className="justify-start rounded-2xl h-12 font-bold" onClick={() => window.dispatchEvent(new CustomEvent('open-office-settings'))}>
+                <MapPin className="mr-2 h-4 w-4" />Office location
+              </Button>
+            )}
+          </div>
+      </section>
+
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-sm border border-slate-100 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Identifiers</p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="uid" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">User ID</Label>
+              <div className="flex items-center gap-2">
+                <Input id="uid" value={user?.id || ''} readOnly className="font-mono text-xs h-11 bg-slate-50 border-slate-200 rounded-2xl"/>
+                <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0 rounded-2xl" onClick={() => user?.id && copyToClipboard(user.id, 'User ID')}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="clientId" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Client ID</Label>
+              <div className="flex items-center gap-2">
+                <Input id="clientId" value={isEmployee ? user.companyId : (user?.clientId || 'N/A')} readOnly className="font-mono text-xs h-11 bg-slate-50 border-slate-200 rounded-2xl"/>
+                <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0 rounded-2xl" onClick={() => (isEmployee ? user.companyId : user.clientId) && copyToClipboard(isEmployee ? user.companyId : user.clientId, 'Client ID')} disabled={isEmployee ? !user.companyId : !user?.clientId}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+      </section>
+    </div>
   );
 }
 
-const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }: any) => (
-    <div className="space-y-6">
-    <Card>
-      <CardContent className="p-0">
-        {planImage && (
-            <div className="relative h-48 w-full">
-                <Image src={planImage.imageUrl} alt={user?.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
+const PlanTab = ({ user, dispatch, setIsSoaDialogOpen }: any) => {
+  const status = subscriptionMeta(user?.subscriptionStatus, 'light');
+  const priceLabel = user?.plan?.isConsumptionBased
+    ? `₱${user?.plan?.price?.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter`
+    : user?.plan?.price != null
+      ? `₱${user.plan.price.toLocaleString()}/month`
+      : 'No plan selected';
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-sm border border-slate-100 space-y-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Current plan</p>
+              <h3 className="text-2xl font-black tracking-tight mt-1 text-slate-900">{user?.plan?.name || 'No subscription'}</h3>
+              <p className="text-sm font-bold text-slate-400 mt-0.5">{user?.clientType || 'Not assigned'}</p>
             </div>
-        )}
-        <div className="p-6">
-          <h3 className="text-xl font-bold">{user?.plan?.name} ({user?.clientType})</h3>
-          {user?.plan?.isConsumptionBased ? (
-              <p className="text-lg font-bold text-foreground">
-                  P{user?.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
+            <Badge className={cn('border rounded-full px-3 py-1 font-bold', status.className)}>
+              {status.label}
+            </Badge>
+          </div>
+          <p className="text-3xl font-black tracking-tight text-slate-900">{priceLabel}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Allocation</p>
+              <p className="text-sm font-bold text-slate-800 mt-1">
+                {user?.plan?.isConsumptionBased ? 'Pay per use' : `${user?.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L / mo`}
               </p>
-          ) : (
-              <p className="text-lg font-bold text-foreground">
-                  P{user?.plan?.price.toLocaleString()}/month
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bonus</p>
+              <p className="text-sm font-bold text-slate-800 mt-1">{user?.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Equipment</p>
+              <p className="text-sm font-bold text-slate-800 mt-1">
+                {user?.customPlanDetails?.gallonQuantity || 0} jugs · {user?.customPlanDetails?.dispenserQuantity || 0} dispensers
               </p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Delivery</p>
+              <p className="text-sm font-bold text-slate-800 mt-1">
+                {user?.customPlanDetails?.deliveryDay || '—'} · {user?.customPlanDetails?.deliveryTime || '—'}
+              </p>
+            </div>
+          </div>
+          {(user?.customPlanDetails?.autoRefillEnabled && user?.customPlanDetails?.deliveryDay) && (
+            <p className="text-xs font-bold text-primary">Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}</p>
           )}
-          <Separator className="my-4" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            {user?.plan?.isConsumptionBased ? (
-              <div className="sm:col-span-2">
-                <h4 className="font-semibold mb-2">Plan Details</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li><strong>Billing:</strong> Pay based on consumption.</li>
-                  <li>
-                    <strong>Deliveries:</strong> Automated, On-demand, or request refills as needed.
-                    {(user?.customPlanDetails?.autoRefillEnabled && user?.customPlanDetails?.deliveryDay) && 
-                      <span className="text-xs block pl-4 text-primary"> - Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}.</span>
-                    }
-                  </li>
-                </ul>
-              </div>
-            ) : (
-              <div>
-                  <h4 className="font-semibold mb-2">Water Plan</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li><strong>Liters/Month:</strong> {user?.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
-                    <li><strong>Bonus Liters:</strong> {user?.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
-                  </ul>
-              </div>
-            )}
-
-            {user?.customPlanDetails && (
-              <div>
-                  <h4 className="font-semibold mb-2">Equipment</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                      <li className="flex items-center gap-2">
-                          <Package className="h-4 w-4"/>
-                          <span>
-                              {user.customPlanDetails.gallonQuantity || 0} Containers 
-                              ({user.customPlanDetails.gallonPrice && user.customPlanDetails.gallonPrice > 0 ? `P${user.customPlanDetails.gallonPrice}${user.customPlanDetails.gallonPaymentType === 'Monthly' ? '/mo' : ' (Rental Fee - One-Time)'}` : 'Free'})
-                          </span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                          <Package className="h-4 w-4"/>
-                          <span>
-                              {user.customPlanDetails.dispenserQuantity || 0} Dispensers 
-                              ({user.customPlanDetails.dispenserPrice && user.customPlanDetails.dispenserPrice > 0 ? `P${user.customPlanDetails.dispenserPrice}${user.customPlanDetails.dispenserPaymentType === 'Monthly' ? '/mo' : ' (Rental Fee - One-Time)'}` : 'Free'})
-                          </span>
-                      </li>
-                  </ul>
-              </div>
-             )}
-
-            <div className="sm:col-span-2">
-              <h4 className="font-semibold mb-2">Delivery Schedule</h4>
-              <p className="text-muted-foreground">
-                {user?.customPlanDetails?.deliveryFrequency} on {user?.customPlanDetails?.deliveryDay} at {user?.customPlanDetails?.deliveryTime}
-              </p>
-            </div>
-
+      </section>
+      <div className="grid grid-cols-1 gap-2">
+        {user?.currentContractUrl ? (
+          <Button variant="outline" className="rounded-2xl h-12 justify-start font-bold" asChild>
+            <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
+              <FileText className="mr-2 h-4 w-4" />View contract
+            </a>
+          </Button>
+        ) : (
+          <Button variant="outline" className="rounded-2xl h-12 justify-start font-bold" disabled>
+            <FileX className="mr-2 h-4 w-4" />No contract on file
+          </Button>
+        )}
+        <Button variant="outline" className="rounded-2xl h-12 justify-start font-bold" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true})}>
+          <Repeat className="mr-2 h-4 w-4" />Change plan
+        </Button>
+        <Button className="rounded-2xl h-12 justify-start font-bold" onClick={() => setIsSoaDialogOpen(true)}>
+          <Download className="mr-2 h-4 w-4" />Download SOA
+        </Button>
+      </div>
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-sm border border-slate-100 space-y-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Included</p>
+            <h3 className="font-black text-slate-900 mt-1">In every plan</h3>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-     <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {user?.currentContractUrl ? (
-                <Button variant="outline" asChild>
-                    <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
-                        <FileText className="mr-2 h-4 w-4" />
-                        View Contract
-                    </a>
-                </Button>
-            ) : (
-                <Button variant="outline" disabled>
-                    <FileX className="mr-2 h-4 w-4" />
-                    No Contract
-                </Button>
-            )}
-            <Button variant="outline" onClick={() => {
-              dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true});
-            }}>
-                <Repeat className="mr-2 h-4 w-4" />
-                Change Plan
-            </Button>
-             <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
-                <Download className="mr-2 h-4 w-4" />
-                Download SOA
-            </Button>
+          <div className="grid grid-cols-1 gap-3">
+            {includedFeatures.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <div key={index} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3">
+                  <div className="h-10 w-10 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">{feature.title}</h4>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{feature.description}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </CardContent>
-    </Card>
-     <Card>
-          <CardContent className="p-6 space-y-4">
-              <div>
-                  <h3 className="font-semibold">Included in Every Plan</h3>
-                  <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {includedFeatures.map((feature, index) => {
-                      const Icon = feature.icon;
-                      return (
-                          <div key={index} className="flex items-start gap-3">
-                              <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                              <div>
-                                  <h4 className="font-medium text-sm">{feature.title}</h4>
-                                  <p className="text-xs text-muted-foreground">{feature.description}</p>
-                              </div>
-                          </div>
-                      );
-                  })}
-              </div>
-          </CardContent>
-      </Card>
-  </div>
-);
+      </section>
+    </div>
+  );
+};
 
 const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }: any) => (
     <div className="space-y-4">
     {user?.accountType === 'Branch' && (
-        <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-center gap-3 p-4 text-sm font-medium text-sky-800 bg-sky-50 border border-sky-100 rounded-2xl">
             <Info className="h-5 w-5 shrink-0" />
-            <p>Your invoices are covered by your parent account. This history is for your records.</p>
+            <p>Invoices are covered by your parent account. This history is for your records.</p>
         </div>
     )}
-    {/* Desktop Table View */}
-    <div className="hidden md:block">
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {paymentsLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                        <TableRow key={`skel-inv-${i}`}>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
-                        </TableRow>
-                    ))
-                ) : paginatedInvoices.length > 0 ? (
-                    paginatedInvoices.map((invoice: any) => {
-                        if (!invoice) return null;
-                        const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
-                        return (
-                        <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
-                            <TableCell>
-                                <div className="font-medium">{invoice.description}</div>
-                                <div className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</div>
-                            </TableCell>
-                            <TableCell>
-                                <Badge variant={isCurrentEst ? 'default' : 'secondary'} className={cn(
-                                    'text-xs',
-                                    invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
-                                    isCurrentEst ? 'bg-blue-100 text-blue-800' :
-                                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                    invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800'
-                                )}>
-                                    {invoice.status}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                            <div className="flex flex-col items-end">
-                                <span>P{invoice.amount.toFixed(2)}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
-                            </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {invoice.status === 'Covered by Parent Account' ? (
-                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                ) : isCurrentEst ? (
-                                    <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                ) : invoice.status === 'Paid' ? (
-                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
-                                    <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                ) : (
-                                    <span className="text-xs text-muted-foreground">{invoice.status}</span>
-                                )}
-                            </TableCell>
-                        </TableRow>
-                    )})
-                ) : (
-                    <TableRow>
-                        <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
-                            No invoices found.
-                        </TableCell>
-                    </TableRow>
-                )}
-            </TableBody>
-        </Table>
-    </div>
-
-    {/* Mobile Card View */}
-    <div className="space-y-4 md:hidden">
+    <div className="space-y-3">
         {paymentsLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
-            <Card key={`skel-inv-mob-${i}`}>
-                <CardContent className="p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                    <div><Skeleton className="h-5 w-24 mb-1" /><Skeleton className="h-4 w-20" /></div>
-                    <Skeleton className="h-6 w-24 rounded-full" />
-                </div>
-                <Skeleton className="h-5 w-16" />
-                <Skeleton className="h-9 w-full" />
-                </CardContent>
-            </Card>
+            <div key={`skel-inv-${i}`} className="rounded-[1.75rem] bg-white p-5 border border-slate-100 shadow-sm space-y-3">
+                <div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-6 w-20 rounded-full" /></div>
+                <Skeleton className="h-7 w-24" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
             ))
         ) : paginatedInvoices.length > 0 ? (
             paginatedInvoices.map((invoice: any) => {
                 if (!invoice) return null;
                 const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                 return (
-                <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
-                    <CardContent className="p-4 space-y-3">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="font-semibold">{invoice.description}</p>
-                                <p className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</p>
-                            </div>
-                            <Badge className={cn('whitespace-nowrap px-2 py-1 text-xs font-medium',
-                                invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
-                                isCurrentEst ? 'bg-blue-100 text-blue-800' :
-                                invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                            )}>{invoice.status}</Badge>
+                <div key={invoice.id} className={cn("rounded-[1.75rem] bg-white p-5 border shadow-sm space-y-4", isCurrentEst ? "border-primary/20" : "border-slate-100")}>
+                    <div className="flex justify-between items-start gap-3">
+                        <div className="min-w-0">
+                            <p className="font-black text-slate-900 truncate">{invoice.description}</p>
+                            <p className="text-xs font-bold text-slate-400 mt-1">{getInvoiceDisplayDate(invoice)}</p>
                         </div>
-                        <div className="flex justify-between items-baseline pt-1">
-                            <p className="text-lg font-bold">P{invoice.amount.toFixed(2)}</p>
-                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
-                        </div>
-                        <div className="pt-2">
-                            {invoice.status === 'Covered by Parent Account' ? (
-                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                            ) : isCurrentEst ? (
-                                <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                            ) : (invoice.status === 'Paid') ? (
-                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                            ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
-                                <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Badge className={cn('whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide', invoiceStatusClass(invoice.status, isCurrentEst))}>
+                          {isCurrentEst ? 'This cycle' : invoice.status}
+                        </Badge>
+                    </div>
+                    <div className="flex items-end justify-between">
+                        <p className="text-2xl font-black tracking-tight text-slate-900">₱{Number(invoice.amount || 0).toFixed(2)}</p>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-xs font-bold" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                    </div>
+                    {invoiceAction(invoice, isCurrentEst, onPayNow, handleViewInvoice)}
+                </div>
             )})
         ) : (
-           <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
+           <div className="rounded-[1.75rem] bg-white border border-slate-100 py-14 text-center">
+             <p className="text-sm font-bold text-slate-400">No statements yet.</p>
+           </div>
         )}
     </div>
-    <div className="flex items-center justify-between px-2 pt-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Showing {paginatedInvoices.length} of {allInvoices.length} Statements</p>
-        <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between px-1 pt-1">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Showing {paginatedInvoices.length} of {allInvoices.length}</p>
+        <div className="flex items-center gap-2">
             <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                className="h-9 px-4 rounded-full font-bold text-xs"
                 onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
                 disabled={invoiceCurrentPage === 1}
             >
@@ -612,7 +484,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, sh
             <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                className="h-9 px-4 rounded-full font-bold text-xs"
                 onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
                 disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
             >
@@ -780,13 +652,14 @@ interface MyAccountDialogProps {
   paymentsLoading: boolean;
   onLogout: () => void;
   children?: React.ReactNode;
-  onPayNow: (invoice: Payment) => void;
+  onPayNow?: (invoice: Payment) => void;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   initialTab?: string;
+  startPaymentInvoice?: Payment | null;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange, initialTab }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoading, onLogout, children, isOpen, onOpenChange, initialTab, startPaymentInvoice }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -797,6 +670,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [paymentProofPreview, setPaymentProofPreview] = React.useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [payingInvoice, setPayingInvoice] = useState<Payment | null>(null);
 
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -1135,25 +1009,34 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
   }, [isParent, transactions, branchDeliveries, user]);
 
-  const TABS_CONFIG = useMemo(() => [
-    { value: 'accounts', label: 'Accounts', icon: UserIcon, condition: true },
-    { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: user?.accountType === 'Parent' },
-    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user?.accountType === 'Parent' },
-    { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user?.accountType !== 'Parent' },
-    { value: 'plan', label: 'Plan', icon: FileText, condition: true },
-  ].filter(tab => tab.condition), [user]);
+  const TABS_CONFIG = useMemo(() => {
+    const hideWaterBilling = user?.hrRole === 'employee' || user?.workspaceKind === 'individual';
+    return [
+    { value: 'invoices', label: 'Payments', icon: CreditCard, condition: !hideWaterBilling && user?.accountType !== 'Parent' },
+    { value: 'plan', label: 'Subscription', icon: FileText, condition: !hideWaterBilling },
+    { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: !hideWaterBilling && user?.accountType === 'Parent' },
+    { value: 'top-ups', label: 'Top-ups', icon: DollarSign, condition: !hideWaterBilling && user?.accountType === 'Parent' },
+    { value: 'accounts', label: 'Profile', icon: UserIcon, condition: true },
+  ].filter(tab => tab.condition);
+  }, [user]);
 
   const defaultTab = useMemo(() => {
+    if (user?.hrRole === 'employee' || user?.workspaceKind === 'individual') return 'accounts';
     if (user?.accountType === 'Parent') return 'transactions';
     return 'invoices';
   }, [user]);
 
 
   useEffect(() => {
-    if(isOpen) {
+    if (isOpen) {
         setActiveTab(initialTab || defaultTab);
+        if (startPaymentInvoice) {
+          setPayingInvoice(startPaymentInvoice);
+        }
+    } else {
+        setPayingInvoice(null);
     }
-  }, [isOpen, initialTab, defaultTab]);
+  }, [isOpen, initialTab, defaultTab, startPaymentInvoice]);
 
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
@@ -1177,8 +1060,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   
   const tabsGridClass = useMemo(() => {
     const numTabs = TABS_CONFIG.length;
-    if (numTabs <= 4) return `grid-cols-${numTabs}`;
-    return 'grid-cols-2 sm:grid-cols-4';
+    if (numTabs === 2) return 'grid-cols-2';
+    if (numTabs === 3) return 'grid-cols-3';
+    if (numTabs === 4) return 'grid-cols-4';
+    return 'grid-cols-2 sm:grid-cols-3';
   }, [TABS_CONFIG]);
 
   const soaDateOptions = useMemo(() => {
@@ -1513,54 +1398,120 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const displayPhoto = user?.photoURL;
+  const displayName = user?.businessName || user?.name || 'My account';
+  const heroStatus = subscriptionMeta(user?.subscriptionStatus, 'dark');
+  const dueInvoice = allInvoices.find((inv: Payment) =>
+    inv.status === 'Upcoming' || inv.status === 'Overdue' || (showCurrentMonthInvoice && inv.id === currentMonthInvoice?.id)
+  );
   
   return (
     <AlertDialog>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-        <DialogContent className="sm:max-w-3xl rounded-lg">
-          <DialogHeader>
-            <DialogTitle>My Account</DialogTitle>
-            <DialogDescription>Manage your plan, account details, and invoices.</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[70vh] w-full">
-            <div className="pr-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={defaultTab}>
-                <TabsList className={cn("grid w-full h-auto", tabsGridClass)}>
-                    {TABS_CONFIG.map(tab => {
-                        const Icon = tab.icon;
-                        return (
-                            <TabsTrigger key={tab.value} value={tab.value}><Icon className="mr-2 h-4 w-4" />{tab.label}</TabsTrigger>
-                        )
-                    })}
-                </TabsList>
-                <TabsContent value="accounts" className="py-4">
-                  <AccountTab 
-                    user={user} 
-                    authUser={authUser} 
-                    displayPhoto={displayPhoto}
-                    state={state} 
-                    dispatch={dispatch} 
-                    handleSaveChanges={handleSaveChanges} 
-                    isEditingDetails={isEditingDetails}
-                    setIsEditingDetails={setIsEditingDetails}
-                    handleFileSelect={handleFileSelect}
-                    handleProfilePhotoDelete={handleProfilePhotoDelete}
-                    isPending={isPending}
-                    copyToClipboard={copyToClipboard}
-                    workspaceBusinessName={workspaceBusinessName}
-                  />
-                </TabsContent>
-                <TabsContent value="plan" className="py-4 space-y-6">
-                  <PlanTab 
-                    user={user}
-                    planImage={planImage}
-                    dispatch={dispatch}
-                    setIsSoaDialogOpen={setIsSoaDialogOpen}
-                    isParent={isParent}
-                  />
-                </TabsContent>
-                 <TabsContent value="invoices" className="py-4 space-y-4">
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        {children && <SheetTrigger asChild>{children}</SheetTrigger>}
+        <SheetContent
+          side="right"
+          className={cn(
+            "w-full sm:max-w-xl md:max-w-2xl p-0 gap-0 flex flex-col bg-slate-50",
+            payingInvoice
+              ? "[&>button]:text-slate-900 [&>button]:right-4 [&>button]:top-4"
+              : "[&>button]:text-white [&>button]:right-5 [&>button]:top-5 [&>button]:opacity-90"
+          )}
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>{payingInvoice ? 'Payment' : 'My Account'}</SheetTitle>
+            <SheetDescription>Manage your subscription, payments, and profile.</SheetDescription>
+          </SheetHeader>
+
+          {payingInvoice ? (
+            <PaymentPanel invoice={payingInvoice} onBack={() => setPayingInvoice(null)} />
+          ) : (
+            <>
+          <div className="relative bg-[#020617] text-white px-6 pt-8 pb-8 overflow-hidden">
+            <LandingGlowBackdrop />
+            <div className="relative z-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50 mb-6">My account</p>
+            <div className="flex flex-col items-center text-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="relative group rounded-full outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                    <Avatar className="h-36 w-36 sm:h-40 sm:w-40 border-4 border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
+                      <AvatarImage src={displayPhoto ?? undefined} alt={displayName} className="object-cover" />
+                      <AvatarFallback className="text-4xl font-black bg-white/10 text-white">{displayName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    {(isPending) && (
+                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="h-7 w-7 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Pencil className="h-6 w-6 text-white" />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="rounded-xl">
+                  <DropdownMenuLabel>Profile photo</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Label htmlFor="photo-upload-input-user" className="w-full cursor-pointer">
+                      <Upload className="mr-2 h-4 w-4" /> Upload new photo
+                    </Label>
+                  </DropdownMenuItem>
+                  {displayPhoto && (
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Remove photo
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
+              <h2 className="mt-4 text-2xl font-black tracking-tight leading-tight">{displayName}</h2>
+              <p className="text-sm text-white/60 mt-1">{user?.email}</p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <Badge className={cn('border', heroStatus.className)}>{heroStatus.label}</Badge>
+                {user?.plan?.name && (
+                  <Badge className="bg-white/10 text-white border-white/10">{user.plan.name}</Badge>
+                )}
+              </div>
+            </div>
+
+            {user?.accountType !== 'Parent' && dueInvoice && (
+              <div className="mt-6 rounded-2xl bg-white/5 border border-white/10 p-4 text-left backdrop-blur-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/50">Amount due</p>
+                    <p className="text-2xl font-black mt-1">₱{Number(dueInvoice.amount || 0).toFixed(2)}</p>
+                    <p className="text-xs text-white/50 mt-1">{dueInvoice.description}</p>
+                  </div>
+                  {(Number(dueInvoice.amount || 0) > 0 && (dueInvoice.status === 'Upcoming' || dueInvoice.status === 'Overdue' || (showCurrentMonthInvoice && dueInvoice.id === currentMonthInvoice?.id)) && user.accountType !== 'Branch') && (
+                    <Button size="sm" className="rounded-full bg-white text-slate-900 hover:bg-white/90 font-black" onClick={() => setPayingInvoice(dueInvoice)}>
+                      Pay now
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={defaultTab} className="flex-1 min-h-0 flex flex-col">
+            <div className="px-4 pt-3 pb-2 border-b border-slate-100 bg-slate-50/90 backdrop-blur-md sticky top-0 z-10">
+              <TabsList className={cn("grid w-full h-auto rounded-2xl p-1 bg-slate-200/60", tabsGridClass)}>
+                {TABS_CONFIG.map(tab => {
+                  const Icon = tab.icon;
+                  return (
+                    <TabsTrigger key={tab.value} value={tab.value} className="text-[11px] sm:text-xs rounded-xl px-1 py-2.5 gap-1.5 font-black data-[state=active]:shadow-sm">
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="truncate">{tab.label}</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-4 pb-8">
+                <TabsContent value="invoices" className="mt-0 space-y-4">
                   <InvoicesTab
                     user={user}
                     paymentsLoading={paymentsLoading}
@@ -1570,37 +1521,60 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     currentMonthInvoice={currentMonthInvoice}
                     getInvoiceDisplayDate={getInvoiceDisplayDate}
                     handleViewBreakdown={handleViewBreakdown}
-                    onPayNow={onPayNow}
+                    onPayNow={setPayingInvoice}
                     handleViewInvoice={handleViewInvoice}
                     invoiceCurrentPage={invoiceCurrentPage}
                     setInvoiceCurrentPage={setInvoiceCurrentPage}
                     totalInvoicePages={totalInvoicePages}
                   />
-                 </TabsContent>
-                 <TabsContent value="transactions" className="py-4 space-y-4">
-                    <TransactionsTab 
-                      paginatedTransactions={paginatedTransactions}
-                      transactionCurrentPage={transactionCurrentPage}
-                      setTransactionCurrentPage={setTransactionCurrentPage}
-                      totalTransactionPages={totalTransactionPages}
-                      calculatedBalances={calculatedBalances}
-                    />
-                 </TabsContent>
-                 <TabsContent value="top-ups" className="py-4 space-y-4">
-                    <TopUpsTab
-                      topUpRequestsData={topUpRequestsData}
-                      dispatch={dispatch}
-                      handleViewInvoice={handleViewInvoice}
-                    />
-                 </TabsContent>
-              </Tabs>
-            </div>
-          </ScrollArea>
-          <DialogFooter className="pr-6 pt-4 border-t">
-            <Button variant="outline" onClick={onLogout}>Logout</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                </TabsContent>
+                <TabsContent value="plan" className="mt-0">
+                  <PlanTab
+                    user={user}
+                    dispatch={dispatch}
+                    setIsSoaDialogOpen={setIsSoaDialogOpen}
+                  />
+                </TabsContent>
+                <TabsContent value="transactions" className="mt-0 space-y-4">
+                  <TransactionsTab
+                    paginatedTransactions={paginatedTransactions}
+                    transactionCurrentPage={transactionCurrentPage}
+                    setTransactionCurrentPage={setTransactionCurrentPage}
+                    totalTransactionPages={totalTransactionPages}
+                    calculatedBalances={calculatedBalances}
+                  />
+                </TabsContent>
+                <TabsContent value="top-ups" className="mt-0 space-y-4">
+                  <TopUpsTab
+                    topUpRequestsData={topUpRequestsData}
+                    dispatch={dispatch}
+                    handleViewInvoice={handleViewInvoice}
+                  />
+                </TabsContent>
+                <TabsContent value="accounts" className="mt-0">
+                  <AccountTab
+                    user={user}
+                    state={state}
+                    dispatch={dispatch}
+                    handleSaveChanges={handleSaveChanges}
+                    isEditingDetails={isEditingDetails}
+                    setIsEditingDetails={setIsEditingDetails}
+                    copyToClipboard={copyToClipboard}
+                    workspaceBusinessName={workspaceBusinessName}
+                  />
+                </TabsContent>
+              </div>
+            </ScrollArea>
+          </Tabs>
+          <SheetFooter className="p-4 border-t border-slate-100 bg-slate-50">
+            <Button variant="outline" className="w-full rounded-2xl h-12 font-bold text-red-600 hover:text-red-700 hover:bg-red-50" onClick={onLogout}>
+              <LogOut className="mr-2 h-4 w-4" />Sign out
+            </Button>
+          </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
       
       {/* Breakdown Dialog */}
       <Dialog open={state.isBreakdownDialogOpen} onOpenChange={(open) => { if (!open) { dispatch({type: 'SET_INVOICE_FOR_BREAKDOWN', payload: null}); } dispatch({type: 'SET_BREAKDOWN_DIALOG', payload: open}); }}>

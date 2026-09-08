@@ -81,6 +81,7 @@ import {
     CornerDownRight,
     Triangle,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     Zap,
     Minus,
@@ -92,7 +93,8 @@ import {
     FileText,
     Settings2,
     Layers,
-    Binary
+    Binary,
+    Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -113,7 +115,8 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
 import { useMounted } from '@/hooks/use-mounted';
 import { useToast } from '@/hooks/use-toast';
-import type { BoardElement, BoardConnection } from '@/lib/types';
+import { fileToEmbeddedImageSrc, isLikelyImageFile } from '@/lib/collab-image';
+import type { BoardElement, BoardConnection, BoardSlide } from '@/lib/types';
 import { Timestamp, deleteField } from 'firebase/firestore';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
@@ -205,7 +208,7 @@ function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Par
     return (
         <div className="space-y-6">
             <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Connection Label</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Label</Label>
                 <Input 
                     value={page.label || ''} 
                     onChange={(e) => handleUpdate({ label: e.target.value })}
@@ -217,7 +220,7 @@ function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Par
             <Separator className="bg-slate-50" />
 
             <div className="space-y-6">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Routing Mode</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Path</Label>
                 <div className="grid grid-cols-5 gap-2">
                     {[
                         { type: 'curved', icon: Repeat, label: 'Curve' },
@@ -244,7 +247,7 @@ function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Par
             <Separator className="bg-slate-50" />
 
             <div className="space-y-6">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Line Protocol</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Line</Label>
                 <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-3">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Stroke Weight: {page.strokeWidth || 2}px</p>
@@ -273,7 +276,7 @@ function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Par
             <Separator className="bg-slate-50" />
 
             <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">End Marker</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Arrow</Label>
                 <div className="grid grid-cols-4 gap-2">
                     {[
                         { id: 'arrow', label: 'Arrow', icon: ChevronRight },
@@ -299,7 +302,7 @@ function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Par
             <Separator className="bg-slate-50" />
 
             <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stroke Color</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Color</Label>
                 <div className="grid grid-cols-5 gap-2">
                     {COLORS.map(c => (
                         <button 
@@ -322,8 +325,19 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const isMounted = useMounted();
   const { toast } = useToast();
   
-  const [elements, setElements] = useState<BoardElement[]>(initialData?.elements || []);
+  const initialSlides: BoardSlide[] = initialData?.slides?.length
+    ? initialData.slides
+    : [{ id: 'slide-1', name: 'Slide 1' }];
+  const initialSlideId = initialSlides[0].id;
+
+  const [elements, setElements] = useState<BoardElement[]>(
+    (initialData?.elements || []).map((el: BoardElement) => ({ ...el, slideId: el.slideId || initialSlideId }))
+  );
   const [connections, setConnections] = useState<BoardConnection[]>(initialData?.connections || []);
+  const [slides, setSlides] = useState<BoardSlide[]>(initialSlides);
+  const [activeSlideId, setActiveSlideId] = useState(initialSlideId);
+  const slidesRef = useRef(slides);
+  slidesRef.current = slides;
   const [history, setHistory] = useState<{ elements: BoardElement[], connections: BoardConnection[] }[]>([]);
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -353,6 +367,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [assetSearch, setAssetSearch] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const currentPathRef = useRef<string | null>(null);
+  const lastPointRef = useRef({ x: 0, y: 0 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number; type: string }>());
+  const pinchRef = useRef<{ dist: number; scale: number; vx: number; vy: number } | null>(null);
+  const drawingRef = useRef(false);
+  const viewportRef = useRef(viewport);
+  viewportRef.current = viewport;
 
   const selectedElement = useMemo(() => {
     if (selectedIds.length !== 1) return null;
@@ -364,9 +385,35 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     return connections.find(c => c.id === selectedIds[0]);
   }, [selectedIds, connections]);
 
+  const visibleElements = useMemo(
+    () => elements.filter(el => (el.slideId || initialSlideId) === activeSlideId),
+    [elements, activeSlideId, initialSlideId]
+  );
+
+  const activeSlideIndex = Math.max(0, slides.findIndex(s => s.id === activeSlideId));
+
+  const goToSlide = (index: number) => {
+    const next = slides[index];
+    if (!next) return;
+    setActiveSlideId(next.id);
+    setSelectedIds([]);
+  };
+
+  const deleteSlide = () => {
+    if (!editable || slides.length <= 1) return;
+    const nextSlides = slides.filter(s => s.id !== activeSlideId);
+    const nextElements = elements.filter(el => (el.slideId || initialSlideId) !== activeSlideId);
+    slidesRef.current = nextSlides;
+    setSlides(nextSlides);
+    setActiveSlideId(nextSlides[Math.min(activeSlideIndex, nextSlides.length - 1)].id);
+    setElements(nextElements);
+    setSelectedIds([]);
+    sync(nextElements, connections);
+  };
+
   const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
       if (!editable) return;
-      onContentChange({ elements: newElements, connections: newConnections });
+      onContentChange({ elements: newElements, connections: newConnections, slides: slidesRef.current });
   }, [onContentChange, editable]);
 
   const pushHistory = useCallback(() => {
@@ -401,6 +448,30 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     }));
   }, []);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        handleZoom(e.deltaY * -0.01);
+      } else {
+        setViewport(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+      }
+    };
+    const blockGesture = (e: Event) => e.preventDefault();
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('gesturestart', blockGesture as EventListener, { passive: false });
+    el.addEventListener('gesturechange', blockGesture as EventListener, { passive: false });
+    el.addEventListener('gestureend', blockGesture as EventListener, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('gesturestart', blockGesture as EventListener);
+      el.removeEventListener('gesturechange', blockGesture as EventListener);
+      el.removeEventListener('gestureend', blockGesture as EventListener);
+    };
+  }, [isMounted, handleZoom]);
+
   const addElement = (type: BoardElement['type'], x?: number, y?: number, data?: Partial<BoardElement>) => {
       if (!editable) return;
       pushHistory();
@@ -420,7 +491,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           textAlign: data?.textAlign || 'center',
           path: data?.path,
           strokeWidth: data?.strokeWidth,
-          iconName: data?.iconName
+          iconName: data?.iconName,
+          url: data?.url,
+          slideId: activeSlideId,
       };
       setElements(prev => {
           const next = [...prev, newEl];
@@ -430,6 +503,46 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       setSelectedIds([id]);
       return id;
   };
+
+  const placeTool = (type: BoardElement['type']) => {
+      const vp = viewportRef.current;
+      addElement(type, (180 - vp.x) / vp.scale, (140 - vp.y) / vp.scale);
+  };
+
+  const uploadCanvasImage = async (file: File, x?: number, y?: number) => {
+      if (!editable) return;
+      if (!isLikelyImageFile(file)) {
+          toast({ variant: 'destructive', title: 'Wrong format', description: 'Please use an image file.' });
+          return;
+      }
+      try {
+          const url = await fileToEmbeddedImageSrc(file);
+          addElement('image', x, y, { url, width: 280, height: 180, color: '#ffffff' });
+          toast({ title: 'Image added' });
+      } catch (error: any) {
+          toast({
+              variant: 'destructive',
+              title: 'Could not add image',
+              description: error?.message || 'Try a JPEG or PNG photo.',
+          });
+      }
+  };
+
+  useEffect(() => {
+    if (!editable) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const fromFiles = Array.from(e.clipboardData?.files || []).find(isLikelyImageFile);
+      const fromItems = Array.from(e.clipboardData?.items || [])
+        .map((item) => (item.type.startsWith('image/') ? item.getAsFile() : null))
+        .find((file): file is File => !!file);
+      const file = fromFiles || fromItems;
+      if (!file) return;
+      e.preventDefault();
+      uploadCanvasImage(file);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [editable, uploadCanvasImage]);
 
   const deleteSelected = useCallback(() => {
       if (!editable || selectedIds.length === 0) return;
@@ -484,7 +597,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             ...el,
             id: `el-${timestamp}-${randomSuffix()}`,
             x: el.x + offset,
-            y: el.y + offset
+            y: el.y + offset,
+            slideId: activeSlideId,
         }));
     
     setElements(prev => {
@@ -496,6 +610,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   }, [selectedIds, elements, editable, connections, sync, pushHistory]);
 
   useEffect(() => {
+      if (!editable) return;
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           const activeElement = document.activeElement;
           const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
@@ -512,19 +627,28 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       };
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedIds, deleteSelected, handleCopy, handlePaste, undo]);
+  }, [editable, selectedIds, deleteSelected, handleCopy, handlePaste, undo]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent | React.PointerEvent) => {
+      if (!editable) {
+          setIsPanning(true);
+          lastPointRef.current = { x: e.clientX, y: e.clientY };
+          setLastMousePos({ x: e.clientX, y: e.clientY });
+          return;
+      }
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
       
       if (tool === 'hand' || e.button === 1) {
           setIsPanning(true);
+          lastPointRef.current = { x: e.clientX, y: e.clientY };
           setLastMousePos({ x: e.clientX, y: e.clientY });
           return;
       }
 
       if (tool === 'pen' && editable) {
-          setCurrentPath(`M ${x} ${y}`);
+          drawingRef.current = true;
+          currentPathRef.current = `M ${x} ${y}`;
+          setCurrentPath(currentPathRef.current);
           return;
       }
 
@@ -537,7 +661,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
 
       // Check hit for elements
-      const hit = [...elements].reverse().find(el => {
+      const hit = [...visibleElements].reverse().find(el => {
           if (el.type === 'path') {
               return false; 
           } 
@@ -570,19 +694,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | React.PointerEvent) => {
       const { x, y } = getLogicalCoords(e.clientX, e.clientY);
 
       if (isPanning) {
-          const dx = e.clientX - lastMousePos.x;
-          const dy = e.clientY - lastMousePos.y;
+          const dx = e.clientX - lastPointRef.current.x;
+          const dy = e.clientY - lastPointRef.current.y;
+          lastPointRef.current = { x: e.clientX, y: e.clientY };
           setViewport(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
           setLastMousePos({ x: e.clientX, y: e.clientY });
           return;
       }
 
-      if (tool === 'pen' && currentPath && editable) {
-          setCurrentPath(prev => `${prev} L ${x} ${y}`);
+      if ((tool === 'pen' || drawingRef.current) && currentPathRef.current && editable) {
+          const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+          currentPathRef.current = `${currentPathRef.current} L ${x} ${y}`;
+          setCurrentPath(currentPathRef.current);
           return;
       }
 
@@ -593,7 +720,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const yMin = Math.min(marqueeBox.y1, y);
           const yMax = Math.max(marqueeBox.y1, y);
           
-          const inBox = elements.map(el => {
+          const inBox = visibleElements.map(el => {
               if (el.type === 'path') return null; 
               if (el.x < xMax && el.x + el.width > xMin && el.y < yMax && el.y + el.height > yMin) return el.id;
               return null;
@@ -605,7 +732,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       if (pendingConnFrom) setCurrentMouseCoords({ x, y });
 
-      const hoverHit = [...elements].reverse().find(el => {
+      const hoverHit = [...visibleElements].reverse().find(el => {
           if (el.type === 'path') return false;
           return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
       });
@@ -639,27 +766,41 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       }
   };
 
-  const handleMouseUp = (e: React.MouseEvent) => {
-      if (tool === 'pen' && currentPath && editable) {
-          const id = `path-${Date.now()}`;
-          const newPathEl: BoardElement = {
-              id,
-              type: 'path',
-              path: currentPath,
-              x: 0, y: 0, text: '', color: penColor, width: 0, height: 0, strokeWidth: penSize
-          };
-          setElements(prev => {
-              const next = [...prev, newPathEl];
-              setTimeout(() => sync(next, connections), 0);
-              return next;
-          });
-          setCurrentPath(null);
+  const finishStroke = () => {
+      const path = currentPathRef.current;
+      drawingRef.current = false;
+      currentPathRef.current = null;
+      setCurrentPath(null);
+      if (!path || !editable) return;
+      const id = `path-${Date.now()}`;
+      const newPathEl: BoardElement = {
+          id,
+          type: 'path',
+          path,
+          x: 0, y: 0, text: '', color: penColor, width: 0, height: 0, strokeWidth: penSize,
+          slideId: activeSlideId,
+      };
+      setElements(prev => {
+          const next = [...prev, newPathEl];
+          setTimeout(() => sync(next, connections), 0);
+          return next;
+      });
+  };
+
+  const handleMouseUp = (e: React.MouseEvent | React.PointerEvent) => {
+      if (drawingRef.current || (tool === 'pen' && currentPathRef.current)) {
+          finishStroke();
           return;
       }
 
       if (pendingConnFrom) {
+          if (!editable) {
+              setPendingConnFrom(null);
+              setCurrentMouseCoords(null);
+              return;
+          }
           const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-          const targetHit = elements.find(el => {
+          const targetHit = visibleElements.find(el => {
               if (el.type === 'path') return false;
               return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
           });
@@ -692,14 +833,109 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       setDragId(null);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          const delta = e.deltaY * -0.01;
-          handleZoom(delta);
-      } else {
-          setViewport(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+      if ((e.target as HTMLElement).closest('[data-canvas-chrome]')) return;
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+      try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+          /* ignore */
       }
+
+      const hasPen = [...pointersRef.current.values()].some((p) => p.type === 'pen');
+      if (e.pointerType === 'touch' && (drawingRef.current || hasPen)) {
+          return;
+      }
+
+      if (e.pointerType === 'touch' && pointersRef.current.size >= 2) {
+          const pts = [...pointersRef.current.values()];
+          const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          pinchRef.current = {
+              dist: Math.max(dist, 1),
+              scale: viewportRef.current.scale,
+              vx: viewportRef.current.x,
+              vy: viewportRef.current.y,
+          };
+          setIsPanning(false);
+          setIsDragging(false);
+          setIsSelectingMarquee(false);
+          setMarqueeBox(null);
+          return;
+      }
+
+      if (e.pointerType === 'pen' || (e.pointerType !== 'touch' && tool === 'pen')) {
+          e.preventDefault();
+          drawingRef.current = true;
+          const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+          currentPathRef.current = `M ${x} ${y}`;
+          setCurrentPath(currentPathRef.current);
+          return;
+      }
+
+      if (e.pointerType === 'touch' && tool !== 'arrow' && tool !== 'pen') {
+          e.preventDefault();
+          const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+          const hit = [...visibleElements].reverse().find((el) => {
+              if (el.type === 'path') return false;
+              return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
+          });
+          if (hit && tool === 'select' && editable) {
+              handleMouseDown(e);
+              return;
+          }
+          setIsPanning(true);
+          lastPointRef.current = { x: e.clientX, y: e.clientY };
+          return;
+      }
+
+      handleMouseDown(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (pointersRef.current.has(e.pointerId)) {
+          pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+      }
+
+      if (e.pointerType === 'touch' && drawingRef.current) return;
+
+      if (pointersRef.current.size >= 2) {
+          const pts = [...pointersRef.current.values()].slice(0, 2);
+          const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          const pinch = pinchRef.current;
+          if (pinch && pinch.dist > 0) {
+              const nextScale = Math.min(5, Math.max(0.1, pinch.scale * (dist / pinch.dist)));
+              setViewport({ x: pinch.vx, y: pinch.vy, scale: nextScale });
+          }
+          return;
+      }
+
+      if (drawingRef.current && currentPathRef.current) {
+          const native = e.nativeEvent;
+          const events = typeof native.getCoalescedEvents === 'function' ? native.getCoalescedEvents() : [native];
+          events.forEach((ev) => {
+              const { x, y } = getLogicalCoords(ev.clientX, ev.clientY);
+              currentPathRef.current = `${currentPathRef.current} L ${x} ${y}`;
+          });
+          setCurrentPath(currentPathRef.current);
+          return;
+      }
+
+      handleMouseMove(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+      pointersRef.current.delete(e.pointerId);
+      if (pointersRef.current.size < 2) pinchRef.current = null;
+      try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+          /* ignore */
+      }
+      if (drawingRef.current) {
+          finishStroke();
+          return;
+      }
+      handleMouseUp(e);
   };
 
   const updateSelectedElements = (data: Partial<BoardElement>) => {
@@ -782,14 +1018,31 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   if (!isMounted) return null;
 
   return (
-    <div className="flex-1 flex bg-slate-50 overflow-hidden relative select-none h-full font-sans">
-        <aside className="w-16 border-r bg-white flex flex-col items-center py-6 gap-6 z-50 shadow-sm shrink-0">
-            <div className="flex flex-col gap-4">
-                <DraggableTool icon={<TypeIcon className="h-5 w-5 text-slate-900" />} type="text" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} />
-                <DraggableTool icon={<StickyNote className="h-5 w-5 text-amber-500" />} type="note" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} />
-                <DraggableTool icon={<Square className="h-5 w-5 text-blue-500" />} type="rect" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} />
-                <DraggableTool icon={<Circle className="h-5 w-5 text-green-500" />} type="circle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} />
-                <DraggableTool icon={<Diamond className="h-5 w-5 text-purple-500" />} type="diamond" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'diamond')} />
+    <div className="flex-1 flex bg-[#f7f6f3] overflow-hidden relative select-none h-full min-h-0 font-sans">
+        {editable && (
+        <aside className="w-12 border-r border-slate-200/80 bg-white flex flex-col items-center py-3 gap-2 z-50 shrink-0">
+            <div className="flex flex-col gap-1.5">
+                <DraggableTool icon={<TypeIcon className="h-4 w-4 text-slate-800" />} type="text" label="Text" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} />
+                <DraggableTool icon={<StickyNote className="h-4 w-4 text-amber-500" />} type="note" label="Sticky note" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} />
+                <DraggableTool icon={<Square className="h-4 w-4 text-blue-500" />} type="rect" label="Rectangle" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} />
+                <DraggableTool icon={<Circle className="h-4 w-4 text-green-500" />} type="circle" label="Circle" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} />
+                <label
+                    title="Image"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 cursor-pointer"
+                >
+                    <ImageIcon className="h-4 w-4" />
+                    <span className="sr-only">Add image</span>
+                    <input
+                        type="file"
+                        accept="image/*,.heic,.heif,.jpeg,.jpg,.png,.webp,.gif"
+                        className="sr-only"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadCanvasImage(file);
+                            e.target.value = '';
+                        }}
+                    />
+                </label>
                 
                 <Popover onOpenChange={() => setAssetSearch('')}>
                     <PopoverTrigger asChild>
@@ -799,28 +1052,28 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     </PopoverTrigger>
                     <PopoverContent side="right" className="w-80 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white ml-2 overflow-hidden z-50">
                         <div className="p-4 bg-slate-50 border-b">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">More Tools</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">More</p>
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                                <Input placeholder="Find assets..." className="pl-8 h-9 text-xs rounded-xl bg-white border-none shadow-inner" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} />
+                                <Input placeholder="Search..." className="pl-8 h-9 text-xs rounded-xl bg-white border-none shadow-inner" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} />
                             </div>
                         </div>
                         <ScrollArea className="h-[480px]">
                             <div className="p-4 space-y-6">
                                 <div className="space-y-3">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Fulfillment & Logic</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Shapes</p>
                                     <div className="grid grid-cols-4 gap-2">
-                                        <DraggableTool variant="mini" icon={<Triangle className="h-4 w-4" />} type="triangle" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'triangle')} />
-                                        <DraggableTool variant="mini" icon={<LayoutTemplate className="h-4 w-4" />} type="parallelogram" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'parallelogram')} />
-                                        <DraggableTool variant="mini" icon={<Database className="h-4 w-4" />} type="cylinder" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cylinder')} />
-                                        <DraggableTool variant="mini" icon={<PlusCircle className="h-4 w-4" />} type="capsule" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'capsule')} />
-                                        <DraggableTool variant="mini" icon={<Hexagon className="h-4 w-4" />} type="hexagon" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'hexagon')} />
-                                        <DraggableTool variant="mini" icon={<CloudIcon className="h-4 w-4" />} type="cloud" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cloud')} />
-                                        <DraggableTool variant="mini" icon={<FileText className="h-4 w-4" />} type="document" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'document')} />
-                                        <DraggableTool variant="mini" icon={<Settings2 className="h-4 w-4" />} type="predefined" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'predefined')} />
-                                        <DraggableTool variant="mini" icon={<Binary className="h-4 w-4" />} type="manual-input" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'manual-input')} />
-                                        <DraggableTool variant="mini" icon={<Star className="h-4 w-4" />} type="star" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'star')} />
-                                        <DraggableTool variant="mini" icon={<AlertTriangle className="h-4 w-4" />} type="octagon" onDragStart={(e: any) => e.dataTransfer.setData('elType', 'octagon')} />
+                                        <DraggableTool variant="mini" icon={<Triangle className="h-4 w-4" />} type="triangle" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'triangle')} />
+                                        <DraggableTool variant="mini" icon={<LayoutTemplate className="h-4 w-4" />} type="parallelogram" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'parallelogram')} />
+                                        <DraggableTool variant="mini" icon={<Database className="h-4 w-4" />} type="cylinder" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cylinder')} />
+                                        <DraggableTool variant="mini" icon={<PlusCircle className="h-4 w-4" />} type="capsule" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'capsule')} />
+                                        <DraggableTool variant="mini" icon={<Hexagon className="h-4 w-4" />} type="hexagon" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'hexagon')} />
+                                        <DraggableTool variant="mini" icon={<CloudIcon className="h-4 w-4" />} type="cloud" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'cloud')} />
+                                        <DraggableTool variant="mini" icon={<FileText className="h-4 w-4" />} type="document" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'document')} />
+                                        <DraggableTool variant="mini" icon={<Settings2 className="h-4 w-4" />} type="predefined" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'predefined')} />
+                                        <DraggableTool variant="mini" icon={<Binary className="h-4 w-4" />} type="manual-input" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'manual-input')} />
+                                        <DraggableTool variant="mini" icon={<Star className="h-4 w-4" />} type="star" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'star')} />
+                                        <DraggableTool variant="mini" icon={<AlertTriangle className="h-4 w-4" />} type="octagon" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'octagon')} />
                                     </div>
                                 </div>
                                 <div className="space-y-3">
@@ -846,22 +1099,30 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             </div>
             
             <Separator className="w-8" />
-            <div className="flex flex-col gap-3">
-                <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} />
-                <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} />
-                <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} />
-                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} />
+            <div className="flex flex-col gap-1">
+                <ToolbarItem icon={<MousePointer2 className="h-4 w-4" />} active={tool === 'select'} onClick={() => setTool('select')} title="Select" />
+                <ToolbarItem icon={<Pencil className="h-4 w-4" />} active={tool === 'pen'} onClick={() => setTool('pen')} title="Draw" />
+                <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} title="Pan" />
+                <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} title="Connect" />
             </div>
         </aside>
+        )}
 
-        <div className="flex-1 relative overflow-hidden" 
-             onMouseDown={handleMouseDown}
-             onMouseMove={handleMouseMove} 
-             onMouseUp={handleMouseUp}
-             onWheel={handleWheel}
-             onDragOver={(e) => e.preventDefault()}
+        <div className={cn("flex-1 relative overflow-hidden overscroll-none", !editable && "cursor-grab active:cursor-grabbing")} 
+             onPointerDown={handlePointerDown}
+             onPointerMove={handlePointerMove} 
+             onPointerUp={handlePointerUp}
+             onPointerCancel={handlePointerUp}
+             onDragOver={(e) => editable && e.preventDefault()}
              onDrop={(e) => {
+                if (!editable) return;
                 e.preventDefault();
+                const file = Array.from(e.dataTransfer.files || []).find(isLikelyImageFile);
+                if (file) {
+                    const { x, y } = getLogicalCoords(e.clientX, e.clientY);
+                    uploadCanvasImage(file, x - 140, y - 90);
+                    return;
+                }
                 const type = e.dataTransfer.getData('elType') as BoardElement['type'];
                 const text = e.dataTransfer.getData('elText');
                 const fontSize = e.dataTransfer.getData('elFontSize');
@@ -871,7 +1132,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     addElement(type, x - 75, y - (type === 'text' ? 20 : 75), { text: text || undefined, fontSize: fontSize ? parseInt(fontSize) : undefined, iconName: iconName || undefined, width: type === 'icon' ? 100 : undefined, height: type === 'icon' ? 100 : undefined });
                 }
              }}
-             style={{ backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`, backgroundPosition: `${viewport.x}px ${viewport.y}px` }}
+             style={{
+                touchAction: 'none',
+                backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)',
+                backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`,
+                backgroundPosition: `${viewport.x}px ${viewport.y}px`
+             }}
              ref={containerRef}>
             
             <div style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`, transformOrigin: '0 0' }} className="absolute inset-0 pointer-events-none">
@@ -893,7 +1159,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                         </filter>
                     </defs>
 
-                    {connections.map(conn => {
+                    {connections.filter(conn => {
+                        const from = elements.find(e => e.id === conn.fromId);
+                        const to = elements.find(e => e.id === conn.toId);
+                        const sid = activeSlideId;
+                        return (from?.slideId || initialSlideId) === sid && (to?.slideId || initialSlideId) === sid;
+                    }).map(conn => {
                         const isSelected = selectedIds.includes(conn.id);
                         const path = getConnectorPath(conn.fromId, 0, 0, conn.toId, conn.type);
                         const strokeColor = conn.color || '#cbd5e1';
@@ -905,8 +1176,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                     fill="none" 
                                     stroke="transparent" 
                                     strokeWidth="12" 
-                                    className="pointer-events-auto cursor-pointer" 
+                                    className={cn(editable ? "pointer-events-auto cursor-pointer" : "pointer-events-none")} 
                                     onClick={(e) => { 
+                                        if (!editable) return;
                                         e.stopPropagation(); 
                                         setSelectedIds([conn.id]);
                                     }} 
@@ -938,10 +1210,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     {pendingConnFrom && currentMouseCoords && (
                         <path d={getConnectorPath(pendingConnFrom, currentMouseCoords.x, currentMouseCoords.y, undefined, arrowType)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" markerEnd="url(#marker-arrow)" style={{ color: 'hsl(var(--primary))' }} />
                     )}
-                    {elements.filter(el => el.type === 'path').map(el => {
+                    {visibleElements.filter(el => el.type === 'path').map(el => {
                         const isSelected = selectedIds.includes(el.id);
                         return (
-                            <g key={el.id} className="pointer-events-auto group/drawing cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedIds([el.id]); }}>
+                            <g key={el.id} className={cn(editable ? "pointer-events-auto group/drawing cursor-pointer" : "pointer-events-none")} onClick={(e) => { if (!editable) return; e.stopPropagation(); setSelectedIds([el.id]); }}>
                                 <path d={el.path} fill="none" stroke="transparent" strokeWidth={Math.max(10, (el.strokeWidth || 4) * 2)} />
                                 <path d={el.path} fill="none" stroke={isSelected ? 'hsl(var(--primary))' : (el.color || '#3b82f6')} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" />
                                 {isSelected && <path d={el.path} fill="none" stroke="hsl(var(--primary))" strokeWidth={el.strokeWidth ? el.strokeWidth + 4 : 8} strokeOpacity="0.1" />}
@@ -951,7 +1223,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     {currentPath && <path d={currentPath} fill="none" stroke={penColor} strokeWidth={penSize} strokeLinecap="round" strokeLinejoin="round" />}
                 </svg>
 
-                {elements.filter(el => el.type !== 'path').map((el) => {
+                {visibleElements.filter(el => el.type !== 'path').map((el) => {
                     const isSelected = selectedIds.includes(el.id);
                     const isHovered = hoveredId === el.id;
                     const IconComp = el.type === 'icon' ? ASSET_ICONS.find(i => i.name === el.iconName)?.icon : null;
@@ -975,7 +1247,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     const clipPath = getClipPath(el.type);
 
                     return (
-                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute pointer-events-auto", isSelected && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
+                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute", editable ? "pointer-events-auto" : "pointer-events-none", isSelected && editable && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
                             <div className={cn(
                                 "w-full h-full flex flex-col items-center justify-center relative overflow-hidden transition-shadow", 
                                 el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg border-2 border-slate-900 shadow-lg", 
@@ -986,10 +1258,13 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 el.type === 'capsule' && "border-2 border-slate-900 rounded-full shadow-lg",
                                 el.type === 'predefined' && "border-y-2 border-slate-900 relative shadow-lg",
                                 isCustomClipped && "bg-transparent border-none p-0 shadow-none",
-                                (el.type === 'text' || el.type === 'icon') && "bg-transparent border-none p-0 shadow-none"
+                                (el.type === 'text' || el.type === 'icon' || el.type === 'image') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
-                                backgroundColor: (el.type === 'text' || el.type === 'icon' || isCustomClipped || el.type === 'cloud') ? 'transparent' : el.color,
+                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'image' || isCustomClipped || el.type === 'cloud') ? 'transparent' : el.color,
                             }}>
+                                {el.type === 'image' && el.url && (
+                                    <img src={el.url} alt="" className="w-full h-full object-contain pointer-events-none select-none" />
+                                )}
                                 {isCustomClipped && (
                                     <>
                                         <div className="absolute inset-0 bg-slate-900" style={{ clipPath }} />
@@ -1017,15 +1292,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 )}>
                                     {el.type === 'icon' && IconComp ? (
                                         <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
-                                    ) : (
+                                    ) : el.type === 'image' ? null : (
                                         <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap p-3" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
                                             {el.text}
                                         </div>
                                     )}
                                 </div>
-                                {isSelected && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
+                                {isSelected && editable && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
                             </div>
-                            {(isHovered || isSelected) && !isDragging && <div className="absolute inset-0 pointer-events-none"><Port side="top" id={el.id} /><Port side="right" id={el.id} /><Port side="bottom" id={el.id} /><Port side="left" id={el.id} /></div>}
+                            {(isHovered || isSelected) && !isDragging && editable && <div className="absolute inset-0 pointer-events-none"><Port side="top" id={el.id} /><Port side="right" id={el.id} /><Port side="bottom" id={el.id} /><Port side="left" id={el.id} /></div>}
                         </div>
                     );
                 })}
@@ -1033,16 +1308,62 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 {marqueeBox && <div className="absolute border-2 border-primary bg-primary/10 rounded-sm pointer-events-none" style={{ left: Math.min(marqueeBox.x1, marqueeBox.x2), top: Math.min(marqueeBox.y1, marqueeBox.y2), width: Math.abs(marqueeBox.x2 - marqueeBox.x1), height: Math.abs(marqueeBox.y2 - marqueeBox.y1) }} />}
             </div>
 
-            <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2">
-                <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-white border border-slate-200 shadow-lg">
-                    <button onClick={() => handleZoom(-0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">-</button>
-                    <span className="text-[9px] font-black text-slate-900 w-10 text-center uppercase tracking-widest">{Math.round(viewport.scale * 100)}%</span>
-                    <button onClick={() => handleZoom(0.2)} className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50 transition-all font-black">+</button>
+            <div data-canvas-chrome="true" className="absolute bottom-4 right-4 z-50 flex items-center gap-2 pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-0.5 rounded-2xl border border-slate-200 bg-white/95 p-1 shadow-lg backdrop-blur-md">
+                    <button
+                        type="button"
+                        aria-label="Previous slide"
+                        title="Previous slide"
+                        disabled={activeSlideIndex <= 0}
+                        onClick={() => goToSlide(activeSlideIndex - 1)}
+                        className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="min-w-[4.5rem] px-1 text-center text-[10px] font-bold text-slate-600 tabular-nums">
+                        {activeSlideIndex + 1} / {slides.length}
+                    </span>
+                    <button
+                        type="button"
+                        aria-label="Next slide"
+                        title="Next slide"
+                        disabled={activeSlideIndex >= slides.length - 1}
+                        onClick={() => goToSlide(activeSlideIndex + 1)}
+                        className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </button>
+                    {editable && slides.length > 1 && (
+                        <>
+                            <div className="w-px h-5 bg-slate-200 mx-1" />
+                            <button
+                                type="button"
+                                aria-label="Delete slide"
+                                title="Delete slide"
+                                onClick={deleteSlide}
+                                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </>
+                    )}
+                    <div className="w-px h-5 bg-slate-200 mx-1" />
+                    <button type="button" onClick={() => handleZoom(-0.2)} className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50" aria-label="Zoom out">−</button>
+                    <span className="min-w-[2.5rem] text-center text-[10px] font-bold text-slate-600 tabular-nums">{Math.round(viewport.scale * 100)}%</span>
+                    <button type="button" onClick={() => handleZoom(0.2)} className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50" aria-label="Zoom in">+</button>
                 </div>
             </div>
+
+            {editable && visibleElements.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    <p className="text-[13px] text-slate-400 bg-white/80 rounded-full px-3 py-1.5 border border-slate-200/80">
+                        Drag shapes from the left, add an image, or draw with Apple Pencil
+                    </p>
+                </div>
+            )}
         </div>
 
-        {(selectedElement || selectedConnection) && (
+        {editable && (selectedElement || selectedConnection) && (
             <aside className="w-80 border-l bg-white flex flex-col shrink-0 z-50">
                 <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1088,14 +1409,14 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                             <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'center' })} className={cn("flex-1 h-9 rounded-xl", (selectedElement.textAlign === 'center' || !selectedElement.textAlign) && "bg-primary/10 border-primary text-primary")}><AlignCenter className="h-4 w-4" /></Button>
                                             <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ textAlign: 'right' })} className={cn("flex-1 h-9 rounded-xl", selectedElement.textAlign === 'right' && "bg-primary/10 border-primary text-primary")}><AlignRight className="h-4 w-4" /></Button>
                                         </div>
-                                        <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ bold: !selectedElement.bold })} className={cn("w-full h-9 rounded-xl font-black uppercase tracking-widest text-[10px]", selectedElement.bold && "bg-primary/10 border-primary text-primary")}>Bold Weight</Button>
+                                        <Button variant="outline" size="sm" onClick={() => updateSelectedElements({ bold: !selectedElement.bold })} className={cn("w-full h-9 rounded-xl font-black uppercase tracking-widest text-[10px]", selectedElement.bold && "bg-primary/10 border-primary text-primary")}>Bold</Button>
                                     </div>
                                 </div>
 
                                 <Separator className="bg-slate-50" />
 
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Theme & Style</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Style</Label>
                                     <div className="grid grid-cols-5 gap-2">
                                         {COLORS.map(c => (
                                             <button 
@@ -1122,7 +1443,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
                         <div className="pt-4 flex flex-col gap-3">
                             {selectedElement && <Button variant="outline" onClick={handleDuplicate} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 border-slate-200 bg-white shadow-sm"><Copy className="h-3.5 w-3.5" /> Duplicate</Button>}
-                            <Button variant="ghost" onClick={deleteSelected} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove {selectedConnection ? 'Connection' : 'Object'}</Button>
+                            <Button variant="ghost" onClick={deleteSelected} className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Delete {selectedConnection ? 'line' : 'item'}</Button>
                         </div>
                     </div>
                 </ScrollArea>
@@ -1132,19 +1453,24 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   );
 }
 
-function ToolbarItem({ icon, active = false, onClick }: any) {
+function ToolbarItem({ icon, active = false, onClick, title }: any) {
     return (
-        <button onClick={onClick} className={cn("h-10 w-10 flex items-center justify-center rounded-xl transition-all group relative", active ? "bg-primary text-white shadow-lg" : "text-slate-400 hover:bg-slate-50")}>
+        <button title={title} onClick={onClick} className={cn("h-9 w-9 flex items-center justify-center rounded-lg transition-all", active ? "bg-slate-900 text-white" : "text-slate-400 hover:bg-slate-50 hover:text-slate-700")}>
             {icon}
         </button>
     );
 }
 
-function DraggableTool({ icon, type, onDragStart, variant = 'default' }: any) {
+function DraggableTool({ icon, type, onDragStart, variant = 'default', label, onTap }: any) {
     return (
-        <div draggable onDragStart={onDragStart} className={cn(
-            "flex items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
-            variant === 'default' ? "w-10 h-10" : "w-12 h-12"
+        <div
+            draggable
+            onDragStart={onDragStart}
+            onClick={() => onTap?.(type)}
+            title={label || type}
+            className={cn(
+            "flex items-center justify-center rounded-lg bg-white border border-slate-200 cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:border-slate-300 transition-all",
+            variant === 'default' ? "w-9 h-9" : "w-11 h-11"
         )}>
             {icon}
         </div>

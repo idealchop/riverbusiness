@@ -59,9 +59,14 @@ service cloud.firestore {
 
     // --- COLLABORATION PLATFORM ---
 
-    match /collaboration_pages/{document=**} {
-      // UNRESTRICTED COLLABORATION: Any signed-in user can create, edit, organize or delete any page
-      allow read, write: if isAuthenticated();
+    match /collaboration_pages/{pageId} {
+      allow get: if isAuthenticated() || resource.data.isPublic == true;
+      allow list: if isAuthenticated() || resource.data.isPublic == true;
+      allow create, update, delete: if isAuthenticated();
+
+      match /presence/{userId} {
+        allow read, write: if isAuthenticated();
+      }
     }
     
     match /collaboration_workspaces/{document=**} {

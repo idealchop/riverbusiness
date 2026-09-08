@@ -69,7 +69,7 @@ export default function LoginPage() {
         if (user.email === 'admin@riverph.com') {
           router.push('/admin');
         } else {
-          router.push('/dashboard');
+          router.push('/onboarding');
         }
       }
 
@@ -151,10 +151,10 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
-                        The platform to run <span className="text-primary">essential needs</span> for business workforce.
+                        AI-powered operations for modern teams.
                     </h1>
-                    <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-md">
-                        Simplifying how modern teams operate.
+                    <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-w-xl">
+                        Run water refill operations, workforce and HR, files, and a collaboration workspace with documents, canvas, and sheets.
                     </p>
                 </div>
             </div>

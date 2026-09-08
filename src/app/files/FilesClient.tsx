@@ -23,24 +23,21 @@ import {
   Plus,
   Download,
   Loader2,
-  Globe,
   MoreHorizontal,
   StarOff,
   Home,
   X,
-  History,
-  Palette,
-  XCircle,
   PlayCircle,
   Maximize2,
   FileUp,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  Menu
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { 
@@ -58,8 +55,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import type { CloudFile, CloudFolder, AppUser, Notification as NotificationType } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
-import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { uploadWorkspaceFile, isRiverBlobUrl, resolveWorkspaceFileSrc } from '@/lib/storage-utils';
 import { useToast } from '@/hooks/use-toast';
+import { getWorkspaceCompanyId, getHomePath } from '@/lib/workspace-access';
+import { FilesSidebar, type FilesView } from '@/components/files/FilesSidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
     Dialog, 
     DialogContent, 
@@ -80,6 +81,26 @@ import Image from 'next/image';
 
 const STORAGE_QUOTA_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500MB
+const FILE_ACCEPT = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.mp4,.mov,.webm,.mkv,.mp3,.wav,.png,.jpg,.jpeg,.gif,.webp,.svg';
+
+function isImageType(type: string) {
+  return type.startsWith('image/');
+}
+function isVideoType(type: string) {
+  return type.startsWith('video/');
+}
+function isAudioType(type: string) {
+  return type.startsWith('audio/');
+}
+function isPdfType(type: string, name = '') {
+  return type === 'application/pdf' || type.includes('pdf') || /\.pdf$/i.test(name);
+}
+function isOfficeType(type: string, name = '') {
+  return type.includes('officedocument') || type.includes('msword') || type.includes('ms-excel') || type.includes('ms-powerpoint') || /\.(docx?|xlsx?|pptx?)$/i.test(name);
+}
+function isDocumentType(type: string, name = '') {
+  return isPdfType(type, name) || isOfficeType(type, name) || type.startsWith('text/') || type.includes('csv') || /\.(txt|csv|md|rtf)$/i.test(name);
+}
 
 export default function FilesClient() {
   const { user: authUser, isUserLoading } = useUser();
@@ -89,6 +110,7 @@ export default function FilesClient() {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
@@ -100,13 +122,17 @@ export default function FilesClient() {
   const [newFolderName, setNewFolderName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'trash'>('all');
+  const [filesView, setFilesView] = useState<FilesView>('all');
   const [previewFile, setPreviewFile] = useState<CloudFile | null>(null);
+  const previewSrc = useWorkspaceMediaSrc(previewFile);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [uploadLabel, setUploadLabel] = useState('Uploading');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const companyId = user?.companyId || 'unassigned';
+  const companyId = getWorkspaceCompanyId(user) || 'unassigned';
 
   // Real-time Presence Logic
   const presenceQuery = useMemoFirebase(
@@ -156,20 +182,18 @@ export default function FilesClient() {
   const foldersQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_folders'),
-        where('companyId', '==', companyId),
-        where('isTrashed', '==', activeTab === 'trash')
+        where('companyId', '==', companyId)
     ) : null,
-    [firestore, companyId, activeTab]
+    [firestore, companyId]
   );
   const { data: allFolders, isLoading: loadingFolders } = useCollection<CloudFolder>(foldersQuery);
 
   const filesQuery = useMemoFirebase(
     () => (firestore && companyId !== 'unassigned') ? query(
         collection(firestore, 'cloud_files'),
-        where('companyId', '==', companyId),
-        where('isTrashed', '==', activeTab === 'trash')
+        where('companyId', '==', companyId)
     ) : null,
-    [firestore, companyId, activeTab]
+    [firestore, companyId]
   );
   const { data: allFiles, isLoading: loadingFiles } = useCollection<CloudFile>(filesQuery);
 
@@ -183,30 +207,53 @@ export default function FilesClient() {
   const currentFolders = useMemo(() => {
     if (!allFolders) return [];
     let list = allFolders;
-    if (activeTab === 'all') {
-        list = list.filter(f => f.parentId === currentFolderId);
-    } else if (activeTab === 'favorites') {
-        list = list.filter(f => f.isFavorite);
+    if (filesView === 'trash') {
+        list = list.filter(f => f.isTrashed);
+    } else {
+        list = list.filter(f => !f.isTrashed);
+        if (filesView === 'favorites') {
+            list = list.filter(f => f.isFavorite);
+        } else if (filesView === 'all') {
+            list = list.filter(f => f.parentId === currentFolderId);
+        } else {
+            list = [];
+        }
     }
     if (searchTerm) {
         list = list.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [allFolders, currentFolderId, searchTerm, activeTab]);
+  }, [allFolders, currentFolderId, searchTerm, filesView]);
 
   const currentFiles = useMemo(() => {
     if (!allFiles) return [];
     let list = allFiles;
-    if (activeTab === 'all') {
-        list = list.filter(f => f.folderId === currentFolderId);
-    } else if (activeTab === 'favorites') {
-        list = list.filter(f => f.isFavorite);
+    if (filesView === 'trash') {
+        list = list.filter(f => f.isTrashed);
+    } else {
+        list = list.filter(f => !f.isTrashed);
+        if (filesView === 'favorites') {
+            list = list.filter(f => f.isFavorite);
+        } else if (filesView === 'images') {
+            list = list.filter(f => isImageType(f.type));
+        } else if (filesView === 'videos') {
+            list = list.filter(f => isVideoType(f.type));
+        } else if (filesView === 'documents') {
+            list = list.filter(f => isDocumentType(f.type, f.name));
+        } else {
+            list = list.filter(f => f.folderId === currentFolderId);
+        }
     }
     if (searchTerm) {
         list = list.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     return list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  }, [allFiles, currentFolderId, searchTerm, activeTab]);
+  }, [allFiles, currentFolderId, searchTerm, filesView]);
+
+  const sidebarFolders = useMemo(
+    () => (allFolders || []).filter(f => !f.isTrashed),
+    [allFolders]
+  );
 
   const currentFolderPath = useMemo(() => {
     if (!currentFolderId || !allFolders) return [];
@@ -222,7 +269,7 @@ export default function FilesClient() {
 
   const companyUsedStorage = useMemo(() => {
     if (!allFiles) return 0;
-    return allFiles.filter(f => !f.isTrashed).reduce((acc, f) => acc + f.size, 0);
+    return allFiles.filter(f => !f.isTrashed).reduce((acc, f) => acc + (Number(f.size) || 0), 0);
   }, [allFiles]);
 
   const storagePercentage = (companyUsedStorage / STORAGE_QUOTA_BYTES) * 100;
@@ -235,7 +282,7 @@ export default function FilesClient() {
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast({ variant: 'destructive', title: 'File Too Large', description: 'Maximum limit is 500MB.' });
+        toast({ variant: 'destructive', title: 'File Too Large', description: `${file.name} exceeds the 500MB limit.` });
         return;
     }
 
@@ -246,16 +293,17 @@ export default function FilesClient() {
 
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadLabel(file.name);
 
     try {
-        const path = `cloud_storage/${companyId}/${Date.now()}-${file.name}`;
-        const url = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+        const { url, storagePath, fileId } = await uploadWorkspaceFile(storage, auth, firestore, companyId, file, setUploadProgress);
 
         const newFileData = {
             name: file.name,
-            type: file.type,
+            type: file.type || 'application/octet-stream',
             size: file.size,
             url,
+            storagePath,
             folderId: currentFolderId,
             ownerId: auth.currentUser.uid,
             ownerName: user?.name || auth.currentUser.email?.split('@')[0] || 'Member',
@@ -267,20 +315,32 @@ export default function FilesClient() {
             updatedAt: serverTimestamp()
         };
 
-        await addDoc(collection(firestore, 'cloud_files'), newFileData);
-        toast({ title: 'File uploaded' });
+        if (fileId) {
+            await setDoc(doc(firestore, 'cloud_files', fileId), newFileData);
+        } else {
+            await addDoc(collection(firestore, 'cloud_files'), newFileData);
+        }
+        toast({ title: 'File uploaded', description: file.name });
     } catch (e) {
         console.error("Upload process error:", e);
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Check your permissions and try again.' });
+        toast({ variant: 'destructive', title: 'Upload Failed', description: e instanceof Error ? e.message : 'Could not write to the team workspace drive.' });
     } finally {
         setIsUploading(false);
         setUploadProgress(0);
+        setUploadLabel('Uploading');
+    }
+  };
+
+  const performUploads = async (fileList: FileList | File[]) => {
+    const files = Array.from(fileList);
+    for (const file of files) {
+      await performUpload(file);
     }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) performUpload(file);
+    const files = e.target.files;
+    if (files && files.length > 0) performUploads(files);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -303,7 +363,7 @@ export default function FilesClient() {
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      performUpload(files[0]);
+      performUploads(files);
     }
   };
 
@@ -399,26 +459,79 @@ export default function FilesClient() {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  if (isUserLoading || isUserDocLoading) return <FullScreenLoader text="Loading your workspace" />;
+  const handleViewChange = (view: FilesView) => {
+    setFilesView(view);
+    if (view !== 'all') setCurrentFolderId(null);
+    setIsMobileSidebarOpen(false);
+  };
+
+  const sidebarContent = (
+    <FilesSidebar
+      isOpen={isSidebarOpen || isMobile}
+      view={filesView}
+      onViewChange={handleViewChange}
+      folders={sidebarFolders}
+      currentFolderId={currentFolderId}
+      onOpenFolder={(id) => { setFilesView('all'); setCurrentFolderId(id); setIsMobileSidebarOpen(false); }}
+      onUpload={() => fileInputRef.current?.click()}
+      onNewFolder={() => { setIsNewFolderOpen(true); setIsMobileSidebarOpen(false); }}
+      storageLabel={`${formatSize(companyUsedStorage)} of 2 GB`}
+      storagePercent={storagePercentage}
+      user={user}
+    />
+  );
+
+  if (isUserLoading || isUserDocLoading) return <FullScreenLoader text="Loading..." />;
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden font-sans">
+    <div className="flex h-screen bg-white overflow-hidden font-sans">
       <input 
         type="file" 
         ref={fileInputRef} 
         className="hidden" 
+        multiple
+        accept={FILE_ACCEPT}
         onChange={handleFileUpload}
         disabled={isUploading}
       />
 
+      <div className="relative h-full shrink-0">
+        {!isMobile && sidebarContent}
+        {!isMobile && (
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+            className="absolute top-1/2 z-40 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-slate-900"
+            style={{ left: isSidebarOpen ? 'calc(18rem - 16px)' : '8px' }}
+          >
+            {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
-          <div className="flex flex-col">
-            <span className="font-bold text-xs text-slate-900 leading-tight">Shared</span>
-            <span className="font-bold text-[10px] text-slate-400 leading-tight">Files</span>
-          </div>
-        </Link>
+        {isMobile ? (
+          <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-72 border-none">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Files Navigation</SheetTitle>
+              </SheetHeader>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+        ) : null}
+        {isMobile ? (
+          <Link href={getHomePath(user)} className="flex items-center gap-2">
+            <LogoBlack className="h-8 w-8" />
+          </Link>
+        ) : null}
         <div className="flex-1" />
         <div className="flex items-center gap-2 sm:gap-6">
           <TooltipProvider delayDuration={0}>
@@ -451,7 +564,7 @@ export default function FilesClient() {
                                     </p>
                                 ) : (
                                     <p className="text-[10px] font-bold text-primary leading-none mt-1">
-                                        Viewing now
+                                        Online
                                     </p>
                                 )}
                             </div>
@@ -480,34 +593,40 @@ export default function FilesClient() {
 
       <div className="flex-1 flex flex-col min-w-0 bg-white relative">
           {/* Main files area */}
-          <main className="flex-1 overflow-auto bg-white" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+          <main className="flex-1 overflow-auto bg-white relative" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
              {/* Drop Overlay */}
             {isDragging && (
                 <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-4 border-primary border-dashed rounded-xl m-4 flex flex-col items-center justify-center animate-in fade-in duration-300">
                     <div className="p-6 rounded-full bg-white shadow-2xl scale-110 animate-bounce">
                         <FileUp className="h-12 w-12 text-primary" />
                     </div>
-                    <h3 className="mt-6 text-2xl font-black text-primary uppercase tracking-widest">Drop to Upload</h3>
-                    <p className="text-sm font-bold text-primary/60 mt-2">Release to sync file to team hub</p>
+                    <h3 className="mt-6 text-xl font-bold text-primary">Drop to upload</h3>
+                    <p className="text-sm text-primary/60 mt-2">Release to add these files</p>
                 </div>
             )}
 
             <div className="h-14 border-b flex items-center justify-between px-6 bg-white/95 backdrop-blur-sm shrink-0 sticky top-0 z-20">
                 <div className="flex items-center gap-2 overflow-hidden min-w-0">
                     <button 
-                        onClick={() => { setActiveTab('all'); setCurrentFolderId(null); }}
+                        onClick={() => { setFilesView('all'); setCurrentFolderId(null); }}
                         className={cn(
                         "p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors", 
-                        !currentFolderId && "text-slate-900"
+                        filesView === 'all' && !currentFolderId && "text-slate-900"
                         )}
                     >
                         <Home className="h-4 w-4" />
                     </button>
-                    {currentFolderPath.map((folder, idx) => (
+                    {filesView !== 'all' && (
+                      <>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                        <span className="text-xs font-bold text-slate-900 capitalize">{filesView}</span>
+                      </>
+                    )}
+                    {filesView === 'all' && currentFolderPath.map((folder, idx) => (
                         <React.Fragment key={folder.id}>
                         <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
                         <button 
-                            onClick={() => { setActiveTab('all'); setCurrentFolderId(folder.id); }}
+                            onClick={() => { setFilesView('all'); setCurrentFolderId(folder.id); }}
                             className={cn(
                             "text-xs font-bold whitespace-nowrap truncate max-w-[150px] transition-colors",
                             idx === currentFolderPath.length - 1 ? "text-slate-900" : "text-slate-400 hover:text-slate-900"
@@ -523,7 +642,7 @@ export default function FilesClient() {
                     <div className="relative group/search hidden md:block w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                         <Input 
-                        placeholder="Search your files..." 
+                        placeholder="Search files..." 
                         className="h-9 pl-9 rounded-xl bg-slate-50 border-none shadow-inner text-xs font-semibold"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -550,7 +669,7 @@ export default function FilesClient() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                         <Button className="h-9 px-4 rounded-xl font-bold text-xs gap-2 shadow-lg shadow-primary/10">
-                            <Plus className="h-3.5 w-3.5" /> Add File
+                            <Plus className="h-3.5 w-3.5" /> Add
                         </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1 border-slate-100 shadow-2xl">
@@ -560,7 +679,7 @@ export default function FilesClient() {
                         <DropdownMenuSeparator className="bg-slate-50" />
                         <DropdownMenuItem className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                             <Upload className="h-4 w-4 text-primary" /> 
-                            Upload Asset
+                            Upload
                         </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -580,8 +699,8 @@ export default function FilesClient() {
                     <div className="p-10 rounded-[3rem] bg-slate-50 mb-6 border border-slate-100 shadow-inner">
                       <HardDrive className="h-12 w-12 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 leading-none">Your team hub is empty</h3>
-                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Drop a file or create a folder to start organizing together.</p>
+                    <h3 className="text-xl font-bold text-slate-900 leading-none">No files yet</h3>
+                    <p className="text-xs font-semibold text-slate-400 mt-4 max-w-[220px] leading-relaxed">Drop a file or create a folder.</p>
                   </div>
                 ) : (
                   <div className={cn(
@@ -593,12 +712,12 @@ export default function FilesClient() {
                         key={folder.id} 
                         folder={folder} 
                         viewMode={viewMode}
-                        onOpen={() => { setActiveTab('all'); setCurrentFolderId(folder.id); }}
+                        onOpen={() => { setFilesView('all'); setCurrentFolderId(folder.id); }}
                         onFavorite={() => toggleFavorite(folder, 'cloud_folders')}
                         onDelete={() => moveToTrash(folder, 'cloud_folders')}
                         onRestore={() => restoreFromTrash(folder, 'cloud_folders')}
                         onPermanentDelete={() => permanentDelete(folder, 'cloud_folders')}
-                        isTrashView={activeTab === 'trash'}
+                        isTrashView={filesView === 'trash'}
                       />
                     ))}
 
@@ -614,7 +733,7 @@ export default function FilesClient() {
                         onPermanentDelete={() => permanentDelete(file, 'cloud_files')}
                         onPreview={() => setPreviewFile(file)}
                         formatSize={formatSize}
-                        isTrashView={activeTab === 'trash'}
+                        isTrashView={filesView === 'trash'}
                       />
                     ))}
                   </div>
@@ -622,6 +741,7 @@ export default function FilesClient() {
               </div>
             </ScrollArea>
           </main>
+      </div>
       </div>
 
       {isUploading && (
@@ -632,8 +752,8 @@ export default function FilesClient() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading Asset</p>
-                        <p className="text-[8px] font-semibold text-slate-400 mt-1">Syncing to team cloud space...</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">Uploading</p>
+                        <p className="text-[8px] font-semibold text-slate-400 mt-1 truncate max-w-[180px]">{uploadLabel}</p>
                     </div>
                 </div>
                 <span className="text-xs font-bold tabular-nums">{uploadProgress.toFixed(0)}%</span>
@@ -649,17 +769,15 @@ export default function FilesClient() {
                     <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New Folder</DialogTitle>
-                    <DialogDescription className="text-slate-400 font-semibold text-xs mt-1">
-                        Create a shared space for your team's assets.
-                    </DialogDescription>
+                    <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New folder</DialogTitle>
+                    <DialogDescription className="sr-only">Create a folder</DialogDescription>
                 </div>
             </DialogHeader>
             <div className="py-6">
-                <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder Name</Label>
+                <Label className="text-[10px] font-bold text-slate-400 ml-1">Folder name</Label>
                 <Input 
                     autoFocus
-                    placeholder="e.g. Project Assets" 
+                    placeholder="Folder name" 
                     className="h-12 rounded-xl bg-slate-50 border-slate-100 font-semibold px-4 mt-2 text-sm shadow-inner"
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
@@ -669,7 +787,7 @@ export default function FilesClient() {
             <DialogFooter className="gap-2">
                 <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
                 <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
-                    Confirm Folder
+                    Create
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -687,12 +805,12 @@ export default function FilesClient() {
                         <div className="min-w-0">
                             <DialogTitle className="text-lg font-bold text-white truncate">{previewFile?.name}</DialogTitle>
                             <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                {previewFile && formatSize(previewFile.size)} • Synced by {previewFile?.ownerName}
+                                {previewFile && formatSize(previewFile.size)} • Uploaded by {previewFile?.ownerName}
                             </DialogDescription>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl" onClick={() => window.open(previewFile?.url, '_blank')}>
+                        <Button variant="ghost" size="icon" className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl" onClick={() => { if (previewSrc) window.open(previewSrc, '_blank'); }}>
                             <Download className="h-5 w-5" />
                         </Button>
                         <DialogClose asChild>
@@ -703,51 +821,32 @@ export default function FilesClient() {
                     </div>
                 </div>
 
-                <div className="flex-1 flex items-center justify-center p-8 bg-black/40 relative">
-                    {previewFile?.type.startsWith('image/') ? (
-                        <div className="relative w-full h-full">
-                            <Image 
-                                src={previewFile.url} 
-                                alt={previewFile.name} 
-                                fill 
-                                className="object-contain" 
-                                unoptimized
-                            />
-                        </div>
-                    ) : previewFile?.type.startsWith('video/') ? (
-                        <video 
-                            src={previewFile.url} 
-                            controls 
-                            autoPlay 
-                            className="max-w-full max-h-full rounded-2xl shadow-2xl"
-                        />
-                    ) : previewFile?.type.startsWith('audio/') ? (
-                        <div className="flex flex-col items-center gap-6">
-                            <div className="p-10 rounded-[3rem] bg-white/10 text-primary">
-                                <Music className="h-20 w-20" />
-                            </div>
-                            <audio src={previewFile.url} controls className="w-80" />
-                        </div>
+                <div className="flex-1 flex items-center justify-center p-8 bg-black/40 relative min-h-0">
+                    {previewFile && previewSrc && mediaElement(previewSrc, previewFile.type, previewFile.name) ? (
+                        mediaElement(previewSrc, previewFile.type, previewFile.name)
+                    ) : previewFile && !previewSrc && isRiverBlobUrl(previewFile.url) ? (
+                        <Loader2 className="h-8 w-8 animate-spin text-white/60" />
                     ) : (
                         <div className="text-center space-y-6">
                             <div className="p-10 rounded-[3rem] bg-white/10 text-white/20">
                                 <FileText className="h-24 w-24" />
                             </div>
                             <div className="space-y-4">
-                                <p className="text-white font-bold text-lg">Preview unavailable for this format</p>
+                                <p className="text-white font-bold text-lg">Can't preview this file</p>
+                                {previewSrc ? (
                                 <Button asChild className="rounded-xl h-12 px-10 font-bold">
-                                    <a href={previewFile?.url} download={previewFile?.name}>Download to view locally</a>
+                                    <a href={previewSrc} download={previewFile?.name}>Download</a>
                                 </Button>
+                                ) : null}
                             </div>
                         </div>
                     )}
                 </div>
                 
-                <div className="p-6 bg-black/20 border-t border-white/5 flex items-center justify-between">
-                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Authorized Team Document</p>
+                <div className="p-6 bg-black/20 border-t border-white/5 flex items-center justify-end">
                     <div className="flex items-center gap-3">
-                         <Button variant="outline" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest bg-transparent text-white border-white/10 hover:bg-white hover:text-slate-900" onClick={() => window.open(previewFile?.url, '_blank')}>
-                            <Download className="mr-2 h-3.5 w-3.5" /> Full Resolution
+                         <Button variant="outline" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest bg-transparent text-white border-white/10 hover:bg-white hover:text-slate-900" onClick={() => { if (previewSrc) window.open(previewSrc, '_blank'); }}>
+                            <Download className="mr-2 h-3.5 w-3.5" /> Open
                          </Button>
                     </div>
                 </div>
@@ -756,6 +855,86 @@ export default function FilesClient() {
       </Dialog>
     </div>
   );
+}
+
+function useWorkspaceMediaSrc(file: { url: string; type?: string } | null) {
+  const firestore = useFirestore();
+  const [src, setSrc] = useState(file && !isRiverBlobUrl(file.url) ? file.url : '');
+
+  useEffect(() => {
+    if (!file?.url) {
+      setSrc('');
+      return;
+    }
+    if (!isRiverBlobUrl(file.url)) {
+      setSrc(file.url);
+      return;
+    }
+    if (!firestore) return;
+
+    let cancelled = false;
+    let objectUrl = '';
+    resolveWorkspaceFileSrc(firestore, file).then((resolved) => {
+      if (cancelled) {
+        if (resolved.startsWith('blob:')) URL.revokeObjectURL(resolved);
+        return;
+      }
+      objectUrl = resolved;
+      setSrc(resolved);
+    }).catch(() => {
+      if (!cancelled) setSrc('');
+    });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl.startsWith('blob:')) URL.revokeObjectURL(objectUrl);
+    };
+  }, [firestore, file?.url, file?.type]);
+
+  return src;
+}
+
+function mediaElement(src: string, type: string, name: string) {
+  const isLocal = src.startsWith('data:') || src.startsWith('blob:');
+  if (type.startsWith('image/')) {
+    if (isLocal) {
+      return <img src={src} alt={name} className="max-h-full max-w-full object-contain" />;
+    }
+    return (
+      <div className="relative w-full h-full">
+        <Image src={src} alt={name} fill className="object-contain" unoptimized />
+      </div>
+    );
+  }
+  if (type.startsWith('video/')) {
+    return <video src={src} controls autoPlay playsInline className="max-w-full max-h-full rounded-2xl shadow-2xl" />;
+  }
+  if (type.startsWith('audio/')) {
+    return (
+      <div className="flex flex-col items-center gap-6">
+        <div className="p-10 rounded-[3rem] bg-white/10 text-primary">
+          <Music className="h-20 w-20" />
+        </div>
+        <audio src={src} controls className="w-80" />
+      </div>
+    );
+  }
+  if (type === 'application/pdf' || type.includes('pdf') || /\.pdf$/i.test(name)) {
+    return <iframe title={name} src={src} className="w-full h-full rounded-2xl bg-white" />;
+  }
+  if (!isLocal && (type.includes('officedocument') || type.includes('msword') || /\.(docx?|xlsx?|pptx?)$/i.test(name))) {
+    return (
+      <iframe
+        title={name}
+        src={`https://docs.google.com/gview?url=${encodeURIComponent(src)}&embedded=true`}
+        className="w-full h-full rounded-2xl bg-white"
+      />
+    );
+  }
+  if (type.startsWith('text/') || /\.(txt|csv|md)$/i.test(name)) {
+    return <iframe title={name} src={src} className="w-full h-full rounded-2xl bg-white" />;
+  }
+  return null;
 }
 
 function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore, onPermanentDelete, isTrashView }: any) {
@@ -850,8 +1029,34 @@ function FolderItem({ folder, viewMode, onOpen, onFavorite, onDelete, onRestore,
     );
 }
 
+function FileThumb({ file, icon }: { file: CloudFile; icon: React.ReactNode }) {
+    const src = useWorkspaceMediaSrc(file);
+    if (src && isImageType(file.type)) {
+        return (
+            <img
+                src={src}
+                alt={file.name}
+                className="h-full w-full object-cover"
+            />
+        );
+    }
+    if (src && isVideoType(file.type)) {
+        return (
+            <video
+                src={src}
+                muted
+                playsInline
+                preload="metadata"
+                className="h-full w-full object-cover"
+            />
+        );
+    }
+    return <>{icon}</>;
+}
+
 function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPermanentDelete, onPreview, formatSize, isTrashView }: any) {
     const initials = file.ownerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '?';
+    const downloadSrc = useWorkspaceMediaSrc(file);
 
     const Actions = () => (
         <DropdownMenu>
@@ -864,13 +1069,13 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                 {!isTrashView ? (
                     <>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
-                            <Maximize2 className="h-3.5 w-3.5 text-slate-400" /> Open Preview
+                            <Maximize2 className="h-3.5 w-3.5 text-slate-400" /> Preview
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             {file.isFavorite ? <StarOff className="h-3.5 w-3.5 text-amber-500" /> : <Star className="h-3.5 w-3.5 text-amber-500" />}
                             {file.isFavorite ? 'Remove from Starred' : 'Add to Starred'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(file.url, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (downloadSrc) window.open(downloadSrc, '_blank'); }} className="rounded-xl py-2.5 gap-3 font-semibold text-xs cursor-pointer">
                             <Download className="h-3.5 w-3.5 text-slate-400" /> Download
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-50" />
@@ -897,15 +1102,15 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
         return (
             <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 hover:border-primary/20 hover:shadow-xl transition-all group animate-in fade-in duration-500">
                 <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={onPreview}>
-                    <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner border border-slate-100 group-hover:bg-primary/5 transition-all">
-                        {icon}
+                    <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner border border-slate-100 group-hover:bg-primary/5 transition-all overflow-hidden">
+                        <FileThumb file={file} icon={icon} />
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-900 truncate max-w-[300px]">{file.name}</span>
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-semibold text-slate-400">{formatSize(file.size)}</span>
                             <div className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[10px] font-semibold text-primary">Synced by {file.ownerName}</span>
+                            <span className="text-[10px] font-semibold text-primary">Uploaded by {file.ownerName}</span>
                         </div>
                     </div>
                 </div>
@@ -924,9 +1129,9 @@ function FileItem({ file, viewMode, icon, onFavorite, onDelete, onRestore, onPer
                 </div>
                 <div className="flex flex-col gap-6">
                     <div className="flex flex-col items-center text-center gap-3">
-                        <div className="h-16 w-16 rounded-[1.5rem] bg-white flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-500 shadow-sm border border-slate-100 relative">
-                            {icon}
-                            {file.type.startsWith('video/') && (
+                        <div className="h-16 w-16 rounded-[1.5rem] bg-white flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-500 shadow-sm border border-slate-100 relative overflow-hidden">
+                            <FileThumb file={file} icon={icon} />
+                            {isVideoType(file.type) && (
                                 <PlayCircle className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             )}
                         </div>

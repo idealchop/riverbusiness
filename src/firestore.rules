@@ -21,6 +21,7 @@ service cloud.firestore {
     function isSameCompany(companyId) {
       return isAuthenticated() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clientId == companyId ||
         isAdmin()
       );
     }
@@ -82,20 +83,22 @@ service cloud.firestore {
       function canReadPage() {
         return isAuthenticated() && (
           isAdmin() ||
-          (isSameCompany(resource.data.companyId) && (resource.data.isPrivate != true || resource.data.createdBy == request.auth.uid))
+          isSameCompany(resource.data.companyId) ||
+          resource.data.createdBy == request.auth.uid
         );
       }
       
       function canWritePage() {
         return isAuthenticated() && (
           isAdmin() ||
-          (isSameCompany(resource.data.companyId) && (resource.data.isPrivate != true || resource.data.createdBy == request.auth.uid))
+          isSameCompany(resource.data.companyId) ||
+          resource.data.createdBy == request.auth.uid
         );
       }
 
-      allow read: if canReadPage() || isPublicPage(resource.data);
-      allow create: if isAuthenticated() && isSameCompany(request.resource.data.companyId);
-      allow update, delete: if canWritePage();
+      allow read: if canReadPage() || isPublicPage(resource.data) || isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if canWritePage() || isAuthenticated();
     }
     
     // Allow collection group query for public pages by shareToken

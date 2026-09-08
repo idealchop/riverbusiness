@@ -13,21 +13,22 @@ initializeApp();
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, ManualReceiptRequest, HRLeaveRequest } from './types';
-import { 
+import {
     sendEmail, 
     getDeliveryStatusTemplate, 
     getPaymentStatusTemplate, 
     getTopUpConfirmationTemplate,
     getRefillRequestTemplate,
     getWelcomeUnclaimedTemplate,
-    getSanitationScheduledTemplate,
-    getSanitationReportTemplate,
     getPaymentReminderTemplate,
     getEmployeeInvitationTemplate,
     getEmployeePayslipTemplate,
     getLeaveStatusTemplate,
     getStationRefillNoticeTemplate
 } from './email';
+import { syncUserWorkspaceClaim } from './workspace-files';
+
+export { createWorkspaceFileUpload, finalizeWorkspaceFileUpload } from './workspace-files';
 
 // Export all billing functions
 export * from './billing';
@@ -444,7 +445,6 @@ export async function generatePayslipPDF(companyName: string, companyAddress: st
         doc.on('error', (err) => reject(err));
 
         const margin = 40;
-        const pageWidth = 612;
 
         // Header
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 120).fill();
@@ -558,6 +558,12 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
         } catch (error) {
             logger.error(`Failed to sync email to Auth for user ${userId}`, error);
         }
+    }
+
+    const beforeWorkspace = String(before.companyId || before.clientId || '');
+    const afterWorkspace = String(after.companyId || after.clientId || '');
+    if (afterWorkspace && afterWorkspace !== beforeWorkspace) {
+        await syncUserWorkspaceClaim(userId, after);
     }
 });
 
@@ -946,11 +952,11 @@ export const onleavestatusupdate = onDocumentUpdated({
 
     logger.info(`Leave Request ${event.params.requestId} resolved to ${after.status}. Notifying employee.`);
 
-    const period = `${after.startDate} - ${after.endDate}`;
-    const template = getLeaveStatusTemplate(after.employeeName, after.type, period, after.status);
+    const period = `${after.startDate || ''} - ${after.endDate || ''}`;
+    const template = getLeaveStatusTemplate(after.employeeName || '', after.type || '', period, after.status || '');
     
     const db = getFirestore();
-    const employeeDoc = await db.collection('users').doc(after.employeeId).get();
+    const employeeDoc = await db.collection('users').doc(after.employeeId || '').get();
     const employeeData = employeeDoc.data();
 
     if (employeeData?.email) {

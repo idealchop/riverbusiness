@@ -39,15 +39,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedemployeecreate = exports.onunclaimedprofilecreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = exports.onuserupdate = void 0;
+exports.onfileupload = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.onleavestatusupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedemployeecreate = exports.onunclaimedprofilecreate = exports.onpaysliprequestcreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = exports.onuserupdate = exports.notifyStationsOfUpcomingRefills = exports.finalizeWorkspaceFileUpload = exports.createWorkspaceFileUpload = void 0;
 exports.generateDeliveryReceiptPDF = generateDeliveryReceiptPDF;
 exports.generateSOAPDF = generateSOAPDF;
 exports.generateInvoiceReceiptPDF = generateInvoiceReceiptPDF;
+exports.generatePayslipPDF = generatePayslipPDF;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
 const auth_1 = require("firebase-admin/auth");
 const logger = __importStar(require("firebase-functions/logger"));
+const functions = __importStar(require("firebase-functions"));
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const date_fns_1 = require("date-fns");
 // Initialize Firebase Admin SDK first
@@ -55,6 +57,10 @@ const date_fns_1 = require("date-fns");
 const storage_2 = require("firebase-functions/v2/storage");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const email_1 = require("./email");
+const workspace_files_1 = require("./workspace-files");
+var workspace_files_2 = require("./workspace-files");
+Object.defineProperty(exports, "createWorkspaceFileUpload", { enumerable: true, get: function () { return workspace_files_2.createWorkspaceFileUpload; } });
+Object.defineProperty(exports, "finalizeWorkspaceFileUpload", { enumerable: true, get: function () { return workspace_files_2.finalizeWorkspaceFileUpload; } });
 // Export all billing functions
 __exportStar(require("./billing"), exports);
 const BRAND_PRIMARY = '#538ec2';
@@ -399,7 +405,87 @@ async function generateInvoiceReceiptPDF(user, invoice, customAmount, totalConta
         doc.end();
     });
 }
+/**
+ * Generates an Individual Employee Payslip PDF.
+ */
+async function generatePayslipPDF(companyName, companyAddress, signatory, item) {
+    return new Promise((resolve, reject) => {
+        const doc = new pdfkit_1.default({ margin: 40 });
+        const chunks = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (err) => reject(err));
+        const margin = 40;
+        // Header
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 120).fill();
+        doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text(companyName, margin, 45);
+        doc.fontSize(9).font('Helvetica').text(companyAddress, margin, 75);
+        doc.text(`Authorized signatory: ${signatory}`, margin, 87);
+        doc.fillColor('#000000').moveDown(6);
+        doc.fontSize(16).font('Helvetica-Bold').text('Employee Payslip Certificate', margin);
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica').text(`Statement Period: ${(0, date_fns_1.format)(new Date(item.periodStart), 'MMM d')} - ${(0, date_fns_1.format)(new Date(item.periodEnd), 'MMM d, yyyy')}`);
+        doc.text(`Employee: ${item.employeeName}`);
+        doc.text(`Reference: ${item.runId}`);
+        // Table
+        doc.moveDown(2);
+        const tableTop = doc.y;
+        doc.rect(margin, tableTop, 530, 20).fill(BRAND_PRIMARY);
+        doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+        doc.text('Component', margin + 5, tableTop + 6);
+        doc.text('Basis', margin + 200, tableTop + 6);
+        doc.text('Amount', margin + 400, tableTop + 6, { align: 'right', width: 120 });
+        doc.y = tableTop + 25;
+        doc.fillColor('#000000').font('Helvetica').fontSize(10);
+        doc.text('Basic Salary', margin + 5, doc.y);
+        doc.text(item.type === 'daily' ? `${item.daysWorked} days @ P${item.rate}` : 'Monthly Fixed', margin + 200, doc.y);
+        doc.text(`P ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 400, doc.y, { align: 'right', width: 120 });
+        doc.moveDown(4);
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This is an individual disbursement record authorized by the company administrator. Authorized for bank confirmation.', margin, doc.y + 40, { align: 'center', width: 530 });
+        doc.end();
+    });
+}
 // --- TRIGGERS ---
+/**
+ * Scheduled function to notify water stations of upcoming auto-refills tomorrow.
+ * Runs daily at 9:00 AM.
+ */
+exports.notifyStationsOfUpcomingRefills = functions.runWith({
+    secrets: ["BREVO_API_KEY"]
+}).pubsub.schedule('0 9 * * *').onRun(async (context) => {
+    const db = (0, firestore_1.getFirestore)();
+    const now = new Date();
+    const tomorrow = (0, date_fns_1.addDays)(now, 1);
+    const tomorrowDayName = (0, date_fns_1.format)(tomorrow, 'EEEE'); // e.g., "Monday"
+    logger.info(`Daily Logistics Pulse: Checking for auto-refills scheduled for tomorrow (${tomorrowDayName})`);
+    const usersSnap = await db.collection('users')
+        .where('customPlanDetails.autoRefillEnabled', '==', true)
+        .where('customPlanDetails.deliveryDay', '==', tomorrowDayName)
+        .get();
+    if (usersSnap.empty) {
+        logger.info("No auto-refills found for tomorrow.");
+        return null;
+    }
+    const promises = usersSnap.docs.map(async (userDoc) => {
+        const user = userDoc.data();
+        if (!user.assignedWaterStationId)
+            return;
+        const stationDoc = await db.collection('waterStations').doc(user.assignedWaterStationId).get();
+        const station = stationDoc.data();
+        if (station === null || station === void 0 ? void 0 : station.email) {
+            const template = (0, email_1.getStationRefillNoticeTemplate)(station.name, user.businessName, user.address || 'N/A', tomorrowDayName, user.customPlanDetails.deliveryTime || 'TBD');
+            return (0, email_1.sendEmail)({
+                to: station.email,
+                subject: template.subject,
+                text: `Scheduled refill dispatch authorized for ${user.businessName} tomorrow.`,
+                html: template.html
+            });
+        }
+        return null;
+    });
+    await Promise.all(promises);
+    return null;
+});
 /**
  * Frictionless Email Update Sync.
  * Triggered when a user updates their email in Firestore.
@@ -421,6 +507,11 @@ exports.onuserupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}", asyn
         catch (error) {
             logger.error(`Failed to sync email to Auth for user ${userId}`, error);
         }
+    }
+    const beforeWorkspace = String(before.companyId || before.clientId || '');
+    const afterWorkspace = String(after.companyId || after.clientId || '');
+    if (afterWorkspace && afterWorkspace !== beforeWorkspace) {
+        await (0, workspace_files_1.syncUserWorkspaceClaim)(userId, after);
     }
 });
 exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
@@ -583,6 +674,58 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
     }
 });
+exports.onpaysliprequestcreate = (0, firestore_2.onDocumentCreated)({
+    document: "hr_companies/{companyId}/payslipRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const { companyId, requestId } = event.params;
+    const requestData = event.data.data();
+    const db = (0, firestore_1.getFirestore)();
+    logger.info(`Processing payslip request ${requestId} for company ${companyId}`);
+    // Fetch company info (from owner user)
+    const ownerSnap = await db.collection('users').where('companyId', '==', companyId).where('hrRole', '==', 'owner').limit(1).get();
+    if (ownerSnap.empty) {
+        logger.error(`Owner for company ${companyId} not found`);
+        return;
+    }
+    const ownerData = ownerSnap.docs[0].data();
+    const companyName = ownerData.businessName || 'River Philippines';
+    const companyAddress = ownerData.address || 'Authorized Entity';
+    // Fetch employee info
+    const employeeDoc = await db.collection('users').doc(requestData.employeeId).get();
+    if (!employeeDoc.exists) {
+        logger.error(`Employee ${requestData.employeeId} not found`);
+        return;
+    }
+    const employeeData = employeeDoc.data();
+    const recipientEmail = employeeData === null || employeeData === void 0 ? void 0 : employeeData.email;
+    if (!recipientEmail) {
+        logger.error(`Recipient email missing for employee ${requestData.employeeId}`);
+        return;
+    }
+    const period = `${(0, date_fns_1.format)(new Date(requestData.periodStart), 'MMM d')} - ${(0, date_fns_1.format)(new Date(requestData.periodEnd), 'MMM d, yyyy')}`;
+    try {
+        const pdfBuffer = await generatePayslipPDF(companyName, companyAddress, requestData.adminName, requestData);
+        const template = (0, email_1.getEmployeePayslipTemplate)(requestData.employeeName, companyName, period, requestData.amount);
+        await (0, email_1.sendEmail)({
+            to: recipientEmail,
+            subject: template.subject,
+            text: `Your payslip for ${period} is ready.`,
+            html: template.html,
+            attachments: [{
+                    filename: `Payslip_${requestData.employeeName.replace(/\s/g, '_')}_${requestData.runId}.pdf`,
+                    content: pdfBuffer
+                }]
+        });
+        await event.data.ref.update({ status: 'completed', dispatchedAt: firestore_1.FieldValue.serverTimestamp() });
+        logger.info(`Payslip dispatched to ${recipientEmail}`);
+    }
+    catch (error) {
+        logger.error(`Failed to process payslip request ${requestId}`, error);
+    }
+});
 exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
     document: "unclaimedProfiles/{clientId}",
     secrets: ["BREVO_API_KEY"]
@@ -712,6 +855,37 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
         });
     }
 });
+exports.onleavestatusupdate = (0, firestore_2.onDocumentUpdated)({
+    document: "hr_companies/{companyId}/leaveRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    if (before.status === after.status || after.status === 'pending')
+        return;
+    logger.info(`Leave Request ${event.params.requestId} resolved to ${after.status}. Notifying employee.`);
+    const period = `${after.startDate || ''} - ${after.endDate || ''}`;
+    const template = (0, email_1.getLeaveStatusTemplate)(after.employeeName || '', after.type || '', period, after.status || '');
+    const db = (0, firestore_1.getFirestore)();
+    const employeeDoc = await db.collection('users').doc(after.employeeId || '').get();
+    const employeeData = employeeDoc.data();
+    if (employeeData === null || employeeData === void 0 ? void 0 : employeeData.email) {
+        try {
+            await (0, email_1.sendEmail)({
+                to: employeeData.email,
+                subject: template.subject,
+                text: `Your leave request for ${period} has been ${after.status}.`,
+                html: template.html
+            });
+            logger.info(`Leave notification dispatched to ${employeeData.email}`);
+        }
+        catch (error) {
+            logger.error(`Failed to send leave status email`, error);
+        }
+    }
+});
 exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
     document: "users/{userId}/payments/{paymentId}",
     secrets: ["BREVO_API_KEY"]
@@ -820,81 +994,6 @@ exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
         });
     }
 });
-exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
-    document: "users/{userId}/sanitationVisits/{visitId}",
-    secrets: ["BREVO_API_KEY"]
-}, async (event) => {
-    if (!event.data)
-        return;
-    const userId = event.params.userId;
-    const visit = event.data.data();
-    const db = (0, firestore_1.getFirestore)();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-    const targetEmails = getRecipients(userData);
-    if (targetEmails.length > 0 && visit.status === 'Scheduled') {
-        const dateStr = (0, date_fns_1.format)(toSafeDate(visit.scheduledDate), 'PPP');
-        const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
-        const bccList = getBCCList();
-        await (0, email_1.sendEmail)({
-            to: targetEmails.join(','),
-            bcc: bccList,
-            subject: template.subject,
-            text: `Visit scheduled`,
-            html: template.html
-        });
-    }
-});
-exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
-    document: "users/{userId}/sanitationVisits/{visitId}",
-    secrets: ["BREVO_API_KEY"]
-}, async (event) => {
-    if (!event.data)
-        return;
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-    const userId = event.params.userId;
-    const visitId = event.params.visitId;
-    if (before.status !== 'Completed' && after.status === 'Completed') {
-        const db = (0, firestore_1.getFirestore)();
-        const userDoc = await db.collection('users').doc(userId).get();
-        const userData = userDoc.data();
-        const dateStr = (0, date_fns_1.format)(toSafeDate(after.scheduledDate), 'PPP');
-        const passRate = getSanitationPassRate(after);
-        // 1. Create In-App Notification for Client
-        await createNotification(userId, {
-            type: 'sanitation',
-            title: 'Sanitation Visit Completed',
-            description: `Your sanitation report for ${dateStr} is complete. Score: ${passRate}.`,
-            data: { visitId: visitId }
-        });
-        // 2. Create In-App Notification for Admin
-        const adminEmail = 'admin@riverph.com';
-        const adminsSnap = await db.collection('users').where('email', '==', adminEmail).limit(1).get();
-        if (!adminsSnap.empty) {
-            const adminId = adminsSnap.docs[0].id;
-            await createNotification(adminId, {
-                type: 'sanitation',
-                title: `Visit for ${userData === null || userData === void 0 ? void 0 : userData.businessName}: Completed`,
-                description: `The sanitation visit on ${dateStr} was completed with a score of ${passRate}.`,
-                data: { userId: userId, visitId: visitId }
-            });
-        }
-        // 3. Send Email Notification broadcast
-        const targetEmails = getRecipients(userData);
-        if (targetEmails.length > 0) {
-            const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr, passRate);
-            const bccList = getBCCList();
-            await (0, email_1.sendEmail)({
-                to: targetEmails.join(','),
-                bcc: bccList,
-                subject: template.subject,
-                text: `Report ready. Score: ${passRate}`,
-                html: template.html
-            });
-        }
-    }
-});
 exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, async (event) => {
     var _a;
     const filePath = event.data.name;
@@ -908,6 +1007,10 @@ exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, as
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
         const userId = filePath.split("/")[1];
         await db.collection("users").doc(userId).update({ photoURL: url });
+    }
+    else if (filePath.startsWith("users/") && filePath.includes("/support_profile/")) {
+        const userId = filePath.split("/")[1];
+        await db.collection("users").doc(userId).update({ supportPhotoURL: url });
     }
     else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const customMetadata = event.data.metadata;

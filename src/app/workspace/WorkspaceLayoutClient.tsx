@@ -4,12 +4,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, addDoc, serverTimestamp, updateDoc, or, and, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, serverTimestamp, updateDoc, or, and, getDoc, deleteDoc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CollabPage, AppUser, SecurityRuleContext, CollabPageType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -22,6 +22,7 @@ import { useMounted } from '@/hooks/use-mounted';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { getWorkspaceCompanyId, getHomePath } from '@/lib/workspace-access';
 import { LogoBlack } from '@/components/icons';
 
 export default function WorkspaceLayoutClient({ children }: { children: React.ReactNode }) {
@@ -43,7 +44,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
 
-  const companyId = user?.companyId || null;
+  const companyId = getWorkspaceCompanyId(user);
 
   const pagesQuery = useMemoFirebase(
     () => (firestore && companyId && authUser) ? query(
@@ -298,15 +299,28 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
   );
 
   if (!isMounted || isUserLoading || !authUser || isLoggingOut) {
-    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Initializing workspace"} />;
+    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Loading..."} />;
   }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
+      <div className="print:hidden relative h-full shrink-0">
       {!isMobile && sidebarContent}
+      {!isMobile && (
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+          className="absolute top-1/2 z-40 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-slate-900"
+          style={{ left: isSidebarOpen ? 'calc(18rem - 16px)' : '8px' }}
+        >
+          {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+      )}
+      </div>
 
       <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <header className="h-14 border-b flex items-center justify-between px-4 sm:px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+        <header className="h-14 border-b flex items-center justify-between px-4 sm:px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20 print:hidden">
           <div className="flex items-center gap-2 sm:gap-4">
              {isMobile ? (
                 <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
@@ -322,14 +336,8 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
                         {sidebarContent}
                     </SheetContent>
                 </Sheet>
-             ) : (
-                !isSidebarOpen && (
-                    <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="h-8 w-8 rounded-lg">
-                        <Menu className="h-5 w-5" />
-                    </Button>
-                )
-             )}
-             <Link href="/dashboard" className={cn("items-center gap-2 font-bold text-sm hidden", isMobile ? "flex" : "hidden")}>
+             ) : null}
+             <Link href={getHomePath(user)} className={cn("items-center gap-2 font-bold text-sm hidden", isMobile ? "flex" : "hidden")}>
                 <LogoBlack className="h-7 w-7" />
              </Link>
           </div>
@@ -349,7 +357,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto relative">
+        <main className="flex-1 min-h-0 overflow-auto relative">
           {children}
         </main>
       </div>

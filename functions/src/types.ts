@@ -104,6 +104,15 @@ export interface ComplianceReport {
   results?: string;
 }
 
+export interface HRLeaveRequest {
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  employeeName?: string;
+  employeeId?: string;
+  type?: string;
+}
+
 export interface ManualReceiptRequest {
     id: string;
     userId: string;

@@ -20,10 +20,10 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { LiveSupportDialog } from '@/components/dashboard/layout/LiveSupportDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { MobileNav } from '@/components/dashboard/layout/MobileNav';
-import { PaymentDialog } from '@/components/dashboard/dialogs/PaymentDialog';
 import { LogoBlack } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
+import { getHomePath, isIndividualWorkspace, isInvitedEmployee } from '@/lib/workspace-access';
 
 export default function DashboardLayoutClient({
   children,
@@ -61,11 +61,10 @@ export default function DashboardLayoutClient({
     return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
   }, [user]);
 
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
-  const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
   const [isLiveSupportOpen, setIsLiveSupportOpen] = React.useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [initialAccountDialogTab, setInitialAccountDialogTab] = React.useState<string | undefined>(undefined);
+  const [startPaymentInvoice, setStartPaymentInvoice] = React.useState<Payment | null>(null);
   
   useEffect(() => {
     const handleOpenMyAccount = (event: Event) => {
@@ -74,6 +73,9 @@ export default function DashboardLayoutClient({
             setInitialAccountDialogTab(customEvent.detail.tab);
         } else {
             setInitialAccountDialogTab(undefined);
+        }
+        if (customEvent.detail?.invoice) {
+            setStartPaymentInvoice(customEvent.detail.invoice);
         }
         setIsAccountDialogOpen(true);
     };
@@ -115,6 +117,11 @@ export default function DashboardLayoutClient({
   
     if (user === null && !isUserDocLoading && authUser) {
       router.push('/claim-account');
+      return;
+    }
+
+    if (user && (isInvitedEmployee(user) || isIndividualWorkspace(user))) {
+      router.replace(getHomePath(user));
     }
   }, [authUser, user, isUserLoading, isUserDocLoading, router, isLoggingOut]);
 
@@ -172,8 +179,8 @@ export default function DashboardLayoutClient({
   };
     
   const handlePayNow = (invoice: Payment) => {
-      setSelectedInvoice(invoice);
-      setIsPaymentDialogOpen(true);
+      setStartPaymentInvoice(invoice);
+      setIsAccountDialogOpen(true);
   };
 
   const handleMobileRefillClick = () => {
@@ -212,6 +219,10 @@ export default function DashboardLayoutClient({
 
   if (isUserLoading || isUserDocLoading || !isMounted || !auth || isLoggingOut || !authUser || !user) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
+  }
+
+  if (isInvitedEmployee(user) || isIndividualWorkspace(user)) {
+    return <FullScreenLoader text="Opening your workspace..." />;
   }
 
   const userFirstName = user?.name?.split(' ')[0] || 'friend';
@@ -272,10 +283,13 @@ export default function DashboardLayoutClient({
                 paymentHistory={paymentHistoryFromDb || []}
                 paymentsLoading={paymentsLoading}
                 onLogout={handleLogout}
-                onPayNow={handlePayNow}
                 isOpen={isAccountDialogOpen}
-                onOpenChange={setIsAccountDialogOpen}
+                onOpenChange={(open) => {
+                  setIsAccountDialogOpen(open);
+                  if (!open) setStartPaymentInvoice(null);
+                }}
                 initialTab={initialAccountDialogTab}
+                startPaymentInvoice={startPaymentInvoice}
               />
             </div>
           </header>
@@ -299,12 +313,6 @@ export default function DashboardLayoutClient({
                   River Philippines
               </a>
           </footer>
-
-          <PaymentDialog
-            isOpen={isPaymentDialogOpen}
-            onOpenChange={setIsPaymentDialogOpen}
-            selectedInvoice={selectedInvoice}
-          />
       </div>
   );
 }

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "collaboration_pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "shareToken", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

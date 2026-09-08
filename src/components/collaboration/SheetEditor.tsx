@@ -380,7 +380,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                                     <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white">
                                         <div className="p-3 space-y-3">
                                             <div className="space-y-1">
-                                                <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Column Label</Label>
+                                                <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Name</Label>
                                                 <Input 
                                                     value={field.name} 
                                                     onChange={(e) => handleUpdateField(field.id, { name: e.target.value })}
@@ -388,7 +388,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Data Classification</Label>
+                                                <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Type</Label>
                                                 <Select value={field.type} onValueChange={(val: any) => handleUpdateField(field.id, { type: val })}>
                                                     <SelectTrigger className="h-8 rounded-lg bg-slate-50 border-none font-bold text-xs shadow-none">
                                                         <SelectValue />
@@ -480,7 +480,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
         <Dialog open={!!detailRecordId} onOpenChange={(open) => !open && setDetailRecordId(null)}>
             <DialogContent className="max-w-[95vw] sm:max-w-6xl p-0 overflow-hidden border-none shadow-3xl bg-white rounded-none sm:rounded-[1.25rem] h-[90vh] flex flex-col">
                 <DialogHeader className="sr-only">
-                    <DialogTitle>Object Identity: {detailRecord?.id}</DialogTitle>
+                    <DialogTitle>Row {detailRecord?.id}</DialogTitle>
                     <DialogDescription>Field audit and organizational conversation panel.</DialogDescription>
                 </DialogHeader>
                 
@@ -488,7 +488,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                     {/* Left: Data Grid */}
                     <div className="flex-1 flex flex-col bg-white overflow-hidden border-r">
                         <div className="p-8 border-b bg-slate-50/30">
-                            <Badge variant="outline" className="bg-white border-slate-200 text-slate-400 font-black uppercase text-[9px] tracking-widest h-6 px-3 shadow-none mb-4">Object Identity</Badge>
+                            <Badge variant="outline" className="bg-white border-slate-200 text-slate-400 font-black uppercase text-[9px] tracking-widest h-6 px-3 shadow-none mb-4">Details</Badge>
                             <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight truncate">
                                 {detailRecord?.values[fields[0].id] || 'Untitled Item'}
                             </h2>
@@ -531,7 +531,7 @@ export function SheetEditor({ initialData, onContentChange, editable = true, com
                         <div className="p-6 border-b bg-white flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-xl bg-primary/10 text-primary"><MessageSquare className="h-4 w-4" /></div>
-                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Audit Discussion</h3>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Comments</h3>
                             </div>
                             <DialogClose asChild><Button variant="ghost" size="icon" className="h-8 w-8 rounded-full"><X className="h-4 w-4 text-slate-400" /></Button></DialogClose>
                         </div>

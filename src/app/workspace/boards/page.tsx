@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import {
     Sparkles,
     Folder,
     Home,
+    ArrowLeft,
     ChevronRight
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +31,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
+import { getWorkspaceCompanyId } from '@/lib/workspace-access';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -54,18 +57,20 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
-export default function BoardsHubPage() {
+function BoardsHubContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
-  const companyId = user?.companyId || null;
+  const companyId = getWorkspaceCompanyId(user);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState<string>('me');
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const currentFolderId = searchParams.get('folder');
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
@@ -96,6 +101,20 @@ export default function BoardsHubPage() {
     }
     return path;
   }, [currentFolderId, allPages]);
+
+  const goToFolder = (id: string | null) => {
+    if (id) router.push(`/workspace/boards?folder=${encodeURIComponent(id)}`);
+    else router.push('/workspace/boards');
+  };
+
+  const goBack = () => {
+    if (!currentFolderId) {
+      router.push('/workspace');
+      return;
+    }
+    const parentId = folderPath.length >= 2 ? folderPath[folderPath.length - 2].id : null;
+    goToFolder(parentId);
+  };
 
   const filteredAssets = useMemo(() => {
     if (!allPages || !authUser) return [];
@@ -142,8 +161,8 @@ export default function BoardsHubPage() {
   };
 
   const currentFilterLabel = useMemo(() => {
-    if (selectedMemberId === 'me') return 'My Work';
-    if (selectedMemberId === 'all') return 'Entire Team';
+    if (selectedMemberId === 'me') return 'Mine';
+    if (selectedMemberId === 'all') return 'Everyone';
     return teamMembers?.find(m => m.id === selectedMemberId)?.name || 'Member';
   }, [selectedMemberId, teamMembers]);
 
@@ -153,19 +172,25 @@ export default function BoardsHubPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        <button onClick={() => setCurrentFolderId(null)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400">
+                        <button onClick={() => goToFolder(null)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400" title="Canvas home">
                             <Home className="h-4 w-4" />
                         </button>
                         <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Library</span>
+                        <button onClick={() => goToFolder(null)} className={cn("text-[10px] font-bold uppercase tracking-widest leading-none", folderPath.length === 0 ? "text-slate-900" : "text-slate-400 hover:text-slate-900")}>Canvas</button>
                         {folderPath.map((folder, idx) => (
                             <React.Fragment key={folder.id}>
                                 <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                                <button onClick={() => setCurrentFolderId(folder.id)} className={cn("text-[10px] font-bold uppercase tracking-widest whitespace-nowrap truncate max-w-[120px]", idx === folderPath.length - 1 ? "text-slate-900" : "text-slate-400 hover:text-slate-900")}>{folder.title}</button>
+                                <button onClick={() => goToFolder(folder.id)} className={cn("text-[10px] font-bold uppercase tracking-widest whitespace-nowrap truncate max-w-[120px]", idx === folderPath.length - 1 ? "text-slate-900" : "text-slate-400 hover:text-slate-900")}>{folder.title}</button>
                             </React.Fragment>
                         ))}
+                        <Button variant="ghost" size="sm" onClick={goBack} className="h-8 rounded-xl px-2 gap-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 shrink-0 ml-1">
+                            <ArrowLeft className="h-4 w-4" />
+                            <span className="text-xs font-bold">Back</span>
+                        </Button>
                     </div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Canvases</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                        {currentFolderId ? folderPath[folderPath.length - 1]?.title : 'Canvases'}
+                    </h1>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button variant="outline" onClick={() => setIsNewFolderOpen(true)} className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
@@ -182,7 +207,7 @@ export default function BoardsHubPage() {
                     <div className="relative w-full md:w-96 group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-purple-600" />
                         <Input 
-                            placeholder="Search visual boards..." 
+                            placeholder="Search..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="h-10 pl-10 rounded-xl bg-slate-50 border-none shadow-inner font-medium text-sm"
@@ -197,7 +222,7 @@ export default function BoardsHubPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-64 p-1 rounded-2xl shadow-3xl border-slate-100 bg-white z-50">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Filter Library</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-widest border-b mb-1">Filter</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => setSelectedMemberId('me')} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><UserCircle className="h-4 w-4" /></div>
                                 My Canvases
@@ -244,7 +269,7 @@ export default function BoardsHubPage() {
                         <AssetCard 
                             key={asset.id} 
                             page={asset} 
-                            onNavigate={() => asset.type === 'folder' ? setCurrentFolderId(asset.id) : null}
+                            onNavigate={() => asset.type === 'folder' ? goToFolder(asset.id) : null}
                         />
                     ))}
                     {!isLoading && filteredAssets.length === 0 && (
@@ -253,8 +278,7 @@ export default function BoardsHubPage() {
                                 <Layout className="h-16 w-16 text-slate-200" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-black uppercase tracking-[0.4em] text-slate-900 leading-none">Canvas clear</p>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No assets found matching this filter</p>
+                                <p className="text-sm font-bold text-slate-900 leading-none">No canvases yet</p>
                             </div>
                         </div>
                     )}
@@ -270,17 +294,15 @@ export default function BoardsHubPage() {
                         <FolderPlus className="h-5 w-5" />
                     </div>
                     <div>
-                        <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New Folder</DialogTitle>
-                        <DialogDescription className="text-slate-400 font-semibold text-xs mt-1">
-                            Create a shared container for canvases.
-                        </DialogDescription>
+                        <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New folder</DialogTitle>
+                        <DialogDescription className="sr-only">Create a folder</DialogDescription>
                     </div>
                 </DialogHeader>
                 <div className="py-6">
-                    <Label className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">Folder Name</Label>
+                    <Label className="text-[10px] font-bold text-slate-400 ml-1">Folder name</Label>
                     <Input 
                         autoFocus
-                        placeholder="e.g. UX Flows" 
+                        placeholder="Folder name" 
                         className="h-12 rounded-xl bg-slate-50 border-slate-100 font-semibold px-4 mt-2 text-sm shadow-inner"
                         value={newFolderName}
                         onChange={(e) => setNewFolderName(e.target.value)}
@@ -290,12 +312,20 @@ export default function BoardsHubPage() {
                 <DialogFooter className="gap-2">
                     <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
                     <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
-                        Confirm Folder
+                        Create
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     </div>
+  );
+}
+
+export default function BoardsHubPage() {
+  return (
+    <Suspense fallback={<div className="min-h-full bg-white" />}>
+      <BoardsHubContent />
+    </Suspense>
   );
 }
 

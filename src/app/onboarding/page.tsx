@@ -7,6 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs, writeBatch, serverTimes
 import { FullScreenLoader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
 import type { AppUser } from '@/lib/types';
+import { getHomePath } from '@/lib/workspace-access';
 
 /**
  * Onboarding Orchestrator
@@ -40,11 +41,11 @@ export default function OnboardingPage() {
         
         // Direct users based on their resolved infrastructure role
         if (userData.hrRole === 'employee') {
-          router.push('/hr-dashboard/attendance');
+          router.push(getHomePath(userData));
         } else if (userData.role === 'Admin') {
           router.push('/admin');
         } else {
-          router.push('/dashboard');
+          router.push(getHomePath(userData));
         }
         return;
       }
@@ -76,7 +77,7 @@ export default function OnboardingPage() {
                 createdAt: new Date().toISOString(),
                 role: 'User',
                 hrRole: 'employee',
-                // companyId and hrProfile are inherited from the inviteData
+                workspaceKind: 'company',
               } as AppUser;
               
               batch.set(newUserRef, newUserData);

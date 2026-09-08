@@ -18,6 +18,7 @@ export interface AppUser {
     lastLogin: string;
     role: 'Admin' | 'User';
     hrRole?: 'owner' | 'admin' | 'employee';
+    workspaceKind?: 'company' | 'individual';
     companyId: string; // Mandatory for multi-tenancy
     assignedWaterStationId?: string;
     createdAt: any;
@@ -61,6 +62,7 @@ export interface CloudFile {
     type: string;
     size: number;
     url: string;
+    storagePath?: string;
     folderId: string | null;
     ownerId: string;
     ownerName?: string;
@@ -135,6 +137,12 @@ export interface BoardElement {
     path?: string; // For freehand drawing (Pen tool)
     strokeWidth?: number; // Size for path elements
     iconName?: string; // For icon type
+    slideId?: string;
+}
+
+export interface BoardSlide {
+    id: string;
+    name: string;
 }
 
 export interface BoardConnection {

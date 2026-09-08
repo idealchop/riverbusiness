@@ -7,6 +7,9 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
 import {
+  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle
+} from "@/components/ui/sheet";
+import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
@@ -25,7 +28,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePasswor
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { LandingGlowBackdrop } from '@/components/landing-glow';
 
 // State Management with useReducer
 type State = {
@@ -218,103 +221,111 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
 
   return (
     <AlertDialog>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>My Account</DialogTitle>
-            <DialogDescription>Manage your personal account and public support profile.</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[70vh] w-full">
-            <div className="pr-6 py-4 space-y-6">
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-semibold">Support Profile</h4>
-                        {!state.isEditingDetails && <Button variant="outline" size="sm" onClick={() => dispatch({type: 'SET_EDIT_DETAILS', payload: true})}><Edit className="mr-2 h-4 w-4" />Edit Profile</Button>}
-                    </div>
-                    <div className="flex items-center gap-4 mb-4">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <div className="relative group cursor-pointer">
-                                <Avatar className="h-20 w-20">
-                                <AvatarImage src={displayPhoto ?? undefined} alt={displayName} />
-                                <AvatarFallback className="text-3xl">{displayName?.charAt(0) || 'A'}</AvatarFallback>
-                                </Avatar>
-                                {(isPending || uploadProgress > 0) && (
-                                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                        <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
-                                    </div>
-                                )}
-                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Pencil className="h-6 w-6 text-white" />
-                                </div>
-                            </div>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                            <DropdownMenuLabel>Support Photo</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Label htmlFor="admin-photo-upload" className="w-full cursor-pointer">
-                                <Upload className="mr-2 h-4 w-4" />
-                                Upload new photo
-                                </Label>
-                            </DropdownMenuItem>
-                            {displayPhoto && (
-                                <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Remove photo
-                                </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                            )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
-                        <div className="space-y-1 flex-1">
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-x-4">
-                                <Label htmlFor="supportDisplayName" className="text-right">Display Name</Label>
-                                <Input id="supportDisplayName" name="supportDisplayName" value={state.editableFormData.supportDisplayName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDisplayName', value: e.target.value}})} disabled={!state.isEditingDetails} />
-                            </div>
-                             <div className="grid grid-cols-[100px_1fr] items-center gap-x-4 mt-2">
-                                <Label htmlFor="supportDescription" className="text-right">Description</Label>
-                                <Input id="supportDescription" name="supportDescription" value={state.editableFormData.supportDescription || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDescription', value: e.target.value}})} disabled={!state.isEditingDetails}/>
-                            </div>
-                        </div>
-                    </div>
-                     {state.isEditingDetails && (
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button variant="secondary" onClick={() => {dispatch({type: 'SET_EDIT_DETAILS', payload: false}); dispatch({type: 'SET_FORM_DATA', payload: { supportDisplayName: adminUser.supportDisplayName || '', supportDescription: adminUser.supportDescription || '' }})}}>Cancel</Button>
-                            <Button onClick={handleSaveChanges}>Save Changes</Button>
-                        </div>
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-xl p-0 gap-0 flex flex-col [&>button]:text-white [&>button]:right-5 [&>button]:top-5"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>My Account</SheetTitle>
+            <SheetDescription>Manage your personal account and public support profile.</SheetDescription>
+          </SheetHeader>
+          <div className="relative bg-[#020617] text-white px-6 pt-8 pb-8 overflow-hidden">
+            <LandingGlowBackdrop />
+            <div className="relative z-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50 mb-6">My account</p>
+            <div className="flex flex-col items-center text-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="relative group rounded-full outline-none">
+                      <Avatar className="h-36 w-36 sm:h-40 sm:w-40 border-4 border-white/20 shadow-2xl">
+                      <AvatarImage src={displayPhoto ?? undefined} alt={displayName} className="object-cover" />
+                      <AvatarFallback className="text-4xl font-black bg-white/10 text-white">{displayName?.charAt(0) || 'A'}</AvatarFallback>
+                    </Avatar>
+                    {(isPending || uploadProgress > 0) && (
+                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="h-7 w-7 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                      </div>
                     )}
+                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Pencil className="h-6 w-6 text-white" />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="rounded-xl">
+                  <DropdownMenuLabel>Support photo</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Label htmlFor="admin-photo-upload" className="w-full cursor-pointer">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload new photo
+                    </Label>
+                  </DropdownMenuItem>
+                  {displayPhoto && (
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove photo
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
+              <h2 className="mt-4 text-2xl font-black tracking-tight">{displayName}</h2>
+              <p className="text-sm text-white/60 mt-1">{displayDescription}</p>
+              <p className="text-xs text-white/40 mt-2">{adminUser.email}</p>
+            </div>
+            </div>
+          </div>
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-5 space-y-5">
+                <div className="flex justify-between items-center">
+                    <h4 className="font-semibold">Support profile</h4>
+                    {!state.isEditingDetails && <Button variant="outline" size="sm" className="rounded-full" onClick={() => dispatch({type: 'SET_EDIT_DETAILS', payload: true})}><Edit className="mr-2 h-4 w-4" />Edit</Button>}
                 </div>
+                <div className="space-y-3">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="supportDisplayName">Display name</Label>
+                        <Input id="supportDisplayName" name="supportDisplayName" value={state.editableFormData.supportDisplayName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDisplayName', value: e.target.value}})} disabled={!state.isEditingDetails} className="rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="supportDescription">Description</Label>
+                        <Input id="supportDescription" name="supportDescription" value={state.editableFormData.supportDescription || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDescription', value: e.target.value}})} disabled={!state.isEditingDetails} className="rounded-xl"/>
+                    </div>
+                </div>
+                {state.isEditingDetails && (
+                    <div className="flex justify-end gap-2">
+                        <Button variant="secondary" className="rounded-full" onClick={() => {dispatch({type: 'SET_EDIT_DETAILS', payload: false}); dispatch({type: 'SET_FORM_DATA', payload: { supportDisplayName: adminUser.supportDisplayName || '', supportDescription: adminUser.supportDescription || '' }})}}>Cancel</Button>
+                        <Button className="rounded-full" onClick={handleSaveChanges}>Save changes</Button>
+                    </div>
+                )}
                 <Separator />
                 <div>
-                    <h4 className="font-semibold mb-4">Personal Account</h4>
-                     <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-4">
-                            <Label className="w-24 text-right text-muted-foreground">Name</Label>
+                    <h4 className="font-semibold mb-3">Personal account</h4>
+                    <div className="space-y-2 text-sm">
+                        <div>
+                            <Label className="text-muted-foreground">Name</Label>
                             <p className="font-medium">{adminUser.name}</p>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <Label className="w-24 text-right text-muted-foreground">Login Email</Label>
+                        <div>
+                            <Label className="text-muted-foreground">Login email</Label>
                             <p className="font-medium">{adminUser.email}</p>
                         </div>
                     </div>
                 </div>
                 <Separator />
                 <div>
-                    <h4 className="font-semibold mb-4">Security</h4>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                    <Button onClick={() => dispatch({type: 'SET_PASSWORD_DIALOG', payload: true})}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                    </div>
+                    <h4 className="font-semibold mb-3">Security</h4>
+                    <Button className="rounded-xl h-11 w-full justify-start" onClick={() => dispatch({type: 'SET_PASSWORD_DIALOG', payload: true})}><KeyRound className="mr-2 h-4 w-4" />Update password</Button>
                 </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pr-6 pt-4 border-t">
-            <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <SheetFooter className="p-4 border-t">
+            <Button variant="outline" className="w-full rounded-xl h-11 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Sign out</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

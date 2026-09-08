@@ -8,6 +8,7 @@ import { FileText, Trash2, RotateCcw, XCircle, Info, Calendar } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
+import { getWorkspaceCompanyId } from '@/lib/workspace-access';
 import { 
     AlertDialog, 
     AlertDialogAction, 
@@ -25,7 +26,7 @@ export default function TrashPages() {
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
-  const companyId = user?.companyId || null;
+  const companyId = getWorkspaceCompanyId(user);
 
   // Fetch trashed pages SCOPED by companyId
   const pagesQuery = useMemoFirebase(
@@ -125,7 +126,7 @@ export default function TrashPages() {
                                                 onClick={() => handlePermanentDelete(page.id)}
                                                 className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-11 px-10 font-bold text-sm"
                                             >
-                                                Confirm purge
+                                                Delete forever
                                             </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
@@ -137,7 +138,7 @@ export default function TrashPages() {
             ) : (
                 <div className="py-24 text-center opacity-20 flex flex-col items-center gap-4">
                     <Trash2 className="h-12 w-12 text-slate-400" />
-                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Trash bin is empty</p>
+                    <p className="text-sm font-semibold text-slate-400">Trash is empty</p>
                 </div>
             )}
         </div>

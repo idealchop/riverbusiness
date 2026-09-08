@@ -8,6 +8,7 @@ import { FileText, Clock, History, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
+import { getWorkspaceCompanyId } from '@/lib/workspace-access';
 import { Button } from '@/components/ui/button';
 
 export default function RecentPages() {
@@ -16,7 +17,7 @@ export default function RecentPages() {
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
-  const companyId = user?.companyId || null;
+  const companyId = getWorkspaceCompanyId(user);
 
   // Fetch pages SCOPED by companyId
   const pagesQuery = useMemoFirebase(
@@ -90,7 +91,7 @@ export default function RecentPages() {
             ) : (
                 <div className="py-24 text-center opacity-30 flex flex-col items-center gap-4">
                     <History className="h-12 w-12 text-slate-300" />
-                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">No recent activity logged</p>
+                    <p className="text-sm font-semibold text-slate-400">No recent pages</p>
                 </div>
             )}
         </div>

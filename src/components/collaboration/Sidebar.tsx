@@ -10,7 +10,6 @@ import {
     FileText, 
     Home, 
     Trash2, 
-    PanelLeftClose,
     Layout,
     TrendingUp,
     Clock,
@@ -28,6 +27,7 @@ import {
     DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { LogoBlack } from '@/components/icons';
+import { getHomePath } from '@/lib/workspace-access';
 import { useMemoFirebase, useFirestore, useDoc } from '@/firebase';
 import { doc, Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -41,7 +41,7 @@ interface SidebarProps {
   user: AppUser | null;
 }
 
-export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, user }: SidebarProps) {
+export function Sidebar({ isOpen, pages, activePageId, onCreatePage, user }: SidebarProps) {
   const pathname = usePathname();
   const [isHomeExpanded, setIsHomeExpanded] = useState(true);
   const [isActivityExpanded, setIsActivityExpanded] = useState(false);
@@ -68,16 +68,13 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
     )}>
       <div className="p-6 shrink-0 space-y-6">
         <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link href={getHomePath(user)} className="flex items-center gap-3">
                 <LogoBlack className="h-10 w-10" />
                 <div className="flex flex-col">
                     <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Collab</span>
                     <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Workspace</span>
                 </div>
             </Link>
-            <Button variant="ghost" size="icon" onClick={onToggle} className="h-8 w-8 text-slate-400 hover:text-slate-900 rounded-lg">
-                <PanelLeftClose className="h-4 w-4" />
-            </Button>
         </div>
       </div>
 
@@ -103,7 +100,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100 bg-white z-[60]">
-                                <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New Document</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 px-3 py-2 tracking-[0.2em]">New</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => onCreatePage(null, 'Untitled Doc', 'doc')} className="gap-3 font-bold text-xs py-2.5 rounded-xl cursor-pointer">
                                     <div className="p-1.5 rounded-lg bg-blue-50 text-blue-500"><FileText className="h-4 w-4" /></div>
                                     Rich Text Document
@@ -174,7 +171,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
                             <div className="px-3 py-10 text-center border-2 border-dashed rounded-2xl border-slate-100 opacity-40 grayscale">
                                 <Clock className="h-8 w-8 mx-auto mb-2 text-slate-300" />
                                 <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed max-w-[120px] mx-auto">
-                                    No recent work detected
+                                    No recent pages
                                 </p>
                             </div>
                         )}
@@ -192,7 +189,7 @@ export function Sidebar({ isOpen, onToggle, pages, activePageId, onCreatePage, u
         </Link>
         <Link href="/workspace/trash">
             <Button variant="ghost" className={cn("w-full justify-start h-9 rounded-lg gap-3 font-bold text-xs transition-none", pathname === '/workspace/trash' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900')}>
-                <Trash2 className="h-4 w-4" /> Trash bin
+                <Trash2 className="h-4 w-4" /> Trash
             </Button>
         </Link>
       </div>
