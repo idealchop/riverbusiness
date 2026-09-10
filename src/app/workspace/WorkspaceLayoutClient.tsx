@@ -9,7 +9,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { Sidebar } from '@/components/collaboration/Sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import type { CollabPage, AppUser, SecurityRuleContext, CollabPageType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
@@ -24,6 +24,8 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { cn } from '@/lib/utils';
 import { getWorkspaceCompanyId, getHomePath } from '@/lib/workspace-access';
 import { LogoBlack } from '@/components/icons';
+import { WorkspaceChromeProvider, SidebarEdgeToggle, SidebarMainExpandToggle } from '@/app/workspace/workspace-chrome';
+import { saveCollabSnapshot } from '@/components/collaboration/PageHistoryDialog';
 
 export default function WorkspaceLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -36,6 +38,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
   const isMobile = useIsMobile();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = useCallback(() => setIsSidebarOpen(open => !open), []);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -163,13 +166,22 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     if (!firestore) return;
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
+        const snap = await getDoc(pageRef);
+        if (snap.exists() && authUser) {
+            const data = snap.data() as CollabPage;
+            try {
+                await saveCollabSnapshot(firestore, { id: pageId, companyId: data.companyId, type: data.type, title: data.title, content: data.content }, authUser.uid);
+            } catch (snapshotError) {
+                console.error('Snapshot before trash failed:', snapshotError);
+            }
+        }
         await updateDoc(pageRef, { isTrashed: true, trashedAt: serverTimestamp() });
         if (pathname.includes(pageId)) router.push('/workspace');
-        toast({ title: 'Document archived' });
+        toast({ title: 'Moved to trash', description: 'A snapshot was saved in version history.' });
     } catch (error) {
         console.error("Error moving to trash:", error);
     }
-  }, [firestore, pathname, router, toast]);
+  }, [firestore, pathname, router, toast, authUser]);
 
   const handleRestorePage = useCallback(async (pageId: string) => {
     if (!firestore) return;
@@ -290,7 +302,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
   const sidebarContent = (
     <Sidebar 
       isOpen={isSidebarOpen || isMobile} 
-      onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+      onToggle={toggleSidebar}
       pages={pages || []}
       activePageId={pathname.split('/').pop() || null}
       onCreatePage={handleCreatePage}
@@ -303,23 +315,15 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
   }
 
   return (
+    <WorkspaceChromeProvider isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar}>
     <div className="flex h-screen bg-white overflow-hidden">
       <div className="print:hidden relative h-full shrink-0">
       {!isMobile && sidebarContent}
-      {!isMobile && (
-        <button
-          type="button"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-          className="absolute top-1/2 z-40 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-slate-900"
-          style={{ left: isSidebarOpen ? 'calc(18rem - 16px)' : '8px' }}
-        >
-          {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </button>
-      )}
+      {!isMobile && <SidebarEdgeToggle />}
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
+      <div className="flex-1 flex flex-col min-w-0 bg-white relative">
+        {!isMobile && <SidebarMainExpandToggle />}
         <header className="h-14 border-b flex items-center justify-between px-4 sm:px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20 print:hidden">
           <div className="flex items-center gap-2 sm:gap-4">
              {isMobile ? (
@@ -383,5 +387,6 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
           />
       )}
     </div>
+    </WorkspaceChromeProvider>
   );
 }

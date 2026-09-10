@@ -73,6 +73,10 @@ service cloud.firestore {
         allow read, write: if isAuthenticated();
     }
 
+    match /collaboration_snapshots/{snapshotId} {
+        allow read, create, delete: if isAuthenticated();
+    }
+
     // --- STATION & COMPLIANCE ---
 
     match /waterStations/{document=**} {

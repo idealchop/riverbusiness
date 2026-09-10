@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, stripUndefinedForFirestore } from '@/lib/utils';
 import { 
     MousePointer2, 
     Square, 
@@ -83,6 +83,7 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    LocateFixed,
     Zap,
     Minus,
     MoreHorizontal,
@@ -121,11 +122,42 @@ import { Timestamp, deleteField } from 'firebase/firestore';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
+import { CanvasDocSheet } from '@/components/collaboration/CanvasDocSheet';
+import { CanvasSidebarExpandToggle, useWorkspaceChrome } from '@/app/workspace/workspace-chrome';
 
 interface BoardEditorProps {
   initialData: any;
   onContentChange: (json: any) => void;
+  onPersist?: () => void;
   editable?: boolean;
+  companyId?: string;
+}
+
+const EMPTY_DOC = { type: 'doc', content: [{ type: 'paragraph' }] };
+const RICHDOC_BADGE_H = 32;
+
+function tiptapPlainText(node: any): string {
+  if (!node || typeof node !== 'object') return '';
+  if (typeof node.text === 'string') return node.text;
+  if (!Array.isArray(node.content)) return '';
+  const glue = node.type === 'paragraph' || node.type === 'heading' || node.type === 'listItem' ? ' ' : '';
+  return node.content.map(tiptapPlainText).join(glue);
+}
+
+function richDocPreviewLabel(el: BoardElement) {
+  const body = tiptapPlainText(el.docContent).replace(/\s+/g, ' ').trim();
+  return body || 'Untitled';
+}
+
+function elementBox(el: BoardElement) {
+  if (el.type !== 'richdoc') return { x: el.x, y: el.y, width: el.width, height: el.height };
+  const label = richDocPreviewLabel(el);
+  return {
+    x: el.x,
+    y: el.y,
+    width: Math.min(280, Math.max(132, 40 + label.length * 7)),
+    height: RICHDOC_BADGE_H,
+  };
 }
 
 const COLORS = [
@@ -321,9 +353,16 @@ function ConnectionPopover({ page, onUpdate }: { page: any, onUpdate: (data: Par
     );
 }
 
-export function BoardEditor({ initialData, onContentChange, editable = true }: BoardEditorProps) {
+export function BoardEditor({ initialData, onContentChange, onPersist, editable = true, companyId }: BoardEditorProps) {
   const isMounted = useMounted();
   const { toast } = useToast();
+  const workspaceChrome = useWorkspaceChrome();
+  const claimSidebarExpand = workspaceChrome?.claimSidebarExpand;
+
+  useEffect(() => {
+    if (!claimSidebarExpand) return;
+    return claimSidebarExpand();
+  }, [claimSidebarExpand]);
   
   const initialSlides: BoardSlide[] = initialData?.slides?.length
     ? initialData.slides
@@ -341,6 +380,10 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   const [history, setHistory] = useState<{ elements: BoardElement[], connections: BoardConnection[] }[]>([]);
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [openDocId, setOpenDocId] = useState<string | null>(null);
+  const lastOpenDocIdRef = useRef<string | null>(null);
+  if (openDocId) lastOpenDocIdRef.current = openDocId;
+  const sheetDocId = openDocId || lastOpenDocIdRef.current;
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [clipboard, setClipboard] = useState<BoardElement[]>([]);
   
@@ -356,6 +399,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
   
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragMovedRef = useRef(false);
+  const pointerDownHitRef = useRef<BoardElement | null>(null);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   
   const [pendingConnFrom, setPendingConnFrom] = useState<string | null>(null);
@@ -413,8 +458,29 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   const sync = useCallback((newElements: BoardElement[], newConnections: BoardConnection[]) => {
       if (!editable) return;
-      onContentChange({ elements: newElements, connections: newConnections, slides: slidesRef.current });
+      onContentChange(stripUndefinedForFirestore({
+          elements: newElements,
+          connections: newConnections,
+          slides: slidesRef.current,
+      }));
   }, [onContentChange, editable]);
+
+  const persist = useCallback(() => {
+      onPersist?.();
+  }, [onPersist]);
+
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+
+  const patchElement = useCallback((id: string, data: Partial<BoardElement>) => {
+      if (!editable) return;
+      const next = elementsRef.current.map(el => el.id === id ? { ...el, ...data } : el);
+      elementsRef.current = next;
+      setElements(next);
+      sync(next, connectionsRef.current);
+  }, [editable, sync]);
 
   const pushHistory = useCallback(() => {
     setHistory(prev => {
@@ -448,6 +514,41 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
     }));
   }, []);
 
+  const resetView = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) {
+      setViewport({ x: 48, y: 48, scale: 1.1 });
+      return;
+    }
+    const w = el.clientWidth;
+    const h = el.clientHeight;
+    const items = visibleElements.filter((item) => item.type !== 'path');
+    if (items.length === 0) {
+      setViewport({ x: 48, y: 48, scale: 1.1 });
+      return;
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    items.forEach((item) => {
+      const box = elementBox(item);
+      minX = Math.min(minX, box.x);
+      minY = Math.min(minY, box.y);
+      maxX = Math.max(maxX, box.x + box.width);
+      maxY = Math.max(maxY, box.y + box.height);
+    });
+    const bw = Math.max(80, maxX - minX);
+    const bh = Math.max(80, maxY - minY);
+    const pad = 96;
+    const scale = Math.min(1.15, Math.max(0.35, Math.min((w - pad) / bw, (h - pad) / bh)));
+    setViewport({
+      x: (w - bw * scale) / 2 - minX * scale,
+      y: (h - bh * scale) / 2 - minY * scale,
+      scale,
+    });
+  }, [visibleElements]);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -476,31 +577,38 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       if (!editable) return;
       pushHistory();
       const id = `el-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const resolvedType = data?.type || type;
+      const isRich = resolvedType === 'richdoc';
       const newEl: BoardElement = {
           id, 
-          type: data?.type || type,
+          type: resolvedType,
           x: x || (100 - viewport.x) / viewport.scale,
           y: y || (100 - viewport.y) / viewport.scale,
-          text: data?.text || '',
+          text: data?.text || (isRich ? 'Untitled' : ''),
           color: data?.color || (type === 'note' ? '#fef08a' : '#ffffff'),
-          width: data?.width || (type === 'text' ? 200 : 150),
-          height: data?.height || (type === 'text' ? 40 : 150),
-          fontSize: data?.fontSize || 14,
+          width: data?.width || (type === 'text' ? 200 : isRich ? 200 : 150),
+          height: data?.height || (type === 'text' ? 40 : isRich ? RICHDOC_BADGE_H : 150),
+          fontSize: data?.fontSize || (isRich ? 13 : 14),
           fontColor: data?.fontColor || '#0f172a',
-          bold: data?.bold ?? true,
-          textAlign: data?.textAlign || 'center',
-          path: data?.path,
-          strokeWidth: data?.strokeWidth,
-          iconName: data?.iconName,
-          url: data?.url,
+          bold: data?.bold ?? !isRich,
+          textAlign: data?.textAlign || (isRich ? 'left' : 'center'),
           slideId: activeSlideId,
+          ...(data?.path ? { path: data.path } : {}),
+          ...(data?.strokeWidth != null ? { strokeWidth: data.strokeWidth } : {}),
+          ...(data?.iconName ? { iconName: data.iconName } : {}),
+          ...(data?.url ? { url: data.url } : {}),
+          ...(isRich || data?.docContent ? { docContent: data?.docContent ?? EMPTY_DOC } : {}),
       };
       setElements(prev => {
           const next = [...prev, newEl];
-          setTimeout(() => sync(next, connections), 0);
+          elementsRef.current = next;
+          setTimeout(() => {
+              sync(next, connectionsRef.current);
+              persist();
+          }, 0);
           return next;
       });
-      setSelectedIds([id]);
+      if (!isRich) setSelectedIds([id]);
       return id;
   };
 
@@ -550,11 +658,12 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       
       const newElements = elements.filter(el => !selectedIds.includes(el.id));
       const newConnections = connections.filter(c => !selectedIds.includes(c.id) && !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
-      
+
       setElements(newElements);
       setConnections(newConnections);
       sync(newElements, newConnections);
       setSelectedIds([]);
+      setOpenDocId(prev => prev && selectedIds.includes(prev) ? null : prev);
   }, [editable, selectedIds, sync, pushHistory, elements, connections]);
 
   const handleCopy = useCallback(() => {
@@ -664,30 +773,39 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
       const hit = [...visibleElements].reverse().find(el => {
           if (el.type === 'path') {
               return false; 
-          } 
-          return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
+          }
+          const box = elementBox(el);
+          return (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height);
       });
       
       if (hit) {
           const handleSize = 12 / viewport.scale;
-          const isResizingHit = x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize;
+          const isResizingHit = hit.type !== 'richdoc' && x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize;
+          dragMovedRef.current = false;
+          pointerDownHitRef.current = hit;
 
           if (isResizingHit) {
               pushHistory();
               setIsResizing(true);
               setDragId(hit.id);
           } else {
-              if (e.shiftKey) {
-                  setSelectedIds(prev => prev.includes(hit.id) ? prev.filter(id => id !== hit.id) : [...prev, hit.id]);
-              } else if (!selectedIds.includes(hit.id)) {
-                  setSelectedIds([hit.id]);
+              if (hit.type !== 'richdoc') {
+                  if (e.shiftKey) {
+                      setSelectedIds(prev => prev.includes(hit.id) ? prev.filter(id => id !== hit.id) : [...prev, hit.id]);
+                  } else if (!selectedIds.includes(hit.id)) {
+                      setSelectedIds([hit.id]);
+                  }
+              } else {
+                  setSelectedIds([]);
               }
-              pushHistory();
+              if (hit.type !== 'richdoc') pushHistory();
               setIsDragging(true);
               setDragId(hit.id);
               setDragOffset({ x: x - hit.x, y: y - hit.y }); 
           }
       } else {
+          pointerDownHitRef.current = null;
+          dragMovedRef.current = false;
           if (!e.shiftKey) setSelectedIds([]);
           setIsSelectingMarquee(true);
           setMarqueeBox({ x1: x, y1: y, x2: x, y2: y });
@@ -721,8 +839,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const yMax = Math.max(marqueeBox.y1, y);
           
           const inBox = visibleElements.map(el => {
-              if (el.type === 'path') return null; 
-              if (el.x < xMax && el.x + el.width > xMin && el.y < yMax && el.y + el.height > yMin) return el.id;
+              if (el.type === 'path') return null;
+              const box = elementBox(el);
+              if (box.x < xMax && box.x + box.width > xMin && box.y < yMax && box.y + box.height > yMin) return el.id;
               return null;
           }).filter(id => id !== null) as string[];
 
@@ -734,16 +853,22 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
       const hoverHit = [...visibleElements].reverse().find(el => {
           if (el.type === 'path') return false;
-          return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
+          const box = elementBox(el);
+          return (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height);
       });
       setHoveredId(hoverHit?.id || null);
 
       if (isResizing && dragId) {
-          setElements(prev => prev.map(el => el.id === dragId ? { 
-              ...el, 
-              width: Math.max(50, x - el.x), 
-              height: Math.max(40, y - el.y) 
-          } : el));
+          setElements(prev => {
+              const next = prev.map(el => el.id === dragId ? { 
+                  ...el, 
+                  width: Math.max(50, x - el.x), 
+                  height: Math.max(40, y - el.y) 
+              } : el);
+              elementsRef.current = next;
+              return next;
+          });
+          dragMovedRef.current = true;
       } else if (isDragging && dragId) {
           setElements(prev => {
               const mainEl = prev.find(item => item.id === dragId);
@@ -755,13 +880,17 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               const dy = newMainY - mainEl.y;
 
               if (dx === 0 && dy === 0) return prev;
+              if (!dragMovedRef.current && pointerDownHitRef.current?.type === 'richdoc') pushHistory();
+              dragMovedRef.current = true;
 
-              return prev.map(el => {
-                  if (selectedIds.includes(el.id)) {
+              const next = prev.map(el => {
+                  if (selectedIds.includes(el.id) || el.id === dragId) {
                       return { ...el, x: el.x + dx, y: el.y + dy };
                   }
                   return el;
               });
+              elementsRef.current = next;
+              return next;
           });
       }
   };
@@ -793,6 +922,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           return;
       }
 
+      const moved = dragMovedRef.current;
+      const downHit = pointerDownHitRef.current;
+
       if (pendingConnFrom) {
           if (!editable) {
               setPendingConnFrom(null);
@@ -802,7 +934,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const { x, y } = getLogicalCoords(e.clientX, e.clientY);
           const targetHit = visibleElements.find(el => {
               if (el.type === 'path') return false;
-              return (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height);
+              const box = elementBox(el);
+              return (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height);
           });
           if (targetHit && targetHit.id !== pendingConnFrom) {
               pushHistory();
@@ -816,7 +949,11 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
               };
               setConnections(prev => {
                   const next = [...prev, newConn];
-                  setTimeout(() => sync(elements, next), 0);
+                  connectionsRef.current = next;
+                  setTimeout(() => {
+                      sync(elementsRef.current, next);
+                      persist();
+                  }, 0);
                   return next;
               });
           }
@@ -824,7 +961,23 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           setCurrentMouseCoords(null);
       }
 
-      if (isDragging || isResizing) sync(elements, connections);
+      if ((isDragging || isResizing) && moved) {
+          sync(elementsRef.current, connectionsRef.current);
+          persist();
+      }
+
+      if (
+          editable &&
+          !moved &&
+          downHit?.type === 'richdoc' &&
+          tool === 'select'
+      ) {
+          setOpenDocId(downHit.id);
+          setSelectedIds([]);
+      }
+
+      dragMovedRef.current = false;
+      pointerDownHitRef.current = null;
       setIsPanning(false);
       setIsDragging(false);
       setIsResizing(false);
@@ -877,7 +1030,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
           const { x, y } = getLogicalCoords(e.clientX, e.clientY);
           const hit = [...visibleElements].reverse().find((el) => {
               if (el.type === 'path') return false;
-              return x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height;
+              const box = elementBox(el);
+              return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
           });
           if (hit && tool === 'select' && editable) {
               handleMouseDown(e);
@@ -1017,13 +1171,19 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
 
   if (!isMounted) return null;
 
+  const showNavExpand = !!workspaceChrome && !workspaceChrome.isSidebarOpen;
+
   return (
     <div className="flex-1 flex bg-[#f7f6f3] overflow-hidden relative select-none h-full min-h-0 font-sans">
-        {editable && (
+        {(editable || showNavExpand) && (
         <aside className="w-12 border-r border-slate-200/80 bg-white flex flex-col items-center py-3 gap-2 z-50 shrink-0">
+            <CanvasSidebarExpandToggle />
+            {editable && (
+            <>
             <div className="flex flex-col gap-1.5">
                 <DraggableTool icon={<TypeIcon className="h-4 w-4 text-slate-800" />} type="text" label="Text" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'text')} />
                 <DraggableTool icon={<StickyNote className="h-4 w-4 text-amber-500" />} type="note" label="Sticky note" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'note')} />
+                <DraggableTool icon={<FileText className="h-4 w-4 text-sky-600" />} type="richdoc" label="Document" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'richdoc')} />
                 <DraggableTool icon={<Square className="h-4 w-4 text-blue-500" />} type="rect" label="Rectangle" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'rect')} />
                 <DraggableTool icon={<Circle className="h-4 w-4 text-green-500" />} type="circle" label="Circle" onTap={placeTool} onDragStart={(e: any) => e.dataTransfer.setData('elType', 'circle')} />
                 <label
@@ -1105,6 +1265,8 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 <ToolbarItem icon={<Grab className="h-4 w-4" />} active={tool === 'hand'} onClick={() => setTool('hand')} title="Pan" />
                 <ToolbarItem icon={<LinkIcon className="h-4 w-4" />} active={tool === 'arrow'} onClick={() => setTool('arrow')} title="Connect" />
             </div>
+            </>
+            )}
         </aside>
         )}
 
@@ -1129,7 +1291,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 const iconName = e.dataTransfer.getData('iconName');
                 if (type) {
                     const { x, y } = getLogicalCoords(e.clientX, e.clientY);
-                    addElement(type, x - 75, y - (type === 'text' ? 20 : 75), { text: text || undefined, fontSize: fontSize ? parseInt(fontSize) : undefined, iconName: iconName || undefined, width: type === 'icon' ? 100 : undefined, height: type === 'icon' ? 100 : undefined });
+                    addElement(type, x - (type === 'richdoc' ? 80 : 75), y - (type === 'text' ? 20 : type === 'richdoc' ? 16 : 75), { text: text || undefined, fontSize: fontSize ? parseInt(fontSize) : undefined, iconName: iconName || undefined, width: type === 'icon' ? 100 : undefined, height: type === 'icon' ? 100 : undefined });
                 }
              }}
              style={{
@@ -1247,7 +1409,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     const clipPath = getClipPath(el.type);
 
                     return (
-                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.width, height: el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute", editable ? "pointer-events-auto" : "pointer-events-none", isSelected && editable && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
+                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.type === 'richdoc' ? 'auto' : el.width, height: el.type === 'richdoc' ? 'auto' : el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute", editable ? "pointer-events-auto" : "pointer-events-none", isSelected && editable && el.type !== 'richdoc' && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
                             <div className={cn(
                                 "w-full h-full flex flex-col items-center justify-center relative overflow-hidden transition-shadow", 
                                 el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg border-2 border-slate-900 shadow-lg", 
@@ -1258,9 +1420,9 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 el.type === 'capsule' && "border-2 border-slate-900 rounded-full shadow-lg",
                                 el.type === 'predefined' && "border-y-2 border-slate-900 relative shadow-lg",
                                 isCustomClipped && "bg-transparent border-none p-0 shadow-none",
-                                (el.type === 'text' || el.type === 'icon' || el.type === 'image') && "bg-transparent border-none p-0 shadow-none"
+                                (el.type === 'text' || el.type === 'icon' || el.type === 'image' || el.type === 'richdoc') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
-                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'image' || isCustomClipped || el.type === 'cloud') ? 'transparent' : el.color,
+                                backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'image' || isCustomClipped || el.type === 'cloud' || el.type === 'richdoc') ? 'transparent' : el.color,
                             }}>
                                 {el.type === 'image' && el.url && (
                                     <img src={el.url} alt="" className="w-full h-full object-contain pointer-events-none select-none" />
@@ -1292,15 +1454,25 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                                 )}>
                                     {el.type === 'icon' && IconComp ? (
                                         <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
-                                    ) : el.type === 'image' ? null : (
+                                    ) : el.type === 'image' ? null : el.type === 'richdoc' ? (
+                                        <div
+                                            title="Open to slide up"
+                                            className="inline-flex items-center gap-1.5 max-w-[280px] h-8 pl-2 pr-2.5 rounded-full bg-white border border-slate-200 shadow-sm cursor-pointer"
+                                        >
+                                            <FileText className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                                            <span className="text-[11px] font-semibold text-slate-800 truncate">
+                                                {richDocPreviewLabel(el)}
+                                            </span>
+                                        </div>
+                                    ) : (
                                         <div className="w-full h-full text-center font-bold overflow-hidden leading-tight flex items-center justify-center whitespace-pre-wrap p-3" style={{ fontSize: `${el.fontSize || 14}px`, color: el.fontColor || '#0f172a', textAlign: el.textAlign || 'center', fontWeight: el.bold ? 'bold' : 'normal' }}>
                                             {el.text}
                                         </div>
                                     )}
                                 </div>
-                                {isSelected && editable && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
+                                {isSelected && editable && el.type !== 'richdoc' && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
                             </div>
-                            {(isHovered || isSelected) && !isDragging && editable && <div className="absolute inset-0 pointer-events-none"><Port side="top" id={el.id} /><Port side="right" id={el.id} /><Port side="bottom" id={el.id} /><Port side="left" id={el.id} /></div>}
+                            {(isHovered || isSelected) && !isDragging && editable && el.type !== 'richdoc' && <div className="absolute inset-0 pointer-events-none"><Port side="top" id={el.id} /><Port side="right" id={el.id} /><Port side="bottom" id={el.id} /><Port side="left" id={el.id} /></div>}
                         </div>
                     );
                 })}
@@ -1351,6 +1523,15 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                     <button type="button" onClick={() => handleZoom(-0.2)} className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50" aria-label="Zoom out">−</button>
                     <span className="min-w-[2.5rem] text-center text-[10px] font-bold text-slate-600 tabular-nums">{Math.round(viewport.scale * 100)}%</span>
                     <button type="button" onClick={() => handleZoom(0.2)} className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50" aria-label="Zoom in">+</button>
+                    <button
+                        type="button"
+                        onClick={resetView}
+                        className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        aria-label="Center and reset view"
+                        title="Center and reset view"
+                    >
+                        <LocateFixed className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </div>
 
@@ -1363,7 +1544,7 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
             )}
         </div>
 
-        {editable && (selectedElement || selectedConnection) && (
+        {editable && ((selectedElement && selectedElement.type !== 'richdoc') || selectedConnection) && (
             <aside className="w-80 border-l bg-white flex flex-col shrink-0 z-50">
                 <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1449,6 +1630,26 @@ export function BoardEditor({ initialData, onContentChange, editable = true }: B
                 </ScrollArea>
             </aside>
         )}
+        <CanvasDocSheet
+            open={!!openDocId}
+            docId={sheetDocId || ''}
+            title={elements.find(el => el.id === sheetDocId)?.text || 'Untitled'}
+            content={elements.find(el => el.id === sheetDocId)?.docContent}
+            editable={editable}
+            companyId={companyId}
+            onTitleChange={(text) => {
+                if (!sheetDocId) return;
+                patchElement(sheetDocId, { text });
+            }}
+            onContentChange={(docContent) => {
+                if (!sheetDocId) return;
+                patchElement(sheetDocId, { docContent });
+            }}
+            onClose={() => {
+                setOpenDocId(null);
+                persist();
+            }}
+        />
     </div>
   );
 }
@@ -1468,6 +1669,8 @@ function DraggableTool({ icon, type, onDragStart, variant = 'default', label, on
             onDragStart={onDragStart}
             onClick={() => onTap?.(type)}
             title={label || type}
+            aria-label={label || type}
+            role="button"
             className={cn(
             "flex items-center justify-center rounded-lg bg-white border border-slate-200 cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:border-slate-300 transition-all",
             variant === 'default' ? "w-9 h-9" : "w-11 h-11"

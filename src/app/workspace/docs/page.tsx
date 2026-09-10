@@ -483,7 +483,8 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
                     )}
                 </div>
 
-                <div className="flex items-center gap-4 pt-3 border-t border-slate-50">
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-50">
+                    <div className="flex items-center gap-4 min-w-0">
                     <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-slate-400">
                         {page.isPrivate ? (
                             <><Lock className="h-2.5 w-2.5" /> Private</>
@@ -496,6 +497,21 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
                             <Globe className="h-2.5 w-2.5" /> Public
                         </div>
                     )}
+                    </div>
+                    <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!window.confirm(`Delete this ${isFolder ? 'folder' : 'document'}? You can restore it from Trash.`)) return;
+                            window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-red-600 shrink-0"
+                    >
+                        <Trash2 className="h-3 w-3" />
+                        Delete
+                    </button>
                 </div>
             </CardContent>
         </Card>

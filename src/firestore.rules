@@ -109,6 +109,10 @@ service cloud.firestore {
     match /collaboration_pages/{pageId}/presence/{userId} {
         allow read, write: if isAuthenticated();
     }
+
+    match /collaboration_snapshots/{snapshotId} {
+        allow read, create, delete: if isAuthenticated();
+    }
     
     match /collaboration_workspaces/{document=**} {
         allow read, write: if isAuthenticated();

@@ -18,7 +18,6 @@ import {
   Globe, 
   AlertTriangle, 
   RotateCcw, 
-  FilePlus, 
   ArrowLeft, 
   X, 
   Search, 
@@ -26,21 +25,21 @@ import {
   Sparkles, 
   Lock, 
   Clock, 
-  Copy, 
+  Copy,
   CheckCircle2,
   MoreHorizontal,
   Users,
-  FileDown,
   Rows3,
   Columns2,
   Minus,
   Plus,
-  Home
+  Home,
+  History
 } from 'lucide-react';
-import type { CollabPage, SecurityRuleContext, AppUser } from '@/lib/types';
+import { PageHistoryDialog, SnapshotHeaderButton } from '@/components/collaboration/PageHistoryDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, stripUndefinedForFirestore } from '@/lib/utils';
 import { getCollabBackHref, getCollabFolderHref, getCollabShareUrl, getCollabTypeHomeHref, getCollabTypeHomeLabel } from '@/lib/workspace-access';
 import { useToast } from '@/hooks/use-toast';
 import { addHours, addDays } from 'date-fns';
@@ -287,6 +286,7 @@ function PageEditorContent() {
     }
   });
   const [pageZoom, setPageZoom] = useState(100);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   
   const [localIsTyping, setLocalIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -343,10 +343,28 @@ function PageEditorContent() {
 
   const forceSave = useCallback(async () => {
     if (!firestore || !pageId || !latestContentRef.current) return;
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = null;
+    }
     const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
-    updateDoc(pageRef, { title: latestTitleRef.current, content: latestContentRef.current, updatedAt: serverTimestamp() }).catch(() => {});
+    const content = stripUndefinedForFirestore(latestContentRef.current);
+    latestContentRef.current = content;
+    updateDoc(pageRef, { title: latestTitleRef.current, content, updatedAt: serverTimestamp() }).catch(() => {});
   }, [firestore, pageId]);
+
+  useEffect(() => {
+    const flush = () => { void forceSave(); };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [forceSave]);
 
   useEffect(() => {
     if (!firestore || !pageId || !user || !userProfile) return;
@@ -370,8 +388,10 @@ function PageEditorContent() {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setPage({ id: snapshot.id, ...data } as CollabPage);
-        latestContentRef.current = data.content;
         latestTitleRef.current = data.title;
+        if (!updateTimeoutRef.current) {
+          latestContentRef.current = data.content;
+        }
 
         if (data.parentId) {
             const parentSnap = await getDoc(doc(firestore, 'collaboration_pages', data.parentId));
@@ -449,12 +469,13 @@ function PageEditorContent() {
 
   const handleUpdateContent = useCallback((json: any) => {
     if (!firestore || !pageId || page?.isTrashed) return;
-    latestContentRef.current = json;
+    const content = stripUndefinedForFirestore(json);
+    latestContentRef.current = content;
     triggerTypingIndicator();
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     updateTimeoutRef.current = setTimeout(() => {
       setIsSaving(true);
-      updateDoc(doc(firestore, 'collaboration_pages', pageId as string), { content: json, updatedAt: serverTimestamp() }).then(() => setTimeout(() => setIsSaving(false), 800));
+      updateDoc(doc(firestore, 'collaboration_pages', pageId as string), { content, updatedAt: serverTimestamp() }).then(() => setTimeout(() => setIsSaving(false), 800));
     }, 1000);
   }, [firestore, pageId, page?.isTrashed, triggerTypingIndicator]);
 
@@ -491,12 +512,6 @@ function PageEditorContent() {
   const typeHomeHref = getCollabTypeHomeHref(pageType);
   const typeHomeLabel = getCollabTypeHomeLabel(pageType);
   const backHref = getCollabBackHref(page, parentPage);
-
-  const createNewDocument = () => {
-    window.dispatchEvent(new CustomEvent('request-new-collab-page', {
-      detail: { parentId: page.parentId ?? null, type: 'doc' }
-    }));
-  };
 
   const toggleFavorite = () => {
     const next = !page.isFavorite;
@@ -576,7 +591,7 @@ function PageEditorContent() {
         )}
 
         {pageType === 'board' && (
-            <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} editable={!page.isTrashed} />
+            <BoardEditor initialData={page.content} onContentChange={handleUpdateContent} onPersist={forceSave} editable={!page.isTrashed} companyId={page.companyId} />
         )}
     </div>
   );
@@ -710,29 +725,22 @@ function PageEditorContent() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1 shadow-2xl border-slate-100">
-                             <DropdownMenuItem onClick={createNewDocument} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
-                                <FilePlus className="h-4 w-4 text-blue-500" /> New document
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
-                                <Copy className="h-4 w-4 text-slate-500" /> Duplicate Document
+                            <DropdownMenuItem onClick={() => setIsHistoryOpen(true)} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
+                                <History className="h-4 w-4 text-slate-500" /> Snapshots
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleFavorite} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
                                 <Star className={cn("h-4 w-4", page.isFavorite && "fill-amber-500 text-amber-500")} /> {page.isFavorite ? 'Unfavorite' : 'Add to Favorites'}
                             </DropdownMenuItem>
                             <SharePopover page={page} onUpdate={handleUpdateMeta} isMobile />
-                            <DropdownMenuItem onClick={() => window.print()} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer">
-                                <FileDown className="h-4 w-4" /> Download PDF
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-50" />
                             <DropdownMenuItem onClick={trashDocument} className="gap-2 font-semibold py-2.5 rounded-lg cursor-pointer text-red-600 focus:text-red-600">
-                                <Trash2 className="h-4 w-4" /> Move to Trash
+                                <Trash2 className="h-4 w-4" /> Delete
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 ) : (
                     <>
-                        <HeaderAction icon={<FilePlus className="h-4 w-4" />} label="New document" onClick={createNewDocument} />
-                        <HeaderAction icon={<Copy className="h-4 w-4" />} label="Duplicate" onClick={() => window.dispatchEvent(new CustomEvent('request-duplicate-collab-page', { detail: { pageId: page.id } }))} />
+                        <SnapshotHeaderButton onClick={() => setIsHistoryOpen(true)} />
                         <HeaderAction
                             icon={<Star className={cn("h-4 w-4", page.isFavorite && "fill-current")} />}
                             label={page.isFavorite ? 'Remove favorite' : 'Favorite'}
@@ -740,8 +748,14 @@ function PageEditorContent() {
                             className={page.isFavorite ? "text-amber-500" : undefined}
                         />
                         <SharePopover page={page} onUpdate={handleUpdateMeta} />
-                        <HeaderAction icon={<FileDown className="h-4 w-4" />} label="Download PDF" onClick={() => window.print()} />
-                        <HeaderAction icon={<Trash2 className="h-4 w-4" />} label="Move to trash" onClick={trashDocument} hoverClass="hover:text-red-600" />
+                        <button
+                            type="button"
+                            onClick={trashDocument}
+                            className="h-7 px-2 rounded-lg inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            Delete
+                        </button>
                     </>
                 )}
             </div>
@@ -814,6 +828,13 @@ function PageEditorContent() {
             </div>
           )}
       </div>
+      <PageHistoryDialog
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+        page={page}
+        userId={user?.uid}
+        latestContent={latestContentRef.current}
+      />
     </div>
   );
 }

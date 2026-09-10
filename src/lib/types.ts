@@ -122,7 +122,7 @@ export type CollabPageType = 'doc' | 'board' | 'folder';
 
 export interface BoardElement {
     id: string;
-    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image' | 'path' | 'icon' | 'triangle' | 'parallelogram' | 'cylinder' | 'capsule' | 'cloud' | 'hexagon' | 'octagon' | 'star' | 'document' | 'manual-input' | 'predefined';
+    type: 'note' | 'rect' | 'circle' | 'diamond' | 'text' | 'image' | 'path' | 'icon' | 'triangle' | 'parallelogram' | 'cylinder' | 'capsule' | 'cloud' | 'hexagon' | 'octagon' | 'star' | 'document' | 'manual-input' | 'predefined' | 'richdoc';
     x: number;
     y: number;
     text: string;
@@ -138,6 +138,7 @@ export interface BoardElement {
     strokeWidth?: number; // Size for path elements
     iconName?: string; // For icon type
     slideId?: string;
+    docContent?: any;
 }
 
 export interface BoardSlide {
@@ -178,6 +179,17 @@ export interface CollabPage {
     expiresAt?: any;
     isTrashed?: boolean;
     trashedAt?: any;
+}
+
+export interface CollabSnapshot {
+    id: string;
+    companyId: string;
+    pageId: string;
+    type: CollabPageType;
+    title: string;
+    content?: any;
+    createdBy: string;
+    createdAt: any;
 }
 
 export interface HRAttendanceLog {
