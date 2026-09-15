@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { mergeAttributes } from '@tiptap/core';
 import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, Node, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -24,9 +25,9 @@ import {
     Bold, 
     Italic, 
     List, 
-    Heading1, 
-    Heading2, 
     CheckSquare,
+    ChevronDown,
+    ChevronRight,
     Link as LinkIcon,
     Loader2,
     Sparkles,
@@ -48,7 +49,7 @@ import {
     Layout,
     Image as ImageIcon,
     Maximize,
-    Columns,
+    Table2,
     FileText,
     Search,
     FileX
@@ -71,7 +72,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuLabel
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { 
     Dialog, 
@@ -89,6 +93,32 @@ import { BoardEditor } from './BoardEditor';
 import { query, collection, where } from 'firebase/firestore';
 import type { CollabPage } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
+
+const Title = Node.create({
+  name: 'title',
+  group: 'block',
+  content: 'inline*',
+  defining: true,
+  parseHTML() {
+    return [{ tag: 'p.docs-style-title' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['p', mergeAttributes(HTMLAttributes, { class: 'docs-style-title' }), 0];
+  },
+});
+
+const Subtitle = Node.create({
+  name: 'subtitle',
+  group: 'block',
+  content: 'inline*',
+  defining: true,
+  parseHTML() {
+    return [{ tag: 'p.docs-style-subtitle' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['p', mergeAttributes(HTMLAttributes, { class: 'docs-style-subtitle' }), 0];
+  },
+});
 
 // --- Custom Interactive Blocks ---
 
@@ -744,7 +774,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       Color,
       Underline,
       TextAlign.configure({
-        types: ['heading', 'paragraph'],
+        types: ['heading', 'paragraph', 'title', 'subtitle'],
       }),
       Placeholder.configure({
         placeholder: 'Write your guide here... Type "/" for quick commands.',
@@ -772,6 +802,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       TableCell,
       TableHeader,
       Highlight.configure({ multicolor: true }),
+      Title,
+      Subtitle,
       CanvasExtension,
       PageLinkExtension,
       ColumnGroup,
@@ -1027,14 +1059,8 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     setIsLinkPageOpen(false);
   };
 
-  const handleInsertColumns = (count: number) => {
-      const width = Math.round((100 / count) * 10) / 10;
-      const columns = Array.from({ length: count }, () => ({
-          type: 'column',
-          attrs: { width },
-          content: [{ type: 'paragraph' }],
-      }));
-      insertBlock({ type: 'columnGroup', content: columns });
+  const handleInsertTable = (rows: number, cols: number) => {
+      editor?.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).run();
   };
 
   const handleInsertImage = () => {
@@ -1094,14 +1120,15 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                                 <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600"><Layout className="h-4 w-4" /></div>
                                 Canvas
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleInsertColumns(2)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
-                                <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600"><Columns className="h-4 w-4" /></div>
-                                2 columns
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleInsertColumns(3)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
-                                <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600"><Columns className="h-4 w-4" /></div>
-                                3 columns
-                            </DropdownMenuItem>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                    <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600"><Table2 className="h-4 w-4" /></div>
+                                    Table
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent align="start" className="p-0 rounded-xl border-slate-200 shadow-xl z-[90]">
+                                    <TableSizePicker onPick={handleInsertTable} />
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                             <DropdownMenuItem onSelect={() => handleInsertImage()} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><ImageIcon className="h-4 w-4" /></div>
                                 Static Image
@@ -1112,9 +1139,57 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
                   
-                  <div className="flex items-center gap-1 px-1 shrink-0">
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 className="h-4 w-4" />} label="Large Heading" />
-                      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={<Heading2 className="h-4 w-4" />} label="Medium Heading" />
+                  <div className="flex items-center px-1 shrink-0">
+                    <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              onMouseDown={(e) => e.preventDefault()}
+                              className="h-8 min-w-[8.75rem] justify-between gap-2 rounded-md px-2.5 text-[13px] font-normal text-slate-700 hover:bg-slate-100"
+                            >
+                              {currentTextStyleLabel(editor)}
+                              <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-64 p-0 rounded-xl shadow-xl border-slate-200 overflow-hidden z-[80]">
+                            <StyleMenuItem
+                              active={editor.isActive('paragraph') && !editor.isActive('title') && !editor.isActive('subtitle') && !editor.isActive('heading')}
+                              previewClass="text-[13px] text-slate-700"
+                              label="Normal text"
+                              onSelect={() => editor.chain().focus().setParagraph().run()}
+                            />
+                            <StyleMenuItem
+                              active={editor.isActive('title')}
+                              previewClass="text-[26px] font-normal leading-none text-slate-900"
+                              label="Title"
+                              onSelect={() => editor.chain().focus().setNode('title').run()}
+                            />
+                            <StyleMenuItem
+                              active={editor.isActive('subtitle')}
+                              previewClass="text-[15px] text-slate-500"
+                              label="Subtitle"
+                              onSelect={() => editor.chain().focus().setNode('subtitle').run()}
+                            />
+                            <StyleMenuItem
+                              active={editor.isActive('heading', { level: 1 })}
+                              previewClass="text-[20px] font-normal text-slate-900"
+                              label="Heading 1"
+                              onSelect={() => editor.chain().focus().setHeading({ level: 1 }).run()}
+                            />
+                            <StyleMenuItem
+                              active={editor.isActive('heading', { level: 2 })}
+                              previewClass="text-[16px] font-normal text-slate-800"
+                              label="Heading 2"
+                              onSelect={() => editor.chain().focus().setHeading({ level: 2 }).run()}
+                            />
+                            <StyleMenuItem
+                              active={editor.isActive('heading', { level: 3 })}
+                              previewClass="text-[14px] font-normal text-slate-700"
+                              label="Heading 3"
+                              onSelect={() => editor.chain().focus().setHeading({ level: 3 }).run()}
+                            />
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   
                   <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200 shrink-0" />
@@ -1311,6 +1386,72 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 });
 
 Editor.displayName = 'Editor';
+
+function currentTextStyleLabel(editor: any) {
+    if (editor.isActive('title')) return 'Title';
+    if (editor.isActive('subtitle')) return 'Subtitle';
+    if (editor.isActive('heading', { level: 1 })) return 'Heading 1';
+    if (editor.isActive('heading', { level: 2 })) return 'Heading 2';
+    if (editor.isActive('heading', { level: 3 })) return 'Heading 3';
+    return 'Normal text';
+}
+
+function StyleMenuItem({ active, label, previewClass, onSelect }: { active: boolean; label: string; previewClass: string; onSelect: () => void }) {
+    return (
+        <DropdownMenuItem
+            onMouseDown={(e) => e.preventDefault()}
+            onSelect={onSelect}
+            className={cn(
+                "rounded-none px-3 py-2.5 cursor-pointer flex items-center justify-between gap-3",
+                active && "bg-slate-100"
+            )}
+        >
+            <div className="flex items-center gap-2 min-w-0">
+                <span className="w-4 shrink-0 flex justify-center">
+                    {active && <Check className="h-3.5 w-3.5 text-slate-700" />}
+                </span>
+                <span className={cn("truncate", previewClass)}>{label}</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+        </DropdownMenuItem>
+    );
+}
+
+function TableSizePicker({ onPick }: { onPick: (rows: number, cols: number) => void }) {
+    const maxCols = 8;
+    const maxRows = 8;
+    const [hover, setHover] = useState({ rows: 1, cols: 1 });
+
+    return (
+        <div className="p-3 w-[220px]" onMouseDown={(e) => e.preventDefault()}>
+            <div
+                className="grid gap-[3px]"
+                style={{ gridTemplateColumns: `repeat(${maxCols}, 1fr)` }}
+                onMouseLeave={() => setHover({ rows: 1, cols: 1 })}
+            >
+                {Array.from({ length: maxRows * maxCols }, (_, i) => {
+                    const cols = (i % maxCols) + 1;
+                    const rows = Math.floor(i / maxCols) + 1;
+                    const active = rows <= hover.rows && cols <= hover.cols;
+                    return (
+                        <button
+                            key={`${rows}-${cols}`}
+                            type="button"
+                            aria-label={`${cols} by ${rows} table`}
+                            className={cn(
+                                "h-4 w-4 rounded-[2px] border",
+                                active ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-slate-50"
+                            )}
+                            onMouseEnter={() => setHover({ rows, cols })}
+                            onClick={() => onPick(rows, cols)}
+                        />
+                    );
+                })}
+            </div>
+            <p className="mt-2 text-center text-[13px] text-slate-500">{hover.cols} x {hover.rows}</p>
+        </div>
+    );
+}
 
 function ToolbarButton({ onClick, active, disabled, icon, label }: any) {
     return (

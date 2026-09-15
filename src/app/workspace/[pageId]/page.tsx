@@ -338,6 +338,11 @@ function PageEditorContent() {
       });
   }, [rawCollaborators, user?.uid, presenceNow]);
 
+  const typingCollaborators = useMemo(
+    () => collaborators.filter((c: any) => c.isTyping),
+    [collaborators]
+  );
+
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch) return EMOJI_LIST;
     const s = emojiSearch.toLowerCase();
