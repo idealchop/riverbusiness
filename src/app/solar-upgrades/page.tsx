@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import SolarUpgradesClient from './SolarUpgradesClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Upgrades',
+  title: inAppTitle('Upgrades'),
   robots: privatePageRobots,
 };
 

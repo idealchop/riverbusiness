@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Shared page',
+  title: inAppTitle('Shared page'),
   robots: privatePageRobots,
 };
 

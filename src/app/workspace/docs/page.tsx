@@ -7,15 +7,13 @@ import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
     FileText, 
-    Clock, 
     Plus, 
     Search, 
     UserCircle, 
     FolderPlus, 
     ChevronDown, 
-    MoreHorizontal, 
+    MoreVertical, 
     Globe, 
-    Lock,
     Users,
     Check,
     Filter,
@@ -27,12 +25,14 @@ import {
     Loader2,
     Star,
     StarOff,
-    Trash2
+    Pencil,
+    Trash2,
+    LayoutGrid,
+    List
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
-import { formatDistanceToNow } from 'date-fns';
 import type { CollabPage, AppUser } from '@/lib/types';
 import { getWorkspaceCompanyId } from '@/lib/workspace-access';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { NamePromptPopover } from '@/components/collaboration/NamePromptPopover';
 
 function DocsHubContent() {
   const { user: authUser } = useUser();
@@ -76,6 +77,9 @@ function DocsHubContent() {
   const currentFolderId = searchParams.get('folder');
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [isNewDocOpen, setIsNewDocOpen] = useState(false);
+  const [newDocName, setNewDocName] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   // Fetch all pages (docs and folders) for the company
   const pagesQuery = useMemoFirebase(
@@ -157,9 +161,12 @@ function DocsHubContent() {
   }, [allPages, searchTerm, selectedMemberId, authUser, currentFolderId]);
 
   const handleCreateDoc = () => {
+    if (!newDocName.trim()) return;
     window.dispatchEvent(new CustomEvent('request-new-collab-page', {
-        detail: { type: 'doc', parentId: currentFolderId }
+        detail: { type: 'doc', title: newDocName.trim(), parentId: currentFolderId }
     }));
+    setNewDocName('');
+    setIsNewDocOpen(false);
   };
 
   const handleCreateFolder = () => {
@@ -213,12 +220,40 @@ function DocsHubContent() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" onClick={() => setIsNewFolderOpen(true)} className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
-                        <FolderPlus className="h-4 w-4" /> New folder
-                    </Button>
-                    <Button onClick={handleCreateDoc} className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20">
-                        <Plus className="h-4 w-4" /> New document
-                    </Button>
+                    <NamePromptPopover
+                        open={isNewFolderOpen}
+                        onOpenChange={(open) => {
+                            setIsNewFolderOpen(open);
+                            if (!open) setNewFolderName('');
+                        }}
+                        title="Folder name"
+                        placeholder="Folder name"
+                        value={newFolderName}
+                        onChange={setNewFolderName}
+                        onSubmit={handleCreateFolder}
+                        trigger={
+                            <Button variant="outline" className="h-10 rounded-xl px-4 font-bold text-xs gap-2 border-slate-200 bg-white">
+                                <FolderPlus className="h-4 w-4" /> New folder
+                            </Button>
+                        }
+                    />
+                    <NamePromptPopover
+                        open={isNewDocOpen}
+                        onOpenChange={(open) => {
+                            setIsNewDocOpen(open);
+                            if (!open) setNewDocName('');
+                        }}
+                        title="Document name"
+                        placeholder="Document name"
+                        value={newDocName}
+                        onChange={setNewDocName}
+                        onSubmit={handleCreateDoc}
+                        trigger={
+                            <Button className="h-10 rounded-xl px-6 font-bold text-xs gap-2 shadow-lg shadow-primary/20">
+                                <Plus className="h-4 w-4" /> New document
+                            </Button>
+                        }
+                    />
                 </div>
             </div>
 
@@ -268,7 +303,8 @@ function DocsHubContent() {
                     </DropdownMenu>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                    <HubViewToggle view={viewMode} onChange={setViewMode} />
                     <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-bold text-[11px] text-slate-500 uppercase tracking-widest hover:bg-slate-50">
                         Date <ChevronDown className="h-3 w-3" />
                     </Button>
@@ -280,15 +316,21 @@ function DocsHubContent() {
 
         <ScrollArea className="flex-1">
             <div className="p-8 pb-32">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                <div className={cn(
+                    "grid",
+                    viewMode === 'list'
+                        ? "grid-cols-1 rounded-2xl border border-slate-100 bg-white overflow-hidden divide-y divide-slate-100"
+                        : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
+                )}>
                     {isLoading ? (
                         Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="aspect-[4/5] rounded-[1.5rem] bg-slate-50" />
+                            <div key={i} className={cn("bg-slate-50", viewMode === 'list' ? "h-12" : "aspect-[4/5] rounded-[1.5rem]")} />
                         ))
                     ) : filteredAssets.map(asset => (
                         <AssetCard 
                             key={asset.id} 
-                            page={asset} 
+                            page={asset}
+                            viewMode={viewMode}
                             onNavigate={() => asset.type === 'folder' ? goToFolder(asset.id) : null}
                         />
                     ))}
@@ -305,38 +347,6 @@ function DocsHubContent() {
                 </div>
             </div>
         </ScrollArea>
-
-        {/* New Folder Dialog */}
-        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
-            <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-3xl p-8 bg-white">
-                <DialogHeader className="space-y-4">
-                    <div className="p-3 w-fit rounded-xl bg-blue-50 text-blue-600">
-                        <FolderPlus className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">New folder</DialogTitle>
-                        <DialogDescription className="sr-only">Create a folder</DialogDescription>
-                    </div>
-                </DialogHeader>
-                <div className="py-6">
-                    <Label className="text-[10px] font-bold text-slate-400 ml-1">Folder name</Label>
-                    <Input 
-                        autoFocus
-                        placeholder="Folder name" 
-                        className="h-12 rounded-xl bg-slate-50 border-slate-100 font-semibold px-4 mt-2 text-sm shadow-inner focus-visible:ring-primary"
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-                    />
-                </div>
-                <DialogFooter className="gap-2">
-                    <Button variant="ghost" onClick={() => setIsNewFolderOpen(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
-                    <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">
-                        Create
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }
@@ -349,18 +359,39 @@ export default function DocsHubPage() {
   );
 }
 
-function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => void }) {
-    const firestore = useFirestore();
-    const creatorQuery = useMemoFirebase(() => (firestore && page.createdBy) ? doc(firestore, 'users', page.createdBy) : null, [firestore, page.createdBy]);
-    const { data: creator } = useDoc<AppUser>(creatorQuery);
-    
-    const [isOver, setIsOver] = useState(false);
+function HubViewToggle({ view, onChange }: { view: 'grid' | 'list'; onChange: (view: 'grid' | 'list') => void }) {
+    return (
+        <div className="flex items-center rounded-2xl bg-white border border-slate-200 p-1 shadow-sm">
+            <button
+                type="button"
+                aria-label="Grid view"
+                onClick={() => onChange('grid')}
+                className={cn(
+                    "h-8 w-9 rounded-xl flex items-center justify-center transition-colors",
+                    view === 'grid' ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
+                )}
+            >
+                <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+                type="button"
+                aria-label="List view"
+                onClick={() => onChange('list')}
+                className={cn(
+                    "h-8 w-9 rounded-xl flex items-center justify-center transition-colors",
+                    view === 'list' ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
+                )}
+            >
+                <List className="h-4 w-4" />
+            </button>
+        </div>
+    );
+}
 
-    const timeAgo = page.updatedAt 
-        ? formatDistanceToNow((page.updatedAt as Timestamp).toDate(), { addSuffix: true })
-        : page.createdAt 
-            ? formatDistanceToNow((page.createdAt as Timestamp).toDate(), { addSuffix: true })
-            : 'Recently';
+function AssetCard({ page, onNavigate, viewMode }: { page: CollabPage, onNavigate?: () => void, viewMode: 'grid' | 'list' }) {
+    const [isOver, setIsOver] = useState(false);
+    const [renameOpen, setRenameOpen] = useState(false);
+    const [renameValue, setRenameValue] = useState(page.title || '');
 
     const isFolder = page.type === 'folder';
 
@@ -382,8 +413,73 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
         }
     };
 
-    const cardContent = (
-        <Card 
+    const typeIcon = page.icon ? (
+        <span className="text-base leading-none">{page.icon}</span>
+    ) : isFolder ? (
+        <Folder className="h-4 w-4 text-blue-500" />
+    ) : (
+        <FileText className="h-4 w-4 text-blue-500" />
+    );
+
+    const actionsMenu = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    className="h-8 w-7 rounded-lg text-slate-300 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center shrink-0"
+                    aria-label="Document actions"
+                >
+                    <MoreVertical className="h-4 w-4" />
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                    onClick={(e) => {
+                        e.preventDefault();
+                        setRenameValue(page.title || '');
+                        setRenameOpen(true);
+                    }}
+                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
+                >
+                    <Pencil className="h-4 w-4" /> Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }));
+                    }}
+                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
+                >
+                    {page.isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+                    {page.isFavorite ? 'Unfavorite' : 'Favorite'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
+                    }}
+                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
+                >
+                    <Globe className="h-4 w-4" /> Share
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
+                    }}
+                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer text-red-600 focus:text-red-600"
+                >
+                    <Trash2 className="h-4 w-4" /> Move to trash
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
+    const cardContent = viewMode === 'grid' ? (
+        <Card
             draggable={!isFolder && !page.isTrashed}
             onDragStart={handleDragStart}
             onDragOver={(e) => { if (isFolder) { e.preventDefault(); setIsOver(true); } }}
@@ -403,7 +499,6 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
                 )}
-                
                 <div className="relative z-10">
                     {page.icon ? (
                         <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
@@ -418,100 +513,36 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
                     )}
                 </div>
             </div>
-
-            <CardContent className="p-4 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight">
-                            {page.title || 'Untitled'}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1.5">
-                            <Avatar className="h-4 w-4 shadow-sm shrink-0 border border-white ring-1 ring-slate-100">
-                                <AvatarImage src={creator?.photoURL} />
-                                <AvatarFallback className="text-[6px] font-black">{creator?.name?.charAt(0) || '?'}</AvatarFallback>
-                            </Avatar>
-                            <p className="text-[10px] font-bold text-slate-400 truncate">
-                                {creator?.name || 'Contributor'} • {timeAgo}
-                            </p>
-                        </div>
-                    </div>
-                    {!isFolder && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                    className="h-8 w-8 rounded-lg text-slate-300 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center shrink-0"
-                                    aria-label="Document actions"
-                                >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }));
-                                    }}
-                                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
-                                >
-                                    {page.isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
-                                    {page.isFavorite ? 'Unfavorite' : 'Favorite'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
-                                    }}
-                                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
-                                >
-                                    <Globe className="h-4 w-4" /> Share
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
-                                    }}
-                                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer text-red-600 focus:text-red-600"
-                                >
-                                    <Trash2 className="h-4 w-4" /> Move to trash
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+            <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                    <h3 className="flex-1 min-w-0 text-sm font-bold text-slate-900 truncate tracking-tight">
+                        {page.title || 'Untitled'}
+                    </h3>
+                    {actionsMenu}
                 </div>
-
-                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-50">
-                    <div className="flex items-center gap-4 min-w-0">
-                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-slate-400">
-                        {page.isPrivate ? (
-                            <><Lock className="h-2.5 w-2.5" /> Private</>
-                        ) : (
-                            <><Users className="h-2.5 w-2.5" /> Shared</>
-                        )}
-                    </div>
-                    {page.isPublic && (
-                            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-primary">
-                            <Globe className="h-2.5 w-2.5" /> Public
-                        </div>
-                    )}
-                    </div>
-                    <button
-                        type="button"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!window.confirm(`Delete this ${isFolder ? 'folder' : 'document'}? You can restore it from Trash.`)) return;
-                            window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
-                        }}
-                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-red-600 shrink-0"
-                    >
-                        <Trash2 className="h-3 w-3" />
-                        Delete
-                    </button>
+            </CardContent>
+        </Card>
+    ) : (
+        <Card
+            draggable={!isFolder && !page.isTrashed}
+            onDragStart={handleDragStart}
+            onDragOver={(e) => { if (isFolder) { e.preventDefault(); setIsOver(true); } }}
+            onDragLeave={() => setIsOver(false)}
+            onDrop={handleDrop}
+            className={cn(
+                "border-none shadow-none bg-transparent rounded-none overflow-hidden",
+                isOver && "bg-blue-50/40"
+            )}
+        >
+            <CardContent className="p-0">
+                <div className="flex items-center gap-3 h-12 px-3 hover:bg-slate-50 transition-colors">
+                    <span className="h-8 w-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0" aria-hidden>
+                        {typeIcon}
+                    </span>
+                    <h3 className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate tracking-tight">
+                        {page.title || 'Untitled'}
+                    </h3>
+                    {actionsMenu}
                 </div>
             </CardContent>
         </Card>
@@ -519,15 +550,66 @@ function AssetCard({ page, onNavigate }: { page: CollabPage, onNavigate?: () => 
 
     if (isFolder) {
         return (
+            <>
             <button onClick={onNavigate} className="group block text-left outline-none">
                 {cardContent}
             </button>
+            <RenameDialog open={renameOpen} onOpenChange={setRenameOpen} value={renameValue} onChange={setRenameValue} onSave={() => {
+                window.dispatchEvent(new CustomEvent('request-rename-collab-page', { detail: { pageId: page.id, title: renameValue } }));
+                setRenameOpen(false);
+            }} />
+            </>
         );
     }
 
     return (
+        <>
         <Link href={`/workspace/${page.id}`} className="group block">
             {cardContent}
         </Link>
+        <RenameDialog open={renameOpen} onOpenChange={setRenameOpen} value={renameValue} onChange={setRenameValue} onSave={() => {
+            window.dispatchEvent(new CustomEvent('request-rename-collab-page', { detail: { pageId: page.id, title: renameValue } }));
+            setRenameOpen(false);
+        }} />
+        </>
     );
+}
+
+function RenameDialog({
+  open,
+  onOpenChange,
+  value,
+  onChange,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-3xl p-8 bg-white" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Rename</DialogTitle>
+          <DialogDescription className="sr-only">Enter a new name</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label className="text-[10px] font-bold text-slate-400 ml-1">Name</Label>
+          <Input
+            autoFocus
+            className="h-12 rounded-xl bg-slate-50 border-slate-100 font-semibold px-4 mt-2 text-sm shadow-inner focus-visible:ring-primary"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onSave()}
+          />
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
+          <Button onClick={onSave} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

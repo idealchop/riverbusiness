@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import HRLayoutClient from './HRLayoutClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Team Hub',
+  title: inAppTitle('Team Hub'),
   robots: privatePageRobots,
 };
 

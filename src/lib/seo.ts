@@ -40,6 +40,14 @@ export const privatePageMetadata: Metadata = {
   robots: privatePageRobots,
 };
 
+/** In-app tab titles without the "| River Business" suffix. */
+export function inAppTitle(pageTitle: string): Metadata['title'] {
+  return {
+    absolute: pageTitle,
+    template: '%s',
+  };
+}
+
 export function getJsonLd() {
   return {
     '@context': 'https://schema.org',

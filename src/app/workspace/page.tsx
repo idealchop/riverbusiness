@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { LogoBlack } from '@/components/icons';
 import { cn } from '@/lib/utils';
+import { NamePromptPopover } from '@/components/collaboration/NamePromptPopover';
 
 const SUGGESTIONS = [
   "Draft a project proposal...",
@@ -22,6 +23,10 @@ const SUGGESTIONS = [
 
 export default function WorkspaceLandingPage() {
   const [prompt, setPrompt] = useState('');
+  const [docOpen, setDocOpen] = useState(false);
+  const [docName, setDocName] = useState('');
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [boardName, setBoardName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,9 +45,11 @@ export default function WorkspaceLandingPage() {
     }
   }, [prompt]);
 
-  const handleCreate = (type: 'doc' | 'board') => {
+  const handleCreate = (type: 'doc' | 'board', title: string) => {
+    const name = title.trim();
+    if (!name) return;
     window.dispatchEvent(new CustomEvent('request-new-collab-page', {
-        detail: { type }
+        detail: { type, title: name }
     }));
   };
 
@@ -112,15 +119,49 @@ export default function WorkspaceLandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full max-w-4xl px-2">
-                <QuickActionButton 
-                    onClick={() => handleCreate('doc')}
-                    icon={<FileText className="h-4 w-4 text-blue-500" />}
-                    label="Write Document"
+                <NamePromptPopover
+                    open={docOpen}
+                    onOpenChange={(open) => {
+                        setDocOpen(open);
+                        if (!open) setDocName('');
+                    }}
+                    title="Document name"
+                    placeholder="Document name"
+                    value={docName}
+                    onChange={setDocName}
+                    onSubmit={() => {
+                        handleCreate('doc', docName);
+                        setDocName('');
+                        setDocOpen(false);
+                    }}
+                    trigger={
+                        <QuickActionButton
+                            icon={<FileText className="h-4 w-4 text-blue-500" />}
+                            label="Write Document"
+                        />
+                    }
                 />
-                <QuickActionButton 
-                    onClick={() => handleCreate('board')}
-                    icon={<Layout className="h-4 w-4 text-purple-600" />}
-                    label="Flow Canvas"
+                <NamePromptPopover
+                    open={boardOpen}
+                    onOpenChange={(open) => {
+                        setBoardOpen(open);
+                        if (!open) setBoardName('');
+                    }}
+                    title="Canvas name"
+                    placeholder="Canvas name"
+                    value={boardName}
+                    onChange={setBoardName}
+                    onSubmit={() => {
+                        handleCreate('board', boardName);
+                        setBoardName('');
+                        setBoardOpen(false);
+                    }}
+                    trigger={
+                        <QuickActionButton
+                            icon={<Layout className="h-4 w-4 text-purple-600" />}
+                            label="Flow Canvas"
+                        />
+                    }
                 />
             </div>
         </div>
@@ -128,10 +169,10 @@ export default function WorkspaceLandingPage() {
   );
 }
 
-function QuickActionButton({ onClick, icon, label }: { onClick: () => void, icon: React.ReactNode, label: string }) {
+function QuickActionButton({ icon, label }: { icon: React.ReactNode, label: string }) {
     return (
         <button 
-            onClick={onClick}
+            type="button"
             className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all duration-200 active:scale-[0.97] group shadow-sm"
         >
             <span className="text-slate-900 transition-transform group-hover:scale-110 duration-300">

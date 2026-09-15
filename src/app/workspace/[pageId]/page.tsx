@@ -117,6 +117,16 @@ export function PageSkeleton() {
   );
 }
 
+function presenceTimeMs(value: any): number {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  return 0;
+}
+
+const TYPING_WINDOW_MS = 4000;
+const ONLINE_WINDOW_MS = 60_000;
+
 function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, onUpdate: (data: Partial<CollabPage>) => Promise<void>, isMobile?: boolean }) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [hasCopied, setHasCopied] = useState(false);
@@ -289,7 +299,9 @@ function PageEditorContent() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   
   const [localIsTyping, setLocalIsTyping] = useState(false);
+  const localIsTypingRef = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [presenceNow, setPresenceNow] = useState(() => Date.now());
 
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<AppUser>(userDocRef);
@@ -308,19 +320,23 @@ function PageEditorContent() {
 
   const collaborators = useMemo(() => {
     if (!rawCollaborators) return [];
-    return [...rawCollaborators].sort((a, b) => {
-        const timeA = a.lastActive?.seconds || 0;
-        const timeB = b.lastActive?.seconds || 0;
-        if (a.isActive && !b.isActive) return -1;
-        if (!a.isActive && b.isActive) return 1;
-        return timeB - timeA;
-    });
-  }, [rawCollaborators]);
-
-  const typingCollaborators = useMemo(() => 
-    collaborators.filter(c => c.isTyping && c.userId !== user?.uid),
-    [collaborators, user?.uid]
-  );
+    const myId = user?.uid;
+    return [...rawCollaborators]
+      .map((c: any) => {
+        const uid = c.userId || c.id;
+        const lastActiveMs = presenceTimeMs(c.lastActive);
+        const typingAtMs = presenceTimeMs(c.typingAt);
+        const isOnline = lastActiveMs > 0 && presenceNow - lastActiveMs < ONLINE_WINDOW_MS;
+        const isTyping = !!uid && uid !== myId && typingAtMs > 0 && presenceNow - typingAtMs < TYPING_WINDOW_MS;
+        return { ...c, userId: uid, isOnline, isTyping };
+      })
+      .filter((c: any) => c.userId && c.userId !== myId && c.isOnline)
+      .sort((a: any, b: any) => {
+        if (a.isTyping && !b.isTyping) return -1;
+        if (!a.isTyping && b.isTyping) return 1;
+        return presenceTimeMs(b.lastActive) - presenceTimeMs(a.lastActive);
+      });
+  }, [rawCollaborators, user?.uid, presenceNow]);
 
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch) return EMOJI_LIST;
@@ -328,17 +344,23 @@ function PageEditorContent() {
     return EMOJI_LIST.filter(e => e.keywords.includes(s) || e.char.includes(s));
   }, [emojiSearch]);
 
-  const setTypingState = useCallback(async (isTyping: boolean) => {
-    if (!firestore || !pageId || !user || isTyping === localIsTyping) return;
+  const setTypingState = useCallback((isTyping: boolean) => {
+    if (!firestore || !pageId || !user) return;
+    if (isTyping === localIsTypingRef.current && isTyping) return;
+    localIsTypingRef.current = isTyping;
     setLocalIsTyping(isTyping);
     const presenceRef = doc(firestore, 'collaboration_pages', pageId as string, 'presence', user.uid);
-    updateDoc(presenceRef, { isTyping, lastActive: serverTimestamp() }).catch(() => {});
-  }, [firestore, pageId, user, localIsTyping]);
+    updateDoc(presenceRef, {
+      isTyping,
+      typingAt: isTyping ? serverTimestamp() : deleteField(),
+      lastActive: serverTimestamp(),
+    }).catch(() => {});
+  }, [firestore, pageId, user]);
 
   const triggerTypingIndicator = useCallback(() => {
     setTypingState(true);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => setTypingState(false), 3000);
+    typingTimeoutRef.current = setTimeout(() => setTypingState(false), 2500);
   }, [setTypingState]);
 
   const forceSave = useCallback(async () => {
@@ -378,10 +400,16 @@ function PageEditorContent() {
         photoURL: userProfile.photoURL || null,
         lastActive: serverTimestamp(),
         isActive: true,
-        isTyping: false
+        isTyping: false,
     };
     
     setDoc(presenceRef, presenceData).catch(() => {});
+
+    const heartbeat = window.setInterval(() => {
+      updateDoc(presenceRef, { isActive: true, lastActive: serverTimestamp() }).catch(() => {});
+    }, 20000);
+
+    const tick = window.setInterval(() => setPresenceNow(Date.now()), 1000);
 
     const pageRef = doc(firestore, 'collaboration_pages', pageId as string);
     const unsub = onSnapshot(pageRef, async (snapshot) => {
@@ -410,9 +438,12 @@ function PageEditorContent() {
 
     return () => {
         unsub();
+        window.clearInterval(heartbeat);
+        window.clearInterval(tick);
         forceSave();
-        updateDoc(presenceRef, { isActive: false, isTyping: false, lastActive: serverTimestamp() }).catch(() => {}); 
+        updateDoc(presenceRef, { isActive: false, isTyping: false, typingAt: deleteField(), lastActive: serverTimestamp() }).catch(() => {}); 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        localIsTypingRef.current = false;
     };
   }, [firestore, pageId, router, user, userProfile, forceSave]);
 
@@ -662,11 +693,11 @@ function PageEditorContent() {
 
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <div className="flex -space-x-1.5 mr-1 sm:mr-4">
-              {collaborators?.filter(c => c.userId !== user?.uid).slice(0, 3).map(collab => (
+              {collaborators.slice(0, 3).map(collab => (
                   <TooltipProvider key={collab.userId}>
                       <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>
-                              <Avatar className={cn("h-5 w-5 sm:h-6 sm:w-6 border-2 border-white shadow-sm transition-all", !collab.isActive && "grayscale opacity-50", collab.isTyping && "ring-2 ring-primary ring-offset-1 animate-pulse")}>
+                              <Avatar className={cn("h-5 w-5 sm:h-6 sm:w-6 border-2 border-white shadow-sm transition-all", collab.isTyping && "ring-2 ring-primary ring-offset-1 animate-pulse")}>
                                   <AvatarImage src={collab.photoURL} /><AvatarFallback className="text-[7px] sm:text-[8px] font-bold bg-primary/10 text-primary">{collab.name?.charAt(0)}</AvatarFallback>
                               </Avatar>
                           </TooltipTrigger>
@@ -677,7 +708,7 @@ function PageEditorContent() {
                       </Tooltip>
                   </TooltipProvider>
               ))}
-              {collaborators && collaborators.length > 4 && (
+              {collaborators.length > 3 && (
                   <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-500">+{collaborators.length - 3}</div>
               )}
           </div>

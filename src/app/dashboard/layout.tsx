@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import DashboardLayoutClient from './DashboardLayoutClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Water Refill',
+  title: inAppTitle('Water Refill'),
   robots: privatePageRobots,
 };
 

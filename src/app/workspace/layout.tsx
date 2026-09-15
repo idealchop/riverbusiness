@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import WorkspaceLayoutClient from './WorkspaceLayoutClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Collaboration',
+  title: inAppTitle('Collaboration'),
   robots: privatePageRobots,
 };
 

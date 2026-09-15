@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import FilesClient from './FilesClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Files',
+  title: inAppTitle('Files'),
   robots: privatePageRobots,
 };
 

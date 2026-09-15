@@ -65,6 +65,12 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
   const { data: rawPages, isLoading: loadingPages } = useCollection<CollabPage>(pagesQuery);
 
+  const isProjectEditor = useMemo(() => {
+    const hub = new Set(['docs', 'boards', 'sheets', 'recent', 'trash']);
+    const parts = pathname.split('/').filter(Boolean);
+    return parts[0] === 'workspace' && parts.length >= 2 && !hub.has(parts[1]);
+  }, [pathname]);
+
   const pages = useMemo(() => {
       if (!rawPages) return [];
       return [...rawPages]
@@ -204,6 +210,20 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     }
   }, [firestore, toast]);
 
+  const handleRenamePage = useCallback(async (pageId: string, title: string) => {
+    if (!firestore) return;
+    const nextTitle = title.trim() || 'Untitled';
+    try {
+        await updateDoc(doc(firestore, 'collaboration_pages', pageId), {
+            title: nextTitle,
+            updatedAt: serverTimestamp(),
+        });
+        toast({ title: 'Renamed' });
+    } catch (error) {
+        console.error('Error renaming page:', error);
+    }
+  }, [firestore, toast]);
+
   const handleFavoriteToggle = useCallback(async (pageId: string, isFavorite: boolean) => {
     if (!firestore) return;
     try {
@@ -246,6 +266,11 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
         if (customEvent.detail?.pageId) handleFavoriteToggle(customEvent.detail.pageId, customEvent.detail.isFavorite);
     };
 
+    const handleRequestRename = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.pageId) handleRenamePage(customEvent.detail.pageId, customEvent.detail.title || 'Untitled');
+    };
+
     const handleRequestShare = (event: Event) => {
         const customEvent = event as CustomEvent;
         if (customEvent.detail?.pageId) setSharingPageId(customEvent.detail.pageId);
@@ -266,6 +291,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     window.addEventListener('request-restore-collab-page', handleRequestRestorePage);
     window.addEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
     window.addEventListener('request-favorite-collab-page', handleRequestFavorite);
+    window.addEventListener('request-rename-collab-page', handleRequestRename);
     window.addEventListener('request-share-collab-page', handleRequestShare);
     window.addEventListener('request-duplicate-collab-page', handleRequestDuplicate);
     window.addEventListener('request-move-collab-page', handleRequestMove);
@@ -276,11 +302,12 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
         window.removeEventListener('request-restore-collab-page', handleRequestRestorePage);
         window.removeEventListener('request-permanent-delete-page', handleRequestPermanentDelete);
         window.removeEventListener('request-favorite-collab-page', handleRequestFavorite);
+        window.removeEventListener('request-rename-collab-page', handleRequestRename);
         window.removeEventListener('request-share-collab-page', handleRequestShare);
         window.removeEventListener('request-duplicate-collab-page', handleRequestDuplicate);
         window.removeEventListener('request-move-collab-page', handleRequestMove);
     };
-  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle, handleDuplicatePage, handleMovePage]);
+  }, [handleCreatePage, handleSoftDelete, handleRestorePage, handlePermanentDelete, handleFavoriteToggle, handleRenamePage, handleDuplicatePage, handleMovePage]);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -324,6 +351,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
       <div className="flex-1 flex flex-col min-w-0 bg-white relative">
         {!isMobile && <SidebarMainExpandToggle />}
+        {!isProjectEditor && (
         <header className="h-14 border-b flex items-center justify-between px-4 sm:px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20 print:hidden">
           <div className="flex items-center gap-2 sm:gap-4">
              {isMobile ? (
@@ -360,6 +388,24 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
             />
           </div>
         </header>
+        )}
+        {isProjectEditor && isMobile && (
+        <header className="h-12 border-b flex items-center px-3 shrink-0 bg-white print:hidden">
+            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                        <Menu className="h-5 w-5" />
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72 border-none">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Workspace Navigation</SheetTitle>
+                    </SheetHeader>
+                    {sidebarContent}
+                </SheetContent>
+            </Sheet>
+        </header>
+        )}
 
         <main className="flex-1 min-h-0 overflow-auto relative">
           {children}

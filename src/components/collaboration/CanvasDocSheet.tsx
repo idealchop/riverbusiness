@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Editor } from '@/components/collaboration/Editor';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ export function CanvasDocSheet({
   onTitleChange,
   onContentChange,
   onClose,
+  onDelete,
 }: {
   open: boolean;
   docId: string;
@@ -29,6 +30,7 @@ export function CanvasDocSheet({
   onTitleChange: (title: string) => void;
   onContentChange: (json: any) => void;
   onClose: () => void;
+  onDelete?: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [render, setRender] = useState(false);
@@ -105,6 +107,17 @@ export function CanvasDocSheet({
             className="h-11 border-none shadow-none bg-transparent text-lg font-bold px-0 focus-visible:ring-0 text-center sm:text-left"
             placeholder="Untitled document"
           />
+          {editable && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="h-9 w-9 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+              aria-label="Delete document"
+              title="Delete document"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

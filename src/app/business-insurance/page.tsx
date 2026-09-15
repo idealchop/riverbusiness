@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import VaultClient from './VaultClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'PS Vault',
+  title: inAppTitle('PS Vault'),
   robots: privatePageRobots,
 };
 

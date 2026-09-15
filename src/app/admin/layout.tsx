@@ -1,10 +1,10 @@
 
 import { Metadata } from 'next';
 import AdminLayoutClient from './AdminLayoutClient';
-import { privatePageRobots } from '@/lib/seo';
+import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Admin Command Center',
+  title: inAppTitle('Admin Command Center'),
   robots: privatePageRobots,
 };
 

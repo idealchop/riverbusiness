@@ -84,6 +84,8 @@ import {
     ChevronLeft,
     ChevronRight,
     LocateFixed,
+    Undo2,
+    Redo2,
     Zap,
     Minus,
     MoreHorizontal,
@@ -151,12 +153,11 @@ function richDocPreviewLabel(el: BoardElement) {
 
 function elementBox(el: BoardElement) {
   if (el.type !== 'richdoc') return { x: el.x, y: el.y, width: el.width, height: el.height };
-  const label = richDocPreviewLabel(el);
   return {
     x: el.x,
     y: el.y,
-    width: Math.min(280, Math.max(132, 40 + label.length * 7)),
-    height: RICHDOC_BADGE_H,
+    width: Math.max(132, el.width || 200),
+    height: Math.max(RICHDOC_BADGE_H, el.height || RICHDOC_BADGE_H),
   };
 }
 
@@ -378,6 +379,7 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
   const slidesRef = useRef(slides);
   slidesRef.current = slides;
   const [history, setHistory] = useState<{ elements: BoardElement[], connections: BoardConnection[] }[]>([]);
+  const [redoStack, setRedoStack] = useState<{ elements: BoardElement[], connections: BoardConnection[] }[]>([]);
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [openDocId, setOpenDocId] = useState<string | null>(null);
@@ -482,22 +484,42 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
       sync(next, connectionsRef.current);
   }, [editable, sync]);
 
+  const snapshotBoard = useCallback(() => ({
+    elements: JSON.parse(JSON.stringify(elements)) as BoardElement[],
+    connections: JSON.parse(JSON.stringify(connections)) as BoardConnection[],
+  }), [elements, connections]);
+
   const pushHistory = useCallback(() => {
+    const snap = snapshotBoard();
     setHistory(prev => {
-        const next = [...prev, { elements: JSON.parse(JSON.stringify(elements)), connections: JSON.parse(JSON.stringify(connections)) }];
+        const next = [...prev, snap];
         if (next.length > 50) return next.slice(1);
         return next;
     });
-  }, [elements, connections]);
+    setRedoStack([]);
+  }, [snapshotBoard]);
 
   const undo = useCallback(() => {
     if (history.length === 0 || !editable) return;
     const prevState = history[history.length - 1];
+    setRedoStack(prev => [...prev, snapshotBoard()]);
     setHistory(prev => prev.slice(0, -1));
     setElements(prevState.elements);
     setConnections(prevState.connections);
     sync(prevState.elements, prevState.connections);
-  }, [history, editable, sync]);
+    persist();
+  }, [history, editable, sync, persist, snapshotBoard]);
+
+  const redo = useCallback(() => {
+    if (redoStack.length === 0 || !editable) return;
+    const nextState = redoStack[redoStack.length - 1];
+    setHistory(prev => [...prev, snapshotBoard()]);
+    setRedoStack(prev => prev.slice(0, -1));
+    setElements(nextState.elements);
+    setConnections(nextState.connections);
+    sync(nextState.elements, nextState.connections);
+    persist();
+  }, [redoStack, editable, sync, persist, snapshotBoard]);
 
   const getLogicalCoords = (clientX: number, clientY: number) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -654,17 +676,35 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
 
   const deleteSelected = useCallback(() => {
       if (!editable || selectedIds.length === 0) return;
+      const idsToDelete = selectedIds.filter((id) => {
+          const el = elements.find((item) => item.id === id);
+          return !el || el.type !== 'richdoc';
+      });
+      if (idsToDelete.length === 0) return;
       pushHistory();
-      
-      const newElements = elements.filter(el => !selectedIds.includes(el.id));
-      const newConnections = connections.filter(c => !selectedIds.includes(c.id) && !selectedIds.includes(c.fromId) && !selectedIds.includes(c.toId));
+
+      const newElements = elements.filter(el => !idsToDelete.includes(el.id));
+      const newConnections = connections.filter(c => !idsToDelete.includes(c.id) && !idsToDelete.includes(c.fromId) && !idsToDelete.includes(c.toId));
 
       setElements(newElements);
       setConnections(newConnections);
       sync(newElements, newConnections);
+      persist();
       setSelectedIds([]);
-      setOpenDocId(prev => prev && selectedIds.includes(prev) ? null : prev);
-  }, [editable, selectedIds, sync, pushHistory, elements, connections]);
+  }, [editable, selectedIds, sync, persist, pushHistory, elements, connections]);
+
+  const deleteCanvasDoc = useCallback((id: string) => {
+      if (!editable) return;
+      pushHistory();
+      const newElements = elements.filter(el => el.id !== id);
+      const newConnections = connections.filter(c => c.fromId !== id && c.toId !== id);
+      setElements(newElements);
+      setConnections(newConnections);
+      sync(newElements, newConnections);
+      persist();
+      setOpenDocId(null);
+      setSelectedIds(prev => prev.filter(sid => sid !== id));
+  }, [editable, elements, connections, sync, persist, pushHistory]);
 
   const handleCopy = useCallback(() => {
       const selected = elements.filter(el => selectedIds.includes(el.id));
@@ -721,9 +761,15 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
   useEffect(() => {
       if (!editable) return;
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
-          const activeElement = document.activeElement;
-          const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
-          if (!isInput) {
+          const activeElement = document.activeElement as HTMLElement | null;
+          const isTyping = !!(
+            activeElement &&
+            (activeElement.tagName === 'INPUT' ||
+              activeElement.tagName === 'TEXTAREA' ||
+              activeElement.isContentEditable ||
+              activeElement.closest('.ProseMirror'))
+          );
+          if (!isTyping) {
             if (e.key.toLowerCase() === 's') { e.preventDefault(); setTool('select'); }
             if (e.key.toLowerCase() === 'p') { e.preventDefault(); setTool('pen'); }
             if (e.key.toLowerCase() === 'h') { e.preventDefault(); setTool('hand'); }
@@ -731,12 +777,17 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
             if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteSelected(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'c') { e.preventDefault(); handleCopy(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'v') { e.preventDefault(); handlePaste(); }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+              e.preventDefault();
+              if (e.shiftKey) redo();
+              else undo();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
           }
       };
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [editable, selectedIds, deleteSelected, handleCopy, handlePaste, undo]);
+  }, [editable, selectedIds, deleteSelected, handleCopy, handlePaste, undo, redo]);
 
   const handleMouseDown = (e: React.MouseEvent | React.PointerEvent) => {
       if (!editable) {
@@ -762,6 +813,17 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
       }
 
       const target = e.target as HTMLElement;
+      const connId = target.closest('[data-conn-id]')?.getAttribute('data-conn-id');
+      if (connId) {
+          setSelectedIds([connId]);
+          return;
+      }
+      const drawingId = target.closest('[data-path-id]')?.getAttribute('data-path-id');
+      if (drawingId) {
+          setSelectedIds([drawingId]);
+          return;
+      }
+
       const portId = target.closest('[data-port-id]')?.getAttribute('data-port-id');
       if (portId) {
           setPendingConnFrom(portId);
@@ -780,7 +842,13 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
       
       if (hit) {
           const handleSize = 12 / viewport.scale;
-          const isResizingHit = hit.type !== 'richdoc' && x >= hit.x + hit.width - handleSize && y >= hit.y + hit.height - handleSize;
+          const box = elementBox(hit);
+          const resizingFromHandle = !!(target.closest('[data-resize-handle]'));
+          const isResizingHit = resizingFromHandle || (
+              hit.type !== 'richdoc' &&
+              x >= box.x + box.width - handleSize &&
+              y >= box.y + box.height - handleSize
+          );
           dragMovedRef.current = false;
           pointerDownHitRef.current = hit;
 
@@ -788,15 +856,14 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
               pushHistory();
               setIsResizing(true);
               setDragId(hit.id);
+              if (hit.type !== 'richdoc') setSelectedIds([hit.id]);
           } else {
-              if (hit.type !== 'richdoc') {
-                  if (e.shiftKey) {
-                      setSelectedIds(prev => prev.includes(hit.id) ? prev.filter(id => id !== hit.id) : [...prev, hit.id]);
-                  } else if (!selectedIds.includes(hit.id)) {
-                      setSelectedIds([hit.id]);
-                  }
-              } else {
+              if (hit.type === 'richdoc') {
                   setSelectedIds([]);
+              } else if (e.shiftKey) {
+                  setSelectedIds(prev => prev.includes(hit.id) ? prev.filter(id => id !== hit.id) : [...prev, hit.id]);
+              } else if (!selectedIds.includes(hit.id)) {
+                  setSelectedIds([hit.id]);
               }
               if (hit.type !== 'richdoc') pushHistory();
               setIsDragging(true);
@@ -839,7 +906,7 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
           const yMax = Math.max(marqueeBox.y1, y);
           
           const inBox = visibleElements.map(el => {
-              if (el.type === 'path') return null;
+              if (el.type === 'path' || el.type === 'richdoc') return null;
               const box = elementBox(el);
               if (box.x < xMax && box.x + box.width > xMin && box.y < yMax && box.y + box.height > yMin) return el.id;
               return null;
@@ -860,11 +927,16 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
 
       if (isResizing && dragId) {
           setElements(prev => {
-              const next = prev.map(el => el.id === dragId ? { 
-                  ...el, 
-                  width: Math.max(50, x - el.x), 
-                  height: Math.max(40, y - el.y) 
-              } : el);
+              const next = prev.map(el => {
+                  if (el.id !== dragId) return el;
+                  const minW = el.type === 'richdoc' ? 132 : 50;
+                  const minH = el.type === 'richdoc' ? RICHDOC_BADGE_H : 40;
+                  return {
+                      ...el,
+                      width: Math.max(minW, x - el.x),
+                      height: Math.max(minH, y - el.y),
+                  };
+              });
               elementsRef.current = next;
               return next;
           });
@@ -969,6 +1041,7 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
       if (
           editable &&
           !moved &&
+          !isResizing &&
           downHit?.type === 'richdoc' &&
           tool === 'select'
       ) {
@@ -1332,13 +1405,19 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                         const strokeColor = conn.color || '#cbd5e1';
                         
                         return (
-                            <g key={conn.id} className="group/conn pointer-events-none">
+                            <g key={conn.id} className="group/conn pointer-events-none" data-conn-id={conn.id}>
                                 <path 
+                                    data-conn-id={conn.id}
                                     d={path} 
                                     fill="none" 
                                     stroke="transparent" 
-                                    strokeWidth="12" 
+                                    strokeWidth="16" 
                                     className={cn(editable ? "pointer-events-auto cursor-pointer" : "pointer-events-none")} 
+                                    onPointerDown={(e) => {
+                                        if (!editable) return;
+                                        e.stopPropagation();
+                                        setSelectedIds([conn.id]);
+                                    }}
                                     onClick={(e) => { 
                                         if (!editable) return;
                                         e.stopPropagation(); 
@@ -1353,6 +1432,7 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                         strokeWidth={6} 
                                         strokeOpacity="0.2"
                                         filter="url(#selection-glow)"
+                                        className="pointer-events-none"
                                     />
                                 )}
                                 <path 
@@ -1362,7 +1442,7 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                     strokeWidth={conn.strokeWidth || 2} 
                                     strokeDasharray={conn.dashArray || ""}
                                     markerEnd={conn.endMarker && conn.endMarker !== 'none' ? `url(#marker-${conn.endMarker})` : "url(#marker-arrow)"}
-                                    className="transition-colors duration-300"
+                                    className="pointer-events-none transition-colors duration-300"
                                     style={{ color: isSelected ? 'hsl(var(--primary))' : strokeColor }}
                                 />
                             </g>
@@ -1375,10 +1455,20 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                     {visibleElements.filter(el => el.type === 'path').map(el => {
                         const isSelected = selectedIds.includes(el.id);
                         return (
-                            <g key={el.id} className={cn(editable ? "pointer-events-auto group/drawing cursor-pointer" : "pointer-events-none")} onClick={(e) => { if (!editable) return; e.stopPropagation(); setSelectedIds([el.id]); }}>
-                                <path d={el.path} fill="none" stroke="transparent" strokeWidth={Math.max(10, (el.strokeWidth || 4) * 2)} />
-                                <path d={el.path} fill="none" stroke={isSelected ? 'hsl(var(--primary))' : (el.color || '#3b82f6')} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" />
-                                {isSelected && <path d={el.path} fill="none" stroke="hsl(var(--primary))" strokeWidth={el.strokeWidth ? el.strokeWidth + 4 : 8} strokeOpacity="0.1" />}
+                            <g
+                                key={el.id}
+                                data-path-id={el.id}
+                                className={cn(editable ? "pointer-events-auto group/drawing cursor-pointer" : "pointer-events-none")}
+                                onPointerDown={(e) => {
+                                    if (!editable) return;
+                                    e.stopPropagation();
+                                    setSelectedIds([el.id]);
+                                }}
+                                onClick={(e) => { if (!editable) return; e.stopPropagation(); setSelectedIds([el.id]); }}
+                            >
+                                <path data-path-id={el.id} d={el.path} fill="none" stroke="transparent" strokeWidth={Math.max(16, (el.strokeWidth || 4) * 3)} />
+                                <path d={el.path} fill="none" stroke={isSelected ? 'hsl(var(--primary))' : (el.color || '#3b82f6')} strokeWidth={el.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none" />
+                                {isSelected && <path d={el.path} fill="none" stroke="hsl(var(--primary))" strokeWidth={el.strokeWidth ? el.strokeWidth + 4 : 8} strokeOpacity="0.1" className="pointer-events-none" />}
                             </g>
                         );
                     })}
@@ -1408,8 +1498,17 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
 
                     const clipPath = getClipPath(el.type);
 
+                    const box = el.type === 'richdoc' ? elementBox(el) : null;
                     return (
-                        <div key={el.id} style={{ left: el.x, top: el.y, width: el.type === 'richdoc' ? 'auto' : el.width, height: el.type === 'richdoc' ? 'auto' : el.height, zIndex: isSelected ? 30 : 10 }} className={cn("absolute", editable ? "pointer-events-auto" : "pointer-events-none", isSelected && editable && el.type !== 'richdoc' && "ring-2 ring-primary ring-offset-2 rounded-xl")}>
+                        <div
+                            key={el.id}
+                            style={{ left: el.x, top: el.y, width: box ? box.width : el.width, height: box ? box.height : el.height, zIndex: isSelected ? 30 : 10 }}
+                            className={cn(
+                                "absolute",
+                                editable ? "pointer-events-auto" : "pointer-events-none",
+                                isSelected && editable && el.type !== 'richdoc' && "ring-2 ring-primary ring-offset-2 rounded-xl"
+                            )}
+                        >
                             <div className={cn(
                                 "w-full h-full flex flex-col items-center justify-center relative overflow-hidden transition-shadow", 
                                 el.type === 'note' && "border-t-8 border-t-amber-400 rounded-b-lg border-2 border-slate-900 shadow-lg", 
@@ -1456,8 +1555,8 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                         <div className="w-full h-full flex items-center justify-center"><IconComp className="w-[80%] h-[80%]" style={{ color: el.fontColor || '#0f172a' }} /></div>
                                     ) : el.type === 'image' ? null : el.type === 'richdoc' ? (
                                         <div
-                                            title="Open to slide up"
-                                            className="inline-flex items-center gap-1.5 max-w-[280px] h-8 pl-2 pr-2.5 rounded-full bg-white border border-slate-200 shadow-sm cursor-pointer"
+                                            title="Click to open"
+                                            className="w-full h-full inline-flex items-center gap-1.5 pl-2 pr-2.5 rounded-full bg-white border border-slate-200 shadow-sm cursor-pointer overflow-hidden"
                                         >
                                             <FileText className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                                             <span className="text-[11px] font-semibold text-slate-800 truncate">
@@ -1470,7 +1569,14 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                         </div>
                                     )}
                                 </div>
-                                {isSelected && editable && el.type !== 'richdoc' && <div className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"><CornerRightUp className="h-2 w-2 rotate-90" /></div>}
+                                {(isSelected || (el.type === 'richdoc' && isHovered)) && editable && (
+                                    <div
+                                        data-resize-handle="true"
+                                        className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize flex items-center justify-center bg-primary rounded-tl-lg rounded-br-lg text-white z-20"
+                                    >
+                                        <CornerRightUp className="h-2 w-2 rotate-90 pointer-events-none" />
+                                    </div>
+                                )}
                             </div>
                             {(isHovered || isSelected) && !isDragging && editable && el.type !== 'richdoc' && <div className="absolute inset-0 pointer-events-none"><Port side="top" id={el.id} /><Port side="right" id={el.id} /><Port side="bottom" id={el.id} /><Port side="left" id={el.id} /></div>}
                         </div>
@@ -1532,6 +1638,31 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                     >
                         <LocateFixed className="h-3.5 w-3.5" />
                     </button>
+                    {editable && (
+                        <>
+                            <div className="w-px h-5 bg-slate-200 mx-1" />
+                            <button
+                                type="button"
+                                onClick={undo}
+                                disabled={history.length === 0}
+                                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
+                                aria-label="Undo"
+                                title="Undo"
+                            >
+                                <Undo2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={redo}
+                                disabled={redoStack.length === 0}
+                                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
+                                aria-label="Redo"
+                                title="Redo"
+                            >
+                                <Redo2 className="h-3.5 w-3.5" />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -1648,6 +1779,10 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
             onClose={() => {
                 setOpenDocId(null);
                 persist();
+            }}
+            onDelete={() => {
+                if (!sheetDocId) return;
+                deleteCanvasDoc(sheetDocId);
             }}
         />
     </div>
