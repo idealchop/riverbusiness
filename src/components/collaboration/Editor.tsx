@@ -696,6 +696,40 @@ interface EditorProps {
   companyId?: string;
 }
 
+const AI_STATUS_STEPS: Record<string, string[]> = {
+  improve: ['Reading your draft…', 'Tightening the wording…', 'Checking clarity…'],
+  rewrite: ['Reading your draft…', 'Rewriting in a clearer voice…', 'Smoothing the flow…'],
+  'fix-grammar': ['Checking spelling…', 'Fixing grammar…', 'Reviewing punctuation…'],
+  summarize: ['Finding the key points…', 'Condensing the draft…', 'Writing the summary…'],
+  expand: ['Reading your draft…', 'Adding useful detail…', 'Structuring the extra content…'],
+  professional: ['Reading your draft…', 'Adjusting the tone…', 'Keeping it plain and clear…'],
+  simplify: ['Reading your draft…', 'Simplifying the language…', 'Keeping the facts intact…'],
+  continue: ['Reading what you wrote…', 'Drafting the next section…', 'Matching your voice…'],
+  custom: ['Understanding your request…', 'Drafting a response…', 'Polishing the wording…'],
+  generate: ['Outlining the document…', 'Writing the first draft…', 'Structuring the sections…'],
+};
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function suggestionToHtml(text: string) {
+  const blocks = text.replace(/\r\n/g, '\n').trim().split(/\n{2,}/);
+  if (!blocks.length) return '<p></p>';
+  return blocks.map((block) => {
+    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    if (lines.every((line) => /^[-•*]\s+/.test(line))) {
+      const items = lines.map((line) => `<li>${escapeHtml(line.replace(/^[-•*]\s+/, ''))}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    }
+    return `<p>${lines.map((line) => escapeHtml(line)).join('<br>')}</p>`;
+  }).join('');
+}
+
 export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPrompt, onContentChange, editable = true, companyId }, ref) => {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -709,8 +743,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiStatus, setAiStatus] = useState('');
+  const [aiAction, setAiAction] = useState<string | null>(null);
   const [customGoal, setCustomGoal] = useState('');
-  const [aiPreview, setAiPreview] = useState<{ text: string, originalText: string, from: number, to: number } | null>(null);
+  const [aiPreview, setAiPreview] = useState<{
+    originalJSON: any;
+    rationale?: string;
+  } | null>(null);
 
   const [isLinkPageOpen, setIsLinkPageOpen] = useState(false);
   const [pageSearch, setPageSearch] = useState('');
@@ -898,14 +936,27 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const acceptAiSuggestion = () => {
     if (!aiPreview || !editor) return;
     setAiPreview(null);
+    onContentChange(editor.getJSON());
   };
 
   const discardAiSuggestion = () => {
     if (!aiPreview || !editor) return;
-    const { from, to, originalText } = aiPreview;
-    editor.chain().focus().deleteRange(from, to).insertContentAt(from, originalText).run();
+    editor.commands.setContent(aiPreview.originalJSON, false);
+    onContentChange(editor.getJSON());
     setAiPreview(null);
   };
+
+  useEffect(() => {
+    if (!isAiProcessing) return;
+    const steps = AI_STATUS_STEPS[aiAction || 'custom'] || AI_STATUS_STEPS.custom;
+    let i = 0;
+    setAiStatus(steps[0]);
+    const timer = window.setInterval(() => {
+      i = (i + 1) % steps.length;
+      setAiStatus(steps[i]);
+    }, 1600);
+    return () => window.clearInterval(timer);
+  }, [isAiProcessing, aiAction]);
 
   useImperativeHandle(ref, () => ({
       focus: () => {
@@ -952,16 +1003,19 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
     if (initialPrompt && editor && !isAiProcessing && editor.isEmpty) {
         const streamDoc = async () => {
             setIsAiProcessing(true);
-            setAiStatus('Writing...');
+            setAiAction('generate');
+            setShowAiToolbar(true);
+            setAiStatus('Outlining the document…');
             try {
                 const response = await fetch('/api/ai/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: initialPrompt })
                 });
+                if (!response.ok) throw new Error('Could not start the draft.');
                 if (!response.body) throw new Error('Stream failed');
                 const reader = response.body.getReader();
-                const decoder = new TextEncoder();
+                const decoder = new TextDecoder();
                 let accumulatedHtml = '';
                 while (true) {
                     const { done, value } = await reader.read();
@@ -975,12 +1029,18 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                 if (isMounted && editor && !editor.isDestroyed) {
                     onContentChange(editor.getJSON());
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Streaming error:', error);
+                toast({
+                  variant: 'destructive',
+                  title: 'Could not write the draft',
+                  description: error?.message || 'Try again in a moment.',
+                });
             } finally {
                 if (isMounted) {
                     setIsAiProcessing(false);
                     setAiStatus('');
+                    setAiAction(null);
                 }
             }
         };
@@ -989,39 +1049,64 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   }, [initialPrompt, editor, onContentChange, toast, isMounted]);
 
   const callAiAssistant = async (action: string, customInstruction?: string) => {
-    if (!editor || editor.isDestroyed) return;
+    if (!editor || editor.isDestroyed || isAiProcessing) return;
     const { from, to } = editor.state.selection;
-    const selectedText = editor.state.doc.textBetween(from, to, ' ');
-    const textToProcess = selectedText || editor.getText();
-    const context = editor.getText();
-    if (!textToProcess.trim()) return;
+    const selectedText = from !== to ? editor.state.doc.textBetween(from, to, '\n') : '';
+    const fullText = editor.getText();
+    const hasSelection = selectedText.trim().length > 0;
+    const textToProcess = hasSelection ? selectedText : fullText;
+    const goal = (customInstruction || '').trim();
+
+    if (action === 'custom' && !goal) return;
+    if (!textToProcess.trim() && action !== 'custom' && action !== 'continue') {
+      toast({ title: 'Add some text first', description: 'Select a passage, or type a request for the assistant.' });
+      return;
+    }
+
+    const replaceWhole = !hasSelection && ['improve', 'rewrite', 'fix-grammar', 'summarize', 'professional', 'simplify'].includes(action);
+    const originalJSON = editor.getJSON();
+
+    setShowAiToolbar(true);
     setIsAiProcessing(true);
-    setShowAiToolbar(false);
-    setAiStatus('AI is working...');
+    setAiAction(action);
+    setAiStatus((AI_STATUS_STEPS[action] || AI_STATUS_STEPS.custom)[0]);
     try {
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToProcess, action, customGoal: customInstruction, context })
+        body: JSON.stringify({
+          text: textToProcess,
+          action,
+          customGoal: goal || undefined,
+          context: hasSelection ? fullText.slice(0, 6000) : undefined,
+        })
       });
-      if (!response.ok) throw new Error('Assistant error');
-      const data = await response.json();
-      if (data && data.suggestedText && isMounted && !editor.isDestroyed) {
-          if (selectedText) {
-              const combinedHtml = `<s>${selectedText}</s> ${data.suggestedText}`;
-              editor.chain().focus().deleteRange(from, to).insertContent(combinedHtml).run();
-              const currentTo = editor.state.selection.to;
-              setAiPreview({ text: data.suggestedText, originalText: selectedText, from: from, to: currentTo });
-          } else {
-              editor.chain().focus().insertContentAt(editor.state.doc.content.size, `\n\n${data.suggestedText}`).run();
-          }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Assistant error');
+      if (!data?.suggestedText || !isMounted || editor.isDestroyed) return;
+
+      const html = suggestionToHtml(data.suggestedText);
+      if (hasSelection) {
+        editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, html).run();
+      } else if (replaceWhole || editor.isEmpty) {
+        editor.commands.setContent(html, false);
+      } else {
+        editor.chain().focus().insertContent(html).run();
       }
+      setAiPreview({ originalJSON, rationale: data.rationale });
+      setCustomGoal('');
     } catch (error: any) {
       console.error('AI error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Assistant could not finish',
+        description: error?.message || 'Try a shorter selection or a clearer request.',
+      });
     } finally {
       if (isMounted) {
           setIsAiProcessing(false);
           setAiStatus('');
+          setAiAction(null);
       }
     }
   };
@@ -1079,12 +1164,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const editorToolbar = editable && !editor.isDestroyed ? (
         <TooltipProvider delayDuration={0}>
           <div className="docs-editor-toolbar relative pointer-events-auto mx-auto w-full max-w-full sm:w-fit bg-white/95 backdrop-blur-xl border border-slate-200 shadow-lg p-1.5 rounded-2xl sm:rounded-[2rem] flex flex-col items-center gap-1 overflow-visible print:hidden">
-              {(isAiProcessing || isUploading) && (
+              {(isUploading) && (
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full whitespace-nowrap shadow-xl border border-white/10 z-50">
                       <div className="flex items-center gap-3">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                            {isUploading ? `Uploading ${uploadProgress.toFixed(0)}%` : (aiStatus || 'Processing...')}
+                            Uploading {uploadProgress.toFixed(0)}%
                           </span>
                       </div>
                   </div>
@@ -1094,10 +1179,12 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   <div className="flex items-center px-1 shrink-0">
                       <Button
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => setShowAiToolbar(!showAiToolbar)}
-                        className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-widest", showAiToolbar ? "bg-primary text-white shadow-lg" : "bg-slate-900 text-white hover:bg-slate-800")}
+                        onClick={() => !isAiProcessing && setShowAiToolbar(!showAiToolbar)}
+                        disabled={isAiProcessing}
+                        className={cn("h-9 rounded-2xl px-4 gap-2 font-black text-[10px] uppercase tracking-widest", showAiToolbar || isAiProcessing ? "bg-primary text-white shadow-lg" : "bg-slate-900 text-white hover:bg-slate-800")}
                       >
-                          <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} /> Assistant
+                          {isAiProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className={cn("h-3.5 w-3.5", showAiToolbar && "animate-pulse")} />}
+                          {isAiProcessing ? 'Writing' : 'Assistant'}
                       </Button>
                   </div>
                   
@@ -1261,17 +1348,32 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                   </div>
               </div>
 
-              {showAiToolbar && (
+              {(showAiToolbar || isAiProcessing) && (
                   <div className="w-full px-2 py-1.5 flex flex-col gap-2">
+                      {isAiProcessing ? (
+                        <div className="px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-100">
+                          <div className="flex items-center gap-2.5 mb-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                            <p className="text-[12px] font-semibold text-slate-800">{aiStatus || 'Working…'}</p>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                            <div className="h-full w-2/5 rounded-full bg-primary animate-pulse" />
+                          </div>
+                          <p className="mt-2 text-[10px] text-slate-400">Keep this tab open. You can review the draft when it finishes.</p>
+                        </div>
+                      ) : (
+                        <>
                       <div className="flex items-center gap-1.5 w-full overflow-x-auto scrollbar-none px-2">
                         <AiAction icon={<Wand2 className="h-3 w-3" />} label="Improve" onClick={() => callAiAssistant('improve')} />
                         <AiAction icon={<Languages className="h-3 w-3" />} label="Fix Grammar" onClick={() => callAiAssistant('fix-grammar')} />
                         <AiAction icon={<Type className="h-3 w-3" />} label="Professional" onClick={() => callAiAssistant('professional')} />
                       </div>
                       <div className="flex items-center gap-2 px-2 pb-1 w-full">
-                          <Input placeholder="Ask AI to do something..." value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0 shadow-none" />
+                          <Input placeholder="Ask the assistant to write or edit…" value={customGoal} onChange={(e) => setCustomGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && callAiAssistant('custom', customGoal)} className="h-9 rounded-xl bg-slate-50 border-none font-bold text-[11px] flex-1 focus:ring-0 focus-visible:ring-0 shadow-none" />
                           <Button disabled={!customGoal.trim()} onClick={() => callAiAssistant('custom', customGoal)} size="icon" className="h-9 w-9 rounded-xl shrink-0"><Send className="h-3.5 w-3.5" /></Button>
                       </div>
+                        </>
+                      )}
                   </div>
               )}
           </div>
@@ -1284,16 +1386,16 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       {toolbarSlot && editorToolbar ? createPortal(editorToolbar, toolbarSlot) : editorToolbar}
 
       {aiPreview && (
-          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] w-[90%] sm:w-auto">
-              <Card className="border-none shadow-2xl rounded-full bg-slate-900 text-white overflow-hidden py-2 px-4 sm:px-6 flex items-center gap-6 border border-white/10">
-                <div className="flex items-center gap-3">
-                    <div className="p-1.5 sm:p-2 rounded-full bg-primary/20 text-primary shrink-0"><Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>
-                    <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Review changes</p>
+          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] w-[min(92vw,32rem)]">
+              <Card className="border-none shadow-2xl rounded-2xl bg-slate-900 text-white overflow-hidden py-3 px-4 sm:px-5 flex items-center gap-4 border border-white/10">
+                <div className="p-1.5 sm:p-2 rounded-full bg-primary/20 text-primary shrink-0"><Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Review draft</p>
+                    <p className="text-xs text-white/90 truncate">{aiPreview.rationale || 'Keep this version, or undo to restore the previous text.'}</p>
                 </div>
-                <Separator orientation="vertical" className="h-4 bg-white/10" />
-                <div className="flex items-center gap-2">
-                    <Button onClick={acceptAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white"><Check className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
-                    <Button onClick={discardAiSuggestion} variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-red-500/20 text-red-400 hover:bg-red-50 hover:text-white"><X className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+                <div className="flex items-center gap-2 shrink-0">
+                    <Button onClick={discardAiSuggestion} variant="ghost" size="sm" className="h-8 rounded-full px-3 text-[10px] font-bold uppercase tracking-widest text-red-300 hover:bg-red-500 hover:text-white">Undo</Button>
+                    <Button onClick={acceptAiSuggestion} size="sm" className="h-8 rounded-full px-3 text-[10px] font-bold uppercase tracking-widest bg-green-500 hover:bg-green-400 text-white">Keep</Button>
                 </div>
               </Card>
           </div>
@@ -1324,8 +1426,19 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
         </FloatingMenu>
       )}
 
-      <div onClick={() => editor?.commands.focus()}>
+      <div onClick={() => editor?.commands.focus()} className="relative">
         <EditorContent editor={editor} />
+        {isAiProcessing && (
+          <div className="absolute inset-0 z-20 flex items-start justify-center bg-white/55 backdrop-blur-[1px] pt-16 pointer-events-none">
+            <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2.5 shadow-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <div>
+                <p className="text-[12px] font-semibold text-slate-800 leading-none">{aiStatus || 'Working…'}</p>
+                <p className="text-[10px] text-slate-400 mt-1 leading-none">Assistant is drafting</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={isLinkPageOpen} onOpenChange={setIsLinkPageOpen}>

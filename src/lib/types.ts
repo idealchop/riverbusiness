@@ -132,6 +132,7 @@ export interface BoardElement {
     fontSize?: number;
     fontColor?: string;
     bold?: boolean;
+    italic?: boolean;
     textAlign?: 'left' | 'center' | 'right';
     url?: string; // For images
     path?: string; // For freehand drawing (Pen tool)
@@ -139,6 +140,8 @@ export interface BoardElement {
     iconName?: string; // For icon type
     slideId?: string;
     docContent?: any;
+    docUpdatedAt?: number;
+    opacity?: number;
 }
 
 export interface BoardSlide {

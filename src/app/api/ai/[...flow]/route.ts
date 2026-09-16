@@ -68,7 +68,8 @@ export async function POST(
       const result = await writingAssistant(json);
       return NextResponse.json(result);
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const message = error?.message || 'The assistant could not complete that request.';
+      return NextResponse.json({ error: message }, { status: 500 });
     }
   }
 
