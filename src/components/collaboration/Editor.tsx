@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { mergeAttributes } from '@tiptap/core';
 import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, Node, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Heading from '@tiptap/extension-heading';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
@@ -98,12 +99,17 @@ const Title = Node.create({
   name: 'title',
   group: 'block',
   content: 'inline*',
-  defining: true,
+  defining: false,
   parseHTML() {
     return [{ tag: 'p.docs-style-title' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ['p', mergeAttributes(HTMLAttributes, { class: 'docs-style-title' }), 0];
+  },
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => this.editor.chain().splitBlock().setParagraph().run(),
+    };
   },
 });
 
@@ -111,12 +117,17 @@ const Subtitle = Node.create({
   name: 'subtitle',
   group: 'block',
   content: 'inline*',
-  defining: true,
+  defining: false,
   parseHTML() {
     return [{ tag: 'p.docs-style-subtitle' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ['p', mergeAttributes(HTMLAttributes, { class: 'docs-style-subtitle' }), 0];
+  },
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => this.editor.chain().splitBlock().setParagraph().run(),
+    };
   },
 });
 
@@ -517,6 +528,31 @@ const LETTER_PAGE_WIDTH = 816;
 const LETTER_PAGE_GAP = 40;
 const MAX_PAGE_BREAKS = 24;
 
+const LIST_JSON_TYPES = new Set(['bulletList', 'orderedList', 'taskList']);
+
+const joinListContent = (nodes: any[]): any[] => {
+    const mapped = nodes.map((n) => healEditorJson(n));
+    const out: any[] = [];
+    for (const child of mapped) {
+        const prev = out[out.length - 1];
+        if (prev && child && LIST_JSON_TYPES.has(prev.type) && prev.type === child.type) {
+            prev.content = [...(prev.content || []), ...(child.content || [])];
+        } else {
+            out.push(child);
+        }
+    }
+    return out;
+};
+
+const healEditorJson = (json: any): any => {
+    if (!json) return json;
+    if (Array.isArray(json)) return joinListContent(json);
+    if (json.content) {
+        return { ...json, content: joinListContent(json.content) };
+    }
+    return json;
+};
+
 const stripPageBreaks = (json: any): any => {
     if (!json) return json;
     if (Array.isArray(json)) return json.filter((n) => n?.type !== 'pageBreak').map(stripPageBreaks);
@@ -549,11 +585,72 @@ const sizeVerticalPages = (pm: HTMLElement, paper: HTMLElement) => {
     body.style.minHeight = `${pages * (LETTER_PAGE_HEIGHT + LETTER_PAGE_GAP) - LETTER_PAGE_GAP}px`;
 };
 
+const LIST_NODE_NAMES = new Set(['bulletList', 'orderedList', 'taskList']);
+const DO_NOT_SPLIT_NODE_NAMES = new Set([
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'listItem',
+  'taskItem',
+  'table',
+  'tableRow',
+  'tableCell',
+  'tableHeader',
+  'columnGroup',
+  'column',
+]);
+
+const isUnsplittableDom = (el: HTMLElement) => {
+    const tag = el.tagName;
+    if (tag === 'UL' || tag === 'OL' || tag === 'TABLE') return true;
+    if (el.getAttribute('data-type') === 'taskList') return true;
+    if (el.classList.contains('tiptap-column-group')) return true;
+    if (el.classList.contains('node-columnGroup')) return true;
+    return false;
+};
+
+const joinAdjacentListsInTr = (tr: any) => {
+    let safety = 0;
+    while (safety++ < 40) {
+        let joinAt: number | null = null;
+        tr.doc.descendants((node: any, pos: number) => {
+            if (joinAt != null) return false;
+            if (!LIST_NODE_NAMES.has(node.type.name)) return true;
+            const after = pos + node.nodeSize;
+            const next = tr.doc.nodeAt(after);
+            if (next && next.type.name === node.type.name) joinAt = after;
+            return false;
+        });
+        if (joinAt == null) break;
+        try {
+            tr.join(joinAt);
+        } catch {
+            break;
+        }
+    }
+};
+
+const pageBreakInsertPos = (state: any, pos: number) => {
+    const type = state.schema.nodes.pageBreak;
+    if (!type) return null;
+    const clamped = Math.max(1, Math.min(pos, state.doc.content.size));
+    let $pos = state.doc.resolve(clamped);
+    while ($pos.depth > 0) {
+        const parent = $pos.parent;
+        const index = $pos.index();
+        if (parent.canReplaceWith(index, index, type)) break;
+        $pos = state.doc.resolve($pos.before($pos.depth));
+    }
+    if ($pos.depth > 0 && DO_NOT_SPLIT_NODE_NAMES.has($pos.parent.type.name)) return null;
+    if ($pos.nodeBefore?.type?.name === 'pageBreak' || $pos.nodeAfter?.type?.name === 'pageBreak') return null;
+    return $pos.pos;
+};
+
 const insertVerticalPageBreak = (editor: any, pos: number) => {
-    const $pos = editor.state.doc.resolve(Math.max(1, Math.min(pos, editor.state.doc.content.size)));
-    if ($pos.nodeBefore?.type?.name === 'pageBreak' || $pos.nodeAfter?.type?.name === 'pageBreak') return false;
+    const insertPos = pageBreakInsertPos(editor.state, pos);
+    if (insertPos == null) return false;
     const node = editor.schema.nodes.pageBreak.create();
-    const insertTr = editor.state.tr.insert($pos.pos, node);
+    const insertTr = editor.state.tr.insert(insertPos, node);
     insertTr.setMeta('pagination', true);
     insertTr.setMeta('addToHistory', false);
     editor.view.dispatch(insertTr);
@@ -562,9 +659,12 @@ const insertVerticalPageBreak = (editor: any, pos: number) => {
 
 const paginateDocument = (editor: any, depth = 0) => {
     if (!editor || editor.isDestroyed || depth > MAX_PAGE_BREAKS) return;
-    const paper = document.querySelector('.docs-paper') as HTMLElement | null;
     const pm = editor.view?.dom as HTMLElement | undefined;
-    if (!paper || !pm) return;
+    if (!pm) return;
+    const paper = pm.closest('.docs-paper') as HTMLElement | null;
+    if (!paper) return;
+    const paperBox = paper.getBoundingClientRect();
+    if (paperBox.height < 80 || paperBox.width < 80) return;
     const body = (paper.querySelector('.docs-paper-body') as HTMLElement | null) || paper;
 
     if (isHorizontalDocsLayout()) {
@@ -604,8 +704,10 @@ const paginateDocument = (editor: any, depth = 0) => {
         if (bottom <= pageEnd + 1) continue;
 
         try {
+            const spansPage = top <= pageEnd - 6;
+            if (spansPage && isUnsplittableDom(el)) continue;
             let pos: number | null = null;
-            if (top > pageEnd - 6) {
+            if (!spansPage) {
                 pos = editor.view.posAtDOM(el, 0);
             } else {
                 const bodyRect = body.getBoundingClientRect();
@@ -679,9 +781,12 @@ const stripPageBreaksFromEditor = (editor: any) => {
             breaks.push({ from: pos, to: pos + node.nodeSize });
         }
     });
-    if (!breaks.length) return false;
     const tr = state.tr;
-    breaks.reverse().forEach(({ from, to }) => tr.delete(from, to));
+    if (breaks.length) {
+        breaks.reverse().forEach(({ from, to }) => tr.delete(from, to));
+    }
+    joinAdjacentListsInTr(tr);
+    if (!tr.steps.length) return false;
     tr.setMeta('pagination', true);
     tr.setMeta('addToHistory', false);
     editor.view.dispatch(tr);
@@ -806,8 +911,18 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-          heading: { levels: [1, 2, 3] }
+          heading: false,
+          bulletList: { keepMarks: true, keepAttributes: false },
+          orderedList: { keepMarks: true, keepAttributes: false },
       }),
+      Heading.extend({
+        addKeyboardShortcuts() {
+          return {
+            ...this.parent?.(),
+            Enter: () => this.editor.chain().splitBlock().setParagraph().run(),
+          };
+        },
+      }).configure({ levels: [1, 2, 3] }),
       TextStyle,
       Color,
       Underline,
@@ -848,13 +963,13 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       Column,
       PageBreakExtension,
     ],
-    content: stripPageBreaks(initialContent),
+    content: healEditorJson(stripPageBreaks(initialContent)),
     editable: editable,
     onUpdate: ({ editor, transaction }) => {
       if (!editable) return;
       if (transaction.getMeta('pagination')) return;
       if (!isAiProcessing && isMounted) {
-        onContentChange(stripPageBreaks(editor.getJSON()));
+        onContentChange(healEditorJson(stripPageBreaks(editor.getJSON())));
       }
     },
     editorProps: {

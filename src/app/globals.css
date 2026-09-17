@@ -161,19 +161,30 @@
   /* List Styles */
   .prose ul {
     list-style-type: disc;
-    margin: 1.25em 0 1.25em 1.5em;
-    padding-left: 0.5rem;
+    list-style-position: outside;
+    margin: 0.4em 0 0.4em 1.35em;
+    padding-left: 0.35rem;
+    break-inside: auto;
   }
   .prose ol {
     list-style-type: decimal;
-    margin: 1.25em 0 1.25em 1.5em;
-    padding-left: 0.5rem;
+    list-style-position: outside;
+    margin: 0.4em 0 0.4em 1.35em;
+    padding-left: 0.35rem;
+    break-inside: auto;
   }
   .prose li {
-    margin: 0.5em 0;
+    margin: 0.12em 0;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
   }
   .prose li p {
     margin: 0;
+  }
+  .prose li > ul,
+  .prose li > ol {
+    margin: 0.1em 0 0.1em 1.1em;
   }
 
   /* Task List Styles */
@@ -668,6 +679,14 @@
     padding-right: 64px;
     overflow-wrap: anywhere;
     word-break: break-word;
+  }
+
+  html[data-docs-layout="horizontal"] .docs-paper .ProseMirror ul,
+  html[data-docs-layout="horizontal"] .docs-paper .ProseMirror ol,
+  html[data-docs-layout="horizontal"] .docs-paper .ProseMirror li {
+    -webkit-column-break-inside: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   html[data-docs-layout="horizontal"] .docs-paper .ProseMirror img,
