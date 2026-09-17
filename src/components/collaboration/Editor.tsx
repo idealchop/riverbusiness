@@ -880,7 +880,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       setUploadProgress(90);
       if (isMounted && editor && !editor.isDestroyed) {
           editor.chain().focus().setImage({ src }).run();
-          toast({ title: 'Image added' });
+          toast({ title: 'Image added', description: 'The image is in the document. Drag to reposition it.' });
       }
     } catch (error: any) {
       console.error('Image attach failed:', error);

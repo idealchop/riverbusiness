@@ -54,7 +54,7 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
     try {
         const pageRef = doc(firestore, 'collaboration_pages', page.id);
         await updateDoc(pageRef, updates);
-        toast({ title: 'Security updated' });
+        toast({ title: 'Security updated', description: 'Sharing settings for this item were saved.' });
     } catch (error: any) {
         toast({
             variant: 'destructive',
@@ -104,7 +104,7 @@ export function ShareDialog({ isOpen, onOpenChange, page }: ShareDialogProps) {
     navigator.clipboard.writeText(shareUrl);
     setHasCopied(true);
     setTimeout(() => setHasCopied(false), 2000);
-    toast({ title: 'Link copied' });
+    toast({ title: 'Link copied', description: 'Anyone with the link can use the current sharing settings.' });
   };
 
   return (

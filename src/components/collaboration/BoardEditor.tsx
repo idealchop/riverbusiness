@@ -749,7 +749,7 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
       try {
           const url = await fileToEmbeddedImageSrc(file);
           addElement('image', x, y, { url, width: 280, height: 180, color: '#ffffff' });
-          toast({ title: 'Image added' });
+          toast({ title: 'Image added', description: 'It is on the canvas. Drag to place it.' });
       } catch (error: any) {
           toast({
               variant: 'destructive',
@@ -860,7 +860,6 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
   }, [selectedIds, elements, editable, connections, sync, pushHistory]);
 
   useEffect(() => {
-      if (!editable) return;
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           const activeElement = document.activeElement as HTMLElement | null;
           const isTyping = !!(
@@ -870,7 +869,17 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
               activeElement.isContentEditable ||
               activeElement.closest('.ProseMirror'))
           );
-          if (!isTyping) {
+
+          if (e.key === 'Escape') {
+            if (openDocId) return;
+            if (selectedIds.length > 0 || selectedConnection) {
+              e.preventDefault();
+              setSelectedIds([]);
+            }
+            return;
+          }
+
+          if (!editable || isTyping) return;
             if (e.key.toLowerCase() === 's') { e.preventDefault(); setTool('select'); }
             if (e.key.toLowerCase() === 'p') { e.preventDefault(); setTool('pen'); }
             if (e.key.toLowerCase() === 'h') { e.preventDefault(); setTool('hand'); }
@@ -888,11 +897,10 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
               else undo();
             }
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
-          }
       };
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-      }, [editable, selectedIds, visibleElements, deleteSelected, handleCopy, handlePaste, undo, redo]);
+      }, [editable, selectedIds, selectedConnection, openDocId, visibleElements, deleteSelected, handleCopy, handlePaste, undo, redo]);
 
   const handleMouseDown = (e: React.MouseEvent | React.PointerEvent) => {
       if (!editable) {
@@ -1785,11 +1793,13 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                 height: box ? box.height : el.height,
                                 zIndex: isSelected ? 10000 : undefined,
                                 opacity: el.opacity ?? 1,
+                                ...(el.type === 'image' ? { borderRadius: el.borderRadius ?? 0 } : {}),
                             }}
                             className={cn(
                                 "absolute",
                                 editable ? "pointer-events-auto" : "pointer-events-none",
-                                isSelected && editable && (el.type !== 'richdoc' || selectedShapes.length > 1) && "ring-2 ring-primary ring-offset-2 rounded-xl"
+                                isSelected && editable && (el.type !== 'richdoc' || selectedShapes.length > 1) && "ring-2 ring-primary ring-offset-2",
+                                isSelected && editable && el.type !== 'image' && (el.type !== 'richdoc' || selectedShapes.length > 1) && "rounded-xl"
                             )}
                         >
                             <div className={cn(
@@ -1806,9 +1816,15 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                 (el.type === 'text' || el.type === 'icon' || el.type === 'image' || el.type === 'richdoc') && "bg-transparent border-none p-0 shadow-none"
                             )} style={{ 
                                 backgroundColor: (el.type === 'text' || el.type === 'icon' || el.type === 'image' || isCustomClipped || el.type === 'cloud' || el.type === 'richdoc') ? 'transparent' : el.color,
+                                ...(el.type === 'image' ? { borderRadius: el.borderRadius ?? 0 } : {}),
                             }}>
                                 {el.type === 'image' && el.url && (
-                                    <img src={el.url} alt="" className="w-full h-full object-contain pointer-events-none select-none" />
+                                    <img
+                                        src={el.url}
+                                        alt=""
+                                        className="w-full h-full object-cover pointer-events-none select-none"
+                                        style={{ borderRadius: el.borderRadius ?? 0 }}
+                                    />
                                 )}
                                 {isCustomClipped && (
                                     <>
@@ -2086,6 +2102,23 @@ export function BoardEditor({ initialData, onContentChange, onPersist, editable 
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {selectedElement?.type === 'image' && (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[11px] text-slate-500">Round</p>
+                                    <span className="text-[11px] tabular-nums text-slate-400">{selectedElement.borderRadius ?? 0}px</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="80"
+                                    value={selectedElement.borderRadius ?? 0}
+                                    onChange={(e) => updateSelectedElements({ borderRadius: parseInt(e.target.value, 10) })}
+                                    className="w-full"
+                                />
                             </div>
                         )}
 

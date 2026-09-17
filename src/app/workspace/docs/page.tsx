@@ -60,6 +60,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { NamePromptPopover } from '@/components/collaboration/NamePromptPopover';
+import { HubAssetCard } from '@/components/collaboration/HubAssetCard';
 
 function DocsHubContent() {
   const { user: authUser } = useUser();
@@ -327,11 +328,15 @@ function DocsHubContent() {
                             <div key={i} className={cn("bg-slate-50", viewMode === 'list' ? "h-12" : "aspect-[4/5] rounded-[1.5rem]")} />
                         ))
                     ) : filteredAssets.map(asset => (
-                        <AssetCard 
-                            key={asset.id} 
+                        <HubAssetCard
+                            key={asset.id}
                             page={asset}
+                            pages={allPages || []}
                             viewMode={viewMode}
-                            onNavigate={() => asset.type === 'folder' ? goToFolder(asset.id) : null}
+                            accent="blue"
+                            untitledLabel="Untitled"
+                            rootLabel="Documents"
+                            onOpenFolder={goToFolder}
                         />
                     ))}
                     {!isLoading && filteredAssets.length === 0 && (
@@ -386,230 +391,4 @@ function HubViewToggle({ view, onChange }: { view: 'grid' | 'list'; onChange: (v
             </button>
         </div>
     );
-}
-
-function AssetCard({ page, onNavigate, viewMode }: { page: CollabPage, onNavigate?: () => void, viewMode: 'grid' | 'list' }) {
-    const [isOver, setIsOver] = useState(false);
-    const [renameOpen, setRenameOpen] = useState(false);
-    const [renameValue, setRenameValue] = useState(page.title || '');
-
-    const isFolder = page.type === 'folder';
-
-    const handleDragStart = (e: React.DragEvent) => {
-        if (isFolder) return;
-        e.dataTransfer.setData('pageId', page.id);
-        e.dataTransfer.effectAllowed = 'move';
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        if (!isFolder) return;
-        e.preventDefault();
-        setIsOver(false);
-        const sourceId = e.dataTransfer.getData('pageId');
-        if (sourceId && sourceId !== page.id) {
-            window.dispatchEvent(new CustomEvent('request-move-collab-page', {
-                detail: { pageId: sourceId, targetParentId: page.id }
-            }));
-        }
-    };
-
-    const typeIcon = page.icon ? (
-        <span className="text-base leading-none">{page.icon}</span>
-    ) : isFolder ? (
-        <Folder className="h-4 w-4 text-blue-500" />
-    ) : (
-        <FileText className="h-4 w-4 text-blue-500" />
-    );
-
-    const actionsMenu = (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button
-                    type="button"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    className="h-8 w-7 rounded-lg text-slate-300 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center shrink-0"
-                    aria-label="Document actions"
-                >
-                    <MoreVertical className="h-4 w-4" />
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem
-                    onClick={(e) => {
-                        e.preventDefault();
-                        setRenameValue(page.title || '');
-                        setRenameOpen(true);
-                    }}
-                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
-                >
-                    <Pencil className="h-4 w-4" /> Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                    onClick={(e) => {
-                        e.preventDefault();
-                        window.dispatchEvent(new CustomEvent('request-favorite-collab-page', { detail: { pageId: page.id, isFavorite: !page.isFavorite } }));
-                    }}
-                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
-                >
-                    {page.isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
-                    {page.isFavorite ? 'Unfavorite' : 'Favorite'}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                    onClick={(e) => {
-                        e.preventDefault();
-                        window.dispatchEvent(new CustomEvent('request-share-collab-page', { detail: { pageId: page.id } }));
-                    }}
-                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer"
-                >
-                    <Globe className="h-4 w-4" /> Share
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    onClick={(e) => {
-                        e.preventDefault();
-                        window.dispatchEvent(new CustomEvent('request-delete-collab-page', { detail: { pageId: page.id } }));
-                    }}
-                    className="gap-2 font-semibold text-xs rounded-lg cursor-pointer text-red-600 focus:text-red-600"
-                >
-                    <Trash2 className="h-4 w-4" /> Move to trash
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-
-    const cardContent = viewMode === 'grid' ? (
-        <Card
-            draggable={!isFolder && !page.isTrashed}
-            onDragStart={handleDragStart}
-            onDragOver={(e) => { if (isFolder) { e.preventDefault(); setIsOver(true); } }}
-            onDragLeave={() => setIsOver(false)}
-            onDrop={handleDrop}
-            className={cn(
-                "border-none shadow-none bg-white rounded-2xl overflow-hidden",
-                isOver && "ring-2 ring-primary ring-offset-2 bg-blue-50/30"
-            )}
-        >
-            <div className={cn(
-                "relative aspect-[1.4/1] w-full border border-slate-100 rounded-2xl flex items-center justify-center overflow-hidden",
-                isFolder ? "bg-slate-100" : "bg-slate-50"
-            )}>
-                {page.coverImage ? (
-                    <Image src={page.coverImage} alt={page.title} fill className="object-cover" unoptimized />
-                ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-50" />
-                )}
-                <div className="relative z-10">
-                    {page.icon ? (
-                        <span className="text-5xl drop-shadow-xl select-none">{page.icon}</span>
-                    ) : (
-                        <div className={cn(
-                            "h-16 w-16 rounded-[1.25rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center",
-                            isFolder ? "text-blue-600" : "text-blue-500",
-                            page.coverImage && "bg-white/90 backdrop-blur-md border-white/50"
-                        )}>
-                            {isFolder ? <Folder className="h-8 w-8 fill-current" /> : <FileText className="h-8 w-8" />}
-                        </div>
-                    )}
-                </div>
-            </div>
-            <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                    <h3 className="flex-1 min-w-0 text-sm font-bold text-slate-900 truncate tracking-tight">
-                        {page.title || 'Untitled'}
-                    </h3>
-                    {actionsMenu}
-                </div>
-            </CardContent>
-        </Card>
-    ) : (
-        <Card
-            draggable={!isFolder && !page.isTrashed}
-            onDragStart={handleDragStart}
-            onDragOver={(e) => { if (isFolder) { e.preventDefault(); setIsOver(true); } }}
-            onDragLeave={() => setIsOver(false)}
-            onDrop={handleDrop}
-            className={cn(
-                "border-none shadow-none bg-transparent rounded-none overflow-hidden",
-                isOver && "bg-blue-50/40"
-            )}
-        >
-            <CardContent className="p-0">
-                <div className="flex items-center gap-3 h-12 px-3 hover:bg-slate-50 transition-colors">
-                    <span className="h-8 w-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0" aria-hidden>
-                        {typeIcon}
-                    </span>
-                    <h3 className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate tracking-tight">
-                        {page.title || 'Untitled'}
-                    </h3>
-                    {actionsMenu}
-                </div>
-            </CardContent>
-        </Card>
-    );
-
-    if (isFolder) {
-        return (
-            <>
-            <button onClick={onNavigate} className="group block text-left outline-none">
-                {cardContent}
-            </button>
-            <RenameDialog open={renameOpen} onOpenChange={setRenameOpen} value={renameValue} onChange={setRenameValue} onSave={() => {
-                window.dispatchEvent(new CustomEvent('request-rename-collab-page', { detail: { pageId: page.id, title: renameValue } }));
-                setRenameOpen(false);
-            }} />
-            </>
-        );
-    }
-
-    return (
-        <>
-        <Link href={`/workspace/${page.id}`} className="group block">
-            {cardContent}
-        </Link>
-        <RenameDialog open={renameOpen} onOpenChange={setRenameOpen} value={renameValue} onChange={setRenameValue} onSave={() => {
-            window.dispatchEvent(new CustomEvent('request-rename-collab-page', { detail: { pageId: page.id, title: renameValue } }));
-            setRenameOpen(false);
-        }} />
-        </>
-    );
-}
-
-function RenameDialog({
-  open,
-  onOpenChange,
-  value,
-  onChange,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  value: string;
-  onChange: (value: string) => void;
-  onSave: () => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-3xl p-8 bg-white" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">Rename</DialogTitle>
-          <DialogDescription className="sr-only">Enter a new name</DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Label className="text-[10px] font-bold text-slate-400 ml-1">Name</Label>
-          <Input
-            autoFocus
-            className="h-12 rounded-xl bg-slate-50 border-slate-100 font-semibold px-4 mt-2 text-sm shadow-inner focus-visible:ring-primary"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onSave()}
-          />
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl h-10 font-bold text-xs text-slate-400">Cancel</Button>
-          <Button onClick={onSave} className="rounded-xl h-10 px-8 font-bold text-xs shadow-lg">Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }

@@ -135,6 +135,7 @@ export interface BoardElement {
     italic?: boolean;
     textAlign?: 'left' | 'center' | 'right';
     url?: string; // For images
+    borderRadius?: number; // Corner roundness, mainly for images
     path?: string; // For freehand drawing (Pen tool)
     strokeWidth?: number; // Size for path elements
     iconName?: string; // For icon type

@@ -148,7 +148,10 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
         }
         try {
             await onUpdate(updates);
-            toast({ title: enabled ? 'Link sharing is on' : 'Link sharing is off' });
+            toast({
+                title: enabled ? 'Link sharing is on' : 'Link sharing is off',
+                description: enabled ? 'People with the link can open this item.' : 'The public link no longer works.',
+            });
         } catch {
             // toast handled by onUpdate
         } finally {
@@ -181,7 +184,7 @@ function SharePopover({ page, onUpdate, isMobile = false }: { page: CollabPage, 
         navigator.clipboard.writeText(shareUrl);
         setHasCopied(true);
         setTimeout(() => setHasCopied(false), 2000);
-        toast({ title: 'Link copied' });
+        toast({ title: 'Link copied', description: 'The share link is on your clipboard.' });
     };
 
     if (isMobile) {

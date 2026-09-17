@@ -26,6 +26,7 @@ import { getWorkspaceCompanyId, getHomePath } from '@/lib/workspace-access';
 import { LogoBlack } from '@/components/icons';
 import { WorkspaceChromeProvider, SidebarEdgeToggle, SidebarMainExpandToggle } from '@/app/workspace/workspace-chrome';
 import { saveCollabSnapshot } from '@/components/collaboration/PageHistoryDialog';
+import { canMoveToFolder } from '@/lib/collab-folders';
 
 export default function WorkspaceLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -117,7 +118,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
             router.push(redirectUrl);
         }
         setIsMobileSidebarOpen(false);
-        if (!initialPrompt) toast({ title: 'Asset initialized' });
+        if (!initialPrompt) toast({ title: 'Created', description: 'Your new item is ready to open.' });
       })
       .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -130,17 +131,18 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
 
   const handleMovePage = useCallback(async (pageId: string, targetParentId: string | null) => {
     if (!firestore) return;
+    if (!canMoveToFolder(pages, pageId, targetParentId)) return;
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, {
             parentId: targetParentId,
             updatedAt: serverTimestamp()
         });
-        toast({ title: 'Item Moved' });
+        toast({ title: 'Moved', description: 'It now lives in the folder you chose.' });
     } catch (error) {
         console.error("Error moving page:", error);
     }
-  }, [firestore, toast]);
+  }, [firestore, toast, pages]);
 
   const handleDuplicatePage = useCallback(async (pageId: string) => {
     if (!firestore || !authUser || !companyId) return;
@@ -161,7 +163,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
         };
         const docRef = await addDoc(collection(firestore, 'collaboration_pages'), newPage);
         router.push(`/workspace/${docRef.id}`);
-        toast({ title: 'Document duplicated' });
+        toast({ title: 'Duplicated', description: 'A copy was created and opened.' });
       }
     } catch (error) {
       console.error("Duplication failed:", error);
@@ -194,7 +196,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isTrashed: false, trashedAt: null });
-        toast({ title: 'Asset restored' });
+        toast({ title: 'Restored', description: 'The item is back in your workspace.' });
     } catch (error) {
         console.error("Error restoring page:", error);
     }
@@ -204,7 +206,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     if (!firestore) return;
     try {
         await deleteDoc(doc(firestore, 'collaboration_pages', pageId));
-        toast({ title: 'Document permanently removed' });
+        toast({ title: 'Deleted', description: 'This item was removed permanently.' });
     } catch (error) {
         console.error("Error deleting permanently:", error);
     }
@@ -218,7 +220,7 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
             title: nextTitle,
             updatedAt: serverTimestamp(),
         });
-        toast({ title: 'Renamed' });
+        toast({ title: 'Renamed', description: 'The new name is saved.' });
     } catch (error) {
         console.error('Error renaming page:', error);
     }
@@ -229,7 +231,10 @@ export default function WorkspaceLayoutClient({ children }: { children: React.Re
     try {
         const pageRef = doc(firestore, 'collaboration_pages', pageId);
         await updateDoc(pageRef, { isFavorite });
-        toast({ title: isFavorite ? 'Added to favorites' : 'Removed from favorites' });
+        toast({
+          title: isFavorite ? 'Added to favorites' : 'Removed from favorites',
+          description: isFavorite ? 'You can find it faster from favorites.' : 'It is no longer marked as a favorite.',
+        });
     } catch (error) {
         console.error("Error toggling favorite:", error);
     }

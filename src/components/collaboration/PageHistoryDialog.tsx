@@ -69,7 +69,7 @@ export function PageHistoryDialog({
     setSaving(true);
     try {
       await saveCollabSnapshot(firestore, { ...page, content: latestContent ?? page.content }, userId);
-      toast({ title: 'Snapshot saved' });
+      toast({ title: 'Snapshot saved', description: 'You can restore this version later from history.' });
     } catch (error: any) {
       toast({
         variant: 'destructive',

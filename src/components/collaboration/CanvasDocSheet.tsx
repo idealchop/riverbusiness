@@ -59,13 +59,16 @@ export function CanvasDocSheet({
     const prevLayout = html.dataset.docsLayout;
     html.dataset.docsLayout = 'vertical';
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current();
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      onCloseRef.current();
     };
-    window.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
       document.body.style.overflow = prevOverflow;
       if (prevLayout) html.dataset.docsLayout = prevLayout;
       else delete html.dataset.docsLayout;
