@@ -437,6 +437,29 @@
     box-shadow: none;
   }
 
+  .docs-page-add {
+    position: absolute;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: -14px;
+    margin-top: -14px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    pointer-events: auto;
+  }
+
+  .docs-page-add:hover {
+    color: #0f172a;
+    background: #f8fafc;
+  }
+
   html[data-docs-layout="vertical"] .docs-paper .ProseMirror {
     width: auto !important;
     max-width: 100%;
@@ -642,6 +665,7 @@
   }
 
   html[data-docs-layout="horizontal"] .docs-editor-sheet {
+    position: relative;
     width: max-content;
     overflow: visible;
   }

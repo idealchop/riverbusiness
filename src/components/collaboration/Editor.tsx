@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { mergeAttributes } from '@tiptap/core';
+import { Fragment } from '@tiptap/pm/model';
 import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, Node, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Heading from '@tiptap/extension-heading';
@@ -518,15 +519,27 @@ const PageBreakExtension = Node.create({
     name: 'pageBreak',
     group: 'block',
     atom: true,
-    selectable: false,
+    selectable: true,
+    addAttributes() {
+        return {
+            kind: {
+                default: 'manual',
+                parseHTML: (element) => element.getAttribute('data-kind') || 'manual',
+                renderHTML: (attributes) => ({ 'data-kind': attributes.kind || 'manual' }),
+            },
+        };
+    },
     parseHTML() { return [{ tag: 'div[data-type="page-break"]' }]; },
-    renderHTML() { return ['div', { 'data-type': 'page-break', class: 'doc-page-break' }]; },
+    renderHTML({ HTMLAttributes }) {
+        return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'page-break', class: 'doc-page-break' })];
+    },
 });
 
-const LETTER_PAGE_HEIGHT = 1056;
-const LETTER_PAGE_WIDTH = 816;
+const LETTER_PAGE_HEIGHT = 1056; // US Letter at 96dpi: 11in
+const LETTER_PAGE_WIDTH = 816; // US Letter at 96dpi: 8.5in
 const LETTER_PAGE_GAP = 40;
-const MAX_PAGE_BREAKS = 24;
+const PAGE_SLOT = LETTER_PAGE_HEIGHT + LETTER_PAGE_GAP;
+const MAX_PAGE_BREAKS = 40;
 
 const LIST_JSON_TYPES = new Set(['bulletList', 'orderedList', 'taskList']);
 
@@ -600,15 +613,6 @@ const DO_NOT_SPLIT_NODE_NAMES = new Set([
   'column',
 ]);
 
-const isUnsplittableDom = (el: HTMLElement) => {
-    const tag = el.tagName;
-    if (tag === 'UL' || tag === 'OL' || tag === 'TABLE') return true;
-    if (el.getAttribute('data-type') === 'taskList') return true;
-    if (el.classList.contains('tiptap-column-group')) return true;
-    if (el.classList.contains('node-columnGroup')) return true;
-    return false;
-};
-
 const joinAdjacentListsInTr = (tr: any) => {
     let safety = 0;
     while (safety++ < 40) {
@@ -646,10 +650,43 @@ const pageBreakInsertPos = (state: any, pos: number) => {
     return $pos.pos;
 };
 
+const isPageBreakNode = (node: any) => node?.type?.name === 'pageBreak';
+const isManualPageBreak = (node: any) => isPageBreakNode(node) && node.attrs?.kind === 'manual';
+const isAutoPageBreak = (node: any) => isPageBreakNode(node) && node.attrs?.kind !== 'manual';
+
+const countManualPageBreaks = (doc: any) => {
+    let n = 0;
+    doc.forEach((node: any) => {
+        if (isManualPageBreak(node)) n += 1;
+    });
+    return n;
+};
+
+const insertManualPageAfter = (editor: any, afterPageIndex: number) => {
+    if (!editor || editor.isDestroyed || !editor.isEditable) return;
+    const type = editor.schema.nodes.pageBreak;
+    const paragraph = editor.schema.nodes.paragraph;
+    if (!type || !paragraph) return;
+    const doc = editor.state.doc;
+    let page = 0;
+    let insertPos: number | null = null;
+    doc.forEach((node: any, offset: number) => {
+        if (!isPageBreakNode(node)) return;
+        if (page === afterPageIndex && insertPos == null) insertPos = offset;
+        page += 1;
+    });
+    if (insertPos == null) insertPos = doc.content.size;
+    const breakNode = type.create({ kind: 'manual' });
+    const paraNode = paragraph.create();
+    const tr = editor.state.tr.insert(insertPos, Fragment.from([breakNode, paraNode]));
+    editor.view.dispatch(tr);
+    editor.chain().focus(insertPos + breakNode.nodeSize + 1).run();
+};
+
 const insertVerticalPageBreak = (editor: any, pos: number) => {
     const insertPos = pageBreakInsertPos(editor.state, pos);
     if (insertPos == null) return false;
-    const node = editor.schema.nodes.pageBreak.create();
+    const node = editor.schema.nodes.pageBreak.create({ kind: 'auto' });
     const insertTr = editor.state.tr.insert(insertPos, node);
     insertTr.setMeta('pagination', true);
     insertTr.setMeta('addToHistory', false);
@@ -670,20 +707,20 @@ const paginateDocument = (editor: any, depth = 0) => {
     if (isHorizontalDocsLayout()) {
         body.style.minHeight = '';
         pm.style.paddingBottom = '';
-        if (stripPageBreaksFromEditor(editor)) {
+        if (stripAutoPageBreaksFromEditor(editor)) {
             requestAnimationFrame(() => paginateDocument(editor, depth + 1));
             return;
         }
-        sizeHorizontalPages(pm);
+        sizeHorizontalPages(pm, editor);
         requestAnimationFrame(() => {
-            if (!editor.isDestroyed && isHorizontalDocsLayout()) sizeHorizontalPages(pm);
+            if (!editor.isDestroyed && isHorizontalDocsLayout()) sizeHorizontalPages(pm, editor);
         });
         return;
     }
 
     clearHorizontalPageStyles(pm);
 
-    if (depth === 0 && stripPageBreaksFromEditor(editor)) {
+    if (depth === 0 && stripAutoPageBreaksFromEditor(editor)) {
         requestAnimationFrame(() => paginateDocument(editor, 1));
         return;
     }
@@ -703,20 +740,11 @@ const paginateDocument = (editor: any, depth = 0) => {
         const bottom = cssOffsetFrom(el, body, scale) + el.getBoundingClientRect().height / scale;
         if (bottom <= pageEnd + 1) continue;
 
+        const startsOnNextPage = top > pageEnd - 6;
+        if (!startsOnNextPage) continue;
+
         try {
-            const spansPage = top <= pageEnd - 6;
-            if (spansPage && isUnsplittableDom(el)) continue;
-            let pos: number | null = null;
-            if (!spansPage) {
-                pos = editor.view.posAtDOM(el, 0);
-            } else {
-                const bodyRect = body.getBoundingClientRect();
-                const hit = editor.view.posAtCoords({
-                    left: bodyRect.left + Math.min(80, bodyRect.width / 2),
-                    top: bodyRect.top + pageEnd * scale - 2,
-                });
-                pos = hit?.pos ?? editor.view.posAtDOM(el, 0);
-            }
+            const pos = editor.view.posAtDOM(el, 0);
             if (pos == null || pos < 1) continue;
             if (!insertVerticalPageBreak(editor, pos)) continue;
             requestAnimationFrame(() => paginateDocument(editor, depth + 1));
@@ -748,7 +776,7 @@ const clearHorizontalPageStyles = (pm: HTMLElement) => {
     pm.style.removeProperty('columns');
 };
 
-const sizeHorizontalPages = (pm: HTMLElement) => {
+const sizeHorizontalPages = (pm: HTMLElement, editor?: any) => {
     pm.style.columns = '1';
     pm.style.columnWidth = 'auto';
     pm.style.columnGap = '0px';
@@ -757,7 +785,9 @@ const sizeHorizontalPages = (pm: HTMLElement) => {
     pm.style.minHeight = '0';
     void pm.offsetHeight;
     const usable = LETTER_PAGE_HEIGHT - 96;
-    let pages = Math.max(1, Math.min(MAX_PAGE_BREAKS, Math.ceil(Math.max(pm.scrollHeight, 1) / usable)));
+    const contentPages = Math.max(1, Math.min(MAX_PAGE_BREAKS, Math.ceil(Math.max(pm.scrollHeight, 1) / usable)));
+    const manualPages = editor ? 1 + countManualPageBreaks(editor.state.doc) : 1;
+    let pages = Math.max(contentPages, manualPages);
     const widthFor = (count: number) => `${count * LETTER_PAGE_WIDTH + (count - 1) * LETTER_PAGE_GAP}px`;
     pm.style.removeProperty('columns');
     pm.style.height = `${LETTER_PAGE_HEIGHT}px`;
@@ -773,11 +803,11 @@ const sizeHorizontalPages = (pm: HTMLElement) => {
     }
 };
 
-const stripPageBreaksFromEditor = (editor: any) => {
+const stripAutoPageBreaksFromEditor = (editor: any) => {
     const { state } = editor;
     const breaks: { from: number; to: number }[] = [];
     state.doc.descendants((node: any, pos: number) => {
-        if (node.type.name === 'pageBreak') {
+        if (isAutoPageBreak(node)) {
             breaks.push({ from: pos, to: pos + node.nodeSize });
         }
     });
@@ -963,13 +993,13 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
       Column,
       PageBreakExtension,
     ],
-    content: healEditorJson(stripPageBreaks(initialContent)),
+    content: healEditorJson(initialContent),
     editable: editable,
     onUpdate: ({ editor, transaction }) => {
       if (!editable) return;
       if (transaction.getMeta('pagination')) return;
       if (!isAiProcessing && isMounted) {
-        onContentChange(healEditorJson(stripPageBreaks(editor.getJSON())));
+        onContentChange(healEditorJson(editor.getJSON()));
       }
     },
     editorProps: {
@@ -1331,6 +1361,10 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
                                     <TableSizePicker onPick={handleInsertTable} />
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
+                            <DropdownMenuItem onSelect={() => insertManualPageAfter(editor, Number.MAX_SAFE_INTEGER)} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                                <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600"><Plus className="h-4 w-4" /></div>
+                                Page
+                            </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleInsertImage()} className="gap-3 font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
                                 <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><ImageIcon className="h-4 w-4" /></div>
                                 Static Image
@@ -1543,6 +1577,7 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 
       <div onClick={() => editor?.commands.focus()} className="relative">
         <EditorContent editor={editor} />
+        {editable && <DocsPageAdders editor={editor} />}
         {isAiProcessing && (
           <div className="absolute inset-0 z-20 flex items-start justify-center bg-white/55 backdrop-blur-[1px] pt-16 pointer-events-none">
             <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2.5 shadow-lg">
@@ -1614,6 +1649,81 @@ export const Editor = forwardRef<any, EditorProps>(({ initialContent, initialPro
 });
 
 Editor.displayName = 'Editor';
+
+function DocsPageAdders({ editor }: { editor: any }) {
+    const [host, setHost] = useState<HTMLElement | null>(null);
+    const [horizontal, setHorizontal] = useState(false);
+    const [pageCount, setPageCount] = useState(1);
+
+    useEffect(() => {
+        if (!editor || editor.isDestroyed) return;
+        const sync = () => {
+            const pm = editor.view?.dom as HTMLElement | undefined;
+            const paper = pm?.closest('.docs-paper') as HTMLElement | null;
+            const body = (paper?.querySelector('.docs-paper-body') as HTMLElement | null) || paper;
+            const sheet = paper?.querySelector('.docs-editor-sheet') as HTMLElement | null;
+            const across = isHorizontalDocsLayout();
+            setHorizontal(across);
+            setHost(across ? (sheet || pm.parentElement) : body);
+            if (!pm || !body) {
+                setPageCount(1);
+                return;
+            }
+            if (across) {
+                const pages = Math.max(1, Math.round((pm.offsetWidth + LETTER_PAGE_GAP) / (LETTER_PAGE_WIDTH + LETTER_PAGE_GAP)));
+                setPageCount(Math.min(MAX_PAGE_BREAKS + 1, pages));
+            } else {
+                const pages = Math.max(1, Math.round((body.offsetHeight + LETTER_PAGE_GAP) / PAGE_SLOT));
+                setPageCount(Math.min(MAX_PAGE_BREAKS + 1, pages));
+            }
+        };
+        sync();
+        const timer = window.setInterval(sync, 400);
+        const onLayout = () => sync();
+        editor.on('update', sync);
+        window.addEventListener('resize', onLayout);
+        window.addEventListener('docs-page-layout', onLayout);
+        return () => {
+            window.clearInterval(timer);
+            editor.off('update', sync);
+            window.removeEventListener('resize', onLayout);
+            window.removeEventListener('docs-page-layout', onLayout);
+        };
+    }, [editor]);
+
+    if (!host || pageCount < 1) return null;
+
+    return createPortal(
+        <>
+            {Array.from({ length: pageCount }, (_, i) => (
+                <button
+                    key={`add-page-${i}`}
+                    type="button"
+                    className="docs-page-add docs-no-print"
+                    aria-label="Add page"
+                    title="Add page"
+                    style={
+                        horizontal
+                            ? { left: (i + 1) * (LETTER_PAGE_WIDTH + LETTER_PAGE_GAP) - 20, top: '50%' }
+                            : { top: (i + 1) * PAGE_SLOT - 20, left: '50%' }
+                    }
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        insertManualPageAfter(editor, i);
+                    }}
+                >
+                    <Plus className="h-3.5 w-3.5" />
+                </button>
+            ))}
+        </>,
+        host
+    );
+}
 
 function currentTextStyleLabel(editor: any) {
     if (editor.isActive('title')) return 'Title';
