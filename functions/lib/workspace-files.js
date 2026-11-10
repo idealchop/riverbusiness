@@ -37,7 +37,7 @@ exports.finalizeWorkspaceFileUpload = exports.createWorkspaceFileUpload = void 0
 exports.syncUserWorkspaceClaim = syncUserWorkspaceClaim;
 const https_1 = require("firebase-functions/v2/https");
 const auth_1 = require("firebase-admin/auth");
-const firestore_1 = require("firebase-admin/firestore");
+const function_runtime_1 = require("./function-runtime");
 const storage_1 = require("firebase-admin/storage");
 const crypto_1 = require("crypto");
 const logger = __importStar(require("firebase-functions/logger"));
@@ -68,7 +68,7 @@ async function assertWorkspaceMember(uid, companyId) {
     if (!companyId || companyId === 'unassigned') {
         throw new https_1.HttpsError('invalid-argument', 'Workspace id is required.');
     }
-    const userSnap = await (0, firestore_1.getFirestore)().collection('users').doc(uid).get();
+    const userSnap = await (0, function_runtime_1.getDb)().collection('users').doc(uid).get();
     if (!userSnap.exists) {
         throw new https_1.HttpsError('permission-denied', 'User profile was not found.');
     }

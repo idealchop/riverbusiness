@@ -1,8 +1,16 @@
 {
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
+  "firestore": [
+    {
+      "database": "(default)",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    },
+    {
+      "database": "riverbusiness-dev",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
   "functions": [
     {
       "source": "functions",
@@ -13,6 +21,21 @@
         "firebase-debug.log",
         "firebase-debug.*.log",
         "src/**"
+      ]
+    },
+    {
+      "source": "functions-dev",
+      "codebase": "dev",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "scripts/**"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR/../functions\" run build",
+        "node \"$RESOURCE_DIR/scripts/prepare.js\""
       ]
     }
   ],

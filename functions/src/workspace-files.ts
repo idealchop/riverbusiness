@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, type DocumentData } from 'firebase-admin/firestore';
+import { type DocumentData } from 'firebase-admin/firestore';
+import { getDb } from './function-runtime';
 import { getStorage } from 'firebase-admin/storage';
 import { randomUUID } from 'crypto';
 import * as logger from 'firebase-functions/logger';
@@ -36,7 +37,7 @@ async function assertWorkspaceMember(uid: string, companyId: string) {
     throw new HttpsError('invalid-argument', 'Workspace id is required.');
   }
 
-  const userSnap = await getFirestore().collection('users').doc(uid).get();
+  const userSnap = await getDb().collection('users').doc(uid).get();
   if (!userSnap.exists) {
     throw new HttpsError('permission-denied', 'User profile was not found.');
   }

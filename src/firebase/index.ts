@@ -5,6 +5,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { configuredFirestoreDatabaseId } from '@/lib/firestore-database';
 
 /**
  * Singleton cache for Firebase services to prevent multiple initializations
@@ -33,7 +34,8 @@ export function initializeFirebase() {
   }
 
   const auth = getAuth(firebaseApp);
-  const firestore = getFirestore(firebaseApp);
+  const databaseId = configuredFirestoreDatabaseId();
+  const firestore = databaseId ? getFirestore(firebaseApp, databaseId) : getFirestore(firebaseApp);
   const storage = getStorage(firebaseApp);
 
   firebaseServices = { firebaseApp, auth, firestore, storage };

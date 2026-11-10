@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import * as logger from "firebase-functions/logger";
 import * as functions from 'firebase-functions';
@@ -13,6 +13,7 @@ initializeApp();
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, ManualReceiptRequest, HRLeaveRequest } from './types';
+import { assignFunctionExports, getDb, isDevFunctionsCodebase, withDatabase } from "./function-runtime";
 import {
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -26,12 +27,8 @@ import {
     getLeaveStatusTemplate,
     getStationRefillNoticeTemplate
 } from './email';
-import { syncUserWorkspaceClaim } from './workspace-files';
-
-export { createWorkspaceFileUpload, finalizeWorkspaceFileUpload } from './workspace-files';
-
-// Export all billing functions
-export * from './billing';
+import { syncUserWorkspaceClaim, createWorkspaceFileUpload, finalizeWorkspaceFileUpload } from './workspace-files';
+import { generateMonthlyInvoices } from './billing';
 
 const BRAND_PRIMARY = '#538ec2';
 const LITER_RATIO = 19.5;
@@ -50,7 +47,7 @@ const toSafeDate = (val: any): Date => {
  */
 async function createNotification(userId: string, notificationData: any) {
   if (!userId) return;
-  const db = getFirestore();
+  const db = getDb();
   const notification = { 
     ...notificationData, 
     userId, 
@@ -488,10 +485,10 @@ export async function generatePayslipPDF(companyName: string, companyAddress: st
  * Scheduled function to notify water stations of upcoming auto-refills tomorrow.
  * Runs daily at 9:00 AM.
  */
-export const notifyStationsOfUpcomingRefills = functions.runWith({
+const notifyStationsOfUpcomingRefills = functions.runWith({
     secrets: ["BREVO_API_KEY"]
 }).pubsub.schedule('0 9 * * *').onRun(async (context) => {
-    const db = getFirestore();
+    const db = getDb();
     const now = new Date();
     const tomorrow = addDays(now, 1);
     const tomorrowDayName = format(tomorrow, 'EEEE'); // e.g., "Monday"
@@ -543,7 +540,7 @@ export const notifyStationsOfUpcomingRefills = functions.runWith({
  * Triggered when a user updates their email in Firestore.
  * Background-syncs the new email to Firebase Authentication via Admin SDK.
  */
-export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) => {
+const onuserupdate = onDocumentUpdated(withDatabase({ document: "users/{userId}" }), async (event) => {
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data();
@@ -567,13 +564,13 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
     }
 });
 
-export const onpaymentremindercreate = onDocumentCreated({
+const onpaymentremindercreate = onDocumentCreated(withDatabase({
     document: "users/{userId}/reminders/{reminderId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
-    const db = getFirestore();
+    const db = getDb();
     const triggerData = event.data.data();
     const { period: selectedPeriod, recipientEmail } = triggerData;
     
@@ -665,14 +662,14 @@ export const onpaymentremindercreate = onDocumentCreated({
 /**
  * Manual Receipt Trigger
  */
-export const onmanualreceiptcreate = onDocumentCreated({
+const onmanualreceiptcreate = onDocumentCreated(withDatabase({
     document: "users/{userId}/receiptRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
     const requestData = event.data.data() as ManualReceiptRequest;
-    const db = getFirestore();
+    const db = getDb();
 
     logger.info(`Manual Receipt Triggered for user ${userId}, invoice ${requestData.invoiceId}`);
 
@@ -745,14 +742,14 @@ export const onmanualreceiptcreate = onDocumentCreated({
     }
 });
 
-export const onpaysliprequestcreate = onDocumentCreated({
+const onpaysliprequestcreate = onDocumentCreated(withDatabase({
     document: "hr_companies/{companyId}/payslipRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const { companyId, requestId } = event.params;
     const requestData = event.data.data();
-    const db = getFirestore();
+    const db = getDb();
 
     logger.info(`Processing payslip request ${requestId} for company ${companyId}`);
 
@@ -804,10 +801,10 @@ export const onpaysliprequestcreate = onDocumentCreated({
     }
 });
 
-export const onunclaimedprofilecreate = onDocumentCreated({
+const onunclaimedprofilecreate = onDocumentCreated(withDatabase({
     document: "unclaimedProfiles/{clientId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const profile = event.data.data();
     if (!profile.businessEmail) return;
@@ -829,13 +826,13 @@ export const onunclaimedprofilecreate = onDocumentCreated({
     } catch (error) { logger.error(`Failed welcome email`, error); }
 });
 
-export const onunclaimedemployeecreate = onDocumentCreated({
+const onunclaimedemployeecreate = onDocumentCreated(withDatabase({
     document: "unclaimedEmployees/{inviteId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const invite = event.data.data();
-    const db = getFirestore();
+    const db = getDb();
     
     const companyId = invite.companyId;
     let businessName = invite.inviterBusinessName || "your company";
@@ -866,15 +863,15 @@ export const onunclaimedemployeecreate = onDocumentCreated({
     }
 });
 
-export const ondeliverycreate = onDocumentCreated({
+const ondeliverycreate = onDocumentCreated(withDatabase({
     document: "users/{userId}/deliveries/{deliveryId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
-    const db = getFirestore();
+    const db = getDb();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     
@@ -902,17 +899,17 @@ export const ondeliverycreate = onDocumentCreated({
     }
 });
 
-export const ondeliveryupdate = onDocumentUpdated({
+const ondeliveryupdate = onDocumentUpdated(withDatabase({
     document: "users/{userId}/deliveries/{deliveryId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const before = event.data.before.data() as Delivery;
     const after = event.data.after.data() as Delivery;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     if (before.status === after.status) return;
-    const db = getFirestore();
+    const db = getDb();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     
@@ -940,10 +937,10 @@ export const ondeliveryupdate = onDocumentUpdated({
     }
 });
 
-export const onleavestatusupdate = onDocumentUpdated({
+const onleavestatusupdate = onDocumentUpdated(withDatabase({
     document: "hr_companies/{companyId}/leaveRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const before = event.data.before.data() as HRLeaveRequest;
     const after = event.data.after.data() as HRLeaveRequest;
@@ -955,7 +952,7 @@ export const onleavestatusupdate = onDocumentUpdated({
     const period = `${after.startDate || ''} - ${after.endDate || ''}`;
     const template = getLeaveStatusTemplate(after.employeeName || '', after.type || '', period, after.status || '');
     
-    const db = getFirestore();
+    const db = getDb();
     const employeeDoc = await db.collection('users').doc(after.employeeId || '').get();
     const employeeData = employeeDoc.data();
 
@@ -974,10 +971,10 @@ export const onleavestatusupdate = onDocumentUpdated({
     }
 });
 
-export const onpaymentupdate = onDocumentUpdated({
+const onpaymentupdate = onDocumentUpdated(withDatabase({
     document: "users/{userId}/payments/{paymentId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data();
@@ -988,10 +985,10 @@ export const onpaymentupdate = onDocumentUpdated({
     }
 });
 
-export const ontopuprequestupdate = onDocumentUpdated({
+const ontopuprequestupdate = onDocumentUpdated(withDatabase({
     document: "users/{userId}/topUpRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data();
@@ -999,7 +996,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     
     if (before.status === after.status || after.status !== 'Approved') return;
     
-    const db = getFirestore();
+    const db = getDb();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
@@ -1020,15 +1017,15 @@ export const ontopuprequestupdate = onDocumentUpdated({
     }
 });
 
-export const onrefillrequestcreate = onDocumentCreated({
+const onrefillrequestcreate = onDocumentCreated(withDatabase({
     document: "users/{userId}/refillRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
     const requestId = event.params.requestId;
     const request = event.data.data() as RefillRequest;
-    const db = getFirestore();
+    const db = getDb();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
@@ -1053,10 +1050,10 @@ export const onrefillrequestcreate = onDocumentCreated({
     }
 });
 
-export const onrefillrequestupdate = onDocumentUpdated({
+const onrefillrequestupdate = onDocumentUpdated(withDatabase({
     document: "users/{userId}/refillRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data) return;
     const before = event.data.before.data() as RefillRequest;
     const after = event.data.after.data() as RefillRequest;
@@ -1065,7 +1062,7 @@ export const onrefillrequestupdate = onDocumentUpdated({
 
     if (before.status === after.status) return;
 
-    const db = getFirestore();
+    const db = getDb();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
@@ -1090,11 +1087,11 @@ export const onrefillrequestupdate = onDocumentUpdated({
     }
 });
 
-export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
+const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
   const storage = getStorage();
-  const db = getFirestore();
+  const db = getDb();
   const bucket = storage.bucket(event.data.bucket);
   const file = bucket.file(filePath);
   const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
@@ -1112,3 +1109,31 @@ export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event
       }
   }
 });
+
+const cloudFunctions: Record<string, unknown> = {
+  generateMonthlyInvoices,
+  createWorkspaceFileUpload,
+  finalizeWorkspaceFileUpload,
+  notifyStationsOfUpcomingRefills,
+  onuserupdate,
+  onpaymentremindercreate,
+  onmanualreceiptcreate,
+  onpaysliprequestcreate,
+  onunclaimedprofilecreate,
+  onunclaimedemployeecreate,
+  ondeliverycreate,
+  ondeliveryupdate,
+  onleavestatusupdate,
+  onpaymentupdate,
+  ontopuprequestupdate,
+  onrefillrequestcreate,
+  onrefillrequestupdate,
+};
+
+// Storage is shared. Only the live function should listen, otherwise a dev copy
+// would also run on every upload and write a second set of user documents.
+if (!isDevFunctionsCodebase()) {
+  cloudFunctions.onfileupload = onfileupload;
+}
+
+assignFunctionExports(module.exports as Record<string, unknown>, cloudFunctions);

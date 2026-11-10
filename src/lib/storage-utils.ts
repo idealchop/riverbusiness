@@ -11,6 +11,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
+import { cloudFunctionName } from '@/lib/firestore-database';
 
 const INLINE_MAX_BYTES = 450_000;
 const PART_BYTES = 350_000;
@@ -98,11 +99,11 @@ async function trySignedWorkspaceUpload(
     const createUpload = httpsCallable<
       { companyId: string; fileName: string; contentType: string; size: number },
       { uploadUrl: string; storagePath: string; contentType: string }
-    >(functions, 'createWorkspaceFileUpload');
+    >(functions, cloudFunctionName('createWorkspaceFileUpload'));
     const finalizeUpload = httpsCallable<
       { companyId: string; storagePath: string },
       { url: string; storagePath: string }
-    >(functions, 'finalizeWorkspaceFileUpload');
+    >(functions, cloudFunctionName('finalizeWorkspaceFileUpload'));
 
     const created = await createUpload({
       companyId,

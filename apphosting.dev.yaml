@@ -1,0 +1,22 @@
+# App Hosting environment named "dev".
+# Firebase merges this file over apphosting.yaml for backends whose
+# environment name is dev. The live backend has no environment override,
+# so it keeps apphosting.yaml only.
+# https://firebase.google.com/docs/app-hosting/multiple-environments
+
+env:
+  - variable: NEXT_PUBLIC_FIRESTORE_DATABASE_ID
+    value: riverbusiness-dev
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_APP_ENV
+    value: dev
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FUNCTIONS_PREFIX
+    value: dev
+    availability:
+      - BUILD
+      - RUNTIME
