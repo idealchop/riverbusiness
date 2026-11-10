@@ -48,6 +48,7 @@ const logger = __importStar(require("firebase-functions/logger"));
 const functions = __importStar(require("firebase-functions"));
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const date_fns_1 = require("date-fns");
+const billing_period_1 = require("./billing-period");
 // Initialize Firebase Admin SDK first
 (0, app_1.initializeApp)();
 const storage_2 = require("firebase-functions/v2/storage");
@@ -147,7 +148,7 @@ async function generateDeliveryReceiptPDF(user, delivery) {
         doc.fontSize(10).font('Helvetica-Bold').text('Tracking #:', margin, topY);
         doc.font('Helvetica').text(delivery.id, margin + 80, topY);
         doc.font('Helvetica-Bold').text('Date:', margin, topY + 15);
-        doc.font('Helvetica').text((0, date_fns_1.format)(toSafeDate(delivery.date), 'MMMM d, yyyy'), margin + 80, topY + 15);
+        doc.font('Helvetica').text((0, billing_period_1.formatManilaDate)(delivery.date, 'long'), margin + 80, topY + 15);
         // Client Info
         doc.moveDown(2);
         const stakeholderY = doc.y;
@@ -303,7 +304,7 @@ async function generateSOAPDF(user, period, deliveries, sanitation, compliance, 
                 totalAmount += amount;
                 return [
                     d.id,
-                    (0, date_fns_1.format)(toSafeDate(d.date), 'MMM d, yyyy'),
+                    (0, billing_period_1.formatManilaDate)(d.date, 'medium'),
                     qty,
                     `P${pricePerContainer.toFixed(2)}`,
                     `${liters.toFixed(1)}L`,
@@ -534,15 +535,17 @@ const onpaymentremindercreate = (0, firestore_2.onDocumentCreated)((0, function_
     let cycleEnd = (0, date_fns_1.endOfDay)(new Date());
     if (selectedPeriod && selectedPeriod !== 'full') {
         if (selectedPeriod === '2025-12_2026-01') {
-            cycleStart = new Date(2025, 11, 1);
-            cycleEnd = (0, date_fns_1.endOfDay)(new Date(2026, 0, 31));
+            const combined = (0, billing_period_1.billingRangeFromPeriodLabel)('December 2025 - January 2026');
+            cycleStart = combined ? combined.start : new Date(0);
+            cycleEnd = combined ? combined.end : (0, date_fns_1.endOfDay)(new Date());
             billingPeriodLabel = 'December 2025 - January 2026';
         }
         else {
-            const parsed = (0, date_fns_1.parse)(selectedPeriod, 'yyyy-MM', new Date());
-            cycleStart = (0, date_fns_1.startOfMonth)(parsed);
-            cycleEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.endOfMonth)(parsed));
-            billingPeriodLabel = (0, date_fns_1.format)(parsed, 'MMMM yyyy');
+            const [year, month] = selectedPeriod.split('-').map(Number);
+            const range = (0, billing_period_1.manilaMonthRange)(year, month - 1);
+            cycleStart = range.start;
+            cycleEnd = range.end;
+            billingPeriodLabel = (0, billing_period_1.manilaMonthLabel)(year, month - 1);
         }
     }
     const collectionName = user.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
@@ -623,14 +626,16 @@ const onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)((0, function_ru
     try {
         const invoiceDate = toSafeDate(invoiceData.date);
         let cycleStart, cycleEnd;
-        if (invoiceData.description.includes('December 2025 - January 2026')) {
-            cycleStart = new Date(2025, 11, 2);
-            cycleEnd = (0, date_fns_1.endOfDay)(new Date(2026, 1, 1));
+        const periodLabel = invoiceData.billingPeriod || (0, billing_period_1.periodLabelFromText)(invoiceData.description || '');
+        const periodRange = periodLabel ? (0, billing_period_1.billingRangeFromPeriodLabel)(periodLabel) : null;
+        if (periodRange) {
+            cycleStart = periodRange.start;
+            cycleEnd = periodRange.end;
         }
         else {
-            const billingMonth = (0, date_fns_1.subMonths)(invoiceDate, 1);
-            cycleStart = (0, date_fns_1.addDays)((0, date_fns_1.startOfMonth)(billingMonth), 1);
-            cycleEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.startOfMonth)((0, date_fns_1.addMonths)(billingMonth, 1)));
+            const window = (0, billing_period_1.billingWindowForRun)(invoiceDate);
+            cycleStart = window.skip ? invoiceDate : window.start;
+            cycleEnd = window.skip ? invoiceDate : window.end;
         }
         const collectionName = userData.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
         const deliveriesSnap = await db.collection('users').doc(userId).collection(collectionName)
@@ -1014,6 +1019,7 @@ const onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, asyn
 });
 const cloudFunctions = {
     generateMonthlyInvoices: billing_1.generateMonthlyInvoices,
+    syncDeliveryBilling: billing_1.syncDeliveryBilling,
     createWorkspaceFileUpload: workspace_files_1.createWorkspaceFileUpload,
     finalizeWorkspaceFileUpload: workspace_files_1.finalizeWorkspaceFileUpload,
     notifyStationsOfUpcomingRefills,

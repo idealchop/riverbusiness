@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc, setDoc, deleteDoc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { format } from 'date-fns';
+import { datePickerValueForStoredDelivery, manilaCalendarDayIso } from '@/lib/billing-period';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, FileText, Trash2 } from 'lucide-react';
 
@@ -59,7 +60,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
     useEffect(() => {
         if (isOpen) {
             if (deliveryToEdit) {
-                deliveryForm.reset({ ...deliveryToEdit, date: new Date(deliveryToEdit.date) });
+                deliveryForm.reset({ ...deliveryToEdit, date: datePickerValueForStoredDelivery(deliveryToEdit.date) });
             } else {
                 const defaultId = `D-${Date.now().toString().slice(-6)}`;
                 deliveryForm.reset({ id: defaultId, status: 'Pending', volumeContainers: 1, date: new Date(), adminNotes: '' });
@@ -106,7 +107,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 ...restOfValues,
                 id: deliveryId,
                 userId: user.id,
-                date: values.date.toISOString(),
+                date: manilaCalendarDayIso(values.date),
                 liters,
                 amount,
             };

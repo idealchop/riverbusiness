@@ -29,7 +29,8 @@ import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } fro
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, limit } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
 import type { AppUser, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ImagePlaceholder } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
+import { format, startOfMonth, addMonths, subMonths, isAfter, isSameDay } from 'date-fns';
+import { billingRangeFromPeriodLabel, consumptionCharge, deliveriesInRange, deliveryLiters, manilaMonthLabel, manilaMonthRange, manilaParts, periodLabelFromText, previousManilaMonth, roundMoney } from '@/lib/billing-period';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail, CreditCard, LogOut, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -208,6 +209,19 @@ const toSafeDate = (timestamp: any): Date | null => {
   }
   return null;
 };
+
+function manilaRangeForStatement(description: string, invoiceDate: Date, isCurrent: boolean) {
+  const label = periodLabelFromText(description || '');
+  const parsed = label ? billingRangeFromPeriodLabel(label) : null;
+  if (parsed) return parsed;
+  if (isCurrent) {
+    const parts = manilaParts(new Date());
+    const range = manilaMonthRange(parts.year, parts.monthIndex);
+    return { start: range.start, end: range.end, monthsToBill: 1 };
+  }
+  const previous = previousManilaMonth(invoiceDate);
+  return { start: previous.start, end: previous.end, monthsToBill: 1 };
+}
 
 
 function invoiceStatusClass(status: string, isCurrentEst?: boolean) {
@@ -457,7 +471,12 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, sh
                         </Badge>
                     </div>
                     <div className="flex items-end justify-between">
-                        <p className="text-2xl font-black tracking-tight text-slate-900">₱{Number(invoice.amount || 0).toFixed(2)}</p>
+                        <div>
+                          <p className="text-2xl font-black tracking-tight text-slate-900">₱{Number(invoice.amount || 0).toFixed(2)}</p>
+                          {Number(invoice.unbilledAmount) > 0 && (
+                            <p className="text-[11px] font-bold text-amber-700 mt-1">₱{Number(invoice.unbilledAmount).toFixed(2)} entered after payment — added to the next bill</p>
+                          )}
+                        </div>
                         <Button variant="link" size="sm" className="h-auto p-0 text-xs font-bold" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                     </div>
                     {invoiceAction(invoice, isCurrentEst, onPayNow, handleViewInvoice)}
@@ -732,8 +751,7 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
     if (!user || deliveriesLoading) return null;
 
     const now = new Date();
-    const currentYear = getYear(now);
-    const currentMonth = getMonth(now);
+    const nowParts = manilaParts(now);
 
     let cycleStart: Date;
     let cycleEnd: Date;
@@ -741,29 +759,29 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
     let description: string;
     let invoiceIdSuffix: string;
 
-    // Rule: Cycle is 2nd of Month to 1st of Next Month
-    if (currentYear === 2025 && currentMonth === 11 || currentYear === 2026 && currentMonth === 0) {
-        cycleStart = new Date(2025, 11, 2); // Dec 2, 2025
-        cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1, 2026
-        monthsToBill = 2;
+    const combinedPeriod = (nowParts.year === 2025 && nowParts.monthIndex === 11) || (nowParts.year === 2026 && nowParts.monthIndex === 0);
+    if (combinedPeriod) {
+        const combined = billingRangeFromPeriodLabel('December 2025 - January 2026')!;
+        cycleStart = combined.start;
+        cycleEnd = combined.end;
+        monthsToBill = combined.monthsToBill;
         description = 'Bill for December 2025 - January 2026';
         invoiceIdSuffix = '202512-202601';
     } else {
-        cycleStart = addDays(startOfMonth(now), 1); // e.g. Oct 2
-        cycleEnd = endOfDay(startOfMonth(addMonths(now, 1))); // e.g. Nov 1
-        description = `Bill for ${format(now, 'MMMM yyyy')}`;
-        invoiceIdSuffix = format(now, 'yyyyMM');
+        const range = manilaMonthRange(nowParts.year, nowParts.monthIndex);
+        cycleStart = range.start;
+        cycleEnd = range.end;
+        description = `Bill for ${manilaMonthLabel(nowParts.year, nowParts.monthIndex)}`;
+        invoiceIdSuffix = `${nowParts.year}${String(nowParts.monthIndex + 1).padStart(2, '0')}`;
     }
     
-    const deliveriesThisCycle = (deliveries || []).filter(d => {
-        const deliveryDate = toSafeDate(d.date);
-        return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
-    });
+    const deliveriesThisCycle = deliveriesInRange(deliveries || [], cycleStart, cycleEnd);
     
     let estimatedCost = 0;
     
     const userCreationDate = toSafeDate(user.createdAt);
-    const isFirstMonth = userCreationDate ? getYear(userCreationDate) === getYear(now) && getMonth(userCreationDate) === getMonth(now) : false;
+    const createdParts = userCreationDate ? manilaParts(userCreationDate) : null;
+    const isFirstMonth = createdParts ? createdParts.year === nowParts.year && createdParts.monthIndex === nowParts.monthIndex : false;
 
     if (isFirstMonth && user.customPlanDetails) {
         if (user.customPlanDetails.gallonPaymentType === 'One-Time') {
@@ -786,10 +804,7 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
     estimatedCost += equipmentCostForPeriod;
 
     if (user.plan?.isConsumptionBased) {
-        const consumptionCost = deliveriesThisCycle.reduce((acc, d) => {
-            return acc + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * (user.plan?.price || 0));
-        }, 0);
-        estimatedCost += consumptionCost;
+        estimatedCost += consumptionCharge(deliveriesThisCycle, user.plan.price || 0);
     } else {
         const planCost = user.plan?.price || 0;
         estimatedCost += planCost;
@@ -803,7 +818,7 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
         id: `INV-${user.id.substring(0, 5)}-${invoiceIdSuffix}`,
         date: new Date().toISOString(),
         description: isFirstMonth ? `${description} + One-Time Fees` : description,
-        amount: estimatedCost,
+        amount: roundMoney(estimatedCost),
         status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
     };
 }, [user, deliveries, deliveriesLoading]);
@@ -820,8 +835,10 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
         
         const userCreationDate = toSafeDate(user.createdAt);
         
-        const isFirstInvoice = userCreationDate
-            ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate)
+        const invoiceParts = manilaParts(invoiceDate);
+        const createdParts = userCreationDate ? manilaParts(userCreationDate) : null;
+        const isFirstInvoice = createdParts
+            ? createdParts.year === invoiceParts.year && createdParts.monthIndex === invoiceParts.monthIndex
             : false;
         
         const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
@@ -840,27 +857,17 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
         let cycleEnd: Date;
         let monthsToBill = 1;
 
-        if (state.invoiceForBreakdown.description.includes('December 2025 - January 2026')) {
-            cycleStart = new Date(2025, 11, 2); // Dec 2, 2025
-            cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1, 2026
-            monthsToBill = 2;
-        } else {
-            const billingMonth = isCurrent ? new Date() : subMonths(invoiceDate, 1);
-            cycleStart = addDays(startOfMonth(billingMonth), 1); // 2nd of Month
-            cycleEnd = endOfDay(startOfMonth(addMonths(billingMonth, 1))); // 1st of Next Month
-        }
+        const statementRange = manilaRangeForStatement(state.invoiceForBreakdown.description, invoiceDate, isCurrent);
+        cycleStart = statementRange.start;
+        cycleEnd = statementRange.end;
+        monthsToBill = statementRange.monthsToBill;
 
-        const deliveriesInPeriod = deliveries.filter(d => {
-            const dDate = toSafeDate(d.date);
-            return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
-        });
+        const deliveriesInPeriod = deliveriesInRange(deliveries, cycleStart, cycleEnd);
         consumedContainers = deliveriesInPeriod.reduce((sum, d) => sum + d.volumeContainers, 0);
-        consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
+        consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + deliveryLiters(d), 0);
         
         if (user.plan?.isConsumptionBased) {
-            consumptionCost = deliveriesInPeriod.reduce((acc, d) => {
-                return acc + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * (user.plan?.price || 0));
-            }, 0);
+            consumptionCost = consumptionCharge(deliveriesInPeriod, user.plan.price || 0);
         } else {
             planCost = user.plan?.price || 0;
         }
@@ -910,20 +917,12 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
         let cycleStart: Date;
         let cycleEnd: Date;
 
-        if (state.selectedInvoiceForDetail.description.includes('December 2025 - January 2026')) {
-            cycleStart = new Date(2025, 11, 2);
-            cycleEnd = endOfDay(new Date(2026, 1, 1));
-        } else {
-            const isCurrent = currentMonthInvoice?.id === state.selectedInvoiceForDetail.id;
-            const billingMonth = isCurrent ? new Date() : subMonths(invoiceDate, 1);
-            cycleStart = addDays(startOfMonth(billingMonth), 1);
-            cycleEnd = endOfDay(startOfMonth(addMonths(billingMonth, 1)));
-        }
+        const isCurrent = currentMonthInvoice?.id === state.selectedInvoiceForDetail.id;
+        const statementRange = manilaRangeForStatement(state.selectedInvoiceForDetail.description, invoiceDate, isCurrent);
+        cycleStart = statementRange.start;
+        cycleEnd = statementRange.end;
 
-        return deliveries.filter(d => {
-            const dDate = toSafeDate(d.date);
-            return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
-        }).reduce((sum, d) => sum + d.volumeContainers, 0);
+        return deliveriesInRange(deliveries, cycleStart, cycleEnd).reduce((sum, d) => sum + d.volumeContainers, 0);
     }, [state.selectedInvoiceForDetail, deliveries, currentMonthInvoice]);
 
   const showCurrentMonthInvoice = useMemo(() => {
@@ -1272,25 +1271,23 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
     if (selectedSoaPeriod !== 'full') {
         let cycleStart, cycleEnd;
         if (selectedSoaPeriod === '2025-12_2026-01') {
-            cycleStart = new Date(2025, 11, 2); // Dec 2nd
-            cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1st inclusive
+            const combined = billingRangeFromPeriodLabel('December 2025 - January 2026')!;
+            cycleStart = combined.start;
+            cycleEnd = combined.end;
             billingPeriod = 'December 2025 - January 2026';
         } else {
             const [year, month] = selectedSoaPeriod.split('-').map(Number);
-            const date = new Date(year, month - 1);
-            cycleStart = addDays(startOfMonth(date), 1); // 2nd of Month
-            cycleEnd = endOfDay(startOfMonth(addMonths(date, 1))); // 1st of Next Month
-            billingPeriod = format(date, 'MMMM yyyy');
+            const range = manilaMonthRange(year, month - 1);
+            cycleStart = range.start;
+            cycleEnd = range.end;
+            billingPeriod = manilaMonthLabel(year, month - 1);
         }
 
-        filteredDeliveries = (deliveries || []).filter(d => {
-            const dDate = toSafeDate(d.date);
-            return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
-        });
+        filteredDeliveries = deliveriesInRange(deliveries || [], cycleStart, cycleEnd);
         
         filteredSanitation = (sanitationVisits || []).filter(v => {
             const vDate = toSafeDate(v.scheduledDate);
-            return vDate ? isWithinInterval(vDate, { start: cycleStart, end: cycleEnd }) : false;
+            return vDate ? vDate.getTime() >= cycleStart.getTime() && vDate.getTime() <= cycleEnd.getTime() : false;
         });
     }
     
@@ -1348,17 +1345,18 @@ export function MyAccountDialog({ user, authUser, paymentHistory, paymentsLoadin
   };
 
   const getInvoiceDisplayDate = (invoice: Payment) => {
-    if (invoice.description.includes('December 2025 - January 2026')) {
-        return 'Dec 2025 - Jan 2026';
-    }
+    const label = periodLabelFromText(invoice.description || '');
+    if (label === 'December 2025 - January 2026') return 'Dec 2025 - Jan 2026';
+    if (label) return label;
     const safeDate = toSafeDate(invoice.date);
     if (!safeDate) return 'Invalid Date';
     
     if (currentMonthInvoice && invoice.id === currentMonthInvoice.id) {
-        return format(new Date(), 'MMMM yyyy');
+        const parts = manilaParts(new Date());
+        return manilaMonthLabel(parts.year, parts.monthIndex);
     }
 
-    return format(subMonths(safeDate, 1), 'MMMM yyyy');
+    return previousManilaMonth(safeDate).label;
   };
   
   const handleTopUpSubmit = async () => {

@@ -129,7 +129,7 @@ firebase deploy --only firestore:indexes
 
 `npm run deploy:functions` deploys `functions:default`. `npm run deploy:functions:dev` deploys the dev copy. `npm run deploy:rules:dev` deploys rules and indexes to `riverbusiness-dev`.
 
-`firebase deploy --only functions` (no codebase) deploys **both** codebases. Use `functions:default` when you mean live only.
+`firebase deploy --only functions` (no codebase) deploys **both** codebases. Use `functions:default` when you mean live only. Both codebases run on the `nodejs22` runtime (`engines.node` is `22`).
 
 ## Local app against dev
 
@@ -169,6 +169,10 @@ Auth users and the Storage bucket are still the live ones.
 - `dev_onuserupdate` writes email changes and workspace claims to the shared Auth user. A dev profile that uses a real uid can change that person's live login.
 - `onfileupload` stays live-only. Profile and payment uploads in the shared bucket are still applied to `(default)` by the live function.
 - Dev schedules and mail triggers send real email through the shared Brevo key when a dev document contains a real address. Keep dev data fake, or expect those messages to go out.
+
+## Billing backfill
+
+Invoice corrections for Manila months are a separate one-time script, dry-run by default. Pass `--database riverbusiness-dev` to target the dev database, or omit it to target `(default)`. See [BILLING-BACKFILL.md](BILLING-BACKFILL.md). Do not apply it to live data until the dry-run output has been reviewed.
 
 ## What is not deployed
 
