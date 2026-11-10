@@ -129,7 +129,7 @@ firebase deploy --only firestore:indexes
 
 `npm run deploy:functions` deploys `functions:default`. `npm run deploy:functions:dev` deploys the dev copy. `npm run deploy:rules:dev` deploys rules and indexes to `riverbusiness-dev`.
 
-`firebase deploy --only functions` (no codebase) deploys **both** codebases. Use `functions:default` when you mean live only.
+`firebase deploy --only functions` (no codebase) deploys **both** codebases. Use `functions:default` when you mean live only. Both codebases run on the `nodejs22` runtime (`engines.node` is `22`).
 
 ## Local app against dev
 
