@@ -33,15 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateMonthlyInvoices = void 0;
+exports.syncDeliveryBilling = exports.generateMonthlyInvoices = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
-const date_fns_1 = require("date-fns");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
 const index_1 = require("./index");
 const function_runtime_1 = require("./function-runtime");
-const containerToLiter = (containers) => (containers || 0) * 19.5;
+const billing_period_1 = require("./billing-period");
 /**
  * Determines the CC list based on the client ID.
  * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
@@ -59,19 +59,19 @@ function getBCCList() {
     return ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
 }
 /**
- * A scheduled Cloud Function that runs on the 1st of every month
- * to generate invoices and handle plan changes.
+ * Scheduled on the 1st of each month at 00:00 Asia/Manila.
+ * Cloud Functions would otherwise treat the cron as America/Los_Angeles,
+ * and a Manila midnight on the 1st is still the previous UTC day.
  */
 exports.generateMonthlyInvoices = functions.runWith({
-    secrets: ["BREVO_API_KEY"]
-}).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
-    logger.info('Starting monthly invoice generation job.');
+    secrets: ['BREVO_API_KEY'],
+}).pubsub.schedule(billing_period_1.BILLING_CRON).timeZone(billing_period_1.MANILA_TIME_ZONE).onRun(async () => {
+    logger.info('Starting monthly invoice generation job (Asia/Manila).');
     const db = (0, function_runtime_1.getDb)();
     const now = new Date();
-    const currentYear = (0, date_fns_1.getYear)(now);
-    const currentMonth = (0, date_fns_1.getMonth)(now);
+    const window = (0, billing_period_1.billingWindowForRun)(now);
     // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
-    if (currentYear === 2026 && currentMonth === 0) {
+    if (window.skip) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
         return null;
     }
@@ -81,32 +81,18 @@ exports.generateMonthlyInvoices = functions.runWith({
     const promises = [];
     for (const userDoc of usersSnapshot.docs) {
         const userRef = userDoc.ref;
-        let user = userDoc.data();
+        const user = userDoc.data();
         if (user.role === 'Admin' || user.isPrepaid)
             continue;
-        let billingPeriod;
-        let billingCycleStart;
-        let billingCycleEnd;
-        let monthsToBill = 1;
-        let isFirstInvoice = !user.lastBilledDate;
-        // Rule: Billing cycle is exactly 1st to Last day of the target month.
-        if (currentYear === 2026 && currentMonth === 1) { // February 2026
-            // Both fixed and consumption based need 2 months if we skipped Jan 1.
-            billingCycleStart = new Date(2025, 11, 1);
-            billingCycleEnd = (0, date_fns_1.endOfMonth)(new Date(2026, 0, 1));
-            billingPeriod = 'December 2025 - January 2026';
-            monthsToBill = 2;
-        }
-        else {
-            const previousMonth = (0, date_fns_1.subMonths)(now, 1);
-            billingPeriod = (0, date_fns_1.format)(previousMonth, 'MMMM yyyy');
-            billingCycleStart = (0, date_fns_1.startOfMonth)(previousMonth);
-            billingCycleEnd = (0, date_fns_1.endOfMonth)(previousMonth);
-        }
-        // Handle Pending Plan Activation
+        const billingPeriod = window.billingPeriod;
+        const billingCycleStart = window.start;
+        const billingCycleEnd = window.end;
+        const monthsToBill = window.monthsToBill;
+        const isFirstInvoice = !user.lastBilledDate;
+        // Handle Pending Plan Activation on the Manila calendar day the job runs.
         if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
-            if ((0, date_fns_1.isToday)(effectiveDate)) {
+            if ((0, billing_period_1.isSameManilaDay)(effectiveDate, now)) {
                 promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice)
                     .then(() => userRef.update({
                     plan: user.pendingPlan,
@@ -123,74 +109,64 @@ exports.generateMonthlyInvoices = functions.runWith({
     return null;
 });
 async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill = 1, isFirstInvoice) {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d;
     if (!user.plan)
         return;
     const db = (0, function_runtime_1.getDb)();
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();
     const userUpdatePayload = {};
-    let amount = 0;
-    let description = '';
-    // Boundary: Strictly 1st to last day of the month
+    // One Manila month (or the Dec 2025–Jan 2026 combined window). Not the customer's full history.
     const deliveriesSnapshot = await userRef.collection('deliveries')
         .where('date', '>=', billingCycleStart.toISOString())
         .where('date', '<=', billingCycleEnd.toISOString())
         .get();
     const deliveries = deliveriesSnapshot.docs.map(d => d.data());
-    // Use Delivery Service Date logic
-    const consumedLiters = deliveries.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
-    let monthlyEquipmentCost = 0;
-    if (((_a = user.customPlanDetails) === null || _a === void 0 ? void 0 : _a.gallonPaymentType) === 'Monthly')
-        monthlyEquipmentCost += (((_b = user.customPlanDetails) === null || _b === void 0 ? void 0 : _b.gallonPrice) || 0);
-    if (((_c = user.customPlanDetails) === null || _c === void 0 ? void 0 : _c.dispenserPaymentType) === 'Monthly')
-        monthlyEquipmentCost += (((_d = user.customPlanDetails) === null || _d === void 0 ? void 0 : _d.dispenserPrice) || 0);
-    const equipmentCost = monthlyEquipmentCost * monthsToBill;
+    const consumedLiters = deliveries.reduce((sum, d) => sum + (0, billing_period_1.deliveryLiters)(d), 0);
+    const equipmentCost = (0, billing_period_1.roundMoney)((0, billing_period_1.equipmentMonthly)(user.customPlanDetails) * monthsToBill);
+    let oneTimeFee = 0;
+    if (isFirstInvoice)
+        oneTimeFee = (0, billing_period_1.roundMoney)((0, billing_period_1.oneTimeEquipment)(user.customPlanDetails));
+    let amount = 0;
+    let description = '';
+    let consumptionAmount = 0;
     if (user.plan.isConsumptionBased) {
-        amount = (consumedLiters * user.plan.price) + equipmentCost;
+        consumptionAmount = (0, billing_period_1.consumptionCharge)(deliveries, user.plan.price || 0);
+        amount = (0, billing_period_1.roundMoney)(consumptionAmount + equipmentCost + oneTimeFee);
         description = `Bill for ${billingPeriod}`;
     }
     else {
-        // Multi-month support: Multiply base price by monthsToBill
-        amount = (user.plan.price * monthsToBill) + equipmentCost;
+        consumptionAmount = 0;
+        amount = (0, billing_period_1.roundMoney)((user.plan.price * monthsToBill) + equipmentCost + oneTimeFee);
         description = `Monthly Subscription for ${billingPeriod}`;
         if (user.accountType !== 'Branch') {
-            const monthlyAllocation = (((_e = user.customPlanDetails) === null || _e === void 0 ? void 0 : _e.litersPerMonth) || 0) + (((_f = user.customPlanDetails) === null || _f === void 0 ? void 0 : _f.bonusLiters) || 0);
-            const totalAllocation = (monthlyAllocation * monthsToBill) + (((_g = user.customPlanDetails) === null || _g === void 0 ? void 0 : _g.lastMonthRollover) || 0);
+            const monthlyAllocation = (((_a = user.customPlanDetails) === null || _a === void 0 ? void 0 : _a.litersPerMonth) || 0) + (((_b = user.customPlanDetails) === null || _b === void 0 ? void 0 : _b.bonusLiters) || 0);
+            const totalAllocation = (monthlyAllocation * monthsToBill) + (((_c = user.customPlanDetails) === null || _c === void 0 ? void 0 : _c.lastMonthRollover) || 0);
             const newRollover = Math.max(0, totalAllocation - consumedLiters);
             userUpdatePayload.totalConsumptionLiters = monthlyAllocation + newRollover;
             userUpdatePayload['customPlanDetails.lastMonthRollover'] = newRollover;
         }
     }
-    if (isFirstInvoice && user.customPlanDetails) {
-        let oneTimeFee = 0;
-        if (user.customPlanDetails.gallonPaymentType === 'One-Time')
-            oneTimeFee += user.customPlanDetails.gallonPrice || 0;
-        if (user.customPlanDetails.dispenserPaymentType === 'One-Time')
-            oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
-        if (oneTimeFee > 0) {
-            amount += oneTimeFee;
-            description += ` + One-Time Fees`;
+    if (oneTimeFee > 0)
+        description += ' + One-Time Fees';
+    const pendingCharges = user.pendingCharges || [];
+    const applied = (0, billing_period_1.applyPendingCharges)(amount, description, pendingCharges);
+    amount = applied.amount;
+    description = applied.description;
+    if (applied.clearPending) {
+        userUpdatePayload.pendingCharges = admin.firestore.FieldValue.delete();
+        for (const charge of pendingCharges) {
+            const carry = charge;
+            if (carry.kind === 'carryover' && carry.invoiceId) {
+                batch.set(paymentsRef.doc(carry.invoiceId), { carryOverConsumed: true }, { merge: true });
+            }
         }
     }
-    const pendingCharges = user.pendingCharges || [];
-    const pendingTotal = pendingCharges.reduce((sum, c) => sum + c.amount, 0);
-    if (pendingTotal !== 0) {
-        amount += pendingTotal;
-        description += pendingTotal > 0 ? ` + Adjustments` : ` + Deductions`;
-        userUpdatePayload.pendingCharges = admin.firestore.FieldValue.delete();
-    }
     if (amount > 0) {
-        const invoiceId = `INV-${userRef.id.substring(0, 5)}-${billingPeriod.replace(/\s/g, '-')}`;
-        const newInvoice = {
-            id: invoiceId,
-            date: admin.firestore.FieldValue.serverTimestamp(),
-            description: description,
-            amount: amount,
-            status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
-            manualCharges: pendingCharges,
-        };
-        const targetEmails = ((_h = user.notificationEmails) === null || _h === void 0 ? void 0 : _h.length) > 0 ? user.notificationEmails : [user.email];
+        const invoiceId = (0, billing_period_1.invoiceDocId)(userRef.id, billingPeriod);
+        const nonConsumptionAmount = (0, billing_period_1.roundMoney)((user.plan.isConsumptionBased ? 0 : (user.plan.price * monthsToBill)) + equipmentCost + oneTimeFee + (0, billing_period_1.sumCharges)(pendingCharges));
+        const newInvoice = Object.assign(Object.assign({ id: invoiceId, date: admin.firestore.FieldValue.serverTimestamp(), description: description, amount: amount, status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming' }, (applied.manualCharges.length > 0 ? { manualCharges: applied.manualCharges } : {})), { billingPeriod, billingTimeZone: billing_period_1.MANILA_TIME_ZONE, consumptionAmount: user.plan.isConsumptionBased ? consumptionAmount : 0, nonConsumptionAmount, equipmentAmount: equipmentCost, oneTimeFees: oneTimeFee, adjustmentsTotal: (0, billing_period_1.sumCharges)(pendingCharges) });
+        const targetEmails = ((_d = user.notificationEmails) === null || _d === void 0 ? void 0 : _d.length) > 0 ? user.notificationEmails : [user.email];
         if (user.accountType !== 'Branch' && targetEmails.length > 0) {
             const sanitationSnap = await userRef.collection('sanitationVisits')
                 .where('scheduledDate', '>=', billingCycleStart.toISOString())
@@ -215,9 +191,9 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
                 html: template.html,
                 attachments: [{
                         filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`,
-                        content: pdfBuffer
-                    }]
-            }).catch(e => logger.error("Email failed", e));
+                        content: pdfBuffer,
+                    }],
+            }).catch(e => logger.error('Email failed', e));
         }
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
         userUpdatePayload.lastBilledDate = admin.firestore.FieldValue.serverTimestamp();
@@ -226,4 +202,113 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
         batch.update(userRef, userUpdatePayload);
     return batch.commit();
 }
+function feesForInvoice(user, monthsToBill) {
+    return {
+        equipment: (0, billing_period_1.roundMoney)((0, billing_period_1.equipmentMonthly)(user.customPlanDetails) * monthsToBill),
+        oneTime: (0, billing_period_1.roundMoney)((0, billing_period_1.oneTimeEquipment)(user.customPlanDetails)),
+    };
+}
+function applyReconcileResult(tx, invoiceRef, userRef, user, result) {
+    if (result.type === 'skip')
+        return;
+    if (result.type === 'update-unpaid') {
+        tx.update(invoiceRef, {
+            amount: result.amount,
+            consumptionAmount: result.consumptionAmount,
+            nonConsumptionAmount: result.nonConsumptionAmount,
+            lateDeliveryAdjustedAt: admin.firestore.FieldValue.serverTimestamp(),
+            billingFlag: result.billingFlag ? result.billingFlag : admin.firestore.FieldValue.delete(),
+        });
+        logger.info(`Updated unpaid invoice ${invoiceRef.id} to ${result.amount} after a late delivery.`);
+        return;
+    }
+    tx.update(invoiceRef, {
+        unbilledAmount: result.unbilledAmount,
+        carryOverAmount: result.carryOverAmount,
+        lateDeliveryAdjustedAt: admin.firestore.FieldValue.serverTimestamp(),
+        billingFlag: result.billingFlag ? result.billingFlag : admin.firestore.FieldValue.delete(),
+        carryOverChargeId: result.carryOverChargeId ? result.carryOverChargeId : admin.firestore.FieldValue.delete(),
+    });
+    const existing = Array.isArray(user.pendingCharges) ? user.pendingCharges : [];
+    let next = existing.slice();
+    if (result.removePendingChargeId) {
+        next = next.filter((charge) => charge.id !== result.removePendingChargeId);
+    }
+    if (result.pendingCharge) {
+        next = next.filter((charge) => { var _a; return charge.id !== ((_a = result.pendingCharge) === null || _a === void 0 ? void 0 : _a.id); });
+        next.push(Object.assign(Object.assign({}, result.pendingCharge), { dateAdded: new Date().toISOString() }));
+    }
+    const same = JSON.stringify(existing) === JSON.stringify(next);
+    if (!same) {
+        if (next.length === 0) {
+            tx.update(userRef, { pendingCharges: admin.firestore.FieldValue.delete() });
+        }
+        else {
+            tx.update(userRef, { pendingCharges: next });
+        }
+        logger.info(`Recorded carry-over on paid invoice ${invoiceRef.id}; amount left unchanged.`);
+    }
+}
+/**
+ * Late deliveries: recompute the Manila month they belong to.
+ * The query is that month only (plus the Dec 2025–Jan 2026 combined window when that invoice exists).
+ * Current and future months have no invoice yet and are not read.
+ */
+async function reconcileDeliveryMonth(userId, year, monthIndex) {
+    const nowParts = (0, billing_period_1.manilaParts)(new Date());
+    const isCurrentOrFuture = year > nowParts.year || (year === nowParts.year && monthIndex >= nowParts.monthIndex);
+    if (isCurrentOrFuture)
+        return;
+    const db = (0, function_runtime_1.getDb)();
+    const userRef = db.collection('users').doc(userId);
+    for (const invoiceId of (0, billing_period_1.candidateInvoiceIds)(userId, year, monthIndex)) {
+        const invoiceRef = userRef.collection('payments').doc(invoiceId);
+        await db.runTransaction(async (tx) => {
+            var _a;
+            const invoiceSnap = await tx.get(invoiceRef);
+            if (!invoiceSnap.exists)
+                return;
+            const userSnap = await tx.get(userRef);
+            const user = userSnap.data();
+            if (!((_a = user === null || user === void 0 ? void 0 : user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) || user.isPrepaid || user.role === 'Admin')
+                return;
+            const invoice = Object.assign({ id: invoiceId }, invoiceSnap.data());
+            const window = (0, billing_period_1.windowForInvoice)(invoice, year, monthIndex);
+            const deliveriesSnap = await tx.get(userRef.collection('deliveries')
+                .where('date', '>=', window.start.toISOString())
+                .where('date', '<=', window.end.toISOString()));
+            const deliveries = deliveriesSnap.docs.map((doc) => doc.data());
+            const result = (0, billing_period_1.reconcileMonthInvoice)({
+                invoice,
+                deliveries,
+                pricePerLiter: user.plan.price || 0,
+                billingPeriod: window.billingPeriod,
+                fees: feesForInvoice(user, window.monthsToBill),
+            });
+            applyReconcileResult(tx, invoiceRef, userRef, user, result);
+        });
+    }
+}
+exports.syncDeliveryBilling = (0, firestore_1.onDocumentWritten)((0, function_runtime_1.withDatabase)({
+    document: 'users/{userId}/deliveries/{deliveryId}',
+}), async (event) => {
+    var _a, _b;
+    const beforeRaw = ((_a = event.data) === null || _a === void 0 ? void 0 : _a.before.exists) ? event.data.before.data() : undefined;
+    const afterRaw = ((_b = event.data) === null || _b === void 0 ? void 0 : _b.after.exists) ? event.data.after.data() : undefined;
+    if ((0, billing_period_1.billingSignature)(beforeRaw) === (0, billing_period_1.billingSignature)(afterRaw))
+        return;
+    const months = new Set();
+    for (const delivery of [beforeRaw, afterRaw]) {
+        const instant = (0, billing_period_1.deliveryInstant)(delivery === null || delivery === void 0 ? void 0 : delivery.date);
+        if (!instant)
+            continue;
+        const parts = (0, billing_period_1.manilaParts)(instant);
+        months.add(`${parts.year}-${parts.monthIndex}`);
+    }
+    const userId = event.params.userId;
+    for (const key of months) {
+        const [year, monthIndex] = key.split('-').map(Number);
+        await reconcileDeliveryMonth(userId, year, monthIndex);
+    }
+});
 //# sourceMappingURL=billing.js.map

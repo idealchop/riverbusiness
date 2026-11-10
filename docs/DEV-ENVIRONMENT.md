@@ -170,6 +170,10 @@ Auth users and the Storage bucket are still the live ones.
 - `onfileupload` stays live-only. Profile and payment uploads in the shared bucket are still applied to `(default)` by the live function.
 - Dev schedules and mail triggers send real email through the shared Brevo key when a dev document contains a real address. Keep dev data fake, or expect those messages to go out.
 
+## Billing backfill
+
+Invoice corrections for Manila months are a separate one-time script, dry-run by default. Pass `--database riverbusiness-dev` to target the dev database, or omit it to target `(default)`. See [BILLING-BACKFILL.md](BILLING-BACKFILL.md). Do not apply it to live data until the dry-run output has been reviewed.
+
 ## What is not deployed
 
 `src/functions` is an older copy. `firebase.json` does not reference it. Only `functions/` (live) and `functions-dev/` (dev) are deployed.

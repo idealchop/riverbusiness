@@ -172,6 +172,17 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         onChange={handleAdminUploadProof}
                     />
 
+                    {typeof paymentToReview?.unbilledAmount === 'number' && paymentToReview.unbilledAmount > 0 && (
+                        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3">
+                            This paid invoice was not changed. ₱{paymentToReview.unbilledAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} from deliveries entered after it was paid is carried onto the next bill.
+                        </p>
+                    )}
+                    {paymentToReview?.billingFlag === 'adjusted-during-review' && (
+                        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3">
+                            Deliveries were added while this payment was in review, so the amount now includes them.
+                        </p>
+                    )}
+
                     {showRejectionInput && (
                         <div className="space-y-2 pt-4">
                             <Label htmlFor="rejectionReason">Reason for Rejection</Label>

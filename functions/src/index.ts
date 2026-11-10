@@ -5,7 +5,8 @@ import { getAuth } from "firebase-admin/auth";
 import * as logger from "firebase-functions/logger";
 import * as functions from 'firebase-functions';
 import PDFDocument from 'pdfkit';
-import { format, startOfMonth, endOfMonth, parse, endOfDay, addMonths, subMonths, addDays } from 'date-fns';
+import { format, endOfDay, addDays } from 'date-fns';
+import { billingRangeFromPeriodLabel, billingWindowForRun, formatManilaDate, manilaMonthLabel, manilaMonthRange, periodLabelFromText } from './billing-period';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -28,7 +29,7 @@ import {
     getStationRefillNoticeTemplate
 } from './email';
 import { syncUserWorkspaceClaim, createWorkspaceFileUpload, finalizeWorkspaceFileUpload } from './workspace-files';
-import { generateMonthlyInvoices } from './billing';
+import { generateMonthlyInvoices, syncDeliveryBilling } from './billing';
 
 const BRAND_PRIMARY = '#538ec2';
 const LITER_RATIO = 19.5;
@@ -129,7 +130,7 @@ export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery):
         doc.fontSize(10).font('Helvetica-Bold').text('Tracking #:', margin, topY);
         doc.font('Helvetica').text(delivery.id, margin + 80, topY);
         doc.font('Helvetica-Bold').text('Date:', margin, topY + 15);
-        doc.font('Helvetica').text(format(toSafeDate(delivery.date), 'MMMM d, yyyy'), margin + 80, topY + 15);
+        doc.font('Helvetica').text(formatManilaDate(delivery.date, 'long'), margin + 80, topY + 15);
 
         // Client Info
         doc.moveDown(2);
@@ -315,7 +316,7 @@ export async function generateSOAPDF(
                 totalQty += qty; totalLiters += liters; totalAmount += amount;
                 return [
                     d.id, 
-                    format(toSafeDate(d.date), 'MMM d, yyyy'), 
+                    formatManilaDate(d.date, 'medium'), 
                     qty, 
                     `P${pricePerContainer.toFixed(2)}`, 
                     `${liters.toFixed(1)}L`, 
@@ -594,14 +595,16 @@ const onpaymentremindercreate = onDocumentCreated(withDatabase({
 
     if (selectedPeriod && selectedPeriod !== 'full') {
         if (selectedPeriod === '2025-12_2026-01') {
-            cycleStart = new Date(2025, 11, 1);
-            cycleEnd = endOfDay(new Date(2026, 0, 31));
+            const combined = billingRangeFromPeriodLabel('December 2025 - January 2026');
+            cycleStart = combined ? combined.start : new Date(0);
+            cycleEnd = combined ? combined.end : endOfDay(new Date());
             billingPeriodLabel = 'December 2025 - January 2026';
         } else {
-            const parsed = parse(selectedPeriod, 'yyyy-MM', new Date());
-            cycleStart = startOfMonth(parsed);
-            cycleEnd = endOfDay(endOfMonth(parsed));
-            billingPeriodLabel = format(parsed, 'MMMM yyyy');
+            const [year, month] = selectedPeriod.split('-').map(Number);
+            const range = manilaMonthRange(year, month - 1);
+            cycleStart = range.start;
+            cycleEnd = range.end;
+            billingPeriodLabel = manilaMonthLabel(year, month - 1);
         }
     }
 
@@ -693,13 +696,15 @@ const onmanualreceiptcreate = onDocumentCreated(withDatabase({
         const invoiceDate = toSafeDate(invoiceData.date);
         let cycleStart, cycleEnd;
         
-        if (invoiceData.description.includes('December 2025 - January 2026')) {
-            cycleStart = new Date(2025, 11, 2);
-            cycleEnd = endOfDay(new Date(2026, 1, 1));
+        const periodLabel = invoiceData.billingPeriod || periodLabelFromText(invoiceData.description || '');
+        const periodRange = periodLabel ? billingRangeFromPeriodLabel(periodLabel) : null;
+        if (periodRange) {
+            cycleStart = periodRange.start;
+            cycleEnd = periodRange.end;
         } else {
-            const billingMonth = subMonths(invoiceDate, 1);
-            cycleStart = addDays(startOfMonth(billingMonth), 1);
-            cycleEnd = endOfDay(startOfMonth(addMonths(billingMonth, 1)));
+            const window = billingWindowForRun(invoiceDate);
+            cycleStart = window.skip ? invoiceDate : window.start;
+            cycleEnd = window.skip ? invoiceDate : window.end;
         }
 
         const collectionName = userData.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
@@ -1112,6 +1117,7 @@ const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
 
 const cloudFunctions: Record<string, unknown> = {
   generateMonthlyInvoices,
+  syncDeliveryBilling,
   createWorkspaceFileUpload,
   finalizeWorkspaceFileUpload,
   notifyStationsOfUpcomingRefills,

@@ -282,6 +282,9 @@ export interface Payment {
   proofOfPaymentUrl?: string;
   rejectionReason?: string;
   manualCharges?: any[];
+  billingFlag?: string;
+  unbilledAmount?: number;
+  carryOverAmount?: number;
 }
 
 export interface Notification {

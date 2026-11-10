@@ -259,6 +259,9 @@ export function BillingTab({
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <p className="font-extrabold text-sm">₱{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                            {typeof payment.unbilledAmount === 'number' && payment.unbilledAmount > 0 && (
+                                                <p className="text-[10px] font-semibold text-amber-700">₱{payment.unbilledAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} carry-over</p>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right pr-6">
                                             <div className="flex items-center justify-end gap-2">
@@ -320,7 +323,12 @@ export function BillingTab({
                                         </div>
                                         <div className="flex justify-between items-center pt-1 border-t">
                                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Amount:</span>
-                                            <p className="font-extrabold text-sm">₱{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                            <div className="text-right">
+                                                <p className="font-extrabold text-sm">₱{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                {typeof payment.unbilledAmount === 'number' && payment.unbilledAmount > 0 && (
+                                                    <p className="text-[10px] font-semibold text-amber-700">Carry-over on next bill</p>
+                                                )}
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, useStorage } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, getDoc, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc, deleteDoc, orderBy, writeBatch } from 'firebase/firestore';
 import { AppUser, Delivery, WaterStation, Payment, SanitationVisit, RefillRequest, RefillRequestStatus, Notification, DispenserReport, Transaction, TopUpRequest, ManualCharge } from '@/lib/types';
-import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, getYear, getMonth } from 'date-fns';
+import { consumptionCharge, deliveriesInRange, litersInRange, manilaMonthLabel, manilaMonthRange, manilaParts, previousManilaMonth, roundMoney } from '@/lib/billing-period';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 
@@ -29,7 +29,6 @@ import { YearlyConsumptionDialog } from './user-details/YearlyConsumptionDialog'
 import { BranchDeliveriesTab } from './user-details/BranchDeliveriesTab';
 import { ChangePlanDialog } from './user-details/ChangePlanDialog';
 
-const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
     if (timestamp instanceof Timestamp) return timestamp.toDate();
@@ -87,30 +86,16 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
 
     const consumedLitersThisMonth = useMemo(() => {
         if (!userDeliveriesData) return 0;
-        const now = new Date();
-        const cycleStart = startOfMonth(now);
-        const cycleEnd = endOfMonth(now);
-        
-        const deliveriesThisCycle = userDeliveriesData.filter(d => {
-            const deliveryDate = toSafeDate(d.date);
-            return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
-        });
-        return deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
+        const parts = manilaParts(new Date());
+        const range = manilaMonthRange(parts.year, parts.monthIndex);
+        return litersInRange(userDeliveriesData, range.start, range.end);
     }, [userDeliveriesData]);
     
     const consumptionComparison = useMemo(() => {
         if (!userDeliveriesData) return { percentageChange: 0, changeType: 'same' };
     
-        const now = new Date();
-        const lastMonthStart = startOfMonth(subMonths(now, 1));
-        const lastMonthEnd = endOfMonth(subMonths(now, 1));
-    
-        const consumedLitersLastMonth = userDeliveriesData
-            .filter(d => {
-                const deliveryDate = toSafeDate(d.date);
-                return deliveryDate ? isWithinInterval(deliveryDate, { start: lastMonthStart, end: lastMonthEnd }) : false;
-            })
-            .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
+        const previous = previousManilaMonth(new Date());
+        const consumedLitersLastMonth = litersInRange(userDeliveriesData, previous.start, previous.end);
     
         if (consumedLitersLastMonth === 0) {
             return { percentageChange: consumedLitersThisMonth > 0 ? 100 : 0, changeType: consumedLitersThisMonth > 0 ? 'increase' : 'same' };
@@ -127,12 +112,13 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const currentMonthInvoice = useMemo(() => {
         if (!user || !userDeliveriesData) return null;
     
-        const now = new Date();
+        const nowParts = manilaParts(new Date());
         const monthsToBill = 1;
     
         let estimatedCost = 0;
         const userCreationDate = toSafeDate(user.createdAt);
-        const isFirstMonth = userCreationDate ? getYear(userCreationDate) === getYear(now) && getMonth(userCreationDate) === getMonth(now) : false;
+        const createdParts = userCreationDate ? manilaParts(userCreationDate) : null;
+        const isFirstMonth = createdParts ? createdParts.year === nowParts.year && createdParts.monthIndex === nowParts.monthIndex : false;
     
         if (isFirstMonth && user.customPlanDetails) {
             if (user.customPlanDetails.gallonPaymentType === 'One-Time') estimatedCost += user.customPlanDetails.gallonPrice || 0;
@@ -146,7 +132,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         estimatedCost += monthlyEquipmentCost * monthsToBill;
     
         if (user.plan?.isConsumptionBased) {
-            estimatedCost += consumedLitersThisMonth * (user.plan.price || 0);
+            const range = manilaMonthRange(nowParts.year, nowParts.monthIndex);
+            estimatedCost += consumptionCharge(deliveriesInRange(userDeliveriesData, range.start, range.end), user.plan.price || 0);
         } else {
             estimatedCost += user.plan?.price || 0;
         }
@@ -154,14 +141,15 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         const pendingChargesTotal = (user.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
         estimatedCost += pendingChargesTotal;
     
+        const monthKey = `${nowParts.year}${String(nowParts.monthIndex + 1).padStart(2, '0')}`;
         return {
-            id: `INV-EST-${user.id.substring(0, 5)}-${format(now, 'yyyyMM')}`,
+            id: `INV-EST-${user.id.substring(0, 5)}-${monthKey}`,
             date: new Date().toISOString(),
-            description: `Estimated bill for ${format(now, 'MMMM yyyy')}`,
-            amount: estimatedCost,
+            description: `Estimated bill for ${manilaMonthLabel(nowParts.year, nowParts.monthIndex)}`,
+            amount: roundMoney(estimatedCost),
             status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
         };
-    }, [user, userDeliveriesData, consumedLitersThisMonth]);
+    }, [user, userDeliveriesData]);
 
     const handleAssignStation = async (stationId: string) => {
         if (!userDocRef) return;

@@ -33,7 +33,7 @@ import {
   Hourglass
 } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
-import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth, addDays } from 'date-fns';
+import { consumptionCharge, deliveriesInRange, litersInRange, manilaMonthRange, manilaParts, previousManilaMonth } from '@/lib/billing-period';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -43,7 +43,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
-const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 /**
@@ -141,24 +140,14 @@ export function StatCards({
         return emptyState;
     }
 
-    const cycleStart = startOfMonth(now);
-    const cycleEnd = endOfMonth(now);
-    const lastStart = startOfMonth(subMonths(now, 1));
-    const lastEnd = endOfMonth(subMonths(now, 1));
+    const parts = manilaParts(now);
+    const currentRange = manilaMonthRange(parts.year, parts.monthIndex);
+    const previous = previousManilaMonth(now);
     const monthsToBill = 1;
-    
-    const deliveriesThisCycle = deliveries.filter(d => {
-        const deliveryDate = new Date(d.date);
-        return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
-    });
-    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
 
-    const consumedLitersLastMonth = deliveries
-        .filter(d => {
-            const deliveryDate = new Date(d.date);
-            return isWithinInterval(deliveryDate, { start: lastStart, end: lastEnd });
-        })
-        .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
+    const deliveriesThisCycle = deliveriesInRange(deliveries, currentRange.start, currentRange.end);
+    const consumedLitersThisCycle = litersInRange(deliveries, currentRange.start, currentRange.end);
+    const consumedLitersLastMonth = litersInRange(deliveries, previous.start, previous.end);
 
     const diff = consumedLitersLastMonth === 0 ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / (consumedLitersLastMonth || 1)) * 100;
     const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
@@ -170,7 +159,7 @@ export function StatCards({
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     if (user.plan.isConsumptionBased || user.accountType === 'Branch' || user.isPrepaid) {
-        const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
+        const consumptionCost = consumptionCharge(deliveriesThisCycle, user.plan.price || 0);
         return {
             ...emptyState,
             consumedLitersThisMonth: consumedLitersThisCycle,
