@@ -12,8 +12,10 @@
     "firebase": "firebase",
     "firebase:login": "firebase login",
     "deploy:storage": "firebase deploy --only storage",
-    "deploy:functions": "firebase deploy --only functions",
-    "deploy:rules": "firebase deploy --only storage,firestore:rules"
+    "deploy:functions": "firebase deploy --only functions:default",
+    "deploy:functions:dev": "firebase deploy --only functions:dev",
+    "deploy:rules": "firebase deploy --only storage,firestore:rules",
+    "deploy:rules:dev": "firebase deploy --only firestore:riverbusiness-dev"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.0.0",

@@ -5,6 +5,7 @@ import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
 import type { ManualCharge, Delivery, SanitationVisit, ComplianceReport } from './types'; 
 import { generateSOAPDF } from './index';
+import { getDb } from './function-runtime';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -34,7 +35,7 @@ export const generateMonthlyInvoices = functions.runWith({
     secrets: ["BREVO_API_KEY"]
 }).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     logger.info('Starting monthly invoice generation job.');
-    const db = admin.firestore();
+    const db = getDb();
     
     const now = new Date();
     const currentYear = getYear(now);
@@ -109,7 +110,7 @@ async function generateInvoiceForUser(
     isFirstInvoice: boolean
 ) {
     if (!user.plan) return;
-    const db = admin.firestore();
+    const db = getDb();
 
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();

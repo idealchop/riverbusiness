@@ -40,6 +40,7 @@ const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
 const index_1 = require("./index");
+const function_runtime_1 = require("./function-runtime");
 const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
  * Determines the CC list based on the client ID.
@@ -65,7 +66,7 @@ exports.generateMonthlyInvoices = functions.runWith({
     secrets: ["BREVO_API_KEY"]
 }).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     logger.info('Starting monthly invoice generation job.');
-    const db = admin.firestore();
+    const db = (0, function_runtime_1.getDb)();
     const now = new Date();
     const currentYear = (0, date_fns_1.getYear)(now);
     const currentMonth = (0, date_fns_1.getMonth)(now);
@@ -125,7 +126,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
     var _a, _b, _c, _d, _e, _f, _g, _h;
     if (!user.plan)
         return;
-    const db = admin.firestore();
+    const db = (0, function_runtime_1.getDb)();
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();
     const userUpdatePayload = {};

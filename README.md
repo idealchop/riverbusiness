@@ -24,10 +24,12 @@ To deploy the backend intelligence (billing, notifications, and HR automation), 
     cd functions && npm run build
     ```
 3.  **Deploy**:
-    Run the deployment command from the project root:
+    Run the deployment command from the project root. This updates the live functions on the `(default)` database only:
     ```bash
-    firebase deploy --only functions
+    firebase deploy --only functions:default
     ```
+
+    A separate dev copy, App Hosting environment, and named database are described in [docs/DEV-ENVIRONMENT.md](docs/DEV-ENVIRONMENT.md).
 
 ---
 

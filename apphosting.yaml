@@ -1,5 +1,10 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
+#
+# Live backend. Do not set a Firestore database id or APP_ENV here.
+# Unset NEXT_PUBLIC_FIRESTORE_DATABASE_ID keeps the (default) database,
+# and an unset NEXT_PUBLIC_APP_ENV shows no DEV badge.
+# The dev backend uses apphosting.dev.yaml. See docs/DEV-ENVIRONMENT.md.
 
 runConfig:
   # Increase this value if you'd like to automatically spin up

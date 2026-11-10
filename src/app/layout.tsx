@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { SeoJsonLd } from '@/components/seo-json-ld';
+import { DevEnvironmentBadge } from '@/components/dev-environment-badge';
 import {
   MARKETING_URL,
   SEO_KEYWORDS,
@@ -88,6 +89,7 @@ export default function RootLayout({
           {children}
         </FirebaseClientProvider>
         <Toaster />
+        <DevEnvironmentBadge />
       </body>
     </html>
   );

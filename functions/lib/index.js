@@ -32,14 +32,10 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.onleavestatusupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedemployeecreate = exports.onunclaimedprofilecreate = exports.onpaysliprequestcreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = exports.onuserupdate = exports.notifyStationsOfUpcomingRefills = exports.finalizeWorkspaceFileUpload = exports.createWorkspaceFileUpload = void 0;
 exports.generateDeliveryReceiptPDF = generateDeliveryReceiptPDF;
 exports.generateSOAPDF = generateSOAPDF;
 exports.generateInvoiceReceiptPDF = generateInvoiceReceiptPDF;
@@ -56,13 +52,10 @@ const date_fns_1 = require("date-fns");
 (0, app_1.initializeApp)();
 const storage_2 = require("firebase-functions/v2/storage");
 const firestore_2 = require("firebase-functions/v2/firestore");
+const function_runtime_1 = require("./function-runtime");
 const email_1 = require("./email");
 const workspace_files_1 = require("./workspace-files");
-var workspace_files_2 = require("./workspace-files");
-Object.defineProperty(exports, "createWorkspaceFileUpload", { enumerable: true, get: function () { return workspace_files_2.createWorkspaceFileUpload; } });
-Object.defineProperty(exports, "finalizeWorkspaceFileUpload", { enumerable: true, get: function () { return workspace_files_2.finalizeWorkspaceFileUpload; } });
-// Export all billing functions
-__exportStar(require("./billing"), exports);
+const billing_1 = require("./billing");
 const BRAND_PRIMARY = '#538ec2';
 const LITER_RATIO = 19.5;
 const toSafeDate = (val) => {
@@ -83,7 +76,7 @@ const toSafeDate = (val) => {
 async function createNotification(userId, notificationData) {
     if (!userId)
         return;
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const notification = Object.assign(Object.assign({}, notificationData), { userId, date: firestore_1.FieldValue.serverTimestamp(), isRead: false });
     try {
         await db.collection('users').doc(userId).collection('notifications').add(notification);
@@ -450,10 +443,10 @@ async function generatePayslipPDF(companyName, companyAddress, signatory, item) 
  * Scheduled function to notify water stations of upcoming auto-refills tomorrow.
  * Runs daily at 9:00 AM.
  */
-exports.notifyStationsOfUpcomingRefills = functions.runWith({
+const notifyStationsOfUpcomingRefills = functions.runWith({
     secrets: ["BREVO_API_KEY"]
 }).pubsub.schedule('0 9 * * *').onRun(async (context) => {
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const now = new Date();
     const tomorrow = (0, date_fns_1.addDays)(now, 1);
     const tomorrowDayName = (0, date_fns_1.format)(tomorrow, 'EEEE'); // e.g., "Monday"
@@ -491,7 +484,7 @@ exports.notifyStationsOfUpcomingRefills = functions.runWith({
  * Triggered when a user updates their email in Firestore.
  * Background-syncs the new email to Firebase Authentication via Admin SDK.
  */
-exports.onuserupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}", async (event) => {
+const onuserupdate = (0, firestore_2.onDocumentUpdated)((0, function_runtime_1.withDatabase)({ document: "users/{userId}" }), async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -514,15 +507,15 @@ exports.onuserupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}", asyn
         await (0, workspace_files_1.syncUserWorkspaceClaim)(userId, after);
     }
 });
-exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
+const onpaymentremindercreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/reminders/{reminderId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     var _a;
     if (!event.data)
         return;
     const userId = event.params.userId;
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const triggerData = event.data.data();
     const { period: selectedPeriod, recipientEmail } = triggerData;
     logger.info(`Reminder trigger ${event.params.reminderId} for user ${userId}. Raw recipient input: ${recipientEmail}`);
@@ -602,15 +595,15 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
 /**
  * Manual Receipt Trigger
  */
-exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
+const onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/receiptRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const userId = event.params.userId;
     const requestData = event.data.data();
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     logger.info(`Manual Receipt Triggered for user ${userId}, invoice ${requestData.invoiceId}`);
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
@@ -674,15 +667,15 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
     }
 });
-exports.onpaysliprequestcreate = (0, firestore_2.onDocumentCreated)({
+const onpaysliprequestcreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "hr_companies/{companyId}/payslipRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const { companyId, requestId } = event.params;
     const requestData = event.data.data();
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     logger.info(`Processing payslip request ${requestId} for company ${companyId}`);
     // Fetch company info (from owner user)
     const ownerSnap = await db.collection('users').where('companyId', '==', companyId).where('hrRole', '==', 'owner').limit(1).get();
@@ -726,10 +719,10 @@ exports.onpaysliprequestcreate = (0, firestore_2.onDocumentCreated)({
         logger.error(`Failed to process payslip request ${requestId}`, error);
     }
 });
-exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
+const onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "unclaimedProfiles/{clientId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     var _a, _b, _c;
     if (!event.data)
         return;
@@ -754,14 +747,14 @@ exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
         logger.error(`Failed welcome email`, error);
     }
 });
-exports.onunclaimedemployeecreate = (0, firestore_2.onDocumentCreated)({
+const onunclaimedemployeecreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "unclaimedEmployees/{inviteId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const invite = event.data.data();
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const companyId = invite.companyId;
     let businessName = invite.inviterBusinessName || "your company";
     if (!invite.inviterBusinessName) {
@@ -788,16 +781,16 @@ exports.onunclaimedemployeecreate = (0, firestore_2.onDocumentCreated)({
         }
     }
 });
-exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
+const ondeliverycreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/deliveries/{deliveryId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data();
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
@@ -820,10 +813,10 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
         });
     }
 });
-exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
+const ondeliveryupdate = (0, firestore_2.onDocumentUpdated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/deliveries/{deliveryId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -832,7 +825,7 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
     const deliveryId = event.params.deliveryId;
     if (before.status === after.status)
         return;
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
@@ -855,10 +848,10 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
         });
     }
 });
-exports.onleavestatusupdate = (0, firestore_2.onDocumentUpdated)({
+const onleavestatusupdate = (0, firestore_2.onDocumentUpdated)((0, function_runtime_1.withDatabase)({
     document: "hr_companies/{companyId}/leaveRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -868,7 +861,7 @@ exports.onleavestatusupdate = (0, firestore_2.onDocumentUpdated)({
     logger.info(`Leave Request ${event.params.requestId} resolved to ${after.status}. Notifying employee.`);
     const period = `${after.startDate || ''} - ${after.endDate || ''}`;
     const template = (0, email_1.getLeaveStatusTemplate)(after.employeeName || '', after.type || '', period, after.status || '');
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const employeeDoc = await db.collection('users').doc(after.employeeId || '').get();
     const employeeData = employeeDoc.data();
     if (employeeData === null || employeeData === void 0 ? void 0 : employeeData.email) {
@@ -886,10 +879,10 @@ exports.onleavestatusupdate = (0, firestore_2.onDocumentUpdated)({
         }
     }
 });
-exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
+const onpaymentupdate = (0, firestore_2.onDocumentUpdated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/payments/{paymentId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -899,10 +892,10 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
     }
 });
-exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
+const ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/topUpRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -910,7 +903,7 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const userId = event.params.userId;
     if (before.status === after.status || after.status !== 'Approved')
         return;
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
     const targetEmails = getRecipients(userData);
@@ -929,16 +922,16 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
         });
     }
 });
-exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
+const onrefillrequestcreate = (0, firestore_2.onDocumentCreated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/refillRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const userId = event.params.userId;
     const requestId = event.params.requestId;
     const request = event.data.data();
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, {
@@ -960,10 +953,10 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
         });
     }
 });
-exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
+const onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)((0, function_runtime_1.withDatabase)({
     document: "users/{userId}/refillRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
-}, async (event) => {
+}), async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -972,7 +965,7 @@ exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
     const requestId = event.params.requestId;
     if (before.status === after.status)
         return;
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, {
@@ -994,13 +987,13 @@ exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
         });
     }
 });
-exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, async (event) => {
+const onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, async (event) => {
     var _a;
     const filePath = event.data.name;
     if (!filePath || ((_a = event.data.contentType) === null || _a === void 0 ? void 0 : _a.startsWith('application/x-directory')))
         return;
     const storage = (0, storage_1.getStorage)();
-    const db = (0, firestore_1.getFirestore)();
+    const db = (0, function_runtime_1.getDb)();
     const bucket = storage.bucket(event.data.bucket);
     const file = bucket.file(filePath);
     const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
@@ -1019,4 +1012,29 @@ exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, as
         }
     }
 });
+const cloudFunctions = {
+    generateMonthlyInvoices: billing_1.generateMonthlyInvoices,
+    createWorkspaceFileUpload: workspace_files_1.createWorkspaceFileUpload,
+    finalizeWorkspaceFileUpload: workspace_files_1.finalizeWorkspaceFileUpload,
+    notifyStationsOfUpcomingRefills,
+    onuserupdate,
+    onpaymentremindercreate,
+    onmanualreceiptcreate,
+    onpaysliprequestcreate,
+    onunclaimedprofilecreate,
+    onunclaimedemployeecreate,
+    ondeliverycreate,
+    ondeliveryupdate,
+    onleavestatusupdate,
+    onpaymentupdate,
+    ontopuprequestupdate,
+    onrefillrequestcreate,
+    onrefillrequestupdate,
+};
+// Storage is shared. Only the live function should listen, otherwise a dev copy
+// would also run on every upload and write a second set of user documents.
+if (!(0, function_runtime_1.isDevFunctionsCodebase)()) {
+    cloudFunctions.onfileupload = onfileupload;
+}
+(0, function_runtime_1.assignFunctionExports)(module.exports, cloudFunctions);
 //# sourceMappingURL=index.js.map
