@@ -4,7 +4,7 @@ One-time correction for consumption invoices that were generated before Manila m
 
 It is dry-run unless you pass `--apply`. A dry-run prints each planned write: document path, old amount, new amount, and any carry-over. It does not change a **Paid** invoice amount. The gap on a paid invoice is a single `pendingCharges` entry (`kind: 'carryover'`). Running it again after a successful apply prints no further changes for those invoices.
 
-The script does not scan a customer's whole delivery history. Each invoice is matched to one Manila month (or the December 2025–January 2026 combined window) and that range is queried.
+The script does not scan a customer's whole delivery history. Invoices that cover the same Manila month (the monthly bill, an early-payment document, and a ₱0 stub) are compared once, using each delivery's stored amount. A description that mentions one-time fees does not add the customer's current dispenser price. The live `syncDeliveryBilling` trigger uses the same comparison, and it will not create carry-overs for periods before June 2026 (`BILLING_CARRYOVER_CUTOFF`, `YYYY-MM`). This script is the explicit run, so it can still plan those older months.
 
 Do not run it until you have reviewed a dry-run. This repository change does not execute the script.
 

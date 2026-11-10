@@ -217,12 +217,40 @@ export function roundMoney(amount: number): number {
     return (sign * Math.round((Math.abs(amount) + Number.EPSILON) * 100)) / 100;
 }
 
+/**
+ * The monthly job never filtered on delivery status, so Pending and In Transit
+ * count the same as Delivered.
+ */
+export function countsTowardConsumption(delivery: { status?: string }): boolean {
+    return delivery.status !== 'Cancelled';
+}
+
+/**
+ * Money already stored on the delivery. Recomputes must use this and not the
+ * customer's current plan price — deliveries through mid-May 2026 were ₱3/L.
+ * `fallbackPricePerLiter` is only for a new invoice when a row has no amount.
+ */
+export function deliveryBilledAmount(
+    delivery: { amount?: number; liters?: number; volumeContainers?: number; status?: string },
+    fallbackPricePerLiter?: number,
+): number {
+    if (!countsTowardConsumption(delivery)) return 0;
+    if (typeof delivery.amount === 'number' && Number.isFinite(delivery.amount)) return delivery.amount;
+    if (typeof fallbackPricePerLiter === 'number') return roundMoney(deliveryLiters(delivery) * fallbackPricePerLiter);
+    return 0;
+}
+
+export function storedConsumption(
+    deliveries: { amount?: number; liters?: number; volumeContainers?: number; status?: string }[],
+): number {
+    return roundMoney(deliveries.reduce((sum, delivery) => sum + deliveryBilledAmount(delivery), 0));
+}
+
 export function consumptionCharge(
-    deliveries: { liters?: number; volumeContainers?: number }[],
+    deliveries: { amount?: number; liters?: number; volumeContainers?: number; status?: string }[],
     pricePerLiter: number,
 ): number {
-    const liters = deliveries.reduce((sum, delivery) => sum + deliveryLiters(delivery), 0);
-    return roundMoney(liters * pricePerLiter);
+    return roundMoney(deliveries.reduce((sum, delivery) => sum + deliveryBilledAmount(delivery, pricePerLiter), 0));
 }
 
 export function litersInRange(
@@ -332,13 +360,109 @@ export interface FeeSnapshot {
     oneTime: number;
 }
 
-export function inferNonConsumption(invoice: InvoiceForReconcile, fees: FeeSnapshot): number {
-    if (typeof invoice.nonConsumptionAmount === 'number' && !Number.isNaN(invoice.nonConsumptionAmount)) {
-        return roundMoney(invoice.nonConsumptionAmount);
+/** Live trigger will not create carry-overs for periods that start before this month. */
+export const DEFAULT_CARRYOVER_CUTOFF = '2026-06';
+
+const MONTH_NAME_PATTERN = 'January|February|March|April|May|June|July|August|September|October|November|December';
+
+export function periodKeyFromInvoice(invoice: { id?: string; description?: string; billingPeriod?: string }): string | null {
+    const label = invoice.billingPeriod || periodLabelFromText(invoice.description || '') || '';
+    if (label.includes('December 2025 - January 2026')) return '2025-12_2026-01';
+    const named = label.match(new RegExp(`^(${MONTH_NAME_PATTERN})\\s+(\\d{4})$`));
+    if (named) {
+        const monthIndex = MONTHS.indexOf(named[1] as typeof MONTHS[number]);
+        return `${named[2]}-${String(monthIndex + 1).padStart(2, '0')}`;
     }
-    const manual = sumCharges(invoice.manualCharges);
-    const oneTime = (invoice.description || '').includes('One-Time') ? fees.oneTime : 0;
-    return roundMoney(manual + fees.equipment + oneTime);
+    const id = invoice.id || '';
+    const combined = id.match(/-(\d{4})(\d{2})-(\d{4})(\d{2})$/);
+    if (combined) return `${combined[1]}-${combined[2]}_${combined[3]}-${combined[4]}`;
+    const numeric = id.match(/-(\d{4})(\d{2})$/);
+    if (numeric) return `${numeric[1]}-${numeric[2]}`;
+    const idNamed = id.match(new RegExp(`-(${MONTH_NAME_PATTERN})-(\\d{4})$`));
+    if (idNamed) {
+        const monthIndex = MONTHS.indexOf(idNamed[1] as typeof MONTHS[number]);
+        return `${idNamed[2]}-${String(monthIndex + 1).padStart(2, '0')}`;
+    }
+    return null;
+}
+
+export function invoiceCoversMonth(invoice: { id?: string; description?: string; billingPeriod?: string }, year: number, monthIndex: number): boolean {
+    const key = periodKeyFromInvoice(invoice);
+    if (!key) return false;
+    const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    if (key === monthKey) return true;
+    if (key.includes('_')) {
+        const [start, end] = key.split('_');
+        return monthKey === start || monthKey === end;
+    }
+    return false;
+}
+
+export function periodStartsOnOrAfter(periodKey: string, cutoff: string = DEFAULT_CARRYOVER_CUTOFF): boolean {
+    return periodKey.slice(0, 7) >= cutoff;
+}
+
+export function labelForPeriodKey(periodKey: string): string {
+    if (periodKey === '2025-12_2026-01') return 'December 2025 - January 2026';
+    const [year, month] = periodKey.split('-').map(Number);
+    return manilaMonthLabel(year, month - 1);
+}
+
+export function rangeForPeriodKey(periodKey: string): MonthRange | null {
+    if (periodKey === '2025-12_2026-01') return billingRangeFromPeriodLabel('December 2025 - January 2026');
+    const match = periodKey.match(/^(\d{4})-(\d{2})$/);
+    if (!match) return null;
+    const range = manilaMonthRange(Number(match[1]), Number(match[2]) - 1);
+    return { start: range.start, end: range.end, monthsToBill: 1 };
+}
+
+export function chargeReferencesInvoice(charge: ChargeLike, invoiceIds: ReadonlySet<string>): boolean {
+    const text = `${charge.description || ''} ${charge.invoiceId || ''}`;
+    for (const id of invoiceIds) {
+        if (id && text.includes(id)) return true;
+    }
+    return false;
+}
+
+/** Manual charges on the invoices, excluding deductions that point at another invoice in the same period. */
+export function periodAdjustments(invoices: InvoiceForReconcile[]): number {
+    const ids = new Set(invoices.map((invoice) => invoice.id).filter(Boolean));
+    let total = 0;
+    for (const invoice of invoices) {
+        for (const charge of invoice.manualCharges || []) {
+            if (chargeReferencesInvoice(charge, ids)) continue;
+            total += Number(charge.amount) || 0;
+        }
+    }
+    return roundMoney(total);
+}
+
+export function groupInvoicesByPeriod(invoices: InvoiceForReconcile[]): { periodKey: string; invoices: InvoiceForReconcile[] }[] {
+    const groups = new Map<string, InvoiceForReconcile[]>();
+    for (const invoice of invoices) {
+        const periodKey = periodKeyFromInvoice(invoice);
+        if (!periodKey) continue;
+        const list = groups.get(periodKey) || [];
+        list.push(invoice);
+        groups.set(periodKey, list);
+    }
+    return [...groups.entries()].map(([periodKey, grouped]) => ({ periodKey, invoices: grouped }));
+}
+
+function isNamedMonthInvoice(invoice: InvoiceForReconcile): boolean {
+    return new RegExp(`-(${MONTH_NAME_PATTERN})-\\d{4}$`).test(invoice.id)
+        || (invoice.id || '').includes('December-2025');
+}
+
+export function chooseTargetInvoice(invoices: InvoiceForReconcile[], kind: 'open' | 'paid'): InvoiceForReconcile | null {
+    const pool = invoices.filter((invoice) => kind === 'open'
+        ? (OPEN_INVOICE_STATUSES as readonly string[]).includes(invoice.status)
+        : invoice.status === 'Paid');
+    if (pool.length === 0) return null;
+    const named = pool.filter(isNamedMonthInvoice);
+    const preferred = named.length > 0 ? named : pool;
+    const nonzero = preferred.filter((invoice) => Math.abs(invoice.amount) > MONEY_EPS);
+    return nonzero[0] || preferred[0];
 }
 
 export type ReconcileResult =
@@ -360,93 +484,129 @@ export type ReconcileResult =
         removePendingChargeId: string | null;
     };
 
+export interface GroupReconcile {
+    action: 'skip' | 'update-unpaid' | 'flag-paid';
+    reason: string;
+    targetInvoiceId: string | null;
+    expected: number;
+    billed: number;
+    result: ReconcileResult;
+}
+
 /**
- * Decide how a month's deliveries affect an existing invoice.
- * Paid invoices are never rewritten. A positive gap becomes one carry-over
- * charge on the customer (idempotent by id) and a flag on the paid invoice.
- * Pending Review is still unpaid, so the amount is updated and flagged for the reviewer.
+ * Compare one period's invoices, together, with the stored delivery amounts.
+ * Early-payment invoices and ₱0 stubs are not reconciled on their own.
+ * Plan one-time prices are not added just because the description mentions them.
+ * Paid amounts are never changed. `allowCarryOver` is false for the live trigger
+ * on periods before the cutoff; the backfill passes true.
  */
-export function reconcileMonthInvoice(input: {
-    invoice: InvoiceForReconcile | null;
-    deliveries: { liters?: number; volumeContainers?: number }[];
-    pricePerLiter: number;
+export function reconcileInvoiceGroup(input: {
+    invoices: InvoiceForReconcile[];
+    deliveries: { amount?: number; liters?: number; volumeContainers?: number; status?: string }[];
     billingPeriod: string;
-    fees: FeeSnapshot;
-}): ReconcileResult {
-    const { invoice, deliveries, pricePerLiter, billingPeriod, fees } = input;
-    if (!invoice) return { type: 'skip', reason: 'no-invoice' };
+    allowCarryOver?: boolean;
+}): GroupReconcile {
+    const invoices = input.invoices.filter((invoice) => invoice && invoice.id && !invoice.id.startsWith('INV-EST'));
+    const billingPeriod = input.billingPeriod;
+    const allowCarryOver = input.allowCarryOver !== false;
+    const emptySkip = (reason: string): GroupReconcile => ({
+        action: 'skip',
+        reason,
+        targetInvoiceId: null,
+        expected: 0,
+        billed: 0,
+        result: { type: 'skip', reason },
+    });
+    if (invoices.length === 0) return emptySkip('no-invoice');
 
-    const consumptionAmount = consumptionCharge(deliveries, pricePerLiter);
-    const nonConsumptionAmount = inferNonConsumption(invoice, fees);
-    const expected = roundMoney(consumptionAmount + nonConsumptionAmount);
-    const open = (OPEN_INVOICE_STATUSES as readonly string[]).includes(invoice.status);
+    const consumptionAmount = storedConsumption(input.deliveries);
+    const adjustments = periodAdjustments(invoices);
+    const expected = roundMoney(consumptionAmount + adjustments);
+    const billed = roundMoney(invoices.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0));
+    const delta = roundMoney(expected - billed);
+    const openTarget = chooseTargetInvoice(invoices, 'open');
+    const paidTarget = chooseTargetInvoice(invoices, 'paid');
 
-    if (open) {
-        const sameAmount = Math.abs(invoice.amount - expected) < MONEY_EPS;
-        const sameConsumption = typeof invoice.consumptionAmount === 'number'
-            && Math.abs(invoice.consumptionAmount - consumptionAmount) < MONEY_EPS;
-        const sameNon = typeof invoice.nonConsumptionAmount === 'number'
-            && Math.abs(invoice.nonConsumptionAmount - nonConsumptionAmount) < MONEY_EPS;
-        if (sameAmount && sameConsumption && sameNon) {
-            return { type: 'skip', reason: 'already-current' };
-        }
-        return {
+    if (openTarget && Math.abs(delta) >= MONEY_EPS) {
+        const result: ReconcileResult = {
             type: 'update-unpaid',
-            amount: expected,
+            amount: roundMoney(openTarget.amount + delta),
             consumptionAmount,
-            nonConsumptionAmount,
-            billingFlag: invoice.status === 'Pending Review' ? 'adjusted-during-review' : null,
+            nonConsumptionAmount: adjustments,
+            billingFlag: openTarget.status === 'Pending Review' ? 'adjusted-during-review' : null,
+        };
+        return {
+            action: 'update-unpaid',
+            reason: 'missing-deliveries',
+            targetInvoiceId: openTarget.id,
+            expected,
+            billed,
+            result,
         };
     }
 
-    if (invoice.status !== 'Paid') {
-        return { type: 'skip', reason: `status-${invoice.status}` };
+    if (Math.abs(delta) < MONEY_EPS) {
+        return {
+            action: 'skip',
+            reason: 'already-current',
+            targetInvoiceId: null,
+            expected,
+            billed,
+            result: { type: 'skip', reason: 'already-current' },
+        };
     }
 
-    const delta = roundMoney(expected - invoice.amount);
-    const recorded = roundMoney(invoice.carryOverAmount || 0);
-
-    if (delta <= MONEY_EPS) {
-        if (!invoice.carryOverConsumed && recorded > MONEY_EPS && invoice.carryOverChargeId) {
-            return {
-                type: 'flag-paid',
-                billingFlag: delta < -MONEY_EPS ? 'paid-invoice-exceeds-deliveries' : '',
-                unbilledAmount: delta < -MONEY_EPS ? delta : 0,
-                carryOverAmount: 0,
-                carryOverChargeId: null,
-                pendingCharge: null,
-                removePendingChargeId: invoice.carryOverChargeId,
-            };
-        }
-        if ((invoice.unbilledAmount || 0) > MONEY_EPS || invoice.billingFlag) {
-            return {
-                type: 'flag-paid',
-                billingFlag: delta < -MONEY_EPS ? 'paid-invoice-exceeds-deliveries' : '',
-                unbilledAmount: delta < -MONEY_EPS ? delta : 0,
-                carryOverAmount: recorded,
-                carryOverChargeId: invoice.carryOverChargeId || null,
-                pendingCharge: null,
-                removePendingChargeId: null,
-            };
-        }
-        return { type: 'skip', reason: 'paid-in-balance' };
+    if (!paidTarget || delta <= MONEY_EPS) {
+        return {
+            action: 'skip',
+            reason: delta < -MONEY_EPS ? 'paid-in-balance' : 'no-paid-target',
+            targetInvoiceId: null,
+            expected,
+            billed,
+            result: { type: 'skip', reason: 'paid-in-balance' },
+        };
     }
 
-    if (Math.abs(delta - recorded) < MONEY_EPS && invoice.carryOverChargeId) {
-        return { type: 'skip', reason: 'carry-over-already-recorded' };
+    if (!allowCarryOver) {
+        return {
+            action: 'skip',
+            reason: 'carry-over-before-cutoff',
+            targetInvoiceId: paidTarget.id,
+            expected,
+            billed,
+            result: { type: 'skip', reason: 'carry-over-before-cutoff' },
+        };
     }
 
-    const alreadyConsumed = !!invoice.carryOverConsumed;
+    const recorded = roundMoney(paidTarget.carryOverAmount || 0);
+    if (Math.abs(delta - recorded) < MONEY_EPS && paidTarget.carryOverChargeId) {
+        return {
+            action: 'skip',
+            reason: 'carry-over-already-recorded',
+            targetInvoiceId: paidTarget.id,
+            expected,
+            billed,
+            result: { type: 'skip', reason: 'carry-over-already-recorded' },
+        };
+    }
+
+    const alreadyConsumed = !!paidTarget.carryOverConsumed;
     const incremental = alreadyConsumed ? roundMoney(delta - recorded) : delta;
     if (incremental <= MONEY_EPS) {
-        return { type: 'skip', reason: 'carry-over-already-recorded' };
+        return {
+            action: 'skip',
+            reason: 'carry-over-already-recorded',
+            targetInvoiceId: paidTarget.id,
+            expected,
+            billed,
+            result: { type: 'skip', reason: 'carry-over-already-recorded' },
+        };
     }
 
     const chargeId = alreadyConsumed
-        ? `carryover-${invoice.id}-${recorded}`
-        : (invoice.carryOverChargeId || `carryover-${invoice.id}`);
-
-    return {
+        ? `carryover-${paidTarget.id}-${recorded}`
+        : (paidTarget.carryOverChargeId || `carryover-${paidTarget.id}`);
+    const result: ReconcileResult = {
         type: 'flag-paid',
         billingFlag: 'unbilled-after-paid',
         unbilledAmount: delta,
@@ -455,19 +615,47 @@ export function reconcileMonthInvoice(input: {
         removePendingChargeId: null,
         pendingCharge: {
             id: chargeId,
-            description: `Carry-over from paid ${billingPeriod} invoice ${invoice.id}: Manila-month deliveries total ₱${expected.toFixed(2)} and the paid invoice is ₱${invoice.amount.toFixed(2)}.`,
+            description: `Carry-over from paid ${billingPeriod} invoice ${paidTarget.id}: stored delivery amounts plus invoice charges total ₱${expected.toFixed(2)} and the period's invoices total ₱${billed.toFixed(2)}.`,
             amount: incremental,
             kind: 'carryover',
-            invoiceId: invoice.id,
+            invoiceId: paidTarget.id,
             billingPeriod,
         },
     };
+    return {
+        action: 'flag-paid',
+        reason: 'missing-deliveries',
+        targetInvoiceId: paidTarget.id,
+        expected,
+        billed,
+        result,
+    };
 }
 
-export function billingSignature(delivery: { date?: unknown; liters?: number; volumeContainers?: number } | undefined): string | null {
+/**
+ * One invoice. Prefer reconcileInvoiceGroup when several documents cover the period.
+ */
+export function reconcileMonthInvoice(input: {
+    invoice: InvoiceForReconcile | null;
+    deliveries: { amount?: number; liters?: number; volumeContainers?: number; status?: string }[];
+    pricePerLiter?: number;
+    billingPeriod: string;
+    fees?: FeeSnapshot;
+    allowCarryOver?: boolean;
+}): ReconcileResult {
+    if (!input.invoice) return { type: 'skip', reason: 'no-invoice' };
+    return reconcileInvoiceGroup({
+        invoices: [input.invoice],
+        deliveries: input.deliveries,
+        billingPeriod: input.billingPeriod,
+        allowCarryOver: input.allowCarryOver,
+    }).result;
+}
+
+export function billingSignature(delivery: { date?: unknown; liters?: number; volumeContainers?: number; amount?: number; status?: string } | undefined): string | null {
     if (!delivery) return null;
     const instant = deliveryInstant(delivery.date);
-    return `${instant ? instant.toISOString() : ''}|${delivery.liters ?? ''}|${delivery.volumeContainers ?? ''}`;
+    return `${instant ? instant.toISOString() : ''}|${delivery.liters ?? ''}|${delivery.volumeContainers ?? ''}|${delivery.amount ?? ''}|${delivery.status ?? ''}`;
 }
 
 /** Calendar date in Asia/Manila, independent of the process timezone. */

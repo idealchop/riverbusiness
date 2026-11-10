@@ -17,14 +17,14 @@ const {
 const PRICE = 3.3333333333333335;
 
 const octoberEarly = [
-    { id: 'D-620154', date: '2026-10-04T16:00:00.000Z', liters: 78, volumeContainers: 4 },
-    { id: 'D-382699', date: '2026-10-11T16:00:00.000Z', liters: 78, volumeContainers: 4 },
-    { id: 'D-423489', date: '2026-10-14T16:00:00.000Z', liters: 58.5, volumeContainers: 3 },
-    { id: 'D-439855', date: '2026-10-19T11:13:59.855Z', liters: 39, volumeContainers: 2 },
+    { id: 'D-620154', date: '2026-10-04T16:00:00.000Z', liters: 78, volumeContainers: 4, amount: 260, status: 'Delivered' },
+    { id: 'D-382699', date: '2026-10-11T16:00:00.000Z', liters: 78, volumeContainers: 4, amount: 260, status: 'Delivered' },
+    { id: 'D-423489', date: '2026-10-14T16:00:00.000Z', liters: 58.5, volumeContainers: 3, amount: 195, status: 'Delivered' },
+    { id: 'D-439855', date: '2026-10-19T11:13:59.855Z', liters: 39, volumeContainers: 2, amount: 130, status: 'Delivered' },
 ];
 const octoberLate = [
-    { id: 'D-865722', date: '2026-10-23T16:00:00.000Z', liters: 78, volumeContainers: 4 },
-    { id: 'D-888317', date: '2026-10-27T16:00:00.000Z', liters: 39, volumeContainers: 2 },
+    { id: 'D-865722', date: '2026-10-23T16:00:00.000Z', liters: 78, volumeContainers: 4, amount: 260, status: 'Delivered' },
+    { id: 'D-888317', date: '2026-10-27T16:00:00.000Z', liters: 39, volumeContainers: 2, amount: 130, status: 'Delivered' },
 ];
 
 test('client and functions billing calendars stay identical', () => {
@@ -140,17 +140,17 @@ test('a Manila midnight delivery on the 1st stays in that Manila month', () => {
     const may = manilaMonthRange(2026, 4);
     assert.equal(isInRange(new Date(june1Manila), may.start, may.end), false);
 
-    const missed = { liters: 97.5, volumeContainers: 5, date: june1Manila };
+    const missed = { liters: 97.5, volumeContainers: 5, amount: 325, date: june1Manila, status: 'Delivered' };
     const paid = reconcileMonthInvoice({
         invoice: {
-            id: 'INV-Fox-June-2026',
+            id: 'INV-JlVJa-June-2026',
             amount: 845,
             status: 'Paid',
             description: 'Bill for June 2026',
-            nonConsumptionAmount: 0,
+            billingPeriod: 'June 2026',
         },
         deliveries: [
-            { liters: 253.5, volumeContainers: 13 },
+            { liters: 253.5, volumeContainers: 13, amount: 845, status: 'Delivered' },
             missed,
         ],
         pricePerLiter: PRICE,

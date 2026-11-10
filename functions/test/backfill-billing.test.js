@@ -5,14 +5,14 @@ const { parseArgs, describeChange, planInvoice } = require('../scripts/backfill-
 const PRICE = 3.3333333333333335;
 
 const early = [
-    { liters: 78, volumeContainers: 4 },
-    { liters: 78, volumeContainers: 4 },
-    { liters: 58.5, volumeContainers: 3 },
-    { liters: 39, volumeContainers: 2 },
+    { liters: 78, volumeContainers: 4, amount: 260, status: 'Delivered' },
+    { liters: 78, volumeContainers: 4, amount: 260, status: 'Delivered' },
+    { liters: 58.5, volumeContainers: 3, amount: 195, status: 'Delivered' },
+    { liters: 39, volumeContainers: 2, amount: 130, status: 'Delivered' },
 ];
 const late = [
-    { liters: 78, volumeContainers: 4, date: '2026-10-23T16:00:00.000Z' },
-    { liters: 39, volumeContainers: 2, date: '2026-10-27T16:00:00.000Z' },
+    { liters: 78, volumeContainers: 4, amount: 260, date: '2026-10-23T16:00:00.000Z', status: 'Delivered' },
+    { liters: 39, volumeContainers: 2, amount: 130, date: '2026-10-27T16:00:00.000Z', status: 'Delivered' },
 ];
 
 test('backfill args default to a dry-run on (default)', () => {

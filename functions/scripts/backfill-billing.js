@@ -16,12 +16,13 @@
  */
 
 const {
-    candidateInvoiceIds,
-    equipmentMonthly,
-    oneTimeEquipment,
+    groupInvoicesByPeriod,
+    labelForPeriodKey,
+    periodKeyFromInvoice,
     periodLabelFromText,
+    rangeForPeriodKey,
+    reconcileInvoiceGroup,
     reconcileMonthInvoice,
-    roundMoney,
     windowForInvoice,
 } = require('../lib/billing-period');
 
@@ -170,13 +171,6 @@ function fallbackMonth(invoice) {
     return { year: Number(match[2]), monthIndex: names.indexOf(match[1]) };
 }
 
-function feesForUser(user, monthsToBill) {
-    return {
-        equipment: roundMoney(equipmentMonthly(user.customPlanDetails) * monthsToBill),
-        oneTime: roundMoney(oneTimeEquipment(user.customPlanDetails)),
-    };
-}
-
 function planInvoice(userId, user, invoice, deliveries) {
     const label = invoicePeriodLabel(invoice);
     if (!label) return { skipped: `users/${userId}/payments/${invoice.id} skipped: no billing period on the invoice` };
@@ -185,11 +179,38 @@ function planInvoice(userId, user, invoice, deliveries) {
     const result = reconcileMonthInvoice({
         invoice,
         deliveries,
-        pricePerLiter: user.plan?.price || 0,
         billingPeriod: window.billingPeriod,
-        fees: feesForUser(user, window.monthsToBill),
+        allowCarryOver: true,
     });
     return { window, change: describeChange(userId, invoice, result) };
+}
+
+function periodSelected(periodKey, args) {
+    if (args.allMonths) return true;
+    return args.months.some((month) => {
+        if (periodKey === month.key) return true;
+        if (!periodKey.includes('_')) return false;
+        const [start, end] = periodKey.split('_');
+        return month.key === start || month.key === end;
+    });
+}
+
+function planPeriod(userId, invoices, deliveries) {
+    const groupedKey = periodKeyFromInvoice(invoices[0]);
+    const plan = reconcileInvoiceGroup({
+        invoices,
+        deliveries,
+        billingPeriod: groupedKey ? labelForPeriodKey(groupedKey) : invoices[0].id,
+        allowCarryOver: true,
+    });
+    if (plan.action === 'skip' || plan.result.type === 'skip' || !plan.targetInvoiceId) {
+        return { change: null, plan };
+    }
+    const target = invoices.find((invoice) => invoice.id === plan.targetInvoiceId) || invoices[0];
+    if (target.status === 'Paid' && plan.result.type === 'update-unpaid') {
+        throw new Error(`Refusing to change Paid invoice users/${userId}/payments/${target.id}`);
+    }
+    return { change: describeChange(userId, target, plan.result), plan, target };
 }
 
 function usage() {
@@ -221,55 +242,45 @@ async function loadUsers(db, userId) {
     return snap.docs;
 }
 
-async function loadInvoices(userRef, args) {
-    if (args.allMonths) {
-        const snap = await userRef.collection('payments').get();
-        return snap.docs.filter((doc) => doc.id.startsWith('INV-') && !doc.id.startsWith('INV-EST'));
-    }
-    const ids = [];
-    for (const month of args.months) {
-        for (const id of candidateInvoiceIds(userRef.id, month.year, month.monthIndex)) {
-            if (!ids.includes(id)) ids.push(id);
-        }
-    }
-    const docs = [];
-    for (const id of ids) {
-        const snap = await userRef.collection('payments').doc(id).get();
-        if (snap.exists) docs.push(snap);
-    }
-    return docs;
+async function loadInvoices(userRef) {
+    const snap = await userRef.collection('payments').get();
+    return snap.docs.filter((doc) => doc.id.startsWith('INV-') && !doc.id.startsWith('INV-EST'));
 }
 
 function shouldBillUser(user) {
     return !!user && user.role !== 'Admin' && !user.isPrepaid && !!user.plan?.isConsumptionBased;
 }
 
-async function applyChange(db, userRef, invoiceRef, change) {
+async function applyChange(db, userRef, change) {
     const admin = require('firebase-admin');
+    const targetId = change.result.pendingCharge?.invoiceId
+        || (change.invoicePath || '').split('/').pop();
     await db.runTransaction(async (tx) => {
-        const invoiceSnap = await tx.get(invoiceRef);
         const userSnap = await tx.get(userRef);
-        if (!invoiceSnap.exists || !userSnap.exists) return;
-        const invoice = { id: invoiceRef.id, ...invoiceSnap.data() };
+        const paymentsSnap = await tx.get(userRef.collection('payments'));
+        if (!userSnap.exists) return;
         const user = userSnap.data();
-        if (invoice.status === 'Paid' && change.kind !== 'flag-paid') {
-            throw new Error(`Refusing to change Paid invoice ${change.invoicePath}`);
-        }
-        const window = windowForInvoice(invoice, fallbackMonth(invoice).year, fallbackMonth(invoice).monthIndex);
+        const invoices = paymentsSnap.docs
+            .filter((doc) => doc.id.startsWith('INV-') && !doc.id.startsWith('INV-EST'))
+            .map((doc) => ({ id: doc.id, ...doc.data() }));
+        const group = groupInvoicesByPeriod(invoices).find((entry) => entry.invoices.some((invoice) => invoice.id === targetId));
+        if (!group) return;
+        const range = rangeForPeriodKey(group.periodKey);
+        if (!range) return;
         const deliveriesSnap = await tx.get(userRef.collection('deliveries')
-            .where('date', '>=', window.start.toISOString())
-            .where('date', '<=', window.end.toISOString()));
-        const fresh = planInvoice(userRef.id, user, invoice, deliveriesSnap.docs.map((doc) => doc.data()));
-        if (!fresh.change) return;
-        if (invoice.status === 'Paid' && fresh.change.kind !== 'flag-paid') {
-            throw new Error(`Refusing to change Paid invoice ${change.invoicePath}`);
+            .where('date', '>=', range.start.toISOString())
+            .where('date', '<=', range.end.toISOString()));
+        const fresh = planPeriod(userRef.id, group.invoices, deliveriesSnap.docs.map((doc) => doc.data()));
+        if (!fresh.change || !fresh.target) return;
+        if (fresh.target.status === 'Paid' && fresh.change.kind !== 'flag-paid') {
+            throw new Error(`Refusing to change Paid invoice users/${userRef.id}/payments/${fresh.target.id}`);
         }
-        if (fresh.change.newAmount !== invoice.amount && invoice.status === 'Paid') {
-            throw new Error(`Refusing to change Paid invoice ${change.invoicePath}`);
+        if (fresh.target.status === 'Paid' && fresh.change.newAmount !== fresh.target.amount) {
+            throw new Error(`Refusing to change Paid invoice users/${userRef.id}/payments/${fresh.target.id}`);
         }
-
+        const invoiceRef = userRef.collection('payments').doc(fresh.target.id);
+        const result = fresh.change.result;
         if (fresh.change.kind === 'flag-paid') {
-            const result = fresh.change.result;
             tx.update(invoiceRef, {
                 unbilledAmount: result.unbilledAmount,
                 carryOverAmount: result.carryOverAmount,
@@ -286,8 +297,6 @@ async function applyChange(db, userRef, invoiceRef, change) {
             }
             return;
         }
-
-        const result = fresh.change.result;
         tx.update(invoiceRef, {
             amount: result.amount,
             consumptionAmount: result.consumptionAmount,
@@ -325,35 +334,31 @@ async function main(argv) {
             if (args.user) console.log(`users/${userDoc.id} skipped: not a consumption-plan customer`);
             continue;
         }
-        const invoices = await loadInvoices(userDoc.ref, args);
-        for (const invoiceDoc of invoices) {
-            const invoice = { id: invoiceDoc.id, ...invoiceDoc.data() };
-            const label = invoicePeriodLabel(invoice);
-            if (!label) {
-                console.log(`users/${userDoc.id}/payments/${invoiceDoc.id} skipped: no billing period on the invoice`);
+        const invoices = (await loadInvoices(userDoc.ref)).map((doc) => ({ id: doc.id, ref: doc.ref, ...doc.data() }));
+        for (const group of groupInvoicesByPeriod(invoices)) {
+            if (!periodSelected(group.periodKey, args)) continue;
+            const range = rangeForPeriodKey(group.periodKey);
+            if (!range) {
+                console.log(`users/${userDoc.id} period ${group.periodKey} skipped: no Manila window`);
                 continue;
             }
-            const window = windowForInvoice(invoice, fallbackMonth(invoice).year, fallbackMonth(invoice).monthIndex);
             const deliveriesSnap = await userDoc.ref.collection('deliveries')
-                .where('date', '>=', window.start.toISOString())
-                .where('date', '<=', window.end.toISOString())
+                .where('date', '>=', range.start.toISOString())
+                .where('date', '<=', range.end.toISOString())
                 .get();
-            const plannedChange = planInvoice(userDoc.id, user, invoice, deliveriesSnap.docs.map((doc) => doc.data()));
-            if (plannedChange.skipped) {
-                console.log(plannedChange.skipped);
-                continue;
-            }
+            const plannedChange = planPeriod(userDoc.id, group.invoices, deliveriesSnap.docs.map((doc) => doc.data()));
             if (!plannedChange.change) {
                 unchanged += 1;
                 continue;
             }
-            if (invoice.status === 'Paid' && plannedChange.change.newAmount !== invoice.amount) {
-                throw new Error(`Refusing to change Paid invoice users/${userDoc.id}/payments/${invoice.id}`);
+            const target = plannedChange.target;
+            if (target.status === 'Paid' && plannedChange.change.newAmount !== target.amount) {
+                throw new Error(`Refusing to change Paid invoice users/${userDoc.id}/payments/${target.id}`);
             }
             planned += 1;
             console.log(plannedChange.change.lines.join('\n'));
             if (args.apply) {
-                await applyChange(db, userDoc.ref, invoiceDoc.ref, plannedChange.change);
+                await applyChange(db, userDoc.ref, plannedChange.change);
                 console.log('  wrote');
             }
         }
@@ -376,5 +381,6 @@ module.exports = {
     describeChange,
     nextPendingCharges,
     planInvoice,
+    planPeriod,
     usage,
 };

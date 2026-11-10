@@ -9,26 +9,29 @@ import { getDb, withDatabase } from './function-runtime';
 import {
     BILLING_CRON,
     MANILA_TIME_ZONE,
-    FeeSnapshot,
     InvoiceForReconcile,
     ReconcileResult,
     ChargeLike,
     applyPendingCharges,
     billingSignature,
     billingWindowForRun,
-    candidateInvoiceIds,
     consumptionCharge,
+    DEFAULT_CARRYOVER_CUTOFF,
     deliveryInstant,
     deliveryLiters,
     equipmentMonthly,
+    groupInvoicesByPeriod,
+    invoiceCoversMonth,
     invoiceDocId,
     isSameManilaDay,
+    labelForPeriodKey,
     manilaParts,
     oneTimeEquipment,
-    reconcileMonthInvoice,
+    periodStartsOnOrAfter,
+    rangeForPeriodKey,
+    reconcileInvoiceGroup,
     roundMoney,
     sumCharges,
-    windowForInvoice,
 } from './billing-period';
 
 /**
@@ -240,13 +243,6 @@ async function generateInvoiceForUser(
     return batch.commit();
 }
 
-function feesForInvoice(user: admin.firestore.DocumentData, monthsToBill: number): FeeSnapshot {
-    return {
-        equipment: roundMoney(equipmentMonthly(user.customPlanDetails) * monthsToBill),
-        oneTime: roundMoney(oneTimeEquipment(user.customPlanDetails)),
-    };
-}
-
 function applyReconcileResult(
     tx: admin.firestore.Transaction,
     invoiceRef: admin.firestore.DocumentReference,
@@ -297,43 +293,52 @@ function applyReconcileResult(
 }
 
 /**
- * Late deliveries: recompute the Manila month they belong to.
- * The query is that month only (plus the Dec 2025–Jan 2026 combined window when that invoice exists).
- * Current and future months have no invoice yet and are not read.
+ * Late deliveries: recompute only the Manila month on the delivery that was saved.
+ * Several invoices for that period (early payment, ₱0 stub, the real bill) are one comparison.
+ * Carry-overs are not created for periods before BILLING_CARRYOVER_CUTOFF (default 2026-06).
+ * The backfill script is the explicit path for older months.
  */
 async function reconcileDeliveryMonth(userId: string, year: number, monthIndex: number): Promise<void> {
     const nowParts = manilaParts(new Date());
     const isCurrentOrFuture = year > nowParts.year || (year === nowParts.year && monthIndex >= nowParts.monthIndex);
     if (isCurrentOrFuture) return;
 
+    const cutoff = (process.env.BILLING_CARRYOVER_CUTOFF || DEFAULT_CARRYOVER_CUTOFF).trim() || DEFAULT_CARRYOVER_CUTOFF;
     const db = getDb();
     const userRef = db.collection('users').doc(userId);
 
-    for (const invoiceId of candidateInvoiceIds(userId, year, monthIndex)) {
-        const invoiceRef = userRef.collection('payments').doc(invoiceId);
-        await db.runTransaction(async (tx) => {
-            const invoiceSnap = await tx.get(invoiceRef);
-            if (!invoiceSnap.exists) return;
-            const userSnap = await tx.get(userRef);
-            const user = userSnap.data();
-            if (!user?.plan?.isConsumptionBased || user.isPrepaid || user.role === 'Admin') return;
+    await db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        const user = userSnap.data();
+        if (!user?.plan?.isConsumptionBased || user.isPrepaid || user.role === 'Admin') return;
 
-            const invoice = { id: invoiceId, ...invoiceSnap.data() } as InvoiceForReconcile;
-            const window = windowForInvoice(invoice, year, monthIndex);
+        const paymentsSnap = await tx.get(userRef.collection('payments'));
+        const invoices = paymentsSnap.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() } as InvoiceForReconcile))
+            .filter((invoice) => invoice.id.startsWith('INV-') && !invoice.id.startsWith('INV-EST') && invoiceCoversMonth(invoice, year, monthIndex));
+        const groups = groupInvoicesByPeriod(invoices);
+        const plans: { invoiceId: string; result: ReconcileResult }[] = [];
+
+        for (const group of groups) {
+            const range = rangeForPeriodKey(group.periodKey);
+            if (!range) continue;
             const deliveriesSnap = await tx.get(userRef.collection('deliveries')
-                .where('date', '>=', window.start.toISOString())
-                .where('date', '<=', window.end.toISOString()));
-            const deliveries = deliveriesSnap.docs.map((doc) => doc.data() as Delivery);
-            const result = reconcileMonthInvoice({
-                invoice,
-                deliveries,
-                pricePerLiter: user.plan.price || 0,
-                billingPeriod: window.billingPeriod,
-                fees: feesForInvoice(user, window.monthsToBill),
+                .where('date', '>=', range.start.toISOString())
+                .where('date', '<=', range.end.toISOString()));
+            const plan = reconcileInvoiceGroup({
+                invoices: group.invoices,
+                deliveries: deliveriesSnap.docs.map((doc) => doc.data() as Delivery),
+                billingPeriod: labelForPeriodKey(group.periodKey),
+                allowCarryOver: periodStartsOnOrAfter(group.periodKey, cutoff),
             });
-            applyReconcileResult(tx, invoiceRef, userRef, user, result);
-        });
-    }
+            if (plan.action === 'skip' || plan.result.type === 'skip' || !plan.targetInvoiceId) continue;
+            plans.push({ invoiceId: plan.targetInvoiceId, result: plan.result });
+        }
+
+        for (const plan of plans) {
+            applyReconcileResult(tx, userRef.collection('payments').doc(plan.invoiceId), userRef, user, plan.result);
+        }
+    });
 }
 
 export const syncDeliveryBilling = onDocumentWritten(withDatabase({
