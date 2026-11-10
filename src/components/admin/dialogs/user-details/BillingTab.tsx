@@ -189,13 +189,13 @@ export function BillingTab({
             <Card className="border-none shadow-sm bg-muted/20">
                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6">
                     <div>
-                        <CardTitle className="text-xl">Financial Command</CardTitle>
-                        <CardDescription>Dispatch professional SOAs, customized receipts, or apply adjustments.</CardDescription>
+                        <CardTitle className="text-xl">Billing</CardTitle>
+                        <CardDescription>Send a statement or apply an adjustment.</CardDescription>
                     </div>
                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <Button variant="outline" size="sm" onClick={() => setIsDispatchDialogOpen(true)} className="flex-1 sm:flex-none h-9 bg-background shadow-sm text-xs font-bold uppercase tracking-wider">
                             <Send className="mr-2 h-3.5 w-3.5" />
-                            Dispatch Doc
+                            Send statement
                         </Button>
                         {user.accountType === 'Parent' ? (
                             <Button size="sm" onClick={() => onSetIsTopUpOpen(true)} className="flex-1 sm:flex-none h-9 shadow-md text-xs font-bold uppercase tracking-wider">

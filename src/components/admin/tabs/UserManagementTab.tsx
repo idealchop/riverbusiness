@@ -19,6 +19,7 @@ import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { PaymentReviewDialog } from '../dialogs/user-details/PaymentReviewDialog';
 import { createClientNotification } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
+import { dispatchWindowLabel } from '@/lib/refill-display';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -235,8 +236,8 @@ export function UserManagementTab({
                                         )}
                                     </TabsTrigger>
                                 </TabsList>
-                                <Button onClick={onAddNewClientClick} className="w-full sm:w-auto h-10 shadow-md">
-                                    <UserPlus className="mr-2 h-4 w-4" /> Add New Client
+                                <Button onClick={onAddNewClientClick} className="hidden">
+                                    Add
                                 </Button>
                             </div>
                         </CardHeader>
@@ -252,7 +253,7 @@ export function UserManagementTab({
                                             setLocalSearchTerm(e.target.value);
                                             setCurrentPage(1);
                                         }}
-                                        className="pl-10 h-10 shadow-sm border-muted-foreground/20"
+                                        className="h-12 rounded-[16px] border-0 bg-[#F4F4F6] pl-10 text-[16px] font-semibold shadow-none"
                                     />
                                 </div>
                                 
@@ -260,11 +261,10 @@ export function UserManagementTab({
                                     <Table>
                                         <TableHeader className="bg-muted/30">
                                             <TableRow>
-                                                <TableHead className="pl-6">Business Entity</TableHead>
-                                                <TableHead>Refill Mode</TableHead>
-                                                <TableHead>Dispatch Window</TableHead>
-                                                <TableHead>Fulfillment Tier</TableHead>
-                                                <TableHead className="text-right pr-6">Actions</TableHead>
+                                                <TableHead className="pl-6">Business</TableHead>
+                                                <TableHead>Refill</TableHead>
+                                                <TableHead>Window</TableHead>
+                                                <TableHead className="text-right pr-6">Status</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -272,50 +272,17 @@ export function UserManagementTab({
                                                 const paymentStatus = paymentStatusesByUser[user.id];
                                                 const details = user.customPlanDetails || {};
                                                 const isAuto = details.autoRefillEnabled ?? true;
-                                                const schedule = details.deliveryDay ? `${details.deliveryFrequency || 'Weekly'} - ${details.deliveryDay}` : 'On Demand';
+                                                const hasRequest = (refillRequests || []).some((request) => request.userId === user.id && request.status !== 'Completed' && request.status !== 'Cancelled');
+                                                const statusLabel = hasRequest ? 'Requested' : (paymentStatus?.pending || paymentStatus?.overdue) ? 'Review' : 'Active';
 
                                                 return (
                                                     <TableRow key={user.id} onClick={() => onUserClick(user)} className="group cursor-pointer hover:bg-muted/30 transition-colors">
                                                         <TableCell className="pl-6 py-4">
-                                                            <div className="font-bold text-sm text-slate-900">{user.businessName}</div>
-                                                            <div className="font-mono text-[9px] text-muted-foreground uppercase">{user.clientId}</div>
+                                                            <div className="font-extrabold text-[15px] text-[#0A0A0A]">{user.businessName}</div>
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="outline" className={cn(
-                                                                "text-[9px] font-black uppercase tracking-[0.1em] px-2 h-5 border shadow-none",
-                                                                isAuto ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-50 text-slate-400 border-slate-200"
-                                                            )}>
-                                                                <Repeat className="h-2.5 w-2.5 mr-1" />
-                                                                {isAuto ? 'Auto' : 'Manual'}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2">
-                                                                <Clock className="h-3 w-3 text-slate-400" />
-                                                                <span className="text-xs font-semibold text-slate-600">{schedule}</span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="outline" className={cn(
-                                                                "text-[10px] uppercase tracking-wide px-2 h-5",
-                                                                user.accountType === 'Parent' ? 'border-primary text-primary bg-primary/5' :
-                                                                user.accountType === 'Branch' ? 'border-purple-300 text-purple-700 bg-purple-50' : 'text-muted-foreground'
-                                                            )}>
-                                                                {user.plan?.name || 'No Plan'}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-right pr-6">
-                                                            <div className="flex items-center justify-end gap-2">
-                                                                {paymentStatus?.overdue > 0 ? (
-                                                                    <Badge variant="destructive" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstOverdue)} className="cursor-pointer shadow-sm hover:opacity-90">{paymentStatus.overdue} Overdue</Badge>
-                                                                ) : paymentStatus?.pending > 0 ? (
-                                                                    <Badge className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white shadow-sm" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstPending)}>Review Payment</Badge>
-                                                                ) : (
-                                                                    <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 cursor-pointer" onClick={(e) => { e.stopPropagation(); onUserClick(user, 'billing'); }}>Active Ledger</Badge>
-                                                                )}
-                                                                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
-                                                            </div>
-                                                        </TableCell>
+                                                        <TableCell className="text-[14px] font-semibold">{isAuto ? 'Auto' : 'Manual'}</TableCell>
+                                                        <TableCell className="text-[14px] font-semibold text-[#3F3F46]">{dispatchWindowLabel(user)}</TableCell>
+                                                        <TableCell className="text-right pr-6 text-[14px] font-bold">{statusLabel}</TableCell>
                                                     </TableRow>
                                                 )
                                             })}
@@ -333,31 +300,21 @@ export function UserManagementTab({
                                     </Table>
                                 </div>
                                 
-                                <div className="space-y-4 md:hidden">
+                                <div className="space-y-3 md:hidden">
                                     {paginatedUsers.map(user => {
                                         const paymentStatus = paymentStatusesByUser[user.id];
+                                        const hasRequest = (refillRequests || []).some((request) => request.userId === user.id && request.status !== 'Completed' && request.status !== 'Cancelled');
+                                        const statusLabel = hasRequest ? 'Requested' : (paymentStatus?.pending || paymentStatus?.overdue) ? 'Review' : 'Active';
+                                        const letter = (user.businessName || '?').trim().charAt(0).toUpperCase();
                                         return (
-                                            <Card key={user.id} onClick={() => onUserClick(user)} className="shadow-sm active:scale-[0.98] transition-transform">
-                                                <CardContent className="p-4 space-y-3">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <p className="font-bold text-base">{user.businessName}</p>
-                                                            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">{user.clientId}</p>
-                                                        </div>
-                                                        <Badge variant="outline" className="text-[10px] uppercase">{user.accountType || 'Single'}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs pt-2 border-t mt-1">
-                                                        <span className="text-muted-foreground">Status:</span>
-                                                        {paymentStatus?.overdue > 0 ? (
-                                                            <Badge variant="destructive" className="text-[10px]">{paymentStatus.overdue} Overdue</Badge>
-                                                        ) : paymentStatus?.pending > 0 ? (
-                                                            <Badge className="bg-blue-500 text-white text-[10px]">Review Payment</Badge>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="bg-green-50 text-green-700 text-[10px]">Active</Badge>
-                                                        )}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
+                                            <button key={user.id} type="button" onClick={() => onUserClick(user)} className="flex min-h-16 w-full items-center gap-3 rounded-[24px] bg-white px-3.5 text-left shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+                                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[16px] bg-[#F4F4F6] text-[15px] font-extrabold text-[#1A2C49]">{letter}</span>
+                                                <span className="min-w-0 flex-1">
+                                                    <b className="block truncate text-[15.5px]">{user.businessName}</b>
+                                                    <span className="text-[13px] font-medium text-[#8A8A94]">{statusLabel}</span>
+                                                </span>
+                                                <ChevronRight className="text-[#B4B4BC]" />
+                                            </button>
                                         )
                                     })}
                                 </div>

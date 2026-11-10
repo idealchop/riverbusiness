@@ -11,6 +11,8 @@ export interface AppUser {
     industry?: string;
     interests?: string[];
     contactNumber?: string;
+    /** Canonical Firebase phone, E.164, e.g. +639171234567. Set when this auth user signs in or links with that number. */
+    phoneE164?: string;
     notificationEmails?: string[];
     totalConsumptionLiters: number; 
     usedStorageBytes?: number; // Quota tracking
@@ -402,6 +404,14 @@ export interface RefillRequest {
   statusHistory?: StatusHistoryEntry[];
   volumeContainers?: number;
   requestedDate?: string;
+}
+
+export interface Transaction {
+    id: string;
+    type: string;
+    amountCredits: number;
+    date?: unknown;
+    amount?: number;
 }
 
 export interface SecurityRuleContext {

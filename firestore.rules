@@ -88,5 +88,32 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // One editable app review per signed-in user. Clients cannot list the collection.
+    // Assumed fields: userId (uid), rating 1-5 int, comment string <= 500, createdAt, updatedAt timestamps.
+    match /appFeedback/{userId} {
+      function validFeedback() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['userId', 'rating', 'comment', 'createdAt', 'updatedAt'])
+          && data.userId == userId
+          && data.userId == request.auth.uid
+          && data.rating is int
+          && data.rating >= 1
+          && data.rating <= 5
+          && data.comment is string
+          && data.comment.size() <= 500
+          && data.createdAt is timestamp
+          && data.updatedAt is timestamp;
+      }
+
+      allow get: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId && validFeedback();
+      allow update: if isAuthenticated()
+        && request.auth.uid == userId
+        && validFeedback()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete, list: if false;
+    }
   }
 }

@@ -676,8 +676,61 @@ export function OverviewTab({
         </Card>
     );
 
+    const letter = (user.businessName || '?').trim().charAt(0).toUpperCase();
+    const planPrice = user.plan?.price;
+
     return (
-        <div className="relative px-8">
+        <div className="relative pb-6">
+            <div className="mb-4 flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-[16px] bg-[#1A2C49] text-[18px] font-extrabold text-white">{letter}</div>
+                <div>
+                    <h2 className="text-[21px] font-extrabold tracking-[-0.025em]">{user.businessName}</h2>
+                    <p className="text-[14px] font-semibold text-[#8A8A94]">{user.name}</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+                    <p className="text-[13px] font-semibold text-[#8A8A94]">Estimated bill</p>
+                    <p className="mt-1.5 text-[22px] font-extrabold tabular-nums">{currentMonthInvoice ? `₱${currentMonthInvoice.amount.toLocaleString('en-PH')}` : '—'}</p>
+                </div>
+                <div className="rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+                    <p className="text-[13px] font-semibold text-[#8A8A94]">Used this month</p>
+                    <p className="mt-1.5 text-[22px] font-extrabold tabular-nums">{consumedLitersThisMonth.toLocaleString('en-PH')} L</p>
+                </div>
+            </div>
+            <div className="mt-4 rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+                <p className="text-[12px] font-semibold text-[#8A8A94]">Contact</p>
+                <b className="mt-1.5 block text-[16px]">{user.email}</b>
+                <p className="mt-2 text-[14px] font-semibold text-[#8A8A94]">{user.address || 'No address yet'}</p>
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+                <div>
+                    <p className="text-[12px] font-semibold text-[#8A8A94]">Plan</p>
+                    <b className="mt-1 block text-[19px] font-extrabold">{typeof planPrice === 'number' ? `₱${planPrice.toLocaleString('en-PH')}` : (user.plan?.name || 'No plan')}</b>
+                </div>
+                <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => onSetIsChangePlanOpen(true)}>Switch plan</Button>
+            </div>
+            <div className="mt-3 rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[12px] font-semibold text-[#8A8A94]">Auto-refill</p>
+                        <b className="mt-1 block text-[19px] font-extrabold">{localAutoRefill && localDay ? `Every ${localDay}` : localAutoRefill ? 'On' : 'Off'}</b>
+                    </div>
+                    <button type="button" role="switch" aria-checked={!!localAutoRefill} aria-label="Auto-refill" onClick={() => setLocalAutoRefill(!localAutoRefill)} className={cn('relative h-7 w-11 rounded-full', localAutoRefill ? 'bg-[#1A2C49]' : 'bg-[#E4E4E7]')}>
+                        <span className={cn('absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white', localAutoRefill ? 'right-[3px]' : 'left-[3px]')} />
+                    </button>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                    <label className="text-[13px] font-bold">Target day
+                        <input value={localDay} onChange={(event) => setLocalDay(event.target.value)} onBlur={handleSaveLogistics} aria-label="Target day" className="mt-1.5 h-12 w-full rounded-[16px] bg-[#F4F4F6] px-3 text-[16px] font-semibold outline-none" />
+                    </label>
+                    <label className="text-[13px] font-bold">Dispatch window
+                        <input value={localTime} onChange={(event) => setLocalTime(event.target.value)} onBlur={handleSaveLogistics} aria-label="Dispatch window" className="mt-1.5 h-12 w-full rounded-[16px] bg-[#F4F4F6] px-3 text-[16px] font-semibold outline-none" />
+                    </label>
+                </div>
+            </div>
+            <details className="mt-4">
+                <summary className="cursor-pointer py-2 text-[14px] font-bold text-[#8A8A94]">More account details</summary>
             <Carousel className="w-full">
                 <CarouselContent>
                     <CarouselItem>
@@ -712,6 +765,7 @@ export function OverviewTab({
                 <CarouselPrevious className="absolute -left-10 top-1/2 -translate-y-1/2 hidden sm:flex h-10 w-10 border-none shadow-md bg-white hover:bg-blue-50 text-primary transition-all" />
                 <CarouselNext className="absolute -right-10 top-1/2 -translate-y-1/2 hidden sm:flex h-10 w-10 border-none shadow-md bg-white hover:bg-blue-50 text-primary transition-all" />
             </Carousel>
+            </details>
         </div>
     );
 }

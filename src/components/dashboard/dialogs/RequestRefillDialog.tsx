@@ -97,7 +97,7 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
                             selected={deliveryDate}
                             onSelect={setDeliveryDate}
                             disabled={(date) => date < new Date() || isSubmitting}
-                            initialFocus
+                            initialFocus={false}
                         />
                     </div>
                 </div>

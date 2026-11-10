@@ -82,12 +82,13 @@ export function DashboardDialogs({
   const handleOneClickRefill = useCallback(async () => {
     if (!user || !firestore || !authUser) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
+      window.dispatchEvent(new CustomEvent('refill-request-finished'));
       return;
     }
 
-    // If no plan, redirect to the integrated onboarding flow
-    if (!user.plan) {
+    if (!user.plan || user.subscriptionStatus !== 'activated') {
         openDialog('subscriptionOnboarding');
+        window.dispatchEvent(new CustomEvent('refill-request-finished'));
         return;
     }
     
@@ -106,15 +107,11 @@ export function DashboardDialogs({
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
       await addDoc(refillRequestsCollection, newRequestData);
       
-      toast({
-        title: 'Refill Request Sent!',
-        description: `Thank you, ${user.name}! We've received your ASAP refill request. You can track its progress.`,
-      });
-      openDialog('refillStatus');
     } catch (error) {
       toast({ variant: 'destructive', title: 'Request Failed', description: 'There was an issue sending your request.' });
     } finally {
       setIsRefillRequesting(false);
+      window.dispatchEvent(new CustomEvent('refill-request-finished'));
     }
   }, [user, firestore, authUser, toast]);
 

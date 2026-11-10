@@ -194,26 +194,29 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0">
-                    <DialogHeader className="p-6 pb-4">
-                        <DialogTitle>User Account Management</DialogTitle>
-                        <DialogDescription>View user details and perform administrative actions.</DialogDescription>
+                <DialogContent className="rb-app flex h-[100dvh] w-full max-w-none flex-col gap-0 rounded-none border-none bg-[#F5F5F7] p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-[480px] sm:rounded-[28px]">
+                    <DialogHeader className="flex-row items-center gap-1 space-y-0 px-3 pb-2 pt-3 text-left">
+                        <button type="button" aria-label="Back" onClick={() => onOpenChange(false)} className="grid h-9 w-9 place-items-center text-[22px]">‹</button>
+                        <div>
+                          <DialogTitle className="text-[17px] font-extrabold">{isParent ? 'Client' : user.businessName || 'Client'}</DialogTitle>
+                          <DialogDescription className="sr-only">Client account</DialogDescription>
+                        </div>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 px-6 min-h-0">
+                    <ScrollArea className="min-h-0 flex-1 px-4">
                         <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
-                             <TabsList>
+                             <TabsList className="grid h-12 w-full grid-cols-4 rounded-[16px] bg-[#F4F4F6] p-1">
                                 {isParent ? (
                                     <>
-                                        <TabsTrigger value="overview">Parent Overview</TabsTrigger>
-                                        <TabsTrigger value="branch-deliveries">Branch Deliveries</TabsTrigger>
-                                        <TabsTrigger value="billing">Top-Ups</TabsTrigger>
+                                        <TabsTrigger value="overview" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Overview</TabsTrigger>
+                                        <TabsTrigger value="branch-deliveries" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Deliveries</TabsTrigger>
+                                        <TabsTrigger value="billing" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Billing</TabsTrigger>
                                     </>
                                 ) : (
                                     <>
-                                        <TabsTrigger value="overview">Overview</TabsTrigger>
-                                        <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-                                        <TabsTrigger value="billing">Billing</TabsTrigger>
-                                        <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                                        <TabsTrigger value="overview" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Overview</TabsTrigger>
+                                        <TabsTrigger value="deliveries" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Deliveries</TabsTrigger>
+                                        <TabsTrigger value="billing" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Billing</TabsTrigger>
+                                        <TabsTrigger value="sanitation" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Sanitation</TabsTrigger>
                                     </>
                                 )}
                             </TabsList>
@@ -273,7 +276,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <div className="border-t p-4 flex justify-end items-center bg-background">
+                    <div className="sr-only">
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     </div>
                 </DialogContent>

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { SeoJsonLd } from '@/components/seo-json-ld';
 import { DevEnvironmentBadge } from '@/components/dev-environment-badge';
+import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register';
 import {
   MARKETING_URL,
   SEO_KEYWORDS,
@@ -66,7 +67,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0F172A',
+  themeColor: '#1A2C49',
   width: 'device-width',
   initialScale: 1,
 };
@@ -78,11 +79,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;700&display=swap" rel="stylesheet" />
-      </head>
       <body className={cn("font-body antialiased")}>
         <SeoJsonLd />
         <FirebaseClientProvider>
@@ -90,6 +86,7 @@ export default function RootLayout({
         </FirebaseClientProvider>
         <Toaster />
         <DevEnvironmentBadge />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

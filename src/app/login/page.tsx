@@ -1,266 +1,294 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { FullScreenLoader, Loader } from '@/components/ui/loader';
-import { Logo } from '@/components/icons';
+import { RbButton, Wordmark } from '@/components/river/ui';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+  confirmPhoneCode,
+  findProfileByPhone,
+  formatNationalPhone,
+  phoneAuthMessage,
+  sendPhoneCode,
+  toE164Ph,
+} from '@/lib/phone-auth';
+import type { AppUser } from '@/lib/types';
+import { getHomePath } from '@/lib/workspace-access';
 
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
-});
+type Mode = 'phone' | 'code' | 'email';
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+const RECAPTCHA_ID = 'login-recaptcha';
 
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
+  const [mode, setMode] = useState<Mode>('phone');
+  const [national, setNational] = useState('');
+  const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const [resetOpen, setResetOpen] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-  });
+  const e164 = toE164Ph(national);
 
-  const onSubmit = async (data: LoginFormValues) => {
-    if (!auth) {
-        toast({
-            variant: 'destructive',
-            title: 'Service initialization pending',
-            description: 'Please wait a moment and try again.',
-        });
-        return;
+  useEffect(() => {
+    const method = new URLSearchParams(window.location.search).get('method');
+    if (method === 'email') setMode('email');
+  }, []);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setTimeout(() => setResendIn((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendIn]);
+
+  async function continueAfterAuth(uid: string, phoneNumber: string | null, emailAddress: string | null) {
+    if (!firestore || !auth) return;
+    if (emailAddress === 'admin@riverph.com') {
+      router.push('/admin');
+      return;
     }
-
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
-
-      if (user) {
-        toast({ title: "Success", description: "Signing you in..." });
-
-        if (user.email === 'admin@riverph.com') {
-          router.push('/admin');
-        } else {
-          router.push('/onboarding');
-        }
+    const profileSnap = await getDoc(doc(firestore, 'users', uid));
+    if (profileSnap.exists()) {
+      const profile = { id: uid, ...profileSnap.data() } as AppUser;
+      if (phoneNumber && !profile.phoneE164) {
+        await updateDoc(doc(firestore, 'users', uid), { phoneE164: phoneNumber }).catch(() => undefined);
       }
-
-    } catch (error: any) {
-        let title = 'Login Failed';
-        let description = 'Something went wrong. Please try again.';
-
-        switch (error.code) {
-            case 'auth/invalid-credential':
-                title = 'Incorrect Details';
-                description = 'The email or password you entered is incorrect.';
-                break;
-            case 'auth/too-many-requests':
-                title = 'Too Many Attempts';
-                description = 'Access is temporarily locked. Please try again later.';
-                break;
-            case 'auth/user-disabled':
-                title = 'Account Disabled';
-                description = 'Your account has been deactivated. Please contact support.';
-                break;
-        }
-
-        toast({
-            variant: 'destructive',
-            title: title,
-            description: description,
-        });
+      router.push(profile.role === 'Admin' ? '/admin' : getHomePath(profile));
+      return;
     }
-  };
-  
-  const handlePasswordReset = async () => {
-    if (!auth || !resetEmail) {
-        toast({ variant: 'destructive', title: 'Email required', description: 'Enter your email to reset your password.' });
+    if (phoneNumber) {
+      const other = await findProfileByPhone(firestore, phoneNumber);
+      if (other && other.id !== uid) {
+        await signOut(auth);
+        setMode('phone');
+        setCode('');
+        setError(`${other.businessName || 'This number'} already has an account. Use email to sign in, then link this phone in Settings.`);
         return;
+      }
     }
-    setIsResetting(true);
-    try {
-        await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: 'Email Sent', description: 'Check your inbox for a link to reset your password.' });
-        setIsForgotPasswordOpen(false);
-        setResetEmail('');
-    } catch (error: any) {
-        toast({ 
-            variant: 'destructive', 
-            title: 'Error', 
-            description: 'Could not send reset email. Please try again.' 
-        });
-    } finally {
-        setIsResetting(false);
-    }
-  };
+    router.push('/onboarding');
+  }
 
-  if (!auth) {
-      return <FullScreenLoader />;
+  async function textCode(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (!auth) {
+      setError('Still starting. Try again in a moment.');
+      return;
+    }
+    if (!e164) {
+      setError('Enter a 10-digit mobile number, for example 917 123 4567.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await sendPhoneCode(auth, e164, RECAPTCHA_ID);
+      setResendIn(60);
+      setMode('code');
+      setCode('');
+    } catch (cause) {
+      setError(phoneAuthMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verifyCode(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (code.trim().length !== 6) {
+      setError('Enter the 6-digit code.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const result = await confirmPhoneCode(code.trim());
+      await continueAfterAuth(result.user.uid, result.user.phoneNumber, result.user.email);
+    } catch (cause) {
+      setError(phoneAuthMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function emailSignIn(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (!auth) {
+      setError('Still starting. Try again in a moment.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      await continueAfterAuth(credential.user.uid, credential.user.phoneNumber, credential.user.email);
+    } catch (cause) {
+      const authCode = (cause as { code?: string }).code || '';
+      if (authCode.includes('invalid-credential') || authCode.includes('wrong-password') || authCode.includes('user-not-found')) {
+        setError('The email or password is incorrect.');
+      } else if (authCode.includes('too-many-requests')) {
+        setError('Too many attempts. Try again later.');
+      } else {
+        setError(phoneAuthMessage(cause));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPassword() {
+    if (!auth || !email.trim()) {
+      setError('Enter your email first.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      toast({ title: 'Email sent', description: 'Check your inbox for the reset link.' });
+      setResetOpen(false);
+    } catch {
+      setError('Could not send the reset email.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
-      <div className="flex w-full flex-col lg:flex-row">
-        {/* Branding Side (Left) */}
-        <div className="relative w-full lg:w-[65%] p-8 pb-48 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
-            <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
-                
-                <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[50%] h-[50%] rounded-full bg-primary/5 blur-[140px] pointer-events-none" />
+    <main className="rb-app flex min-h-dvh justify-center bg-[#F5F5F7] px-4 py-10">
+      <div className="w-full max-w-[420px]">
+        <Wordmark className="h-8" />
+        <h1 className="mt-8 text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em]">
+          {mode === 'code' ? 'Enter the code' : 'Sign in'}
+        </h1>
+        <p className="mt-2 text-[15px] font-semibold text-[#8A8A94]">
+          {mode === 'phone' && 'We’ll text a 6-digit code to your mobile number.'}
+          {mode === 'code' && `Code sent to +63 ${formatNationalPhone(national)}.`}
+          {mode === 'email' && 'Use the email and password on your account.'}
+        </p>
 
-                <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
-                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-                
-                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-                    <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent absolute left-0 animate-slide-down shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
-                </div>
+        {mode === 'phone' ? (
+          <form onSubmit={textCode} className="mt-6 flex flex-col gap-3">
+            <label htmlFor="phone" className="text-[13px] font-bold">Mobile number</label>
+            <div className="flex h-14 items-center gap-2 rounded-[16px] bg-[#F4F4F6] px-3.5">
+              <span className="text-[16px] font-bold">+63</span>
+              <input
+                id="phone"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                placeholder="917 123 4567"
+                value={national}
+                onChange={(event) => { setNational(formatNationalPhone(event.target.value)); setError(''); }}
+                className="h-full w-full bg-transparent text-[16px] font-semibold outline-none placeholder:text-[#B4B4BC]"
+              />
             </div>
+            <RbButton size="lg" full disabled={!e164 || busy} onClick={() => textCode()}>
+              {busy ? 'Sending…' : 'Text me a code'}
+            </RbButton>
+            <button type="button" className="min-h-11 text-[14px] font-bold text-[#8A8A94] underline underline-offset-[3px]" onClick={() => { setError(''); setMode('email'); }}>
+              Use email instead
+            </button>
+          </form>
+        ) : null}
 
-            <div className="relative z-10 animate-in fade-in slide-in-from-left-4 duration-700">
-                <div className="mb-16">
-                    <Logo className="h-24 w-24" />
-                </div>
-                <div className="space-y-6 max-w-xl">
-                    <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
-                        AI-powered operations for modern teams.
-                    </h1>
-                    <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-w-xl">
-                        Run water refill operations, workforce and HR, files, and a collaboration workspace with documents, canvas, and sheets.
-                    </p>
-                </div>
+        {mode === 'code' ? (
+          <form onSubmit={verifyCode} className="mt-6 flex flex-col gap-3">
+            <label htmlFor="sms-code" className="text-[13px] font-bold">SMS code</label>
+            <input
+              id="sms-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={(event) => { setCode(event.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
+              className="h-14 w-full rounded-[16px] bg-[#F4F4F6] px-3.5 text-center text-[16px] font-semibold tracking-[0.3em] outline-none"
+            />
+            <RbButton size="lg" full disabled={code.length !== 6 || busy} onClick={() => verifyCode()}>
+              {busy ? 'Checking…' : 'Verify and continue'}
+            </RbButton>
+            <button
+              type="button"
+              disabled={resendIn > 0 || busy}
+              onClick={() => textCode()}
+              className="min-h-11 text-[14px] font-bold text-[#8A8A94] underline underline-offset-[3px] disabled:no-underline disabled:opacity-70"
+            >
+              {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
+            </button>
+            <button type="button" className="min-h-11 text-[14px] font-bold text-[#8A8A94]" onClick={() => { setError(''); setMode('phone'); }}>
+              Use a different number
+            </button>
+          </form>
+        ) : null}
+
+        {mode === 'email' ? (
+          <form onSubmit={emailSignIn} className="mt-6 flex flex-col gap-3">
+            <label htmlFor="email" className="text-[13px] font-bold">Email</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="username"
+              inputMode="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="h-14 w-full rounded-[16px] bg-[#F4F4F6] px-3.5 text-[16px] font-semibold outline-none"
+            />
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-[13px] font-bold">Password</label>
+              <button type="button" className="min-h-11 text-[13px] font-bold text-[#8A8A94] underline underline-offset-[3px]" onClick={() => setResetOpen(true)}>
+                Forgot password?
+              </button>
             </div>
-        </div>
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="h-14 w-full rounded-[16px] bg-[#F4F4F6] px-3.5 text-[16px] font-semibold outline-none"
+            />
+            <button type="button" className="self-start text-[13px] font-bold text-[#8A8A94]" onClick={() => setShowPassword((value) => !value)}>
+              {showPassword ? 'Hide password' : 'Show password'}
+            </button>
+            <RbButton size="lg" full disabled={busy || !email || !password} onClick={() => emailSignIn()}>
+              {busy ? 'Signing in…' : 'Sign in'}
+            </RbButton>
+            <button type="button" className="min-h-11 text-[14px] font-bold text-[#8A8A94] underline underline-offset-[3px]" onClick={() => { setError(''); setMode('phone'); }}>
+              Use phone instead
+            </button>
+            <p className="text-center text-[13px] font-semibold text-[#8A8A94]">
+              New business? <Link href="/signup" className="font-bold text-[#0A0A0A] underline underline-offset-[3px]">Sign up</Link>
+            </p>
+          </form>
+        ) : null}
 
-        {/* Sign-in Form Side (Right) */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-12 md:p-20 bg-slate-50 lg:bg-white relative">
-            <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500 bg-white p-10 lg:p-0 rounded-[3rem] lg:rounded-none shadow-2xl lg:shadow-none -mt-32 lg:mt-0 relative z-20">
-                <div className="space-y-2">
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign in</h2>
-                    <p className="text-slate-500 font-bold text-lg">Welcome back! Please enter your details.</p>
-                </div>
+        {error ? <p role="alert" className="mt-4 text-[14px] font-semibold text-[#C2410C]">{error}</p> : null}
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                    <div className="space-y-6">
-                        <div className="space-y-2 group">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="name@company.com"
-                                className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base px-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
-                                {...register('email')}
-                                disabled={isSubmitting}
-                            />
-                            {errors.email && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.email.message}</p>}
-                        </div>
+        <div id={RECAPTCHA_ID} className="sr-only" aria-hidden />
+        <p className="mt-6 text-center text-[11px] font-medium leading-snug text-[#8A8A94]">
+          Protected by reCAPTCHA. Google <a className="underline" href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy</a> and <a className="underline" href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms</a> apply.
+        </p>
 
-                        <div className="space-y-2 group">
-                            <div className="flex items-center justify-between px-1">
-                                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors group-focus-within:text-primary">Password</Label>
-                                <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline underline-offset-4">
-                                    Forgot password?
-                                </button>
-                            </div>
-                            <div className="relative">
-                                <Input 
-                                    id="password" 
-                                    type={showPassword ? 'text' : 'password'} 
-                                    className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base pr-14 pl-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
-                                    {...register('password')} 
-                                    disabled={isSubmitting}
-                                />
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-slate-400 hover:text-primary hover:bg-transparent transition-colors" 
-                                    onClick={() => setShowPassword(!showPassword)} 
-                                    type="button"
-                                >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
-                            </div>
-                            {errors.password && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.password.message}</p>}
-                        </div>
-                    </div>
-
-                    <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Sign in'}
-                    </Button>
-                </form>
-
-                <div className="text-center space-y-6 pt-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        Don't have an account?{" "}
-                        <Link href="/signup" className="text-primary font-black hover:underline underline-offset-4">
-                            Sign up
-                        </Link>
-                    </p>
-                </div>
+        {resetOpen ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A0A0A]/45 sm:items-center" role="dialog" aria-modal="true">
+            <div className="w-full max-w-[420px] rounded-t-[28px] bg-white p-5 sm:rounded-[28px]">
+              <h2 className="text-[20px] font-extrabold">Reset password</h2>
+              <p className="mt-2 text-[14px] font-semibold text-[#8A8A94]">We’ll email a reset link to the address above.</p>
+              <RbButton size="lg" full className="mt-4" disabled={busy} onClick={resetPassword}>Send reset link</RbButton>
+              <button type="button" className="mt-2 min-h-11 w-full text-[14px] font-bold text-[#8A8A94]" onClick={() => setResetOpen(false)}>Cancel</button>
             </div>
-        </div>
+          </div>
+        ) : null}
       </div>
-
-      <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
-            <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-8">
-            <DialogHeader className="space-y-4">
-                <DialogTitle className="text-2xl font-black tracking-tight">Reset password</DialogTitle>
-                <DialogDescription className="text-slate-500 font-bold leading-relaxed">
-                    Enter your email address and we'll send you a link to reset your password.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-6">
-                <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</Label>
-                    <Input
-                        id="reset-email"
-                        type="email"
-                        placeholder="name@company.com"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        disabled={isResetting}
-                        className="h-14 bg-slate-50 border-slate-200 rounded-2xl font-bold px-5 ring-offset-transparent focus-visible:ring-primary/20"
-                    />
-                </div>
-            </div>
-            <DialogFooter className="flex flex-col gap-3 sm:flex-col sm:gap-3 sm:justify-center">
-                <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="w-full h-14 font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-primary/10">
-                    {isResetting ? <Loader className="text-white" /> : 'Send reset link'}
-                </Button>
-                <DialogClose asChild>
-                    <Button type="button" variant="ghost" disabled={isResetting} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Cancel</Button>
-                </DialogClose>
-            </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </main>
   );
 }

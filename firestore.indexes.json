@@ -7,6 +7,14 @@
         { "fieldPath": "isPublic", "order": "ASCENDING" },
         { "fieldPath": "shareToken", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "refillRequests",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "requestedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

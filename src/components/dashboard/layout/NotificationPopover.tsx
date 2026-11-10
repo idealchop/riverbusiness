@@ -28,9 +28,10 @@ const ICONS: { [key: string]: React.ElementType } = {
 interface NotificationPopoverProps {
   notifications: NotificationType[];
   onNotificationClick: (notification: NotificationType) => void;
+  appearance?: 'plain';
 }
 
-export function NotificationPopover({ notifications, onNotificationClick }: NotificationPopoverProps) {
+export function NotificationPopover({ notifications, onNotificationClick, appearance }: NotificationPopoverProps) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const [unreadNotifications, setUnreadNotifications] = React.useState<NotificationType[]>([]);
@@ -60,14 +61,17 @@ export function NotificationPopover({ notifications, onNotificationClick }: Noti
         <Button
           variant="ghost"
           size="icon"
-          className="relative rounded-full hover:bg-slate-100"
+          aria-label="Notifications"
+          className={appearance === 'plain' ? 'relative h-11 w-11 rounded-full text-[#0A0A0A] hover:bg-transparent' : 'relative rounded-full hover:bg-slate-100'}
         >
-          <Bell className="h-5 w-5 text-slate-600" />
-          {unreadNotifications.length > 0 && (
+          <Bell className="h-5 w-5" strokeWidth={1.85} />
+          {unreadNotifications.length > 0 && appearance === 'plain' ? (
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#F5F5F7] bg-[#DC2626]" />
+          ) : unreadNotifications.length > 0 ? (
             <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-[10px] font-bold border-2 border-background shadow-sm">
               {unreadNotifications.length}
             </Badge>
-          )}
+          ) : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 p-0 shadow-2xl border-none rounded-xl overflow-hidden">

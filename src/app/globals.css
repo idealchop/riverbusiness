@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/fonts/PlusJakartaSans-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,7 +81,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  @media (max-width: 640px) {
+    input, select, textarea { font-size: 16px; }
   }
 }
 
@@ -950,3 +963,21 @@
   background-size: 25% 45px;
   animation: wave-horizontal 45s cubic-bezier(0.445, 0.05, 0.55, 0.95) -5s infinite;
 }
+
+.rb-app { color: #0A0A0A; }
+.rb-skel {
+  background: #E4E4E7;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.rb-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: rb-sheen 1.3s ease-in-out infinite;
+}
+@keyframes rb-sheen { to { transform: translateX(100%); } }
+.grecaptcha-badge { visibility: hidden; }

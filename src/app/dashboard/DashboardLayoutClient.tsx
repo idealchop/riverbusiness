@@ -1,29 +1,23 @@
 
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { FileText, ShieldCheck, Headset } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
 import type { AppUser, Notification as NotificationType, ChatMessage, Payment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, updateDoc, serverTimestamp, addDoc, query, orderBy } from 'firebase/firestore';
+import { doc, collection, updateDoc, serverTimestamp, addDoc, query, orderBy, limit } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMounted } from '@/hooks/use-mounted';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LiveSupportDialog } from '@/components/dashboard/layout/LiveSupportDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
-import { MobileNav } from '@/components/dashboard/layout/MobileNav';
-import { LogoBlack } from '@/components/icons';
-import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
-import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { getHomePath, isIndividualWorkspace, isInvitedEmployee } from '@/lib/workspace-access';
+import { CustomerProvider } from '@/components/river/customer-provider';
+import { CustomerHeader, CustomerHomeSkeleton, CustomerTabBar, useRestoreCustomerScreen } from '@/components/river/customer-screens';
+import { writeLastScreen } from '@/lib/screen-cache';
 
 export default function DashboardLayoutClient({
   children,
@@ -36,8 +30,14 @@ export default function DashboardLayoutClient({
   const firestore = useFirestore();
   const isMounted = useMounted();
   const auth = useAuth();
+  const pathname = usePathname() || '/dashboard';
+  useRestoreCustomerScreen();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    writeLastScreen(pathname);
+  }, [pathname]);
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
@@ -45,7 +45,7 @@ export default function DashboardLayoutClient({
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
   const { data: paymentHistoryFromDb, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
   
-  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')) : null, [firestore, authUser]);
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc'), limit(40)) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const chatMessagesQuery = useMemoFirebase(() => {
@@ -213,106 +213,67 @@ export default function DashboardLayoutClient({
       }
   }
 
-  const handleComplianceClick = () => {
-      window.dispatchEvent(new CustomEvent('open-compliance', { detail: { tab: 'compliance' } }));
+  if (!isMounted || !auth || isLoggingOut) {
+    return (
+      <div className="rb-app mx-auto flex h-dvh w-full max-w-[460px] flex-col bg-[#F5F5F7] px-4 pt-4">
+        <CustomerHomeSkeleton />
+      </div>
+    );
   }
 
-  if (isUserLoading || isUserDocLoading || !isMounted || !auth || isLoggingOut || !authUser || !user) {
-    return <FullScreenLoader text={isLoggingOut ? "Signing out..." : undefined} />;
-  }
+  if (!isUserLoading && !authUser) return null;
 
-  if (isInvitedEmployee(user) || isIndividualWorkspace(user)) {
+  if (user && (isInvitedEmployee(user) || isIndividualWorkspace(user))) {
     return <FullScreenLoader text="Opening your workspace..." />;
   }
 
-  const userFirstName = user?.name?.split(' ')[0] || 'friend';
+  const installPage = pathname.startsWith('/dashboard/install');
 
   return (
-      <div className="flex flex-col h-full bg-slate-50/50">
-          <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-            <Link href="/dashboard" className="flex items-center gap-3 group">
-              <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
-              <div className="flex flex-col">
-                <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Water</span>
-                <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Refill</span>
-              </div>
-            </Link>
-            <div className="flex-1" />
-            
-            <div className="flex items-center gap-2 sm:gap-4">
-              <LiveSupportDialog 
-                  isOpen={isLiveSupportOpen}
-                  onOpenChange={setIsLiveSupportOpen}
-                  user={user}
-                  chatMessages={chatMessages || []}
-                  onMessageSubmit={handleMessageSubmit}
-              >
-                <button className="relative p-2 rounded-full hover:bg-slate-100 transition-colors">
-                  <Headset className="h-5 w-5 text-slate-600" />
-                  {(user?.hasUnreadAdminMessages) && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background shadow-sm" />}
-                </button>
-              </LiveSupportDialog>
-              
-              <Button asChild variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100 hidden sm:flex">
-                <Link href="/documentation" target="_blank"><FileText className="h-5 w-5 text-slate-600" /></Link>
-              </Button>
-
-              <NotificationPopover 
-                  notifications={notifications || []}
-                  onNotificationClick={handleNotificationClick}
-              />
-
-              <Button variant="ghost" size="icon" className="sm:hidden rounded-full hover:bg-slate-100" onClick={handleComplianceClick}>
-                <ShieldCheck className="h-4 w-4 text-slate-600" />
-              </Button>
-
-              <AppLauncher />
-
-              <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block bg-slate-200" />
-
-              <UserMenu 
-                user={user} 
-                onOpenSettings={() => setIsAccountDialogOpen(true)} 
-                onLogout={handleLogout} 
-              />
-              
-              <MyAccountDialog
-                user={user}
-                authUser={authUser}
-                planImage={planImage}
-                paymentHistory={paymentHistoryFromDb || []}
-                paymentsLoading={paymentsLoading}
-                onLogout={handleLogout}
-                isOpen={isAccountDialogOpen}
-                onOpenChange={(open) => {
-                  setIsAccountDialogOpen(open);
-                  if (!open) setStartPaymentInvoice(null);
-                }}
-                initialTab={initialAccountDialogTab}
-                startPaymentInvoice={startPaymentInvoice}
-              />
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
-            <div className="container mx-auto max-w-7xl">
-              {children}
-            </div>
-          </main>
-
-          <MobileNav
-            userFirstName={userFirstName}
-            onRefillClick={handleMobileRefillClick}
-            onHistoryClick={() => window.dispatchEvent(new CustomEvent('open-delivery-history'))}
-            onAccountClick={() => setIsAccountDialogOpen(true)}
+    <CustomerProvider authUser={authUser}>
+      <div className="rb-app relative mx-auto flex h-dvh w-full max-w-[460px] flex-col overflow-hidden bg-[#F5F5F7]">
+        <CustomerHeader
+          onOpenChat={() => setIsLiveSupportOpen(true)}
+          chatDot={!!user?.hasUnreadAdminMessages}
+          notification={(
+            <NotificationPopover
+              appearance="plain"
+              notifications={notifications || []}
+              onNotificationClick={handleNotificationClick}
+            />
+          )}
+        />
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-28">
+          {children}
+        </main>
+        {installPage ? null : <CustomerTabBar />}
+        <LiveSupportDialog
+          isOpen={isLiveSupportOpen}
+          onOpenChange={setIsLiveSupportOpen}
+          user={user}
+          chatMessages={chatMessages || []}
+          onMessageSubmit={handleMessageSubmit}
+        >
+          <button type="button" className="sr-only">Live support</button>
+        </LiveSupportDialog>
+        {user && authUser ? (
+          <MyAccountDialog
+            user={user}
+            authUser={authUser}
+            planImage={planImage}
+            paymentHistory={paymentHistoryFromDb || []}
+            paymentsLoading={paymentsLoading}
+            onLogout={handleLogout}
+            isOpen={isAccountDialogOpen}
+            onOpenChange={(open) => {
+              setIsAccountDialogOpen(open);
+              if (!open) setStartPaymentInvoice(null);
+            }}
+            initialTab={initialAccountDialogTab}
+            startPaymentInvoice={startPaymentInvoice}
           />
-
-          <footer className="p-4 text-center text-xs text-muted-foreground border-t bg-background/50 hidden sm:block">
-              <span className="opacity-70">v1.0.0 — Smart Refill is a trademark of </span>
-              <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="font-bold text-slate-900 hover:underline">
-                  River Philippines
-              </a>
-          </footer>
+        ) : null}
       </div>
+    </CustomerProvider>
   );
 }

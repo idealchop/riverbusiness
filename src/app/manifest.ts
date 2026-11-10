@@ -6,10 +6,11 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE_NAME,
     short_name: 'River',
     description: SITE_DESCRIPTION,
-    start_url: '/login',
+    start_url: '/open',
+    scope: '/',
     display: 'standalone',
-    background_color: '#020617',
-    theme_color: '#0F172A',
+    background_color: '#F5F5F7',
+    theme_color: '#1A2C49',
     icons: [
       {
         src: '/icons/icon-192.png',

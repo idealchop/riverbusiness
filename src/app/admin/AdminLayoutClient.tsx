@@ -7,18 +7,17 @@ import { Bell, User, Receipt, Info, MessageSquare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser, Notification as NotificationType } from '@/lib/types';
-import { doc, collection, query, writeBatch, Timestamp, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, writeBatch, Timestamp, where, orderBy, limit } from 'firebase/firestore';
 import { useMounted } from '@/hooks/use-mounted';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { LogoBlack } from '@/components/icons';
-import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
-import { UserMenu } from '@/components/dashboard/layout/UserMenu';
+import { Wordmark } from '@/components/river/ui';
+import { writeLastScreen } from '@/lib/screen-cache';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { signOut } from 'firebase/auth';
@@ -29,6 +28,7 @@ export default function AdminLayoutClient({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname() || '/admin';
   const auth = useAuth();
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -39,7 +39,7 @@ export default function AdminLayoutClient({
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
-  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')) : null, [firestore, authUser]);
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc'), limit(40)) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const usersWithUnreadQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('hasUnreadUserMessages', '==', true)) : null, [firestore]);
@@ -48,6 +48,10 @@ export default function AdminLayoutClient({
   const hasUnreadChatMessages = useMemo(() => (usersWithUnreadMessages?.length || 0) > 0, [usersWithUnreadMessages]);
   
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+
+  useEffect(() => {
+    writeLastScreen(pathname);
+  }, [pathname]);
   
   React.useEffect(() => {
     if (isUserLoading || isLoggingOut) return;
@@ -89,40 +93,33 @@ export default function AdminLayoutClient({
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50/50">
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-        <Link href="/admin" className="flex items-center gap-3 group">
-          <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
-          <div className="flex flex-col">
-              <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Command</span>
-              <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Center</span>
-          </div>
+    <div className="rb-app flex h-dvh flex-col overflow-hidden bg-[#F5F5F7]">
+      <header className="flex h-16 shrink-0 items-center gap-2 px-4 md:px-8">
+        <Link href="/admin" className="mr-auto flex items-center" aria-label="River">
+          <Wordmark />
         </Link>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" className="rounded-full relative border-slate-200 h-10 w-10 group hover:bg-slate-50" asChild>
-            <Link href="/admin/live-chat">
-                <MessageSquare className="h-5 w-5 text-slate-600" />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-full" asChild>
+            <Link href="/admin/live-chat" aria-label="Live chat">
+                <MessageSquare className="h-5 w-5" strokeWidth={1.85} />
                 {hasUnreadChatMessages && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background shadow-sm" />
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#F5F5F7] bg-[#DC2626]" />
                 )}
             </Link>
           </Button>
 
-          <NotificationPopover 
+          <NotificationPopover
+            appearance="plain"
             notifications={notifications || []}
             onNotificationClick={handleNotificationClick}
           />
 
-          <AppLauncher />
-
-          <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
-
-          <UserMenu 
-            user={adminUser} 
-            onOpenSettings={() => setIsAccountDialogOpen(true)} 
-            onLogout={handleLogout} 
-          />
+          <Button variant="ghost" className="hidden h-9 rounded-xl px-3 text-[13.5px] font-bold md:inline-flex" onClick={() => router.push('/admin/settings')}>
+            Account
+          </Button>
+          <button type="button" aria-label="Account" onClick={() => router.push('/admin/settings')} className="grid h-11 w-11 place-items-center rounded-full bg-[#1A2C49] text-[13px] font-extrabold text-white">
+            {(adminUser?.supportDisplayName || adminUser?.name || 'A').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+          </button>
           
           <AdminMyAccountDialog
             adminUser={adminUser}

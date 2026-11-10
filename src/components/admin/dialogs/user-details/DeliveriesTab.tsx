@@ -67,8 +67,8 @@ export function DeliveriesTab({
         <Card className="border-none shadow-sm overflow-hidden">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 bg-muted/20">
                 <div>
-                    <CardTitle className="text-xl">Delivery Logistics</CardTitle>
-                    <CardDescription>Comprehensive log of fulfillment and supply replenishment.</CardDescription>
+                    <CardTitle className="text-xl">Deliveries</CardTitle>
+                    <CardDescription>Date, quantity, and proof.</CardDescription>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <div className="relative flex-1 sm:w-48">
@@ -81,7 +81,7 @@ export function DeliveriesTab({
                         />
                     </div>
                     <Button onClick={() => { onSetDeliveryToEdit(null); onSetIsCreateDeliveryOpen(true); }} size="sm" className="shadow-md h-9">
-                        <PlusCircle className="mr-2 h-4 w-4" /> New Delivery
+                        <PlusCircle className="mr-2 h-4 w-4" /> New
                     </Button>
                 </div>
             </CardHeader>
