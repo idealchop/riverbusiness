@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { SeoJsonLd } from '@/components/seo-json-ld';
 import {
-  LOGO_PATH,
   MARKETING_URL,
   SEO_KEYWORDS,
   SITE_DESCRIPTION,
@@ -31,9 +30,13 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   icons: {
-    icon: [{ url: LOGO_PATH, type: 'image/png' }],
-    shortcut: LOGO_PATH,
-    apple: [{ url: '/apple-icon.png', type: 'image/png' }],
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
     title: `${SITE_NAME} | ${SITE_TAGLINE}`,
