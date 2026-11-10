@@ -18,14 +18,17 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Wordmark } from '@/components/river/ui';
 import { writeLastScreen } from '@/lib/screen-cache';
+import { isWaterAdminEmail } from '@/lib/admin-access';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { signOut } from 'firebase/auth';
 
 export default function AdminLayoutClient({
   children,
+  devAdminEmails = [],
 }: {
   children: React.ReactNode;
+  devAdminEmails?: readonly string[];
 }) {
   const router = useRouter();
   const pathname = usePathname() || '/admin';
@@ -62,10 +65,10 @@ export default function AdminLayoutClient({
     }
 
     // REDIRECTION PROTOCOL: If not the authorized admin identity, route to client dashboard
-    if (authUser.email !== 'admin@riverph.com') {
+    if (!isWaterAdminEmail(authUser.email, devAdminEmails)) {
       router.push('/dashboard');
     }
-  }, [authUser, isUserLoading, router, isLoggingOut]);
+  }, [authUser, isUserLoading, router, isLoggingOut, devAdminEmails]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -86,7 +89,7 @@ export default function AdminLayoutClient({
   };
 
   // Prevent rendering content for unauthorized identities to ensure zero visual leak
-  const isAuthorized = authUser?.email === 'admin@riverph.com';
+  const isAuthorized = isWaterAdminEmail(authUser?.email, devAdminEmails);
 
   if (!isMounted || !auth || isUserLoading || isLoggingOut || !isAuthorized) {
     return <FullScreenLoader text={isLoggingOut ? "Signing out..." : "Verifying credentials..."} />;

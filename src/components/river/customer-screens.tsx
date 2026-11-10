@@ -301,10 +301,10 @@ export function CustomerSettings() {
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-4">
-      <RbCard className="p-4">
-        <div className="flex items-center gap-3.5">
-          <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-[22px] bg-[#1A2C49] text-[26px] font-extrabold text-white">{initials(user.businessName)}</div>
+    <div className="mt-2 flex flex-col gap-3">
+      <RbCard className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[18px] bg-[#1A2C49] text-[22px] font-extrabold text-white">{initials(user.businessName)}</div>
           <div className="min-w-0">
             <h2 className="text-[18px] font-extrabold leading-tight tracking-[-0.02em]">{user.businessName}</h2>
             <p className="mt-0.5 text-[13px] font-semibold text-[#8A8A94]">{user.name}</p>
@@ -316,31 +316,31 @@ export function CustomerSettings() {
         <b className="block text-[16px] font-extrabold">Your details</b>
         <div className="py-2"><p className="text-[12px] font-semibold text-[#8A8A94]">Full name</p><p className="mt-0.5 text-[15px] font-bold">{user.name}</p></div>
         <div className="py-2"><p className="text-[12px] font-semibold text-[#8A8A94]">Login email</p><p className="mt-0.5 break-all text-[15px] font-bold">{user.email}</p></div>
-        <div className="py-2"><p className="text-[12px] font-semibold text-[#8A8A94]">Address</p><p className="mt-0.5 text-[15px] font-bold">{user.address || '—'}</p></div>
-        <LinkPhoneControl linked={user.phoneE164 || undefined} contactNumber={user.contactNumber} />
+        <div className="py-1.5"><p className="text-[12px] font-semibold text-[#8A8A94]">Address</p><p className="mt-0.5 text-[15px] font-bold">{user.address || '—'}</p></div>
       </RbCard>
 
-      <RbCard className="pb-2">
+      <RbCard className="px-[18px] py-3">
         <b className="block text-[16px] font-extrabold">Setup</b>
-        <button type="button" className="flex min-h-14 w-full items-center gap-3 py-2 text-left" onClick={() => setSheet('password')}>
+        <button type="button" className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => setSheet('password')}>
           <span className="flex-1 text-[15.5px] font-extrabold">Update password</span>
           <ChevronRight className="text-[#B4B4BC]" size={20} />
         </button>
-        <button type="button" className="flex min-h-14 w-full items-center gap-3 py-2 text-left" onClick={() => setSheet('email')}>
+        <button type="button" className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => setSheet('email')}>
           <span className="flex-1 text-[15.5px] font-extrabold">Update login email</span>
           <ChevronRight className="text-[#B4B4BC]" size={20} />
         </button>
-        <Link href="/dashboard/install" className="flex min-h-14 w-full items-center gap-3 py-2 text-left">
+        <Link href="/dashboard/install" className="flex min-h-11 w-full items-center gap-3 text-left">
           <span className="flex-1 text-[15.5px] font-extrabold">Install app</span>
           <ChevronRight className="text-[#B4B4BC]" size={20} />
         </Link>
-        <div className="flex min-h-14 items-center">
+        <LinkPhoneControl linked={user.phoneE164 || undefined} contactNumber={user.contactNumber} />
+        <div className="flex min-h-11 items-center gap-1">
           <AppLauncher />
           <span className="text-[15.5px] font-extrabold">Your apps</span>
         </div>
       </RbCard>
 
-      <button type="button" onClick={() => { if (auth) signOut(auth).then(() => router.push('/login')); }} className="flex min-h-16 w-full items-center rounded-[24px] bg-white px-4 text-left shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+      <button type="button" onClick={() => { if (auth) signOut(auth).then(() => router.push('/login')); }} className="flex min-h-14 w-full items-center rounded-[24px] bg-white px-4 text-left shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
         <b className="text-[15.5px] font-extrabold">Sign out</b>
       </button>
 

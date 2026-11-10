@@ -2,7 +2,13 @@
 /** @type {import('next').NextConfig} */
 // This configuration correctly uses the src/app directory by default.
 const nextConfig = {
-  /* config options here */
+  /* App Hosting runs Next in standalone mode. Tracing that reads one file under
+     public/ (the open-graph icon) otherwise leaves a partial public directory,
+     and the adapter then skips the rest. Include every public file in the trace. */
+  output: 'standalone',
+  outputFileTracingIncludes: {
+    '/**': ['./public/**/*'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

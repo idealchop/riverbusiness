@@ -1,6 +1,7 @@
 
 import { Metadata } from 'next';
 import AdminLayoutClient from './AdminLayoutClient';
+import { devAdminAllowlist } from '@/lib/admin-access';
 import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
 export const metadata: Metadata = {
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <AdminLayoutClient>{children}</AdminLayoutClient>;
+  return <AdminLayoutClient devAdminEmails={devAdminAllowlist()}>{children}</AdminLayoutClient>;
 }

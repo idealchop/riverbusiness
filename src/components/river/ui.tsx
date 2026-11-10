@@ -3,10 +3,13 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
+const wordmarkSrc = new URL('../../assets/brand/river-logo-navy.svg', import.meta.url).href;
+
 export function Wordmark({ className }: { className?: string }) {
   return (
+    // Bundled so the wordmark does not depend on public/ being copied into the App Hosting image.
     // eslint-disable-next-line @next/next/no-img-element
-    <img src="/brand/river-logo-navy.svg" alt="River" className={cn('h-8 w-auto max-w-[148px] object-contain', className)} />
+    <img src={wordmarkSrc} alt="River" className={cn('h-8 w-auto max-w-[148px] object-contain', className)} />
   );
 }
 

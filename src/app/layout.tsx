@@ -1,4 +1,5 @@
 import type {Metadata, Viewport} from 'next';
+import localFont from 'next/font/local';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
@@ -14,6 +15,14 @@ import {
   SITE_TAGLINE,
   SITE_URL,
 } from '@/lib/seo';
+
+const jakarta = localFont({
+  src: '../fonts/PlusJakartaSans-Variable.woff2',
+  weight: '200 800',
+  display: 'swap',
+  variable: '--font-jakarta',
+  fallback: ['ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -79,7 +88,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("font-body antialiased")}>
+      <body className={cn(jakarta.variable, 'font-body antialiased')}>
         <SeoJsonLd />
         <FirebaseClientProvider>
           {children}

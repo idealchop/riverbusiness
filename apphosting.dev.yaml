@@ -20,3 +20,11 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  # Comma-separated test accounts that may open /admin on this dev backend only.
+  # Live ignores ADMIN_EMAILS unless NEXT_PUBLIC_APP_ENV is dev, which live does not set.
+  # Example: owner@example.com,tester@example.com
+  - variable: ADMIN_EMAILS
+    value: ""
+    availability:
+      - BUILD
+      - RUNTIME

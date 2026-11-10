@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 9002",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "NODE_ENV=production next build",
+    "build": "NODE_ENV=production next build && node scripts/copy-standalone-public.js",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

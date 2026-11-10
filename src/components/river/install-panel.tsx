@@ -61,6 +61,7 @@ export function InstallPanel({
   const [rating, setRating] = useState(false);
   const fb = useOwnFeedback();
   const installed = pwa.installed;
+  const iconSrc = new URL('../../assets/brand/icon-512.png', import.meta.url).href;
 
   async function onInstall() {
     if (pwa.deferred) {
@@ -77,7 +78,7 @@ export function InstallPanel({
     <div className="flex flex-col items-center px-1 pb-6 pt-6 text-center">
       <div className="flex w-full items-center justify-center rounded-[32px] bg-[#ECECF1] py-9">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/icon-512.png" alt="River Business app icon" width={156} height={156} className="h-[156px] w-[156px] rounded-[36px] object-cover shadow-[0_6px_18px_rgba(0,0,0,0.12)]" />
+        <img src={iconSrc} alt="River Business app icon" width={156} height={156} className="h-[156px] w-[156px] rounded-[36px] object-cover shadow-[0_6px_18px_rgba(0,0,0,0.12)]" />
       </div>
       <h1 className="mt-6 text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em]">{installed ? 'Installed!' : `Install ${productName}`}</h1>
       {installed ? (

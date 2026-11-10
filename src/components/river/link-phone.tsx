@@ -83,7 +83,7 @@ export function LinkPhoneControl({ linked, contactNumber }: { linked?: string; c
 
   return (
     <>
-      <button type="button" className="flex min-h-14 w-full items-center text-left text-[15.5px] font-extrabold" onClick={() => { setOpen(true); setStep('number'); setError(''); }}>
+      <button type="button" className="flex min-h-11 w-full items-center text-left text-[15.5px] font-extrabold" onClick={() => { setOpen(true); setStep('number'); setError(''); }}>
         Add phone number
       </button>
       {open ? (

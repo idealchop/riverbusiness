@@ -1,8 +1,8 @@
+/* Peso sign from a face that always has U+20B1, even if the webfont subset does not. */
 @font-face {
-  font-family: "Plus Jakarta Sans";
-  src: url("/fonts/PlusJakartaSans-Variable.woff2") format("woff2");
-  font-weight: 200 800;
-  font-style: normal;
+  font-family: "River Peso";
+  src: local("Arial"), local("Noto Sans"), local("sans-serif");
+  unicode-range: U+20B1;
   font-display: swap;
 }
 
@@ -81,7 +81,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    font-family: "River Peso", var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 

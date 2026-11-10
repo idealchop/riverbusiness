@@ -9,7 +9,7 @@ export const contentType = 'image/png';
 
 export default async function OpenGraphImage() {
   const logo = await readFile(
-    join(process.cwd(), 'public/brand/river-icon.png')
+    join(process.cwd(), 'src/assets/brand/river-icon.png')
   );
   const logoSrc = `data:image/png;base64,${logo.toString('base64')}`;
 

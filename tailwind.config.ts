@@ -20,9 +20,9 @@ export default {
         'gradient-primary': 'linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--primary-light)))',
       },
       fontFamily: {
-        body: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        headline: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['"River Peso"', 'var(--font-jakarta)', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
+        headline: ['"River Peso"', 'var(--font-jakarta)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['"River Peso"', 'var(--font-jakarta)', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {

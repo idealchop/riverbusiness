@@ -30,7 +30,8 @@ There is no `firebase-admin` Firestore client in the Next.js app. All web reads 
 | Variable | Live | Dev (`apphosting.dev.yaml`) |
 | --- | --- | --- |
 | `NEXT_PUBLIC_FIRESTORE_DATABASE_ID` | unset | `riverbusiness-dev` |
-| `NEXT_PUBLIC_APP_ENV` | unset (no badge) | `dev` (small **DEV** badge, bottom-right) |
+| `NEXT_PUBLIC_APP_ENV` | unset (no badge) | `dev` (small **DEV** badge; above the customer tab bar, otherwise bottom-right) |
+| `ADMIN_EMAILS` | unset, and ignored even if set | comma-separated emails that may open `/admin` in addition to `admin@riverph.com` |
 | `NEXT_PUBLIC_FUNCTIONS_PREFIX` | unset (callable names unchanged) | `dev` |
 
 `NEXT_PUBLIC_FUNCTIONS_PREFIX` only changes the callable names used for workspace file upload (`createWorkspaceFileUpload`, `finalizeWorkspaceFileUpload`). Those dev copies read the dev user directory. Firestore triggers and scheduled jobs are not called by the web app.
