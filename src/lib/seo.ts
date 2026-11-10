@@ -8,7 +8,9 @@ export const SITE_TAGLINE =
 export const SITE_DESCRIPTION =
   'River Business is an AI-powered operations platform for modern businesses. Run water refill operations, workforce and HR, files, and a collaboration workspace with documents, canvas boards, and sheets.';
 
+/** Official River Business app icon (exact 1024px source). */
 export const LOGO_PATH = '/brand/river-icon.png';
+/** Same official icon, so the previous white-logo path does not keep serving old artwork. */
 export const LOGO_WHITE_PATH = '/brand/river-icon-white.png';
 export const LOGO_ABSOLUTE_URL = `${SITE_URL}${LOGO_PATH}`;
 

@@ -29,6 +29,7 @@ import {
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import Image from 'next/image';
+import { LOGO_PATH } from '@/lib/seo';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -367,11 +368,10 @@ export default function SolarUpgradesClient() {
             <div className="space-y-6">
               <div className="flex justify-center mb-4">
                  <Image 
-                    src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-black-v2.png?alt=media&token=d4f3245a-e8bb-4f64-86b2-6282c4beb453" 
-                    alt="River Logo" 
+                    src={LOGO_PATH} 
+                    alt="River Business" 
                     width={32} 
                     height={32} 
-                    className="opacity-10 grayscale"
                   />
               </div>
               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Authorized infrastructure partner</p>

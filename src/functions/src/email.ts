@@ -11,7 +11,7 @@ interface SendEmailOptions {
 
 const BRAND_PRIMARY = '#156391';
 const BRAND_ACCENT = '#22d3ee';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-white-v2.png?alt=media&token=6c25e9e2-9375-4f03-a0ab-e32cd98b8b49';
+const LOGO_URL = 'https://app.riverph.com/brand/river-icon.png';
 
 /**
  * Sends an email using the Brevo SMTP relay.
