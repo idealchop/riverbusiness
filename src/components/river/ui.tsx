@@ -52,11 +52,11 @@ export function RbButton({
     size === 'lg' && 'h-14 px-6 text-[16px] rounded-full',
     size === 'md' && 'h-[46px] px-5 text-[15px] rounded-[14px]',
     size === 'sm' && 'h-9 px-3.5 text-[13.5px] rounded-xl',
-    variant === 'primary' && 'bg-[#1A2C49] text-white shadow-[0_10px_20px_-10px_rgba(26,44,73,0.60),inset_0_1px_0_rgba(255,255,255,0.15)]',
+    variant === 'primary' && 'bg-[#1A2C49] text-white shadow-[0_10px_20px_-10px_rgba(26,44,73,0.55),inset_0_1px_0_rgba(255,255,255,0.16)] disabled:bg-[#1A2C49]/45 disabled:shadow-none disabled:opacity-100',
     variant === 'secondary' && 'bg-white text-[#0A0A0A] shadow-[inset_0_0_0_1.5px_#E4E4E7]',
     variant === 'quiet' && 'bg-transparent text-[#8A8A94] underline underline-offset-[3px] shadow-none h-11 px-2 text-[14px]',
     full && 'w-full',
-    'disabled:opacity-60',
+    variant !== 'primary' && 'disabled:opacity-60',
     className,
   );
   if (href) {
