@@ -7,7 +7,7 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'fir
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { RbButton, Wordmark } from '@/components/river/ui';
+import { RbButton, RiverMark } from '@/components/river/ui';
 import {
   confirmPhoneCode,
   findProfileByPhone,
@@ -171,7 +171,7 @@ export function LoginForm({ devAdminEmails = [] }: { devAdminEmails?: readonly s
     <main className="rb-app flex h-dvh items-center justify-center overflow-hidden bg-[#F5F5F7] px-4 pt-[max(16px,env(safe-area-inset-top))] pb-[max(16px,env(safe-area-inset-bottom))]">
       <div className="flex max-h-full w-full max-w-[420px] flex-col">
         <section className="min-h-0 overflow-y-auto rounded-[28px] bg-white px-4 py-6 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_18px_40px_-18px_rgba(16,16,24,0.18)]">
-          <Wordmark />
+          <RiverMark />
           <h1 className="mt-6 text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em]">
             {mode === 'code' ? 'Enter the code' : 'Sign in'}
           </h1>
