@@ -14,7 +14,7 @@ import { useAuth } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from '@/components/ui/loader';
-import { Logo } from '@/components/icons';
+import { RiverMark } from '@/components/river/ui';
 
 const signupSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -100,7 +100,7 @@ function SignupContent() {
 
             <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-4 duration-700">
                 <div className="mb-16">
-                    <Logo className="h-24 w-24" />
+                    <RiverMark tone="white" className="h-16" />
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 const wordmarkSrc = new URL('../../assets/brand/river-logo-navy.svg', import.meta.url).href;
 const markSrc = new URL('../../assets/brand/river-mark-navy.svg', import.meta.url).href;
+const markWhiteSrc = new URL('../../assets/brand/river-mark-white.svg', import.meta.url).href;
 
 export function Wordmark({ className }: { className?: string }) {
   return (
@@ -14,10 +15,10 @@ export function Wordmark({ className }: { className?: string }) {
   );
 }
 
-export function RiverMark({ className }: { className?: string }) {
+export function RiverMark({ className, tone = 'navy' }: { className?: string; tone?: 'navy' | 'white' }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={markSrc} alt="River" className={cn('h-12 w-auto object-contain', className)} />
+    <img src={tone === 'white' ? markWhiteSrc : markSrc} alt="River" className={cn('h-12 w-auto object-contain', className)} />
   );
 }
 
