@@ -7,7 +7,7 @@ import { Bell, ChevronRight, Home, MessageCircle, Receipt, Settings, Truck } fro
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import { useCustomerWater } from '@/components/river/customer-provider';
-import { IconButton, ProgressTrack, RbButton, RbCard, Skel, Wordmark } from '@/components/river/ui';
+import { IconButton, ProgressTrack, RbButton, RbCard, RiverMark, Skel } from '@/components/river/ui';
 import { formatNumber, formatPeso } from '@/lib/format-money';
 import { autoRefillLabel, formatSentAt, refillStep, toDate } from '@/lib/refill-display';
 import { useAuth, useFirestore } from '@/firebase';
@@ -435,7 +435,7 @@ export function CustomerHeader({
   return (
     <header className="flex shrink-0 items-center gap-2.5 px-4 pb-1 pt-2">
       <div className="min-w-0 flex-1">
-        <Wordmark />
+        <RiverMark className="h-8" />
       </div>
       <IconButton label="Live support" onClick={onOpenChat} dot={chatDot}>
         <MessageCircle size={20} strokeWidth={1.85} />
