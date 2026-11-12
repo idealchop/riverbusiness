@@ -61,7 +61,7 @@ function SignupContent() {
       
       toast({ 
         title: "Account created", 
-        description: "Welcome to River Business! Taking you to your dashboard." 
+        description: "Taking you to your dashboard." 
       });
       
       router.push('/onboarding');
@@ -98,12 +98,12 @@ function SignupContent() {
             </div>
 
             <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-4 duration-700">
-                <div className="mb-16 grid h-[88px] w-[88px] place-items-center rounded-[24px] bg-white shadow-[0_16px_40px_-18px_rgba(0,0,0,0.45)]">
-                    <RiverMark className="h-11" />
+                <div className="mb-16">
+                    <RiverMark tone="white" className="h-16" />
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
-                        River Business — AI-powered operations for modern teams.
+                        AI-powered operations for modern teams.
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-w-xl">
                         Run water refill operations, workforce and HR, files, and a collaboration workspace with documents, canvas, and sheets.
@@ -128,7 +128,7 @@ function SignupContent() {
                     ) : (
                         <>
                             <h2 className="text-4xl font-black tracking-tight text-slate-900">Create account</h2>
-                            <p className="text-slate-500 font-bold text-lg">Start your journey with River Business.</p>
+                            <p className="text-slate-500 font-bold text-lg">Start your journey.</p>
                         </>
                     )}
                 </div>
