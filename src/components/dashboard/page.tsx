@@ -35,7 +35,7 @@ const toSafeDate = (timestamp: any): Date | null => {
     return null;
 };
 
-export default function DashboardPage() {
+export default function DashboardPage({ showDialogs = true }: { showDialogs?: boolean }) {
   const firestore = useFirestore();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
 
@@ -183,21 +183,23 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <DashboardDialogs
-          user={user}
-          authUser={authUser}
-          firestore={firestore}
-          isUserDocLoading={isUserDocLoading}
-          userDocRef={userDocRef}
-          deliveries={deliveries}
-          waterStation={waterStation}
-          complianceReports={complianceReports}
-          complianceLoading={complianceLoading}
-          sanitationVisits={sanitationVisits}
-          sanitationLoading={sanitationLoading}
-          activeRefillRequest={activeRefillRequest}
-          branchUsers={branchUsers}
-        />
+        {showDialogs ? (
+          <DashboardDialogs
+            user={user}
+            authUser={authUser}
+            firestore={firestore}
+            isUserDocLoading={isUserDocLoading}
+            userDocRef={userDocRef}
+            deliveries={deliveries}
+            waterStation={waterStation}
+            complianceReports={complianceReports}
+            complianceLoading={complianceLoading}
+            sanitationVisits={sanitationVisits}
+            sanitationLoading={sanitationLoading}
+            activeRefillRequest={activeRefillRequest}
+            branchUsers={branchUsers}
+          />
+        ) : null}
       </div>
     </TooltipProvider>
   );

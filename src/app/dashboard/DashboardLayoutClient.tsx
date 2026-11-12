@@ -228,10 +228,11 @@ export default function DashboardLayoutClient({
   }
 
   const installPage = pathname.startsWith('/dashboard/install');
+  const home = pathname === '/dashboard';
 
   return (
     <CustomerProvider authUser={authUser}>
-      <div className="rb-app relative mx-auto flex h-dvh w-full max-w-[460px] flex-col overflow-hidden bg-[#F5F5F7]">
+      <div className={`rb-app relative mx-auto flex h-dvh w-full flex-col overflow-hidden bg-[#F5F5F7] ${home ? 'max-w-6xl' : 'max-w-[460px]'}`}>
         <CustomerHeader
           onOpenChat={() => setIsLiveSupportOpen(true)}
           chatDot={!!user?.hasUnreadAdminMessages}
@@ -243,7 +244,7 @@ export default function DashboardLayoutClient({
             />
           )}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-28">
+        <main className={`min-h-0 flex-1 overflow-y-auto pb-28 ${home ? 'px-5 py-2 sm:px-8' : 'px-4'}`}>
           {children}
         </main>
         {installPage ? null : <CustomerTabBar />}

@@ -1,7 +1,7 @@
 'use client';
 
-import { CustomerHome } from '@/components/river/customer-screens';
+import WaterDashboard from '@/components/dashboard/page';
 
 export default function DashboardPage() {
-  return <CustomerHome />;
+  return <WaterDashboard showDialogs={false} />;
 }

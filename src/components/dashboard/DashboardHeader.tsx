@@ -61,7 +61,7 @@ export function DashboardHeader({
           variant={isActivated && hasPendingRefill ? "secondary" : "default"}
           className={cn(
             "flex-1 sm:flex-none rounded-full h-11 px-6 font-bold shadow-lg transition-transform active:scale-95",
-            (!isActivated || !hasPendingRefill) && "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+            (!isActivated || !hasPendingRefill) && "bg-[#1A2C49] text-white hover:bg-[#1A2C49]/90"
           )}
           onClick={onRefillRequest}
         >
