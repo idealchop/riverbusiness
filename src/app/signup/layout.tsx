@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/seo';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Create account',
   description: `Create a ${SITE_NAME} account to run operations, HR, files, and collaboration in one place. ${SITE_DESCRIPTION}`,

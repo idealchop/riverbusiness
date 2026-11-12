@@ -13,6 +13,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   async headers() {
+    const fresh = 'private, no-cache, no-store, max-age=0, must-revalidate';
     return [
       {
         source: '/sw.js',
@@ -20,6 +21,22 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
           { key: 'Service-Worker-Allowed', value: '/' },
         ],
+      },
+      {
+        source: '/',
+        headers: [{ key: 'Cache-Control', value: fresh }],
+      },
+      {
+        source: '/login',
+        headers: [{ key: 'Cache-Control', value: fresh }],
+      },
+      {
+        source: '/signup',
+        headers: [{ key: 'Cache-Control', value: fresh }],
+      },
+      {
+        source: '/dashboard/:path*',
+        headers: [{ key: 'Cache-Control', value: fresh }],
       },
     ];
   },

@@ -3,6 +3,9 @@ import { Metadata } from 'next';
 import DashboardLayoutClient from './DashboardLayoutClient';
 import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: inAppTitle('Water Refill'),
   robots: privatePageRobots,
