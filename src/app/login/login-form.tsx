@@ -7,7 +7,7 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'fir
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { RbButton, RiverMark } from '@/components/river/ui';
+import { RiverMark } from '@/components/river/ui';
 import {
   confirmPhoneCode,
   findProfileByPhone,
@@ -165,29 +165,54 @@ export function LoginForm({ devAdminEmails = [] }: { devAdminEmails?: readonly s
     }
   }
 
-  const fieldClass = 'h-14 w-full rounded-[16px] bg-[#F7F7F9] px-4 text-[16px] font-semibold text-[#0A0A0A] outline-none placeholder:font-medium placeholder:text-[#B4B4BC] focus-visible:ring-2 focus-visible:ring-[#1A2C49]/20';
+  const labelClass = 'text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1';
+  const fieldClass = 'h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 text-base font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-300 focus:bg-white focus-visible:ring-2 focus-visible:ring-primary/20';
+  const submitClass = 'w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary text-white hover:bg-primary/90 disabled:opacity-60';
 
   return (
-    <main className="rb-app flex h-dvh items-center justify-center overflow-hidden bg-[#F5F5F7] px-4 pt-[max(16px,env(safe-area-inset-top))] pb-[max(16px,env(safe-area-inset-bottom))]">
-      <div className="flex max-h-full w-full max-w-[420px] flex-col">
-        <section className="min-h-0 overflow-y-auto rounded-[28px] bg-white px-4 py-6 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_18px_40px_-18px_rgba(16,16,24,0.18)]">
-          <RiverMark />
-          <h1 className="mt-6 text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em]">
-            {mode === 'code' ? 'Enter the code' : 'Sign in'}
-          </h1>
-          <p className="mt-2 text-[15px] font-medium leading-snug text-[#8A8A94]">
-            {mode === 'phone' && 'We’ll text a 6-digit code to your mobile number.'}
-            {mode === 'code' && `Sent to +63 ${formatNationalPhone(national)}.`}
-            {mode === 'email' && 'Use the email and password on your account.'}
-          </p>
+    <div className="flex min-h-screen w-full flex-col overflow-hidden bg-background font-sans lg:flex-row">
+      <div className="relative flex min-h-[400px] w-full flex-col justify-between overflow-hidden bg-[#1A2C49] p-8 pb-48 text-white sm:p-12 md:p-20 lg:min-h-screen lg:w-[65%]">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute left-[-8%] top-[-12%] h-[60%] w-[60%] rounded-full bg-[#3D5A80] blur-[100px]" />
+          <div className="absolute bottom-[-16%] right-[-10%] h-[55%] w-[55%] rounded-full bg-[#0E1A2E] blur-[110px]" />
+          <div className="absolute left-[18%] top-[38%] h-[36%] w-[36%] rounded-full bg-[#4C6E96]/40 blur-[90px]" />
+          <div className="pointer-events-none absolute inset-0 opacity-[0.05] mix-blend-overlay" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+        </div>
+        <div className="relative z-10 space-y-12">
+          <div className="mb-16">
+            <RiverMark tone="white" className="h-16" />
+          </div>
+          <div className="max-w-xl space-y-6">
+            <h1 className="text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl">
+              AI-powered operations for modern teams.
+            </h1>
+            <p className="max-w-xl text-lg font-bold leading-relaxed text-slate-400 sm:text-xl">
+              Run water refill operations, workforce and HR, files, and a collaboration workspace with documents, canvas, and sheets.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative flex flex-1 flex-col items-center justify-center bg-slate-50 p-4 sm:p-12 md:p-20 lg:bg-white">
+        <div className="relative z-20 -mt-32 w-full space-y-12 rounded-[3rem] bg-white p-10 shadow-2xl lg:mt-0 lg:rounded-none lg:p-0 lg:shadow-none">
+          <div className="space-y-2">
+            <h2 className="text-4xl font-black tracking-tight text-slate-900">
+              {mode === 'code' ? 'Enter the code' : 'Sign in'}
+            </h2>
+            <p className="text-lg font-bold text-slate-500">
+              {mode === 'phone' && 'We’ll text a code to your mobile number.'}
+              {mode === 'code' && `Sent to +63 ${formatNationalPhone(national)}.`}
+              {mode === 'email' && 'Use the email and password on your account.'}
+            </p>
+          </div>
 
           {mode === 'phone' ? (
-            <form onSubmit={textCode} className="mt-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="phone" className="text-[13px] font-bold">Mobile number</label>
-                <div className="flex h-14 items-center rounded-[16px] bg-[#F7F7F9] px-4 focus-within:ring-2 focus-within:ring-[#1A2C49]/20">
-                  <span className="pr-3 text-[16px] font-bold text-[#3F3F46]">+63</span>
-                  <span className="mr-3 h-5 w-px bg-[#E4E4E7]" aria-hidden />
+            <form onSubmit={textCode} className="space-y-8">
+              <div className="space-y-2">
+                <label htmlFor="phone" className={labelClass}>Mobile number</label>
+                <div className="flex h-14 items-center rounded-2xl border border-slate-200 bg-slate-50 px-5 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/20">
+                  <span className="pr-3 text-base font-bold text-slate-900">+63</span>
+                  <span className="mr-3 h-5 w-px bg-slate-200" aria-hidden />
                   <input
                     id="phone"
                     inputMode="numeric"
@@ -195,27 +220,24 @@ export function LoginForm({ devAdminEmails = [] }: { devAdminEmails?: readonly s
                     placeholder="917 123 4567"
                     value={national}
                     onChange={(event) => { setNational(formatNationalPhone(event.target.value)); setError(''); }}
-                    className="h-full w-full bg-transparent text-[16px] font-semibold outline-none placeholder:font-medium placeholder:text-[#B4B4BC]"
+                    className="h-full w-full bg-transparent text-base font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-300"
                   />
                 </div>
               </div>
-              <RbButton size="lg" full disabled={busy} type="submit">
+              <button type="submit" className={submitClass} disabled={busy}>
                 {busy ? 'Sending…' : 'Text me a code'}
-              </RbButton>
-              <button type="button" className="min-h-11 text-[14px] font-bold text-[#8A8A94] underline underline-offset-[3px]" onClick={() => { setError(''); setMode('email'); }}>
-                Use email instead
               </button>
             </form>
           ) : null}
 
           {mode === 'code' ? (
-            <form onSubmit={verifyCode} className="mt-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="sms-code" className="text-[13px] font-bold">SMS code</label>
-                <div className="relative focus-within:rounded-[14px] focus-within:ring-2 focus-within:ring-[#1A2C49]/20">
+            <form onSubmit={verifyCode} className="space-y-8">
+              <div className="space-y-2">
+                <label htmlFor="sms-code" className={labelClass}>SMS code</label>
+                <div className="relative">
                   <div className="flex gap-2" aria-hidden>
                     {Array.from({ length: 6 }, (_, index) => (
-                      <span key={index} className="grid h-14 flex-1 place-items-center rounded-[14px] bg-[#F7F7F9] text-[20px] font-extrabold tabular-nums">
+                      <span key={index} className="grid h-14 flex-1 place-items-center rounded-2xl border border-slate-200 bg-slate-50 text-[20px] font-black tabular-nums">
                         {code[index] || ''}
                       </span>
                     ))}
@@ -231,90 +253,107 @@ export function LoginForm({ devAdminEmails = [] }: { devAdminEmails?: readonly s
                   />
                 </div>
               </div>
-              <RbButton size="lg" full disabled={busy} type="submit">
+              <button type="submit" className={submitClass} disabled={busy}>
                 {busy ? 'Checking…' : 'Continue'}
-              </RbButton>
-              <button
-                type="button"
-                disabled={resendIn > 0 || busy}
-                onClick={() => textCode()}
-                className="min-h-11 text-[14px] font-bold text-[#8A8A94] underline underline-offset-[3px] disabled:no-underline disabled:opacity-60"
-              >
-                {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
               </button>
-              <button type="button" className="-mt-2 min-h-11 text-[14px] font-bold text-[#8A8A94]" onClick={() => { setError(''); setMode('phone'); }}>
-                Use a different number
-              </button>
-            </form>
-          ) : null}
-
-          {mode === 'email' ? (
-            <form onSubmit={emailSignIn} className="mt-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="email" className="text-[13px] font-bold">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="username"
-                  inputMode="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className={fieldClass}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex min-h-11 items-center justify-between">
-                  <label htmlFor="password" className="text-[13px] font-bold">Password</label>
-                  <button type="button" className="min-h-11 text-[13px] font-bold text-[#8A8A94] underline underline-offset-[3px]" onClick={() => setResetOpen(true)}>
-                    Forgot password?
-                  </button>
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className={fieldClass}
-                />
-                <button type="button" className="min-h-11 self-start text-[13px] font-bold text-[#8A8A94]" onClick={() => setShowPassword((value) => !value)}>
-                  {showPassword ? 'Hide password' : 'Show password'}
+              <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400">
+                <button type="button" disabled={resendIn > 0 || busy} onClick={() => textCode()} className="font-black text-primary hover:underline disabled:text-slate-400 disabled:no-underline">
+                  {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
                 </button>
-              </div>
-              <RbButton size="lg" full disabled={busy} type="submit">
-                {busy ? 'Signing in…' : 'Sign in'}
-              </RbButton>
-              <button type="button" className="min-h-11 text-[14px] font-bold text-[#8A8A94] underline underline-offset-[3px]" onClick={() => { setError(''); setMode('phone'); }}>
-                Use phone instead
-              </button>
-              <p className="text-center text-[13px] font-semibold text-[#8A8A94]">
-                New business? <Link href="/signup" className="font-bold text-[#0A0A0A] underline underline-offset-[3px]">Sign up</Link>
+                <span className="mx-2">·</span>
+                <button type="button" onClick={() => { setError(''); setMode('phone'); }} className="font-black text-primary hover:underline">
+                  Different number
+                </button>
               </p>
             </form>
           ) : null}
 
-          {error ? <p role="alert" className="mt-4 text-[14px] font-semibold leading-snug text-[#C2410C]">{error}</p> : null}
-        </section>
+          {mode === 'email' ? (
+            <form onSubmit={emailSignIn} className="space-y-8">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label htmlFor="email" className={labelClass}>Email address</label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    inputMode="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <label htmlFor="password" className={labelClass}>Password</label>
+                    <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline" onClick={() => setResetOpen(true)}>
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className={fieldClass}
+                  />
+                  <button type="button" className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setShowPassword((value) => !value)}>
+                    {showPassword ? 'Hide password' : 'Show password'}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" className={submitClass} disabled={busy}>
+                {busy ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+          ) : null}
 
-        <p className="shrink-0 px-2 pt-4 text-center text-[12px] font-semibold leading-[1.45] text-[#8A8A94]">
-          By continuing you agree to our{' '}
-          <a className="underline underline-offset-[3px]" href="https://riverph.com/privacy" target="_blank" rel="noreferrer">Privacy</a>
-          {' '}and{' '}
-          <a className="underline underline-offset-[3px]" href="https://riverph.com/terms" target="_blank" rel="noreferrer">Terms</a>.
-        </p>
-        <div id={RECAPTCHA_ID} className="sr-only" aria-hidden />
+          {error ? <p role="alert" className="text-sm font-bold text-destructive">{error}</p> : null}
 
-        {resetOpen ? (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A0A0A]/45 px-4 pb-4 sm:items-center" role="dialog" aria-modal="true">
-            <div className="w-full max-w-[420px] rounded-[28px] bg-white p-4">
-              <h2 className="text-[20px] font-extrabold tracking-[-0.02em]">Reset password</h2>
-              <p className="mt-2 text-[14px] font-semibold leading-snug text-[#8A8A94]">We’ll email a reset link to the address above.</p>
-              <RbButton size="lg" full className="mt-4" disabled={busy} onClick={resetPassword}>Send reset link</RbButton>
-              <button type="button" className="mt-2 min-h-11 w-full text-[14px] font-bold text-[#8A8A94]" onClick={() => setResetOpen(false)}>Cancel</button>
-            </div>
+          <div className="space-y-3 pt-4 text-center">
+            {mode === 'phone' ? (
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                <button type="button" className="font-black text-primary hover:underline" onClick={() => { setError(''); setMode('email'); }}>
+                  Use email instead
+                </button>
+              </p>
+            ) : null}
+            {mode === 'email' ? (
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                <button type="button" className="font-black text-primary hover:underline" onClick={() => { setError(''); setMode('phone'); }}>
+                  Use phone instead
+                </button>
+              </p>
+            ) : null}
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              New here?{' '}
+              <Link href="/signup" className="font-black text-primary hover:underline underline-offset-4">Sign up</Link>
+            </p>
+            <p className="text-xs font-bold leading-relaxed text-slate-400">
+              By continuing you agree to our{' '}
+              <a className="font-black text-primary hover:underline underline-offset-4" href="https://riverph.com/privacy" target="_blank" rel="noreferrer">Privacy</a>
+              {' '}and{' '}
+              <a className="font-black text-primary hover:underline underline-offset-4" href="https://riverph.com/terms" target="_blank" rel="noreferrer">Terms</a>.
+            </p>
           </div>
-        ) : null}
+        </div>
       </div>
-    </main>
+
+      <div id={RECAPTCHA_ID} className="sr-only" aria-hidden />
+
+      {resetOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A0A0A]/45 px-4 pb-4 sm:items-center" role="dialog" aria-modal="true">
+          <div className="w-full max-w-[420px] rounded-[28px] bg-white p-6">
+            <h2 className="text-2xl font-black tracking-tight text-slate-900">Reset password</h2>
+            <p className="mt-2 text-base font-bold text-slate-500">We’ll email a reset link to the address above.</p>
+            <button type="button" className={`${submitClass} mt-6`} disabled={busy} onClick={resetPassword}>Send reset link</button>
+            <button type="button" className="mt-3 min-h-11 w-full text-xs font-black uppercase tracking-widest text-slate-400" onClick={() => setResetOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
