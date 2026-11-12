@@ -85,12 +85,11 @@ function SignupContent() {
   return (
     <div className="flex w-full flex-col lg:flex-row min-h-screen bg-background font-sans overflow-hidden">
         {/* Branding Side (Left) - 65% width to match Login */}
-        <div className="relative w-full lg:w-[65%] p-8 pb-48 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
-            {/* Animated Mesh Gradient Background - match Login */}
+        <div className="relative w-full lg:w-[65%] p-8 pb-48 sm:p-12 md:p-20 bg-[#1A2C49] text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
             <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
-                <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[50%] h-[50%] rounded-full bg-primary/5 blur-[140px] pointer-events-none" />
+                <div className="absolute top-[-12%] left-[-8%] h-[60%] w-[60%] rounded-full bg-[#3D5A80] blur-[100px]" />
+                <div className="absolute bottom-[-16%] right-[-10%] h-[55%] w-[55%] rounded-full bg-[#0E1A2E] blur-[110px]" />
+                <div className="absolute left-[18%] top-[38%] h-[36%] w-[36%] rounded-full bg-[#4C6E96]/40 blur-[90px]" />
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
                      style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -99,8 +98,8 @@ function SignupContent() {
             </div>
 
             <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-4 duration-700">
-                <div className="mb-16">
-                    <RiverMark tone="white" className="h-16" />
+                <div className="mb-16 grid h-[88px] w-[88px] place-items-center rounded-[24px] bg-white shadow-[0_16px_40px_-18px_rgba(0,0,0,0.45)]">
+                    <RiverMark className="h-11" />
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
