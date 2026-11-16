@@ -337,7 +337,7 @@ export function StatCards({
                     onClick={() => window.dispatchEvent(new CustomEvent('open-compliance'))}
                     className="inline-flex h-7 items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 text-[8px] font-black uppercase tracking-widest text-primary transition-all hover:bg-blue-100"
                   >
-                    Quality &gt; Sanitation
+                    Sanitation
                   </button>
                   <button type="button" onClick={onSaveLitersClick} className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 p-1 text-primary transition-all hover:bg-blue-100">
                     <ShieldCheck className="h-3.5 w-3.5" />
