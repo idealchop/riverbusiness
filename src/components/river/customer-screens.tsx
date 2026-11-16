@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, ChevronRight, Home, MessageCircle, Receipt, Settings, Truck } from 'lucide-react';
+import { Bell, ChevronRight, Home, LayoutGrid, MessageCircle, Receipt, Settings, Truck } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import { useCustomerWater } from '@/components/river/customer-provider';
@@ -334,7 +334,7 @@ export function CustomerSettings() {
           <ChevronRight className="text-[#B4B4BC]" size={20} />
         </Link>
         <LinkPhoneControl linked={user.phoneE164 || undefined} contactNumber={user.contactNumber} />
-        <div className="flex min-h-11 items-center gap-1">
+        <div className="hidden min-h-11 items-center gap-1 sm:flex">
           <AppLauncher />
           <span className="text-[15.5px] font-extrabold">Your apps</span>
         </div>
@@ -366,10 +366,11 @@ export function CustomerSettings() {
   );
 }
 
-const TABS = [
+const TABS: { href: string; label: string; icon: typeof Home; match: (path: string) => boolean; mobileOnly?: boolean }[] = [
   { href: '/dashboard', label: 'Home', icon: Home, match: (path: string) => path === '/dashboard' },
   { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck, match: (path: string) => path.startsWith('/dashboard/deliveries') },
   { href: '/dashboard/billing', label: 'Billing', icon: Receipt, match: (path: string) => path.startsWith('/dashboard/billing') },
+  { href: '/dashboard/apps', label: 'Apps', icon: LayoutGrid, match: (path: string) => path.startsWith('/dashboard/apps'), mobileOnly: true },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, match: (path: string) => path.startsWith('/dashboard/settings') },
 ];
 
@@ -382,7 +383,7 @@ export function CustomerTabBar() {
           const on = tab.match(pathname);
           const Icon = tab.icon;
           return (
-            <Link key={tab.href} href={tab.href} className={cn('inline-flex h-[46px] min-w-[46px] items-center justify-center gap-2 rounded-[16px] px-3 text-[#B4B4BC]', on && 'bg-[#1A2C49] px-[18px] text-white')} aria-current={on ? 'page' : undefined}>
+            <Link key={tab.href} href={tab.href} className={cn('inline-flex h-[46px] min-w-[46px] items-center justify-center gap-2 rounded-[16px] px-3 text-[#B4B4BC]', on && 'bg-[#1A2C49] px-[18px] text-white', tab.mobileOnly && 'sm:hidden')} aria-current={on ? 'page' : undefined}>
               <Icon size={20} strokeWidth={1.85} />
               {on ? <span className="text-[14px] font-bold">{tab.label}</span> : null}
             </Link>
@@ -411,9 +412,11 @@ export function CustomerHeader({
       ? 'Billing'
       : pathname.startsWith('/dashboard/settings')
         ? 'Settings'
-        : pathname.startsWith('/dashboard/install')
-          ? 'Install app'
-          : '';
+        : pathname.startsWith('/dashboard/apps')
+          ? 'Your apps'
+          : pathname.startsWith('/dashboard/install')
+            ? 'Install app'
+            : '';
 
   if (pathname.startsWith('/dashboard/install')) {
     return (
@@ -428,7 +431,9 @@ export function CustomerHeader({
     return (
       <header className="flex min-h-11 shrink-0 items-center gap-2 px-4 pt-1.5">
         <b className="min-w-0 flex-1 text-[17px] font-extrabold tracking-[-0.01em]">{title}</b>
-        <AppLauncher />
+        <span className="hidden sm:contents">
+          <AppLauncher />
+        </span>
       </header>
     );
   }
@@ -442,7 +447,9 @@ export function CustomerHeader({
         <MessageCircle size={20} strokeWidth={1.85} />
       </IconButton>
       {notification}
-      <AppLauncher />
+      <span className="hidden sm:contents">
+        <AppLauncher />
+      </span>
     </header>
   );
 }

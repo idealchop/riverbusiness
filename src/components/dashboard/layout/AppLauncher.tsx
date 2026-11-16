@@ -21,6 +21,11 @@ import { doc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
 import { getAppAvailability, type RiverAppId } from '@/lib/workspace-access';
 
+function isAppActive(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === '/dashboard' || pathname.startsWith('/admin');
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 const apps: { id: RiverAppId; name: string; href: string; iconUrl: string; disabledHint: string }[] = [
   { 
     id: 'water', 
@@ -52,13 +57,17 @@ const apps: { id: RiverAppId; name: string; href: string; iconUrl: string; disab
   },
 ];
 
-export function AppLauncher() {
+function useRiverApps() {
   const pathname = usePathname();
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user } = useDoc<AppUser>(userDocRef);
-  const availability = getAppAvailability(user);
+  return { pathname: pathname || '/dashboard', availability: getAppAvailability(user) };
+}
+
+export function AppLauncher() {
+  const { pathname, availability } = useRiverApps();
 
   return (
     <Popover>
@@ -82,7 +91,7 @@ export function AppLauncher() {
               const status = availability[app.id];
               if (status === 'hidden') return null;
 
-              const isActive = pathname === app.href || (app.href === '/dashboard' && pathname.startsWith('/admin')) || (app.href === '/hr-dashboard' && pathname.startsWith('/hr-dashboard')) || (app.href === '/workspace' && pathname.startsWith('/workspace')) || (app.href === '/files' && pathname.startsWith('/files'));
+              const isActive = isAppActive(pathname, app.href);
               const isDisabled = status === 'disabled';
 
               const content = (
@@ -152,5 +161,57 @@ export function AppLauncher() {
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** Full-page app list used by the mobile Apps tab. Desktop keeps the popover. */
+export function AppsDirectory() {
+  const { pathname, availability } = useRiverApps();
+
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-3">
+      {apps.map((app) => {
+        const status = availability[app.id];
+        if (status === 'hidden') return null;
+        const isActive = isAppActive(pathname, app.href);
+        const isDisabled = status === 'disabled';
+        const body = (
+          <>
+            <div className={cn('relative grid h-16 w-16 place-items-center rounded-full', isDisabled ? 'bg-[#F4F4F6]' : 'bg-[#EEF2F7]')}>
+              <div className={cn('relative h-8 w-8', isDisabled && 'opacity-40 grayscale')}>
+                <Image src={app.iconUrl} alt="" fill className="object-contain" />
+              </div>
+              {isActive && !isDisabled ? (
+                <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-white shadow-sm">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#1A2C49]" />
+                </span>
+              ) : null}
+              {isDisabled ? (
+                <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border border-[#E4E4E7] bg-white">
+                  <Lock className="h-3 w-3 text-[#8A8A94]" />
+                </span>
+              ) : null}
+            </div>
+            <span className={cn('text-center text-[15px] font-extrabold leading-tight tracking-[-0.02em]', isDisabled ? 'text-[#8A8A94]' : 'text-[#0A0A0A]')}>
+              {app.name}
+            </span>
+            {isDisabled ? <span className="text-center text-[11px] font-bold uppercase tracking-[0.08em] text-[#B4B4BC]">{app.disabledHint}</span> : null}
+          </>
+        );
+        const card = 'flex min-h-[168px] flex-col items-center justify-center gap-3 rounded-[24px] bg-white px-3 py-5 text-center shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]';
+        if (isDisabled) {
+          return (
+            <div key={app.id} className={cn(card, 'cursor-not-allowed')} aria-disabled="true">
+              {body}
+            </div>
+          );
+        }
+        return (
+          <Link key={app.id} href={app.href} className={card} aria-current={isActive ? 'page' : undefined}>
+            {body}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
