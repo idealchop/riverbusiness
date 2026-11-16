@@ -151,14 +151,9 @@ export function DeliveriesTab({
                         return (
                         <Card key={delivery.id} className="shadow-none border bg-muted/10">
                             <CardContent className="p-4 space-y-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">#{delivery.id}</p>
-                                        <p className="font-bold text-sm">{toSafeDate(delivery.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                                    </div>
-                                    <Badge variant="outline" className={cn("text-[9px] uppercase font-bold tracking-widest border px-2", status.color)}>
-                                        {delivery.status}
-                                    </Badge>
+                                <div>
+                                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">#{delivery.id}</p>
+                                    <p className="font-bold text-sm">{toSafeDate(delivery.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                                 </div>
                                 <div className="flex justify-between items-baseline border-y py-3">
                                     <span className="text-[10px] font-bold text-muted-foreground uppercase">Supply Volume:</span>
@@ -167,15 +162,20 @@ export function DeliveriesTab({
                                         <p className="text-[10px] text-muted-foreground">{containerToLiter(delivery.volumeContainers).toLocaleString()} Liters</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    {delivery.proofOfDeliveryUrl ? (
-                                        <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold" onClick={() => onSetProofToViewUrl(delivery.proofOfDeliveryUrl!)}>
-                                            <Eye className="mr-1.5 h-3 w-3" /> Proof
+                                <div className="flex items-center justify-between gap-2">
+                                    <Badge variant="outline" className={cn("text-[9px] uppercase font-bold tracking-widest border px-2", status.color)}>
+                                        {delivery.status}
+                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        {delivery.proofOfDeliveryUrl ? (
+                                            <Button variant="outline" size="icon" aria-label="View proof" className="h-11 w-11 shrink-0 rounded-full" onClick={() => onSetProofToViewUrl(delivery.proofOfDeliveryUrl!)}>
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                        ) : null}
+                                        <Button variant="secondary" size="sm" className="h-11 rounded-full px-4 text-[12px] font-bold" onClick={() => { onSetDeliveryToEdit(delivery); onSetIsCreateDeliveryOpen(true); }}>
+                                            <Edit className="mr-1.5 h-4 w-4" /> Edit
                                         </Button>
-                                    ) : null}
-                                    <Button variant="secondary" size="sm" className={cn("h-8 text-[10px] uppercase font-bold", !delivery.proofOfDeliveryUrl ? "w-full" : "flex-1")} onClick={() => { onSetDeliveryToEdit(delivery); onSetIsCreateDeliveryOpen(true); }}>
-                                        <Edit className="mr-1.5 h-3 w-3" /> Edit
-                                    </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
