@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { SeoJsonLd } from '@/components/seo-json-ld';
 import { DevEnvironmentBadge } from '@/components/dev-environment-badge';
-import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register';
+import { AppUpdateButton, ServiceWorkerRegister } from '@/components/pwa/service-worker-register';
 import {
   MARKETING_URL,
   SEO_KEYWORDS,
@@ -96,6 +96,7 @@ export default function RootLayout({
         <Toaster />
         <DevEnvironmentBadge />
         <ServiceWorkerRegister />
+        <AppUpdateButton />
       </body>
     </html>
   );

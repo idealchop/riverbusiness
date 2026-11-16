@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, Loader2, Share, Star, X } from 'lucide-react';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collectionGroup, doc, getDoc, limit, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { RbButton } from '@/components/river/ui';
-import { useFirestore, useUser } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCustomerWater } from '@/components/river/customer-provider';
+import { formatPeso } from '@/lib/format-money';
+import type { Payment } from '@/lib/types';
 
 type Mine = { rating: number; comment: string } | null;
 
@@ -47,14 +51,25 @@ function useOwnFeedback() {
   return { mine, submit, signedIn: !!uid };
 }
 
+export type InstallPayment = {
+  id: string;
+  label: string;
+  detail: string;
+  amount: number;
+  status: string;
+  onOpen: () => void;
+};
+
 export function InstallPanel({
   features,
   openHref,
   productName = 'River Business',
+  payments = [],
 }: {
   features: { art: React.ReactNode; text: string }[];
   openHref: string;
   productName?: string;
+  payments?: InstallPayment[];
 }) {
   const pwa = usePwaInstall();
   const [guide, setGuide] = useState<null | 'ios' | 'safari' | 'menu'>(null);
@@ -94,6 +109,27 @@ export function InstallPanel({
           ))}
         </ul>
       )}
+      {payments.length > 0 ? (
+        <section className="mt-6 w-full text-left">
+          <h2 className="px-1 text-[13px] font-extrabold">Payments</h2>
+          <ul className="mt-2 flex flex-col gap-2">
+            {payments.map((payment) => (
+              <li key={payment.id}>
+                <button type="button" onClick={payment.onOpen} className="flex min-h-14 w-full items-center gap-3 rounded-[18px] bg-white px-3.5 py-2 text-left shadow-[0_1px_2px_rgba(16,16,24,0.04)]">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-bold">{payment.label}</span>
+                    <span className="block truncate text-[12px] font-semibold text-[#8A8A94]">{payment.detail}</span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block text-[14px] font-extrabold tabular-nums">{formatPeso(payment.amount)}</span>
+                    <span className="block text-[11px] font-bold text-[#8A8A94]">{payment.status}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <div className="mt-6 flex w-full flex-col gap-2.5">
         {installed ? (
           <>
@@ -256,10 +292,31 @@ function InstallHint({ kind, onClose }: { kind: 'ios' | 'safari' | 'menu'; onClo
   );
 }
 
+function paymentLabel(payment: Payment) {
+  const description = (payment.description || '').replace(/^Bill for /i, '');
+  if (description) return description;
+  return payment.date || 'Payment';
+}
+
 export function CustomerInstallScreen() {
+  const router = useRouter();
+  const { payments } = useCustomerWater();
+  const rows = (payments || []).map((payment) => ({
+    id: payment.id,
+    label: paymentLabel(payment),
+    detail: payment.date || 'Open this payment',
+    amount: payment.amount,
+    status: payment.status,
+    onOpen: () => {
+      router.push('/dashboard/billing');
+      window.dispatchEvent(new CustomEvent('open-payment-dialog', { detail: { invoiceId: payment.id } }));
+    },
+  }));
+
   return (
     <InstallPanel
       openHref="/dashboard"
+      payments={rows}
       features={[
         { art: <DropArt />, text: 'Request a refill and track your deliveries from your phone' },
         { art: <BillArt />, text: 'See your bills and pay statements in one place' },
@@ -270,9 +327,28 @@ export function CustomerInstallScreen() {
 }
 
 export function AdminInstallScreen() {
+  const router = useRouter();
+  const firestore = useFirestore();
+  const paymentsQuery = useMemoFirebase(() => (
+    firestore ? query(collectionGroup(firestore, 'payments'), orderBy('date', 'desc'), limit(40)) : null
+  ), [firestore]);
+  const { data } = useCollection<Payment & { userId?: string }>(paymentsQuery, { idField: 'userId' });
+  const rows = (data || []).map((payment) => ({
+    id: `${payment.userId || 'payment'}-${payment.id}`,
+    label: paymentLabel(payment),
+    detail: payment.date || 'Open this client',
+    amount: payment.amount,
+    status: payment.status,
+    onOpen: () => {
+      if (payment.userId) window.sessionStorage.setItem('rb-open-client', payment.userId);
+      router.push('/admin');
+    },
+  }));
+
   return (
     <InstallPanel
       openHref="/admin"
+      payments={rows}
       features={[
         { art: <DropArt />, text: 'Track refill requests and deliveries from your phone' },
         { art: <BillArt />, text: 'Review billing ledgers and send statements' },

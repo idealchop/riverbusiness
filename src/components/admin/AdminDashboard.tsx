@@ -167,6 +167,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [allUsers, unclaimedProfiles, salesMetrics, currentGlobalPrice]);
 
     React.useEffect(() => {
+        const clientId = window.sessionStorage.getItem('rb-open-client');
+        if (!clientId || !allUsers) return;
+        const match = allUsers.find((person) => person.id === clientId);
+        if (!match) return;
+        window.sessionStorage.removeItem('rb-open-client');
+        setSelectedUser(match);
+        setInitialUserDetailTab('billing');
+        setIsUserDetailOpen(true);
+    }, [allUsers]);
+
+    React.useEffect(() => {
         const openAccountDialog = () => setIsAccountDialogOpen(true);
         const openUserDetail = (event: Event) => {
             const customEvent = event as CustomEvent;

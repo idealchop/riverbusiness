@@ -1,6 +1,6 @@
 /* River Business service worker. Navigations are network-first with a short timeout,
  * then the last saved page. API and Firebase auth are never cached. */
-const GEN = "rb-v2";
+const GEN = "rb-v3";
 const PAGES = `${GEN}-pages`;
 const ASSETS = `${GEN}-assets`;
 const SHELL = ["/open", "/login", "/dashboard", "/offline.html", "/icons/icon-192.png", "/icons/icon-512.png", "/brand/river-logo-navy.svg"];
@@ -21,8 +21,11 @@ self.addEventListener("install", (event) => {
         if (response.ok) await cache.put(path, await plain(response));
       } catch { /* next visit */ }
     }));
-    await self.skipWaiting();
   })());
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
