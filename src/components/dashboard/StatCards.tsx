@@ -327,8 +327,8 @@ export function StatCards({
         </>
       ) : (
         <>
-          <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white overflow-hidden relative">
-            <CardHeader className="pb-2">
+          <Card className="relative col-span-1 overflow-hidden border-none bg-white shadow-sm max-md:rounded-[24px] md:col-span-2 lg:col-span-1">
+            <CardHeader className="pb-2 max-md:!px-[18px] max-md:!pb-2 max-md:!pt-5">
               <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Water Credits</span>
                 <span className="flex flex-wrap items-center justify-end gap-1.5">
@@ -346,8 +346,8 @@ export function StatCards({
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
+            <CardContent className="max-md:!px-[18px] max-md:!pb-5 max-md:!pt-0">
+              <div className="flex items-center gap-4 md:gap-6">
                 <WaterTankVisual 
                     percentage={remainingBalancePercentage} 
                     isUnlimited={(isFlowPlan || isBranchAccount) && isActivated} 
@@ -421,13 +421,13 @@ export function StatCards({
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white">
-            <CardHeader className="pb-2">
+          <Card className="col-span-1 border-none bg-white shadow-sm max-md:rounded-[24px] md:col-span-2 lg:col-span-1">
+            <CardHeader className="pb-2 max-md:!px-[18px] max-md:!pb-2 max-md:!pt-5">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />Usage Analysis
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 max-md:!px-[18px] max-md:!pb-5 max-md:!pt-0 md:space-y-4">
               <div>
                 <div className="flex items-baseline gap-1">
                     <p className="text-4xl font-extrabold text-slate-900">{consumptionDetails.consumedLitersThisMonth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
@@ -448,8 +448,8 @@ export function StatCards({
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm col-span-1 bg-white">
-            <CardHeader className="pb-2">
+          <Card className="col-span-1 border-none bg-white shadow-sm max-md:rounded-[24px]">
+            <CardHeader className="pb-2 max-md:!px-[18px] max-md:!pb-2 max-md:!pt-5">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Repeat className="h-4 w-4 text-primary" />
@@ -472,8 +472,8 @@ export function StatCards({
                 <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-5">
+            <CardContent className="max-md:!px-[18px] max-md:!pb-5 max-md:!pt-0">
+              <div className="space-y-3 md:space-y-5">
                 <div className={cn(
                     "h-16 rounded-xl border flex items-center justify-center transition-all relative overflow-hidden",
                     autoRefill ? "bg-blue-50 border-blue-100 shadow-inner" : "bg-slate-50 border-slate-200"
