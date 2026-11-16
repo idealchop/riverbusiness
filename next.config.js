@@ -35,7 +35,19 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: fresh }],
       },
       {
+        source: '/dashboard',
+        headers: [{ key: 'Cache-Control', value: fresh }],
+      },
+      {
         source: '/dashboard/:path*',
+        headers: [{ key: 'Cache-Control', value: fresh }],
+      },
+      {
+        source: '/admin',
+        headers: [{ key: 'Cache-Control', value: fresh }],
+      },
+      {
+        source: '/admin/:path*',
         headers: [{ key: 'Cache-Control', value: fresh }],
       },
     ];

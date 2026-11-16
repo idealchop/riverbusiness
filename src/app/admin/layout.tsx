@@ -4,6 +4,9 @@ import AdminLayoutClient from './AdminLayoutClient';
 import { devAdminAllowlist } from '@/lib/admin-access';
 import { inAppTitle, privatePageRobots } from '@/lib/seo';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: inAppTitle('Admin Command Center'),
   robots: privatePageRobots,

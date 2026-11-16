@@ -1,6 +1,6 @@
 /* River Business service worker. Navigations are network-first with a short timeout,
  * then the last saved page. API and Firebase auth are never cached. */
-const GEN = "rb-v1";
+const GEN = "rb-v2";
 const PAGES = `${GEN}-pages`;
 const ASSETS = `${GEN}-assets`;
 const SHELL = ["/open", "/login", "/dashboard", "/offline.html", "/icons/icon-192.png", "/icons/icon-512.png", "/brand/river-logo-navy.svg"];
@@ -57,13 +57,15 @@ self.addEventListener("fetch", (event) => {
   }
   event.respondWith((async () => {
     const cached = await caches.match(request);
-    const network = fetch(request).then(async (response) => {
-      if (response.ok) {
+    try {
+      const response = await fetch(request);
+      if (response.ok && (request.destination === 'script' || request.destination === 'style' || request.destination === 'font' || request.destination === 'image')) {
         const cache = await caches.open(ASSETS);
         await cache.put(request, response.clone());
       }
       return response;
-    }).catch(() => cached);
-    return cached || network;
+    } catch {
+      return cached || new Response('', { status: 504 });
+    }
   })());
 });
