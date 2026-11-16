@@ -21,7 +21,7 @@ export function DashboardHeader({
   const isMaintenance = stationStatus === 'Under Maintenance';
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-2">
+    <div className="flex flex-col items-start justify-between gap-3 pb-1 sm:flex-row sm:items-center sm:gap-6 sm:pb-2">
       <div className="space-y-1">
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{greeting}, {userName}!</h1>
         <div className="flex items-center gap-2">

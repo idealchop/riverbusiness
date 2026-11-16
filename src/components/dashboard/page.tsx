@@ -149,7 +149,7 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-5 sm:gap-8 max-md:[&_.rounded-lg]:!rounded-[24px] max-md:[&_div.p-6]:!p-[18px] max-md:[&_div.pt-0]:!pt-0">
         <DashboardHeader
           greeting={greeting}
           userName={user?.businessName}
@@ -172,7 +172,7 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
             onRequestRefillClick={() => handleDispatchDialogEvent('open-request-refill')}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-6">
           <div className="lg:col-span-8">
             <ConsumptionAnalytics
                 deliveries={deliveries}

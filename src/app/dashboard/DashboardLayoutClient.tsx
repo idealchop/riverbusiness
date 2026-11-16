@@ -248,7 +248,7 @@ export default function DashboardLayoutClient({
             />
           )}
         />
-        <main className={`min-h-0 flex-1 overflow-y-auto pb-28 ${home ? 'px-5 py-2 sm:px-8' : 'px-4'}`}>
+        <main className={`min-h-0 flex-1 overflow-y-auto pb-28 ${home ? 'px-4 py-2 sm:px-8' : 'px-4'}`}>
           {children}
         </main>
         {installPage ? null : <CustomerTabBar />}
