@@ -194,16 +194,16 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="rb-app flex h-[100dvh] w-full max-w-none flex-col gap-0 rounded-none border-none bg-[#F5F5F7] p-0 sm:h-auto sm:max-h-[90vh] sm:max-w-[480px] sm:rounded-[28px]">
-                    <DialogHeader className="flex-row items-center gap-1 space-y-0 px-3 pb-2 pt-3 text-left">
+                <DialogContent className="rb-app fixed inset-0 left-0 top-0 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-none bg-[#F5F5F7] p-0 sm:rounded-none">
+                    <DialogHeader className="flex-row items-center gap-1 space-y-0 px-4 pb-2 pt-3 text-left md:px-8">
                         <button type="button" aria-label="Back" onClick={() => onOpenChange(false)} className="grid h-9 w-9 place-items-center text-[22px]">‹</button>
                         <div>
                           <DialogTitle className="text-[17px] font-extrabold">{isParent ? 'Client' : user.businessName || 'Client'}</DialogTitle>
                           <DialogDescription className="sr-only">Client account</DialogDescription>
                         </div>
                     </DialogHeader>
-                    <ScrollArea className="min-h-0 flex-1 px-4">
-                        <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
+                    <ScrollArea className="min-h-0 flex-1 px-4 md:px-8">
+                        <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')} className="w-full">
                              <TabsList className="grid h-12 w-full grid-cols-4 rounded-[16px] bg-[#F4F4F6] p-1">
                                 {isParent ? (
                                     <>

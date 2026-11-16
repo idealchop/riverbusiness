@@ -680,15 +680,15 @@ export function OverviewTab({
     const planPrice = user.plan?.price;
 
     return (
-        <div className="relative pb-6">
-            <div className="mb-4 flex items-center gap-3">
+        <div className="relative grid grid-cols-1 gap-3 pb-6 lg:grid-cols-2 lg:gap-4">
+            <div className="mb-1 flex items-center gap-3 lg:col-span-2">
                 <div className="grid h-12 w-12 place-items-center rounded-[16px] bg-[#1A2C49] text-[18px] font-extrabold text-white">{letter}</div>
                 <div>
                     <h2 className="text-[21px] font-extrabold tracking-[-0.025em]">{user.businessName}</h2>
                     <p className="text-[14px] font-semibold text-[#8A8A94]">{user.name}</p>
                 </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:col-span-2">
                 <div className="rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
                     <p className="text-[13px] font-semibold text-[#8A8A94]">Estimated bill</p>
                     <p className="mt-1.5 text-[22px] font-extrabold tabular-nums">{currentMonthInvoice ? `₱${currentMonthInvoice.amount.toLocaleString('en-PH')}` : '—'}</p>
@@ -698,19 +698,19 @@ export function OverviewTab({
                     <p className="mt-1.5 text-[22px] font-extrabold tabular-nums">{consumedLitersThisMonth.toLocaleString('en-PH')} L</p>
                 </div>
             </div>
-            <div className="mt-4 rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+            <div className="rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
                 <p className="text-[12px] font-semibold text-[#8A8A94]">Contact</p>
                 <b className="mt-1.5 block text-[16px]">{user.email}</b>
                 <p className="mt-2 text-[14px] font-semibold text-[#8A8A94]">{user.address || 'No address yet'}</p>
             </div>
-            <div className="mt-3 flex items-center justify-between rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+            <div className="flex items-center justify-between rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
                 <div>
                     <p className="text-[12px] font-semibold text-[#8A8A94]">Plan</p>
                     <b className="mt-1 block text-[19px] font-extrabold">{typeof planPrice === 'number' ? `₱${planPrice.toLocaleString('en-PH')}` : (user.plan?.name || 'No plan')}</b>
                 </div>
                 <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => onSetIsChangePlanOpen(true)}>Switch plan</Button>
             </div>
-            <div className="mt-3 rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+            <div className="rounded-[24px] bg-white p-4 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)] lg:col-span-2">
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-[12px] font-semibold text-[#8A8A94]">Auto-refill</p>
@@ -729,7 +729,7 @@ export function OverviewTab({
                     </label>
                 </div>
             </div>
-            <details className="mt-4">
+            <details className="lg:col-span-2">
                 <summary className="cursor-pointer py-2 text-[14px] font-bold text-[#8A8A94]">More account details</summary>
             <Carousel className="w-full">
                 <CarouselContent>
