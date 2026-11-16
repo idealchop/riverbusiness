@@ -204,7 +204,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                     </DialogHeader>
                     <ScrollArea className="min-h-0 flex-1 px-4 md:px-8">
                         <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')} className="w-full">
-                             <TabsList className="grid h-12 w-full grid-cols-4 rounded-[16px] bg-[#F4F4F6] p-1">
+                             <TabsList className="grid h-12 w-full max-w-xl grid-cols-4 rounded-[16px] bg-[#F4F4F6] p-1">
                                 {isParent ? (
                                     <>
                                         <TabsTrigger value="overview" className="rounded-[12px] px-1 text-[12px] font-bold data-[state=active]:bg-white">Overview</TabsTrigger>
