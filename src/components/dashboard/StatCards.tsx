@@ -329,12 +329,21 @@ export function StatCards({
         <>
           <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white overflow-hidden relative">
             <CardHeader className="pb-2">
-              <CardTitle className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Water Credits</span>
-                <button type="button" onClick={onSaveLitersClick} className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 p-1 text-primary transition-all hover:bg-blue-100">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span className="pr-1 text-[8px] font-black uppercase tracking-widest">Live Quality</span>
-                </button>
+                <span className="flex flex-wrap items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-compliance'))}
+                    className="inline-flex h-7 items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 text-[8px] font-black uppercase tracking-widest text-primary transition-all hover:bg-blue-100"
+                  >
+                    Quality &gt; Sanitation
+                  </button>
+                  <button type="button" onClick={onSaveLitersClick} className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 p-1 text-primary transition-all hover:bg-blue-100">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span className="pr-1 text-[8px] font-black uppercase tracking-widest">Live Quality</span>
+                  </button>
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
