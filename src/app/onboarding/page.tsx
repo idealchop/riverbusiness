@@ -20,6 +20,7 @@ export default function OnboardingPage() {
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
     if (isUserLoading || !firestore) {
@@ -27,26 +28,21 @@ export default function OnboardingPage() {
     }
     
     if (!authUser) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
 
+    let cancelled = false;
     const analyzeIdentityAndRoute = async () => {
+      try {
       const userDocRef = doc(firestore, 'users', authUser.uid);
       const userDocSnap = await getDoc(userDocRef);
+      if (cancelled) return;
 
       // 1. Check if Profile Already Exists
       if (userDocSnap.exists()) {
-        const userData = userDocSnap.data() as AppUser;
-        
-        // Direct users based on their resolved infrastructure role
-        if (userData.hrRole === 'employee') {
-          router.push(getHomePath(userData));
-        } else if (userData.role === 'Admin') {
-          router.push('/admin');
-        } else {
-          router.push(getHomePath(userData));
-        }
+        const userData = { id: authUser.uid, ...userDocSnap.data() } as AppUser;
+        router.replace(getHomePath(userData));
         return;
       }
 
@@ -85,23 +81,44 @@ export default function OnboardingPage() {
               
               await batch.commit();
               
+              if (cancelled) return;
               toast({ title: 'Profile Activated', description: `Welcome to the ${inviteData.inviterBusinessName || 'team'} workspace.` });
-              router.push('/hr-dashboard/attendance');
+              router.replace('/hr-dashboard/attendance');
               return;
             } catch (error) {
               console.error("Magic Claim failed:", error);
+              if (!cancelled) setFailed(true);
               toast({ variant: 'destructive', title: 'Activation failed', description: 'Could not sync your employee profile.' });
+              return;
             }
           }
       }
 
       // 3. IDENTITY TYPE 1 or 2: No profile or employee invite found, move to Workspace Ownership choice
-      router.push('/claim-account');
+      router.replace('/claim-account');
+      } catch (error) {
+        console.error('Onboarding route failed:', error);
+        if (!cancelled) setFailed(true);
+      }
     };
     
     analyzeIdentityAndRoute();
+    return () => {
+      cancelled = true;
+    };
 
   }, [authUser, isUserLoading, firestore, router, toast]);
+
+  if (failed) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#F5F5F7] px-6 text-center">
+        <p className="text-[18px] font-extrabold">Could not open your account</p>
+        <button type="button" className="h-12 rounded-full bg-[#1A2C49] px-6 font-bold text-white" onClick={() => router.replace('/dashboard')}>
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return <FullScreenLoader text="Synchronizing secure workspace..." />;
 }

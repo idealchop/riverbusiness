@@ -40,44 +40,51 @@ export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
+  const refId = memoizedDocRef?.path ?? '';
 
-  const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
-  const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [state, setState] = useState<{
+    refId: string;
+    data: StateDataType;
+    isLoading: boolean;
+    error: FirestoreError | Error | null;
+  }>(() => ({
+    refId,
+    data: null,
+    isLoading: Boolean(memoizedDocRef),
+    error: null,
+  }));
+
+  // A new document must count as loading in this render. Waiting for an effect
+  // leaves one frame where the profile looks missing and login redirects loop.
+  let current = state;
+  if (state.refId !== refId) {
+    current = { refId, data: null, isLoading: Boolean(memoizedDocRef), error: null };
+    setState(current);
+  }
 
   useEffect(() => {
-    if (!memoizedDocRef) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
+    if (!memoizedDocRef) return;
+    const path = memoizedDocRef.path;
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
-        if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
-        } else {
-          setData(null);
-        }
-        setError(null);
-        setIsLoading(false);
+        setState({
+          refId: path,
+          data: snapshot.exists() ? { ...(snapshot.data() as T), id: snapshot.id } : null,
+          isLoading: false,
+          error: null,
+        });
       },
-      async (err: FirestoreError) => {
+      (err: FirestoreError) => {
         if (err.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
-                path: memoizedDocRef.path,
+                path: path,
                 operation: 'get',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         }
-        setError(err);
-        setData(null);
-        setIsLoading(false);
+        setState({ refId: path, data: null, isLoading: false, error: err });
       }
     );
 
@@ -88,5 +95,5 @@ export function useDoc<T = any>(
     throw new Error('useDoc: reference was not properly memoized using useMemoFirebase');
   }
 
-  return { data, isLoading, error };
+  return { data: current.data, isLoading: current.isLoading, error: current.error };
 }

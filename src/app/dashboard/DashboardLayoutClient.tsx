@@ -40,7 +40,7 @@ export default function DashboardLayoutClient({
   }, [pathname]);
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+  const { data: user, isLoading: isUserDocLoading, error: userDocError } = useDoc<AppUser>(userDocRef);
   
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
   const { data: paymentHistoryFromDb, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
@@ -108,22 +108,26 @@ export default function DashboardLayoutClient({
   }, [paymentHistoryFromDb]);
 
   useEffect(() => {
-    if (isUserLoading) return;
-  
-    if (!authUser && !isLoggingOut) {
-      router.push('/login');
-      return;
-    }
-  
-    if (user === null && !isUserDocLoading && authUser) {
-      router.push('/claim-account');
+    if (isUserLoading || isLoggingOut) return;
+
+    if (!authUser) {
+      // Sign-in updates Auth before React state. Don't send that user back to login.
+      if (auth?.currentUser) return;
+      router.replace('/login');
       return;
     }
 
     if (user && (isInvitedEmployee(user) || isIndividualWorkspace(user))) {
-      router.replace(getHomePath(user));
+      const home = getHomePath(user);
+      if (home !== pathname) router.replace(home);
+      return;
     }
-  }, [authUser, user, isUserLoading, isUserDocLoading, router, isLoggingOut]);
+
+    const profileSettled = Boolean(userDocRef) && !isUserDocLoading && !userDocError;
+    if (profileSettled && user === null) {
+      router.replace('/claim-account');
+    }
+  }, [auth, authUser, user, isUserLoading, isUserDocLoading, userDocError, userDocRef, router, isLoggingOut, pathname]);
 
   useEffect(() => {
     if (!userDocRef || !auth || !auth.currentUser) return;

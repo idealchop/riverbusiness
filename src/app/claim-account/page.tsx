@@ -97,11 +97,13 @@ export default function ClaimAccountPage() {
     }
 
     const checkExistingOrInvited = async () => {
+        try {
         const userDocRef = doc(firestore, 'users', authUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         
         if (userDocSnap.exists()) {
-            router.push('/onboarding');
+            const profile = { id: authUser.uid, ...userDocSnap.data() } as AppUser;
+            router.replace(getHomePath(profile));
             return;
         }
 
@@ -110,9 +112,12 @@ export default function ClaimAccountPage() {
             const inviteQuery = query(collection(firestore, 'unclaimedEmployees'), where('email', '==', userEmail));
             const inviteSnap = await getDocs(inviteQuery);
             if (!inviteSnap.empty) {
-                router.push('/onboarding');
+                router.replace('/onboarding');
                 return;
             }
+        }
+        } catch (error) {
+            console.error('Account check failed:', error);
         }
         setIsCheckingProfile(false);
     };
