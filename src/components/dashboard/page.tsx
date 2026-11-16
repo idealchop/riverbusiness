@@ -154,7 +154,6 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
           greeting={greeting}
           userName={user?.businessName}
           stationStatus={waterStation?.status}
-          onComplianceClick={() => handleDispatchDialogEvent('open-compliance')}
           onPartnerNoticeClick={() => handleDispatchDialogEvent('open-partner-notice')}
         />
 

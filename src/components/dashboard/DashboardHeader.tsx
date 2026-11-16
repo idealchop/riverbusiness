@@ -1,13 +1,11 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DashboardHeaderProps {
   greeting: string;
   userName?: string;
-  onComplianceClick: () => void;
   onPartnerNoticeClick: () => void;
   stationStatus?: 'Operational' | 'Under Maintenance';
   isActivated?: boolean;
@@ -16,7 +14,6 @@ interface DashboardHeaderProps {
 export function DashboardHeader({
   greeting,
   userName,
-  onComplianceClick,
   onPartnerNoticeClick,
   stationStatus,
   isActivated = true,
@@ -49,20 +46,6 @@ export function DashboardHeader({
                 </>
             )}
         </div>
-      </div>
-      
-      <div className="flex items-center gap-3">
-        {isActivated && (
-            <Button
-              variant="outline"
-              className="rounded-full h-11 px-6 font-bold bg-background shadow-sm border-slate-200 hover:bg-slate-50 transition-transform active:scale-95"
-              onClick={onComplianceClick}
-            >
-              <ShieldCheck className="h-4 w-4 sm:mr-2 text-primary" />
-              <span className="hidden sm:inline">Compliance & Sanitation</span>
-              <span className="sm:hidden text-xs">Quality</span>
-            </Button>
-        )}
       </div>
     </div>
   );
