@@ -965,6 +965,21 @@
 }
 
 .rb-app { color: #0A0A0A; }
+html,
+body,
+.rb-app,
+.rb-app * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.rb-app::-webkit-scrollbar,
+.rb-app *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 .rb-skel {
   background: #E4E4E7;
   border-radius: 10px;
