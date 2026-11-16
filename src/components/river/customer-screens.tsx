@@ -426,8 +426,9 @@ export function CustomerHeader({
 
   if (!home) {
     return (
-      <header className="flex min-h-11 shrink-0 items-center px-4 pt-1.5">
-        <b className="text-[17px] font-extrabold tracking-[-0.01em]">{title}</b>
+      <header className="flex min-h-11 shrink-0 items-center gap-2 px-4 pt-1.5">
+        <b className="min-w-0 flex-1 text-[17px] font-extrabold tracking-[-0.01em]">{title}</b>
+        <AppLauncher />
       </header>
     );
   }
