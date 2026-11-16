@@ -1,16 +1,13 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { BellRing, ShieldCheck, AlertTriangle, CheckCircle2, Search } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 
 interface DashboardHeaderProps {
   greeting: string;
   userName?: string;
-  onRefillRequest: () => void;
   onComplianceClick: () => void;
-  hasPendingRefill: boolean;
   onPartnerNoticeClick: () => void;
   stationStatus?: 'Operational' | 'Under Maintenance';
   isActivated?: boolean;
@@ -19,9 +16,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({
   greeting,
   userName,
-  onRefillRequest,
   onComplianceClick,
-  hasPendingRefill,
   onPartnerNoticeClick,
   stationStatus,
   isActivated = true,
@@ -57,27 +52,6 @@ export function DashboardHeader({
       </div>
       
       <div className="flex items-center gap-3 w-full sm:w-auto">
-        <Button
-          variant={isActivated && hasPendingRefill ? "secondary" : "default"}
-          className={cn(
-            "flex-1 sm:flex-none rounded-full h-11 px-6 font-bold shadow-lg transition-transform active:scale-95",
-            (!isActivated || !hasPendingRefill) && "bg-[#1A2C49] text-white hover:bg-[#1A2C49]/90"
-          )}
-          onClick={onRefillRequest}
-        >
-          {!isActivated ? (
-            <>
-              <Search className="mr-2 h-4 w-4" />
-              Find Water Provider
-            </>
-          ) : (
-            <>
-              <BellRing className={cn("mr-2 h-4 w-4", hasPendingRefill && "text-blue-500")} />
-              {hasPendingRefill ? 'Refill Status' : 'Request Refill'}
-            </>
-          )}
-        </Button>
-        
         {isActivated && (
             <Button
               variant="outline"

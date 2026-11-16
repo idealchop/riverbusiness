@@ -15,6 +15,8 @@ import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { ProgressTrack, RbButton } from '@/components/river/ui';
+import { formatSentAt, refillStep } from '@/lib/refill-display';
 import { StatCards } from '@/components/dashboard/StatCards';
 import { ConsumptionAnalytics } from '@/components/dashboard/ConsumptionAnalytics';
 import { InfoCards } from '@/components/dashboard/InfoCards';
@@ -91,7 +93,6 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
 
   const { data: activeRefills } = useCollection<RefillRequest>(activeRefillQuery);
   const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0 ? activeRefills[0] : null), [activeRefills]);
-  const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
   
   const branchUsersQuery = useMemoFirebase(() => {
     if (!firestore || !isParent || !user?.id) return null;
@@ -152,11 +153,15 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
         <DashboardHeader
           greeting={greeting}
           userName={user?.businessName}
-          hasPendingRefill={hasPendingRefill}
           stationStatus={waterStation?.status}
-          onRefillRequest={() => handleDispatchDialogEvent(hasPendingRefill ? 'open-refill-status' : 'request-asap-refill')}
           onComplianceClick={() => handleDispatchDialogEvent('open-compliance')}
           onPartnerNoticeClick={() => handleDispatchDialogEvent('open-partner-notice')}
+        />
+
+        <RefillRequest
+          active={activeRefillRequest}
+          onChooseDate={() => handleDispatchDialogEvent('open-request-refill')}
+          onSend={() => handleDispatchDialogEvent('request-asap-refill')}
         />
         
         <StatCards
@@ -202,5 +207,52 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
         ) : null}
       </div>
     </TooltipProvider>
+  );
+}
+
+function RefillRequest({
+  active,
+  onSend,
+  onChooseDate,
+}: {
+  active: RefillRequest | null;
+  onSend: () => void;
+  onChooseDate: () => void;
+}) {
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    const finished = () => setSending(false);
+    window.addEventListener('refill-request-finished', finished);
+    return () => window.removeEventListener('refill-request-finished', finished);
+  }, []);
+
+  if (active) {
+    return (
+      <section className="rounded-[24px] bg-[#EEF2F7] px-5 pb-4 pt-5">
+        <h2 className="text-[21px] font-extrabold leading-[1.2] tracking-[-0.025em]">Station notified</h2>
+        <p className="mt-1 text-[14px] font-semibold text-[#8A8A94]">{formatSentAt(active.requestedAt)}</p>
+        <ProgressTrack step={refillStep(active.status)} />
+      </section>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <RbButton
+        size="lg"
+        full
+        disabled={sending}
+        onClick={() => {
+          setSending(true);
+          onSend();
+        }}
+      >
+        {sending ? 'Sending…' : 'Request refill'}
+      </RbButton>
+      <RbButton variant="quiet" full onClick={onChooseDate}>
+        Choose date & quantity
+      </RbButton>
+    </div>
   );
 }
