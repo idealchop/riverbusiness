@@ -159,7 +159,6 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
 
         <RefillRequest
           active={activeRefillRequest}
-          onChooseDate={() => handleDispatchDialogEvent('open-request-refill')}
           onSend={() => handleDispatchDialogEvent('request-asap-refill')}
         />
         
@@ -212,11 +211,9 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
 function RefillRequest({
   active,
   onSend,
-  onChooseDate,
 }: {
   active: RefillRequest | null;
   onSend: () => void;
-  onChooseDate: () => void;
 }) {
   const [sending, setSending] = useState(false);
 
@@ -248,9 +245,6 @@ function RefillRequest({
         }}
       >
         {sending ? 'Sending…' : 'Request refill'}
-      </RbButton>
-      <RbButton variant="quiet" full onClick={onChooseDate}>
-        Choose date & quantity
       </RbButton>
     </div>
   );
