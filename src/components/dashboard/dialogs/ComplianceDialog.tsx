@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
@@ -305,42 +304,44 @@ export function ComplianceDialog({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl h-full flex flex-col sm:h-auto sm:max-h-[90vh] p-0 border-none shadow-2xl overflow-hidden rounded-2xl">
-          <DialogHeader className="p-8 pb-4 bg-muted/20 border-b">
-            <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-primary/10">
-                    <ShieldCheck className="h-5 w-5 text-primary" />
+        <DialogContent className="rb-app !inset-0 !flex !h-auto !max-h-none !w-auto !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-none bg-[#F5F5F7] p-0 shadow-none sm:!inset-auto sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[90vh] sm:!w-[calc(100%-2rem)] sm:!max-w-5xl sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-[28px] sm:shadow-2xl [&>button.absolute]:right-3 [&>button.absolute]:top-3 [&>button.absolute]:z-10 [&>button.absolute]:flex [&>button.absolute]:h-11 [&>button.absolute]:w-11 [&>button.absolute]:items-center [&>button.absolute]:justify-center [&>button.absolute]:rounded-full [&>button.absolute]:bg-white [&>button.absolute]:opacity-100 [&>button.absolute]:shadow-sm">
+          <DialogHeader className="shrink-0 space-y-0 border-b border-black/5 bg-[#F5F5F7] px-4 pb-4 pr-16 pt-4 text-left sm:px-8 sm:pt-6">
+            <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1A2C49] text-white">
+                    <ShieldCheck className="h-5 w-5" />
                 </div>
-                <DialogTitle className="text-2xl font-bold tracking-tight">Compliance Intelligence</DialogTitle>
+                <div className="min-w-0">
+                  <DialogTitle className="text-[22px] font-extrabold tracking-[-0.03em] text-[#0A0A0A] sm:text-[26px]">Quality</DialogTitle>
+                  <DialogDescription className="mt-0.5 whitespace-normal break-words text-[14px] font-semibold leading-snug text-[#8A8A94]">
+                    Water tests and sanitation for {waterStation?.name || 'your station'}.
+                  </DialogDescription>
+                </div>
             </div>
-            <DialogDescription className="text-sm font-medium">
-              Real-time monitoring of water quality tests and office sanitation records for {waterStation?.name || 'Assigned Station'}.
-            </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="px-6 flex-1 py-6">
-            <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex flex-col gap-6">
-              <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto sticky top-0 bg-background/80 backdrop-blur-md z-10 p-1 border rounded-xl shadow-inner">
-                <TabsTrigger value="compliance" className="rounded-lg data-[state=active]:shadow-sm">Station Reports</TabsTrigger>
-                <TabsTrigger value="sanitation" className="rounded-lg data-[state=active]:shadow-sm">Sanitation Logs</TabsTrigger>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-8 sm:py-6">
+            <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex flex-col gap-4">
+              <TabsList className="sticky top-0 z-10 grid h-12 w-full grid-cols-2 rounded-2xl border border-black/5 bg-white p-1 shadow-sm">
+                <TabsTrigger value="compliance" className="h-10 rounded-xl text-[14px] font-bold data-[state=active]:bg-[#1A2C49] data-[state=active]:text-white data-[state=active]:shadow-none">Station reports</TabsTrigger>
+                <TabsTrigger value="sanitation" className="h-10 rounded-xl text-[14px] font-bold data-[state=active]:bg-[#1A2C49] data-[state=active]:text-white data-[state=active]:shadow-none">Sanitation</TabsTrigger>
               </TabsList>
               
               <TabsContent value="compliance" className="mt-0 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   {cadenceSummaries.map(({ cadence, latest, issued }) => (
                     <button
                       key={cadence}
                       type="button"
                       onClick={() => setPeriodFilter(cadence)}
                       className={cn(
-                        "text-left rounded-2xl border p-4 transition-all",
-                        periodFilter === cadence ? "border-primary/40 bg-primary/5 shadow-sm" : "border-slate-100 bg-white hover:border-slate-200"
+                        "min-h-[44px] rounded-[20px] border p-4 text-left transition-all",
+                        periodFilter === cadence ? "border-[#1A2C49] bg-white shadow-sm" : "border-transparent bg-white hover:border-[#E4E4E7]"
                       )}
                     >
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{CADENCE_META[cadence].label}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">{latest?.periodLabel || 'On cycle'}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1">{CADENCE_META[cadence].blurb}</p>
-                      <div className="flex items-center justify-between mt-3">
+                      <p className="text-[12px] font-bold text-[#8A8A94]">{CADENCE_META[cadence].label}</p>
+                      <p className="mt-1 text-[16px] font-extrabold tracking-[-0.02em] text-[#0A0A0A]">{latest?.periodLabel || 'On cycle'}</p>
+                      <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">{CADENCE_META[cadence].blurb}</p>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                         <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest bg-green-50 text-green-700 border-green-200">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           {latest?.status || 'Passed'}
@@ -353,14 +354,14 @@ export function ComplianceDialog({
                   ))}
                 </div>
 
-                <Card className="border-none shadow-sm overflow-hidden bg-white">
-                  <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 bg-slate-50/50">
+                <Card className="overflow-hidden rounded-[24px] border-none bg-white shadow-sm">
+                  <CardHeader className="flex flex-col gap-3 bg-white pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <CardTitle className="text-lg">Station Quality Metrics</CardTitle>
-                      <CardDescription className="text-xs">Monthly, semi-annual, and annual DOH compliance documents — always on file.</CardDescription>
+                      <CardTitle className="text-[18px] font-extrabold tracking-[-0.02em]">Station reports</CardTitle>
+                      <CardDescription className="text-[13px] font-semibold text-[#8A8A94]">Monthly, semi-annual, and annual DOH documents.</CardDescription>
                     </div>
                     <Select value={periodFilter} onValueChange={(value) => setPeriodFilter(value as PeriodFilter)}>
-                      <SelectTrigger className="w-full md:w-[220px] h-9 text-xs font-bold uppercase tracking-tight bg-white">
+                      <SelectTrigger className="h-11 w-full rounded-2xl bg-[#F5F5F7] text-[14px] font-bold sm:w-[220px]">
                         <History className="mr-2 h-3.5 w-3.5" />
                         <SelectValue placeholder="Period Filter" />
                       </SelectTrigger>
@@ -428,52 +429,50 @@ export function ComplianceDialog({
                       </TableBody>
                     </Table>
 
-                    <div className="space-y-4 md:hidden p-4">
+                    <div className="space-y-3 p-3 md:hidden">
                       {paginatedComplianceReports.map(report => {
                         const issued = toReportDate(report.date);
                         return (
-                        <Card key={report.id} className="shadow-none border bg-muted/10">
-                          <CardContent className="p-4 space-y-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold text-sm">{report.name}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight mt-1">
+                        <div key={report.id} className="rounded-[20px] bg-[#F5F5F7] p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-[15px] font-extrabold leading-snug text-[#0A0A0A]">{report.name}</p>
+                                <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">
                                   {report.periodLabel}{issued ? ` · ${format(issued, 'MMM d, yyyy')}` : ''}
                                 </p>
                               </div>
                               <Badge variant="outline" className={cn(
-                                  'text-[9px] uppercase font-bold tracking-widest px-2 py-0.5',
-                                  report.status === 'Passed' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                                  'shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold',
+                                  report.status === 'Passed' ? 'border-green-200 bg-green-50 text-green-700' : 'border-yellow-200 bg-yellow-50 text-yellow-700'
                               )}>{report.status}</Badge>
                             </div>
-                            <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                            <Button variant="outline" className="mt-3 h-11 w-full rounded-full bg-white text-[14px] font-bold" onClick={() => {
                               if (report.reportUrl && report.reportUrl !== 'pending') onViewAttachment(report.reportUrl);
                               else setSelectedCertificate(report);
                             }}>
-                              <Eye className="mr-2 h-3.5 w-3.5" /> View Report Document
+                              <Eye className="mr-2 h-4 w-4" /> View report
                             </Button>
-                          </CardContent>
-                        </Card>
+                        </div>
                         );
                       })}
                     </div>
                   </CardContent>
-                  <CardFooter className="bg-slate-50/50 border-t py-4 flex items-center justify-between">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ledger {filteredReports.length} documents</div>
-                      <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))} disabled={complianceCurrentPage === 1}>Prev</Button>
-                          <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{complianceCurrentPage} / {totalCompliancePages || 1}</span>
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))} disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}>Next</Button>
+                  <CardFooter className="flex flex-col gap-3 border-t bg-white py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-[13px] font-semibold text-[#8A8A94]">{filteredReports.length} documents</div>
+                      <div className="flex w-full items-center gap-2 sm:w-auto">
+                          <Button variant="outline" className="h-11 flex-1 rounded-full text-[14px] font-bold sm:flex-none sm:px-5" onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))} disabled={complianceCurrentPage === 1}>Previous</Button>
+                          <span className="min-w-12 text-center text-[14px] font-bold text-[#0A0A0A]">{complianceCurrentPage} / {totalCompliancePages || 1}</span>
+                          <Button variant="outline" className="h-11 flex-1 rounded-full text-[14px] font-bold sm:flex-none sm:px-5" onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))} disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}>Next</Button>
                       </div>
                   </CardFooter>
                 </Card>
               </TabsContent>
               
               <TabsContent value="sanitation" className="mt-0 space-y-6">
-                <Card className="border-none shadow-sm overflow-hidden bg-white">
-                  <CardHeader className="bg-slate-50/50">
-                    <CardTitle className="text-lg">Office Service Log</CardTitle>
-                    <CardDescription className="text-xs">Professional monthly sanitation visits for your dispensers.</CardDescription>
+                <Card className="overflow-hidden rounded-[24px] border-none bg-white shadow-sm">
+                  <CardHeader className="bg-white">
+                    <CardTitle className="text-[18px] font-extrabold tracking-[-0.02em]">Sanitation visits</CardTitle>
+                    <CardDescription className="text-[13px] font-semibold text-[#8A8A94]">Monthly visits for your dispensers.</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     <Table className="hidden md:table">
@@ -517,62 +516,60 @@ export function ComplianceDialog({
                       </TableBody>
                     </Table>
 
-                    <div className="space-y-4 md:hidden p-4">
+                    <div className="space-y-3 p-3 md:hidden">
                       {sanitationLoading ? (
-                        <p className="text-center text-[10px] font-bold uppercase tracking-widest opacity-40 py-10">Loading...</p>
+                        <p className="py-10 text-center text-[14px] font-semibold text-[#8A8A94]">Loading visits…</p>
                       ) : paginatedSanitationVisits.map(visit => (
-                        <Card key={visit.id} className="shadow-none border bg-muted/10 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => setSelectedSanitationVisit(visit)}>
-                          <CardContent className="p-4 space-y-4">
-                              <div className="flex justify-between items-start">
-                                  <div>
-                                      <p className="font-bold text-sm">{format(new Date(visit.scheduledDate), 'MMM d, yyyy')}</p>
-                                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Officer: {visit.assignedTo}</p>
+                        <button key={visit.id} type="button" className="w-full rounded-[20px] bg-[#F5F5F7] p-4 text-left" onClick={() => setSelectedSanitationVisit(visit)}>
+                              <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                      <p className="text-[15px] font-extrabold text-[#0A0A0A]">{format(new Date(visit.scheduledDate), 'MMM d, yyyy')}</p>
+                                      <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">{visit.assignedTo}</p>
                                   </div>
                                   <Badge variant="outline" className={cn(
-                                      "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5",
-                                      visit.status === 'Completed' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
+                                      "shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold",
+                                      visit.status === 'Completed' ? "border-green-200 bg-green-50 text-green-700" : "border-blue-200 bg-blue-50 text-blue-700"
                                   )}>{visit.status}</Badge>
                               </div>
-                              <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest">
-                                  Open Analysis Report
-                              </Button>
-                          </CardContent>
-                        </Card>
+                              <span className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-white text-[14px] font-bold text-[#0A0A0A]">
+                                  View report
+                              </span>
+                        </button>
                       ))}
                     </div>
                   </CardContent>
-                  <CardFooter className="bg-slate-50/50 border-t py-4 flex items-center justify-between">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total {sanitationVisits?.length || 0} visits</div>
-                      <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))} disabled={sanitationCurrentPage === 1}>Prev</Button>
-                          <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{sanitationCurrentPage} / {totalSanitationPages || 1}</span>
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))} disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}>Next</Button>
+                  <CardFooter className="flex flex-col gap-3 border-t bg-white py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-[13px] font-semibold text-[#8A8A94]">{sanitationVisits?.length || 0} visits</div>
+                      <div className="flex w-full items-center gap-2 sm:w-auto">
+                          <Button variant="outline" className="h-11 flex-1 rounded-full text-[14px] font-bold sm:flex-none sm:px-5" onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))} disabled={sanitationCurrentPage === 1}>Previous</Button>
+                          <span className="min-w-12 text-center text-[14px] font-bold text-[#0A0A0A]">{sanitationCurrentPage} / {totalSanitationPages || 1}</span>
+                          <Button variant="outline" className="h-11 flex-1 rounded-full text-[14px] font-bold sm:flex-none sm:px-5" onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))} disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}>Next</Button>
                       </div>
                   </CardFooter>
                 </Card>
               </TabsContent>
             </Tabs>
-          </ScrollArea>
+          </div>
           
-          <div className="p-6 pt-4 border-t bg-muted/20 flex justify-end">
+          <div className="shrink-0 border-t border-black/5 bg-white px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-8">
             <DialogClose asChild>
-                <Button variant="outline" className="font-bold uppercase tracking-widest text-[10px] rounded-xl px-8 h-10 border-slate-200 shadow-sm">Dismiss</Button>
+                <Button variant="outline" className="h-12 w-full rounded-full text-[15px] font-bold sm:ml-auto sm:w-auto sm:px-8">Close</Button>
             </DialogClose>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!selectedCertificate} onOpenChange={() => setSelectedCertificate(null)}>
-        <DialogContent className="sm:max-w-lg rounded-[2rem] border-none p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-4 bg-slate-900 text-white">
+        <DialogContent className="rb-app !left-0 !top-0 !flex !h-[100dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-none bg-white p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[90vh] sm:!w-[calc(100%-2rem)] sm:!max-w-lg sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-[28px] [&>button.absolute]:right-3 [&>button.absolute]:top-3 [&>button.absolute]:flex [&>button.absolute]:h-11 [&>button.absolute]:w-11 [&>button.absolute]:items-center [&>button.absolute]:justify-center [&>button.absolute]:rounded-full [&>button.absolute]:bg-[#F5F5F7] [&>button.absolute]:opacity-100">
+          <DialogHeader className="space-y-0 px-5 pb-2 pr-16 pt-5 text-left">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-white/10">
-                <FlaskConical className="h-5 w-5 text-sky-300" />
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1A2C49] text-white">
+                <FlaskConical className="h-5 w-5" />
               </div>
-              <div>
-                <DialogTitle className="text-lg font-bold">{selectedCertificate?.name}</DialogTitle>
-                <DialogDescription className="text-slate-400 text-xs font-medium">
-                  {selectedCertificate?.periodLabel} · Result {selectedCertificate?.resultId}
+              <div className="min-w-0">
+                <DialogTitle className="text-[18px] font-extrabold leading-snug tracking-[-0.02em]">{selectedCertificate?.name}</DialogTitle>
+                <DialogDescription className="mt-0.5 text-[13px] font-semibold text-[#8A8A94]">
+                  {selectedCertificate?.periodLabel} · {selectedCertificate?.resultId}
                 </DialogDescription>
               </div>
             </div>
@@ -620,9 +617,9 @@ export function ComplianceDialog({
               Issued {selectedCertificate && toReportDate(selectedCertificate.date) ? format(toReportDate(selectedCertificate.date) as Date, 'MMMM d, yyyy') : 'on file'} for {waterStation?.name || 'assigned station'}.
             </p>
           </div>
-          <DialogFooter className="p-6 pt-0">
+          <DialogFooter className="px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-0">
             <DialogClose asChild>
-              <Button variant="outline" className="w-full rounded-xl font-bold">Close</Button>
+              <Button variant="outline" className="h-12 w-full rounded-full text-[15px] font-bold">Close</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -630,40 +627,40 @@ export function ComplianceDialog({
       
       {/* Individual Report Detail View */}
       <Dialog open={!!selectedSanitationVisit} onOpenChange={() => setSelectedSanitationVisit(null)}>
-        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[95vh] flex flex-col p-0 border-none shadow-3xl overflow-hidden rounded-[2rem]">
-            <DialogHeader className="p-8 pb-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-b-4 border-primary">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
-                            <ClipboardCheck className="h-6 w-6 text-primary-light" />
+        <DialogContent className="rb-app !left-0 !top-0 !flex !h-[100dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-none bg-[#F5F5F7] p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-auto sm:!max-h-[90vh] sm:!w-[calc(100%-2rem)] sm:!max-w-4xl sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-[28px] [&>button.absolute]:right-3 [&>button.absolute]:top-3 [&>button.absolute]:flex [&>button.absolute]:h-11 [&>button.absolute]:w-11 [&>button.absolute]:items-center [&>button.absolute]:justify-center [&>button.absolute]:rounded-full [&>button.absolute]:bg-white [&>button.absolute]:opacity-100">
+            <DialogHeader className="shrink-0 space-y-0 border-b border-black/5 bg-[#F5F5F7] px-4 pb-4 pr-16 pt-4 text-left sm:px-8 sm:pt-6">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1A2C49] text-white">
+                            <ClipboardCheck className="h-5 w-5" />
                         </div>
-                        <div>
-                            <DialogTitle className="text-2xl font-black tracking-tight uppercase">Sanitation Intelligence Report</DialogTitle>
-                            <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                                {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'MMMM do, yyyy') : ''} • Ref: SAN-{selectedSanitationVisit?.id.substring(0, 8).toUpperCase()}
+                        <div className="min-w-0">
+                            <DialogTitle className="text-[20px] font-extrabold tracking-[-0.03em] sm:text-[24px]">Sanitation report</DialogTitle>
+                            <DialogDescription className="mt-0.5 text-[13px] font-semibold text-[#8A8A94]">
+                                {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'MMMM d, yyyy') : ''}
                             </DialogDescription>
                         </div>
                     </div>
                     {selectedSanitationVisit?.status === 'Completed' && (
-                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-black uppercase text-[10px] tracking-widest h-7 px-4">
-                            Finalized
+                        <Badge className="mt-1 shrink-0 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-[12px] font-bold text-green-700">
+                            Done
                         </Badge>
                     )}
                 </div>
             </DialogHeader>
 
-             <div className="flex-1 overflow-y-auto px-8 bg-slate-50/50">
-              <div className="py-8 space-y-8 max-w-3xl mx-auto">
+             <div className="min-h-0 flex-1 overflow-y-auto bg-[#F5F5F7] px-4 sm:px-8">
+              <div className="mx-auto max-w-3xl space-y-5 py-4 sm:space-y-8 sm:py-8">
                   
                   {/* Results Hero Section */}
                   {selectedSanitationVisit?.status === 'Completed' ? (
-                      <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden group">
-                          <CardContent className="p-8">
-                              <div className="grid md:grid-cols-2 gap-8 items-center">
+                      <Card className="overflow-hidden rounded-[24px] border-none bg-white shadow-sm">
+                          <CardContent className="p-5 sm:p-8">
+                              <div className="grid items-center gap-6 md:grid-cols-2 md:gap-8">
                                   <div className="space-y-4">
                                       <div className="space-y-1">
-                                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Quality Assessment</Label>
-                                          <p className={cn("text-4xl font-black tracking-tighter uppercase", sanitationReportStats.statusColor)}>
+                                          <Label className="text-[13px] font-semibold text-[#8A8A94]">Quality assessment</Label>
+                                          <p className={cn("text-[32px] font-extrabold leading-none tracking-[-0.03em] sm:text-4xl", sanitationReportStats.statusColor)}>
                                               {sanitationReportStats.overallStatus}
                                           </p>
                                       </div>
@@ -816,18 +813,16 @@ export function ComplianceDialog({
               </div>
             </div>
             
-            <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="w-full md:w-auto">
-                  {selectedSanitationVisit?.reportUrl && (
-                      <Button variant="outline" className="w-full md:w-auto rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-sm" asChild>
+            <DialogFooter className="flex shrink-0 flex-col gap-2 border-t bg-white px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end sm:px-8">
+                {selectedSanitationVisit?.reportUrl ? (
+                      <Button variant="outline" className="h-12 w-full rounded-full text-[15px] font-bold sm:w-auto sm:px-6" asChild>
                           <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
-                              <Eye className="mr-2 h-4 w-4" /> View Full Certificate
+                              <Eye className="mr-2 h-4 w-4" /> Certificate
                           </a>
                       </Button>
-                  )}
-                </div>
+                ) : null}
                 <DialogClose asChild>
-                    <Button variant="ghost" className="w-full md:w-auto rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900">Close Report</Button>
+                    <Button className="h-12 w-full rounded-full bg-[#1A2C49] text-[15px] font-bold text-white hover:bg-[#1A2C49]/90 sm:w-auto sm:px-8">Close</Button>
                 </DialogClose>
             </DialogFooter>
         </DialogContent>
