@@ -159,12 +159,13 @@ function SignupContent() {
                                     {...register('password')} 
                                     disabled={isSubmitting}
                                 />
-                                <button 
+                                <button
                                     type="button"
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-slate-400 hover:text-primary hover:bg-transparent transition-colors flex items-center justify-center"
-                                    onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center text-slate-400 hover:text-primary"
+                                    onClick={() => setShowPassword((value) => !value)}
                                 >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
                             </div>
                             {errors.password && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.password.message}</p>}

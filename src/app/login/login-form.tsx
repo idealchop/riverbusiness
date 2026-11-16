@@ -7,6 +7,7 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'fir
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 import { RiverMark } from '@/components/river/ui';
 import {
   confirmPhoneCode,
@@ -291,18 +292,25 @@ export function LoginForm({ devAdminEmails = [] }: { devAdminEmails?: readonly s
                       Forgot password?
                     </button>
                   </div>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className={fieldClass}
-                  />
-                  <button type="button" className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setShowPassword((value) => !value)}>
-                    {showPassword ? 'Hide password' : 'Show password'}
-                  </button>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      className={`${fieldClass} pr-14`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center text-slate-400 hover:text-primary"
+                      onClick={() => setShowPassword((value) => !value)}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
               <button type="submit" className={submitClass} disabled={busy}>
