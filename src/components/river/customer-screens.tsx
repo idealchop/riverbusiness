@@ -441,6 +441,7 @@ export function CustomerHeader({
         <MessageCircle size={20} strokeWidth={1.85} />
       </IconButton>
       {notification}
+      <AppLauncher />
     </header>
   );
 }
