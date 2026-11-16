@@ -51,11 +51,11 @@ export function DashboardHeader({
         </div>
       </div>
       
-      <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="flex items-center gap-3">
         {isActivated && (
             <Button
               variant="outline"
-              className="flex-1 sm:flex-none rounded-full h-11 px-6 font-bold bg-background shadow-sm border-slate-200 hover:bg-slate-50 transition-transform active:scale-95"
+              className="rounded-full h-11 px-6 font-bold bg-background shadow-sm border-slate-200 hover:bg-slate-50 transition-transform active:scale-95"
               onClick={onComplianceClick}
             >
               <ShieldCheck className="h-4 w-4 sm:mr-2 text-primary" />
