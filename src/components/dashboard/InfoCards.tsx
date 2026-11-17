@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { 
   Dialog, 
   DialogContent, 
@@ -104,28 +103,13 @@ export function InfoCards() {
     <div className="h-full">
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
-          <Card className="h-full cursor-pointer group transition-all border-none bg-white overflow-hidden flex flex-col active:scale-[0.98] shadow-none">
-            <div className="relative aspect-[3/3.6] w-full flex-1">
-                <Image 
-                    src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fnew-features.png?alt=media&token=59678e26-137b-4d05-8501-14267e15fd44" 
-                    alt="New Features" 
-                    fill 
-                    priority
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    data-ai-hint="app upgrade"
-                />
-                
-                <div className="absolute top-0 left-0 right-0 p-8 pt-10 z-20 space-y-2">
-                    <h3 className="text-4xl font-black tracking-tight text-primary leading-tight">
-                        Your app is <br/>upgraded!
-                    </h3>
-                    <p className="text-sm font-bold text-primary uppercase tracking-[0.2em] flex items-center gap-2 group-hover:translate-x-1 transition-all">
-                        See features <ArrowRight className="h-4 w-4" />
-                    </p>
-                </div>
-            </div>
-          </Card>
+          <button type="button" className="flex w-full items-center gap-3 rounded-[24px] bg-white px-[18px] py-4 text-left shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15.5px] font-extrabold tracking-[-0.01em] text-[#0A0A0A]">What’s new</span>
+              <span className="mt-0.5 block text-[13px] font-medium text-[#8A8A94]">See the latest in River Business</span>
+            </span>
+            <ChevronRight className="shrink-0 text-[#B4B4BC]" size={20} strokeWidth={1.75} />
+          </button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-4xl rounded-[2rem] md:rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white max-h-[92vh] sm:max-h-[85vh] flex flex-col">
           <DialogHeader className="sr-only">

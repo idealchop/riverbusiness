@@ -1,100 +1,19 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Delivery, AppUser } from '@/lib/types';
-import { format, subDays, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear, isWithinInterval, startOfMonth } from 'date-fns';
-import { History, Users, Info, BarChart3 } from 'lucide-react';
+import { getWeekOfMonth, endOfMonth, isWithinInterval, startOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-// Custom Bar Shape for "Water Tank" look in charts
-const LiquidBar = (props: any) => {
-    const { x, y, width, height } = props;
-
-    if (!height || height <= 0) return null;
-
-    return (
-        <g>
-            {/* The main liquid fill with gradient */}
-            <rect 
-                x={x} 
-                y={y} 
-                width={width} 
-                height={height} 
-                fill="url(#barLiquidGradient)" 
-                rx={6} 
-                className="transition-all duration-500 ease-out"
-            />
-            
-            {/* Glossy highlight on the side */}
-            <rect 
-                x={x + 2} 
-                y={y + 4} 
-                width={width / 4} 
-                height={height - 8} 
-                fill="white" 
-                fillOpacity="0.15" 
-                rx={2} 
-            />
-
-            {/* Top surface highlight */}
-            <rect 
-                x={x} 
-                y={y} 
-                width={width} 
-                height={3} 
-                fill="white" 
-                fillOpacity="0.3" 
-                rx={1} 
-            />
-
-            {/* Tiny animated-looking bubbles */}
-            <circle cx={x + width * 0.3} cy={y + height * 0.7} r={1.5} fill="white" fillOpacity="0.4" className="animate-pulse" />
-            <circle cx={x + width * 0.7} cy={y + height * 0.4} r={1} fill="white" fillOpacity="0.3" style={{ animationDelay: '0.5s' }} className="animate-pulse" />
-            <circle cx={x + width * 0.5} cy={y + height * 0.2} r={1.2} fill="white" fillOpacity="0.2" style={{ animationDelay: '1s' }} className="animate-pulse" />
-        </g>
-    );
-};
-
-const CustomTooltip = ({ active, payload, label, isParent }: { active?: boolean, payload?: any[], label?: string, isParent?: boolean }) => {
-    if (active && payload && payload.length) {
-        const data = payload[0].payload;
-        const totalLiters = data.value || 0;
-        const totalContainers = data.containers || 0;
-        const branchBreakdown = data.branchBreakdown || {};
-
-        return (
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xl min-w-[200px] animate-in fade-in zoom-in-95 duration-200">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">{data.name}</p>
-                <div className="space-y-1 mb-3">
-                    <p className="text-2xl font-black text-slate-900">{totalLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
-                    <p className="text-xs font-bold text-primary uppercase tracking-tighter">{totalContainers.toLocaleString()} Total Containers</p>
-                </div>
-                {isParent && Object.keys(branchBreakdown).length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
-                            <Users className="h-3 w-3" /> Branch Activity
-                        </p>
-                        <ul className="space-y-2">
-                            {Object.entries(branchBreakdown).map(([branchName, branchData]: [string, any]) => (
-                                <li key={branchName} className="flex justify-between items-center text-xs group">
-                                    <span className="text-muted-foreground group-hover:text-slate-900 transition-colors font-medium truncate pr-4">{branchName}</span>
-                                    <span className="font-bold text-slate-900 shrink-0">{branchData.liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-            </div>
-        );
-    }
-    return null;
-};
+interface ChartPoint {
+  name: string;
+  displayName: string;
+  value: number;
+  containers: number;
+  branchBreakdown: Record<string, { liters: number; containers: number }>;
+}
 
 interface ConsumptionAnalyticsProps {
   deliveries: Delivery[] | null;
@@ -104,7 +23,7 @@ interface ConsumptionAnalyticsProps {
 }
 
 export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = false, branches = [] }: ConsumptionAnalyticsProps) {
-  const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly' | 'yearly' | '2025'>('monthly');
+  const [selected, setSelected] = useState<number | null>(null);
 
   const branchIdToNameMap = useMemo(() => {
     if (!branches) return {};
@@ -113,169 +32,111 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         return acc;
     }, {} as Record<string, string>);
   }, [branches]);
-  
+
   const consumptionChartData = useMemo(() => {
     const sourceDeliveries = deliveries || [];
     const now = new Date();
-    let cycleStart: Date;
-    let cycleEnd: Date;
-    
-    switch (analyticsFilter) {
-      case 'weekly':
-        cycleStart = subDays(now, 6); cycleEnd = now; break;
-      case 'monthly':
-        cycleStart = startOfMonth(now); cycleEnd = endOfMonth(now); break;
-      case 'yearly':
-        cycleStart = startOfYear(now); cycleEnd = endOfYear(now); break;
-      case '2025':
-        cycleStart = new Date(2025, 0, 1); cycleEnd = new Date(2025, 11, 31); break;
-      default:
-        cycleStart = startOfMonth(now); cycleEnd = endOfMonth(now);
-    }
-    
-    const filteredDeliveries = sourceDeliveries.filter(d => {
-        const deliveryDate = new Date(d.date);
-        return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
+    const cycleStart = startOfMonth(now);
+    const cycleEnd = endOfMonth(now);
+    const filteredDeliveries = sourceDeliveries.filter((delivery) => {
+      const deliveryDate = new Date(delivery.date);
+      return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
 
-    if (analyticsFilter === 'weekly') {
-      const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
-      return last7Days.map((date) => {
-          const deliveriesOnDay = filteredDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-          const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
-          const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
-          const branchBreakdown: { [key: string]: { liters: number; containers: number } } = {};
-          if (isParent) {
-            deliveriesOnDay.forEach(d => {
-              const branchName = branchIdToNameMap[d.userId] || `Unknown Branch`;
-              if (!branchBreakdown[branchName]) branchBreakdown[branchName] = { liters: 0, containers: 0 };
-              branchBreakdown[branchName].liters += (d.liters ?? containerToLiter(d.volumeContainers));
-              branchBreakdown[branchName].containers += d.volumeContainers;
-            });
-          }
-          return {
-              name: format(date, 'MMM d'),
-              displayName: format(date, 'EEE').charAt(0),
-              value: totalLiters,
-              containers: totalContainers,
-              branchBreakdown,
-          };
-      });
-    } else if (analyticsFilter === 'monthly') {
-        const weeksInMonth = getWeekOfMonth(endOfMonth(now));
-        const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
-          name: `Week ${i + 1}`, displayName: `W${i + 1}`, value: 0, containers: 0, branchBreakdown: {} as any,
-        }));
-        filteredDeliveries.forEach(d => {
-          const deliveryDate = new Date(d.date);
-          const weekOfMonth = getWeekOfMonth(deliveryDate) - 1;
-          if(weeklyData[weekOfMonth]) {
-              const liters = d.liters ?? containerToLiter(d.volumeContainers);
-              weeklyData[weekOfMonth].value += liters;
-              weeklyData[weekOfMonth].containers += d.volumeContainers;
-              if (isParent) {
-                const branchName = branchIdToNameMap[d.userId] || `Branch`;
-                if (!weeklyData[weekOfMonth].branchBreakdown[branchName]) weeklyData[weekOfMonth].branchBreakdown[branchName] = { liters: 0, containers: 0 };
-                weeklyData[weekOfMonth].branchBreakdown[branchName].liters += liters;
-                weeklyData[weekOfMonth].branchBreakdown[branchName].containers += d.volumeContainers;
-              }
-          }
-        });
-        return weeklyData;
-    } else {
-        const year = analyticsFilter === '2025' ? 2025 : getYear(now);
-        const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-            name: format(new Date(year, i), 'MMMM'), displayName: format(new Date(year, i), 'MMM'), value: 0, containers: 0, branchBreakdown: {} as any,
-        }));
-        filteredDeliveries.forEach(d => {
-            const deliveryDate = new Date(d.date);
-            const month = getMonth(deliveryDate);
-            const liters = d.liters ?? containerToLiter(d.volumeContainers);
-            monthlyData[month].value += liters;
-            monthlyData[month].containers += d.volumeContainers;
-            if (isParent) {
-              const branchName = branchIdToNameMap[d.userId] || `Branch`;
-              if (!monthlyData[month].branchBreakdown[branchName]) monthlyData[month].branchBreakdown[branchName] = { liters: 0, containers: 0 };
-              monthlyData[month].branchBreakdown[branchName].liters += liters;
-              monthlyData[month].branchBreakdown[branchName].containers += d.volumeContainers;
-            }
-        });
-        return monthlyData;
-    }
-  }, [deliveries, analyticsFilter, isParent, branchIdToNameMap]);
+    const weeksInMonth = getWeekOfMonth(endOfMonth(now));
+    const weeklyData: ChartPoint[] = Array.from({ length: weeksInMonth }, (_, index) => ({
+      name: `Week ${index + 1}`,
+      displayName: `W${index + 1}`,
+      value: 0,
+      containers: 0,
+      branchBreakdown: {},
+    }));
+
+    filteredDeliveries.forEach((delivery) => {
+      const weekOfMonth = getWeekOfMonth(new Date(delivery.date)) - 1;
+      const bucket = weeklyData[weekOfMonth];
+      if (!bucket) return;
+      const liters = delivery.liters ?? containerToLiter(delivery.volumeContainers);
+      bucket.value += liters;
+      bucket.containers += delivery.volumeContainers;
+      if (isParent) {
+        const branchName = branchIdToNameMap[delivery.userId] || 'Branch';
+        if (!bucket.branchBreakdown[branchName]) bucket.branchBreakdown[branchName] = { liters: 0, containers: 0 };
+        bucket.branchBreakdown[branchName].liters += liters;
+        bucket.branchBreakdown[branchName].containers += delivery.volumeContainers;
+      }
+    });
+
+    return weeklyData;
+  }, [deliveries, isParent, branchIdToNameMap]);
+
+  const max = Math.max(...consumptionChartData.map((point) => point.value), 0);
+  const empty = max <= 0;
+  const active = selected !== null ? consumptionChartData[selected] : null;
 
   return (
-    <Card className="border-none shadow-sm bg-white overflow-hidden">
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-8 bg-muted/10 border-b border-slate-100">
+    <section className="rounded-[24px] bg-white px-[18px] py-5 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <CardTitle className="text-xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            {isParent ? 'Multi-Branch Analytics' : 'Consumption History'}
-          </CardTitle>
+          <p className="text-[13px] font-semibold text-[#8A8A94]">Consumption</p>
+          <p className="mt-1.5 text-[20px] font-extrabold leading-[1.2] tracking-[-0.02em] text-[#1A2C49]">This month</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as any)}>
-            <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs font-bold uppercase tracking-tight bg-white border-slate-200">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weekly">This Week</SelectItem>
-              <SelectItem value="monthly">This Month</SelectItem>
-              <SelectItem value="yearly">This Year</SelectItem>
-              <SelectItem value="2025">2025 Full</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={onHistoryClick} variant="outline" size="sm" className="h-9 font-bold uppercase tracking-widest text-[10px] bg-white border-slate-200">
-            <History className="h-3.5 w-3.5 mr-1.5" />
-            History
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="h-80 pt-10">
-        <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={consumptionChartData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                    <linearGradient id="barLiquidGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary-light))" />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" />
-                    </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                    dataKey="displayName" 
-                    stroke="#94a3b8" 
-                    fontSize={10} 
-                    fontWeight={700}
-                    tickLine={false} 
-                    axisLine={false} 
-                    dy={10}
-                />
-                <YAxis 
-                    stroke="#94a3b8" 
-                    fontSize={10} 
-                    fontWeight={700}
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(value) => `${(value as number).toLocaleString()}`}
-                />
-                <Tooltip
-                    cursor={{ fill: '#f8fafc' }}
-                    content={<CustomTooltip isParent={isParent} />}
-                />
-                <Bar 
-                    dataKey="value" 
-                    shape={<LiquidBar />}
-                    barSize={isParent ? 32 : 40}
-                />
-            </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-      <CardFooter className="bg-muted/5 border-t border-slate-100 py-4">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Info className="h-3 w-3" />
-            Hover over the bars to see {isParent ? 'branch-specific breakdowns' : 'container volume detail'}.
+        <button
+          type="button"
+          onClick={onHistoryClick}
+          className="inline-flex h-9 items-center rounded-xl bg-white px-3.5 text-[13.5px] font-bold text-[#0A0A0A] shadow-[inset_0_0_0_1.5px_#E4E4E7]"
+        >
+          History
+        </button>
+      </div>
+
+      <div className="mt-3 flex h-[120px] items-end gap-2.5 px-1 pt-2" role="img" aria-label="Consumption this month">
+        {consumptionChartData.map((point, index) => {
+          const height = empty ? 8 : Math.max(8, (point.value / max) * 100);
+          const on = selected === index;
+          return (
+            <button
+              key={point.displayName}
+              type="button"
+              className="flex h-full flex-1 items-end"
+              aria-label={`${point.name}, ${Math.round(point.value)} liters`}
+              aria-pressed={on}
+              onClick={() => setSelected(on ? null : index)}
+            >
+              <span
+                className={cn('block w-full rounded-t-[6px] rounded-b-[2px]', point.value > 0 ? 'bg-[#1A2C49]' : 'bg-[#EEF2F7]', on && 'outline outline-2 outline-offset-2 outline-[#1A2C49]/30')}
+                style={{ height: `${height}%`, minHeight: 6 }}
+              />
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex justify-between text-[11px] font-semibold text-[#B4B4BC]">
+        {consumptionChartData.map((point) => (
+          <span key={point.displayName} className="flex-1 text-center">{point.displayName}</span>
+        ))}
+      </div>
+
+      {active ? (
+        <div className="mt-2">
+          <p className="text-[13px] font-semibold text-[#8A8A94]">
+            {active.name} · {active.value.toLocaleString('en-PH', { maximumFractionDigits: 0 })} L
+            {active.containers > 0 ? ` · ${active.containers.toLocaleString('en-PH')} containers` : ''}
           </p>
-      </CardFooter>
-    </Card>
+          {isParent && Object.keys(active.branchBreakdown).length > 0 ? (
+            <ul className="mt-1 space-y-1">
+              {Object.entries(active.branchBreakdown).map(([branchName, branchData]) => (
+                <li key={branchName} className="flex justify-between text-[13px] font-semibold text-[#8A8A94]">
+                  <span className="truncate pr-3">{branchName}</span>
+                  <span className="shrink-0 text-[#1A2C49]">{branchData.liters.toLocaleString('en-PH', { maximumFractionDigits: 0 })} L</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : empty ? (
+        <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">No deliveries recorded this month.</p>
+      ) : null}
+    </section>
   );
 }

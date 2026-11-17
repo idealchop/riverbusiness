@@ -1,90 +1,44 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { 
-  History, 
-  Edit, 
-  Calendar as CalendarIcon, 
-  Info, 
-  Users, 
-  Droplets, 
-  MapPin, 
-  BarChart3, 
-  HelpCircle, 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowRight, 
-  Repeat, 
-  ShieldCheck, 
-  Clock, 
-  CheckCircle2,
-  X,
-  ChevronRight,
-  Loader2,
-  Save,
-  Hourglass
-} from 'lucide-react';
+import React, { useMemo } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AppUser, Delivery } from '@/lib/types';
 import { consumptionCharge, deliveriesInRange, litersInRange, manilaMonthRange, manilaParts, previousManilaMonth } from '@/lib/billing-period';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-
-const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+import { formatPeso } from '@/lib/format-money';
+import { autoRefillLabel } from '@/lib/refill-display';
 
 /**
- * A sophisticated vertical water tank visual component.
+ * Softened water-tank mark. Fill still follows remaining credit,
+ * and unlimited or pending plans stay full.
  */
-const WaterTankVisual = ({ percentage, isUnlimited = false, isPending = false }: { percentage: number, isUnlimited?: boolean, isPending?: boolean }) => {
-  return (
-    <div className="relative w-16 h-28 bg-slate-50 rounded-[1.5rem] border-2 border-slate-100 overflow-hidden shadow-inner shrink-0 group">
-      {/* Background reflection */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none z-20" />
-      
-      {/* Water Fill */}
-      <div 
-        className={cn(
-            "absolute bottom-0 left-0 right-0 bg-gradient-to-t transition-all duration-1000 ease-in-out z-10",
-            (isUnlimited || isPending) ? "from-blue-600 to-blue-400 h-full" : "from-primary to-primary-light"
-        )}
-        style={{ height: (isUnlimited || isPending) ? '100%' : `${Math.max(2, percentage)}%` }}
-      >
-        {/* Surface Wave Effect */}
-        {!isUnlimited && !isPending && (
-            <div className="absolute -top-1 left-0 right-0 h-2 bg-white/20 animate-pulse blur-[1px]" />
-        )}
-        
-        {/* Internal Bubbles with enhanced movement */}
-        <div className="absolute bottom-2 left-4 w-1 h-1 rounded-full bg-white/40 animate-bubble-rise" style={{ animationDelay: '0s' }} />
-        <div className="absolute bottom-6 left-8 w-1.5 h-1.5 rounded-full bg-white/30 animate-bubble-rise" style={{ animationDelay: '1.5s' }} />
-        <div className="absolute bottom-1 left-10 w-1 h-1 rounded-full bg-white/20 animate-bubble-rise" style={{ animationDelay: '3s' }} />
-        <div className="absolute bottom-8 left-3 w-2 h-2 rounded-full bg-white/20 animate-bubble-rise" style={{ animationDelay: '0.8s' }} />
-        <div className="absolute bottom-3 left-6 w-1 h-1 rounded-full bg-white/30 animate-bubble-rise" style={{ animationDelay: '2.2s' }} />
-      </div>
+function WaterTankVisual({ percentage, isUnlimited = false, isPending = false }: { percentage: number; isUnlimited?: boolean; isPending?: boolean }) {
+  const full = isUnlimited || isPending;
+  const level = full ? 100 : Math.max(2, Math.min(100, percentage));
 
-      {/* Glass Highlight */}
-      <div className="absolute top-4 left-3 w-2 h-12 bg-white/30 rounded-full blur-[2px] z-30" />
-      
-      {/* Scale markers */}
-      <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-between py-4 z-30 opacity-20 group-hover:opacity-40 transition-opacity">
-          {[1,2,3,4].map(i => <div key={i} className="w-1.5 h-0.5 bg-slate-400" />)}
+  return (
+    <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-[20px] bg-[#E6EDF5] shadow-[inset_0_0_0_1px_rgba(26,44,73,0.06)]" aria-hidden>
+      <div
+        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#6A86A8] to-[#C9D7E8] transition-all duration-700 ease-out"
+        style={{ height: `${level}%` }}
+      >
+        <span className="absolute -top-px left-0 right-0 h-[3px] bg-white/45" />
+        <span className="absolute bottom-3 left-3.5 h-1 w-1 rounded-full bg-white/60" />
+        <span className="absolute bottom-6 left-7 h-1.5 w-1.5 rounded-full bg-white/40" />
+        <span className="absolute bottom-2 left-6 h-1 w-1 rounded-full bg-white/30" />
       </div>
+      <span className="pointer-events-none absolute left-2 top-3 h-10 w-[5px] rounded-full bg-white/55" />
     </div>
   );
-};
+}
+
+const card = 'rounded-[24px] bg-white px-[18px] py-5 shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]';
+const label = 'text-[13px] font-semibold text-[#8A8A94]';
+const value = 'text-[22px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#1A2C49] tabular-nums';
+const quiet = 'text-[13.5px] font-bold text-[#1A2C49]';
 
 interface StatCardsProps {
   user: AppUser | null;
@@ -106,18 +60,12 @@ export function StatCards({
   parentCalculatedBalances,
   onConsumptionHistoryClick,
   onSaveLitersClick,
-  onUpdateScheduleClick,
   onRequestRefillClick,
 }: StatCardsProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isConfirmingToggle, setIsConfirmingToggle] = React.useState(false);
   const [toggleTargetState, setToggleTargetState] = React.useState<boolean | null>(null);
-  
-  const [localDay, setLocalDay] = useState(user?.customPlanDetails?.deliveryDay || 'Monday');
-  const [localTime, setLocalTime] = useState(user?.customPlanDetails?.deliveryTime || '09:00');
-  const [isUpdatingLogistics, setIsUpdatingLogistics] = useState(false);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const consumptionDetails = useMemo(() => {
     const now = new Date();
@@ -215,24 +163,6 @@ export function StatCards({
     });
   };
 
-  const handleSaveLogistics = async () => {
-    if (!firestore || !user?.id) return;
-    setIsUpdatingLogistics(true);
-    try {
-        const userRef = doc(firestore, 'users', user.id);
-        await updateDoc(userRef, {
-            'customPlanDetails.deliveryDay': localDay,
-            'customPlanDetails.deliveryTime': localTime,
-        });
-        toast({ title: 'Cycle Adjusted', description: 'Your fulfillment window has been updated.' });
-        setIsPopoverOpen(false);
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Update failed' });
-    } finally {
-        setIsUpdatingLogistics(false);
-    }
-  };
-
   const onSwitchChange = (checked: boolean) => {
     if (!isActivated) {
         toast({
@@ -259,318 +189,133 @@ export function StatCards({
       return Math.max(0, Math.min(100, (consumptionDetails.currentBalance / consumptionDetails.totalLitersForMonth) * 100));
   }, [consumptionDetails]);
 
+  const unitPrice = user?.plan?.price ? user.plan.price * 19.5 : 65;
+  const usedLabel = `${consumptionDetails.consumedLitersThisMonth.toLocaleString('en-PH', { maximumFractionDigits: 0 })} L`;
+  const trendCopy = consumptionDetails.trend === 'same'
+    ? 'Same as last month'
+    : consumptionDetails.trend === 'increase'
+      ? `${Math.round(consumptionDetails.diff)}% more than last month`
+      : `${Math.round(consumptionDetails.diff)}% less than last month`;
+  const scheduleLabel = autoRefillLabel({
+    ...user,
+    customPlanDetails: { ...planDetails, autoRefillEnabled: autoRefill },
+  } as AppUser);
+
+  const openSetup = () => {
+    if (isActivated) onRequestRefillClick();
+    else window.dispatchEvent(new CustomEvent('open-subscription-onboarding'));
+  };
+
   return (
     <>
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+    <div className="flex flex-col gap-3">
       {isParentAccount ? (
         <>
-            <Card className="border-none shadow-sm bg-gradient-to-br from-blue-600 to-blue-700 text-white overflow-hidden group">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-blue-100 flex items-center justify-between">
-                        <span className="flex items-center gap-2"><Wallet className="h-4 w-4"/>Central Wallet</span>
-                        <Badge variant="outline" className="text-white border-blue-400 bg-white/10">Authorized</Badge>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-extrabold mb-1 tracking-tight">
-                        ₱{Math.abs(parentCalculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                    </p>
-                    <div className="flex items-center justify-between pt-2">
-                        <p className="text-xs text-blue-100 font-medium">
-                            ≈ {parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} Liters available
-                        </p>
-                        <Button variant="link" className="text-white p-0 h-auto text-xs font-bold gap-1 group-hover:translate-x-1 transition-transform">
-                            Manage Balance <ArrowRight className="h-3 w-3" />
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <section className={card}>
+                <p className={label}>Wallet balance</p>
+                <p className={cn(value, 'mt-1.5')}>{formatPeso(Math.abs(parentCalculatedBalances.displayedCreditBalance))}</p>
+                <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">
+                    {parentCalculatedBalances.displayedAvailableLiters.toLocaleString('en-PH', { maximumFractionDigits: 0 })} L available
+                </p>
+            </section>
 
-            <Card onClick={onConsumptionHistoryClick} className="border-none shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.99] group bg-white">
-                 <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-primary"/>Network Consumption
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-baseline gap-2">
-                        <p className="text-3xl font-extrabold text-slate-900">{parentCalculatedBalances.totalConsumptionLiters.toLocaleString(undefined, {maximumFractionDigits:1})}</p>
-                        <span className="text-sm font-bold text-muted-foreground">LITERS</span>
-                    </div>
-                    <div className={cn(
-                        "flex items-center text-[10px] font-bold uppercase mt-2",
-                        consumptionDetails.trend === 'increase' ? 'text-red-500' : 'text-green-500'
-                    )}>
-                        {consumptionDetails.trend === 'increase' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                        {consumptionDetails.diff.toFixed(0)}% vs last month
-                    </div>
-                </CardContent>
-                 <CardFooter className="pt-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary group-hover:underline">Click for branch history</p>
-                </CardFooter>
-            </Card>
+            <button type="button" onClick={onConsumptionHistoryClick} className={cn(card, 'text-left')}>
+                <p className={label}>Network consumption</p>
+                <p className={cn(value, 'mt-1.5')}>{parentCalculatedBalances.totalConsumptionLiters.toLocaleString('en-PH', { maximumFractionDigits: 1 })} L</p>
+                <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">{trendCopy}</p>
+            </button>
 
-            <Card className="border-none shadow-sm bg-white">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-primary"/>Active Locations
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-3xl font-extrabold text-slate-900 mb-1">{user?.customPlanDetails?.branchCount || 0}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Linked multi-branch accounts</p>
-                </CardContent>
-                <CardFooter className="pt-2">
-                    <Button variant="link" className="p-0 h-auto text-[10px] font-bold uppercase tracking-widest" onClick={() => window.dispatchEvent(new CustomEvent('open-branches-dialog'))}>View Detailed Map</Button>
-                </CardFooter>
-            </Card>
+            <section className={card}>
+                <p className={label}>Active locations</p>
+                <p className={cn(value, 'mt-1.5')}>{user?.customPlanDetails?.branchCount || 0}</p>
+                <button type="button" className={cn(quiet, 'mt-3')} onClick={() => window.dispatchEvent(new CustomEvent('open-branches-dialog'))}>
+                    View map
+                </button>
+            </section>
         </>
       ) : (
         <>
-          <Card className="relative col-span-1 overflow-hidden border-none bg-white shadow-sm max-md:rounded-[24px] md:col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2 max-md:!px-[18px] max-md:!pb-2 max-md:!pt-5">
-              <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Water Credits</span>
-                <span className="flex flex-wrap items-center justify-end gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent('open-compliance'))}
-                    className="inline-flex h-7 items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 text-[8px] font-black uppercase tracking-widest text-primary transition-all hover:bg-blue-100"
-                  >
-                    Sanitation
+          <section className={cn(card, 'flex items-center gap-4')}>
+            <WaterTankVisual
+              percentage={remainingBalancePercentage}
+              isUnlimited={Boolean((isFlowPlan || isBranchAccount) && isActivated)}
+              isPending={Boolean(isPending)}
+            />
+            <div className="min-w-0 flex-1">
+              <p className={label}>Water credits</p>
+              <p className="mt-1 text-[20px] font-extrabold leading-[1.2] tracking-[-0.025em] text-[#1A2C49]">Drinking water</p>
+              {!isActivated && !isPending ? (
+                <p className="mt-1 text-[14px] font-semibold text-[#8A8A94]">Subscribe to access water refills.</p>
+              ) : isPending ? (
+                <p className="mt-1 text-[14px] font-semibold text-[#8A8A94]">Activation in progress</p>
+              ) : (isFlowPlan || isBranchAccount) ? (
+                <p className="mt-1 text-[14px] font-semibold text-[#8A8A94]">
+                  Unlimited · <span className="font-bold text-[#0A0A0A]">{formatPeso(unitPrice)}</span> per unit
+                </p>
+              ) : (
+                <>
+                  <p className="mt-1 text-[14px] font-semibold text-[#8A8A94]">
+                    {consumptionDetails.currentBalance.toLocaleString('en-PH', { maximumFractionDigits: 0 })} L left
+                  </p>
+                  {(consumptionDetails.monthlyPlanLiters + consumptionDetails.bonusLiters > 0 || consumptionDetails.rolloverLiters > 0) ? (
+                    <p className="mt-1 text-[13px] font-semibold text-[#8A8A94]">
+                      {(consumptionDetails.monthlyPlanLiters + consumptionDetails.bonusLiters).toLocaleString('en-PH')} L this month
+                      {consumptionDetails.rolloverLiters > 0 ? ` · ${consumptionDetails.rolloverLiters.toLocaleString('en-PH')} L saved` : ''}
+                    </p>
+                  ) : null}
+                </>
+              )}
+              <div className="mt-3.5 flex flex-wrap gap-x-4 gap-y-1">
+                <button type="button" className={quiet} onClick={() => window.dispatchEvent(new CustomEvent('open-compliance'))}>
+                  Sanitation
+                </button>
+                <button type="button" className={quiet} onClick={onSaveLitersClick}>
+                  Live quality
+                </button>
+                {isPending ? (
+                  <button type="button" className={quiet} onClick={() => window.dispatchEvent(new CustomEvent('open-subscription-onboarding'))}>
+                    Track status
                   </button>
-                  <button type="button" onClick={onSaveLitersClick} className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 p-1 text-primary transition-all hover:bg-blue-100">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    <span className="pr-1 text-[8px] font-black uppercase tracking-widest">Live Quality</span>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <div className="grid grid-cols-2 gap-3">
+            <section className="rounded-[24px] bg-white px-[18px] pb-4 pt-[18px] shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+              <p className={label}>Used this month</p>
+              <p className={cn(value, 'mt-1.5')}>{usedLabel}</p>
+              <p className="mt-0.5 text-[12px] font-semibold text-[#8A8A94]">{trendCopy}</p>
+            </section>
+            <section className="rounded-[24px] bg-white px-[18px] pb-4 pt-[18px] shadow-[0_1px_2px_rgba(16,16,24,0.04),0_10px_28px_-10px_rgba(16,16,24,0.12)]">
+              <p className={label}>Estimated bill</p>
+              <p className={cn(value, 'mt-1.5')}>{formatPeso(consumptionDetails.estimatedCost)}</p>
+            </section>
+          </div>
+
+          <section className={card}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className={label}>Auto-refill</p>
+                <p className="mt-1.5 text-[20px] font-extrabold leading-[1.2] tracking-[-0.02em] text-[#1A2C49]">{scheduleLabel}</p>
+                {(!autoRefill || !isActivated) ? (
+                  <button type="button" className={cn(quiet, 'mt-2')} onClick={openSetup}>
+                    {isActivated ? 'Schedule a refill' : isPending ? 'Track setup' : 'Find a water provider'}
                   </button>
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="max-md:!px-[18px] max-md:!pb-5 max-md:!pt-0">
-              <div className="flex items-center gap-4 md:gap-6">
-                <WaterTankVisual 
-                    percentage={remainingBalancePercentage} 
-                    isUnlimited={(isFlowPlan || isBranchAccount) && isActivated} 
-                    isPending={isPending}
-                />
-                
-                <div className="flex-1 space-y-4">
-                    {!isActivated && !isPending ? (
-                        <div>
-                            <p className="text-2xl font-black text-slate-900 tracking-tight">
-                                Drinking Water
-                            </p>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                Subscribe to access water refills.
-                            </p>
-                        </div>
-                    ) : isPending ? (
-                        <div>
-                            <p className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                                <Hourglass className="h-5 w-5 text-primary animate-pulse" />
-                                Processing
-                            </p>
-                            <div className="space-y-2 mt-1">
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none">
-                                    Activation protocol started
-                                </p>
-                                <Button 
-                                    variant="link" 
-                                    className="p-0 h-auto text-[10px] font-black text-primary uppercase tracking-tight"
-                                    onClick={() => window.dispatchEvent(new CustomEvent('open-subscription-onboarding'))}
-                                >
-                                    Track status <ChevronRight className="h-3 w-3" />
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (isFlowPlan || isBranchAccount) ? (
-                        <div>
-                            <p className="text-3xl font-black text-slate-900 tracking-tight">Drinking Water</p>
-                            <div className="space-y-2 mt-1">
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none">
-                                    Unlimited Supply 
-                                </p>
-                                <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-none">
-                                    ₱{(user?.plan?.price ? user.plan.price * 19.5 : 65).toFixed(2)} per unit
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex items-baseline gap-1">
-                                    <p className="text-4xl font-black text-slate-900 tracking-tighter">{consumptionDetails.currentBalance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                                    <span className="text-sm font-black text-slate-400">L</span>
-                                </div>
-                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Tank Balance</p>
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 text-[9px] font-bold uppercase tracking-tight">
-                                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                    <span className="text-slate-400">Monthly Plan</span>
-                                    <span className="text-slate-700">{(consumptionDetails.monthlyPlanLiters + consumptionDetails.bonusLiters).toLocaleString()}L</span>
-                                </div>
-                                <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50 border border-blue-100">
-                                    <span className="text-primary">Saved Rollover</span>
-                                    <span className="text-primary font-black">{consumptionDetails.rolloverLiters.toLocaleString()}L</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                ) : null}
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-1 border-none bg-white shadow-sm max-md:rounded-[24px] md:col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2 max-md:!px-[18px] max-md:!pb-2 max-md:!pt-5">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />Usage Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 max-md:!px-[18px] max-md:!pb-5 max-md:!pt-0 md:space-y-4">
-              <div>
-                <div className="flex items-baseline gap-1">
-                    <p className="text-4xl font-extrabold text-slate-900">{consumptionDetails.consumedLitersThisMonth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                    <span className="text-sm font-bold text-muted-foreground">L</span>
-                </div>
-                <div className={cn(
-                    "flex items-center text-[10px] font-bold uppercase mt-2",
-                    consumptionDetails.trend === 'increase' ? 'text-red-500' : 'text-green-500'
-                )}>
-                    {consumptionDetails.trend === 'increase' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                    {consumptionDetails.diff.toFixed(0)}% vs last month
-                </div>
-              </div>
-              <div className="pt-2 border-t flex justify-between items-center">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estimated overhead</span>
-                  <span className="text-sm font-extrabold text-slate-900">₱{consumptionDetails.estimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-1 border-none bg-white shadow-sm max-md:rounded-[24px]">
-            <CardHeader className="pb-2 max-md:!px-[18px] max-md:!pb-2 max-md:!pt-5">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Repeat className="h-4 w-4 text-primary" />
-                  <span>Auto-Refill</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button className="text-slate-300 hover:text-primary transition-colors cursor-help outline-none">
-                                <HelpCircle className="h-3.5 w-3.5" />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="rounded-xl p-3 border-slate-100 shadow-xl bg-white max-w-[220px]">
-                            <p className="text-[10px] font-bold text-slate-900 leading-relaxed uppercase tracking-tight">
-                                Automated Logistics: Our team monitors your supply and handles replenishment cycles automatically.
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="max-md:!px-[18px] max-md:!pb-5 max-md:!pt-0">
-              <div className="space-y-3 md:space-y-5">
-                <div className={cn(
-                    "h-16 rounded-xl border flex items-center justify-center transition-all relative overflow-hidden",
-                    autoRefill ? "bg-blue-50 border-blue-100 shadow-inner" : "bg-slate-50 border-slate-200"
-                )}>
-                    <div className={cn(
-                        "absolute inset-0 pointer-events-none z-0 transition-all duration-700",
-                        !autoRefill && "grayscale opacity-40"
-                    )}>
-                        <div className="water-wave-layer water-wave-back" />
-                        <div className="water-wave-layer water-wave-mid" />
-                        <div className="water-wave-layer water-wave-main" />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {autoRefill && isActivated && (
-                    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all shrink-0" 
-                            >
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-64 p-0 rounded-2xl shadow-3xl border-slate-100 bg-white overflow-hidden z-50">
-                            <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Logistics Cycle</p>
-                                <button onClick={() => setIsPopoverOpen(false)} className="text-slate-300 hover:text-slate-900"><X className="h-3.5 w-3.5" /></button>
-                            </div>
-                            <div className="p-4 space-y-4">
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Delivery Day</Label>
-                                    <Select value={localDay} onValueChange={setLocalDay}>
-                                        <SelectTrigger className="h-9 rounded-xl bg-white border-slate-200 font-bold text-xs shadow-sm">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl shadow-2xl border-slate-100">
-                                            {WEEKDAYS.map(day => (
-                                                <SelectItem key={day} value={day} className="font-bold text-xs py-2 rounded-lg">{day}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Dispatch Window</Label>
-                                    <div className="relative group">
-                                        <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
-                                        <Input 
-                                            type="time" 
-                                            value={localTime}
-                                            onChange={(e) => setLocalTime(e.target.value)}
-                                            className="h-9 rounded-xl bg-white border-slate-200 font-bold text-xs pl-8 shadow-sm"
-                                        />
-                                    </div>
-                                </div>
-
-                                <Button 
-                                    onClick={handleSaveLogistics} 
-                                    disabled={isUpdatingLogistics}
-                                    size="sm"
-                                    className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 gap-2"
-                                >
-                                    {isUpdatingLogistics ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-2" />}
-                                    Save Schedule
-                                </Button>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                  )}
-                  <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Logistics Cycle</p>
-                      <p className={cn("text-base font-extrabold", autoRefill ? "text-slate-900" : "text-slate-400")}>
-                          {autoRefill ? `Every ${nextRefillDay}` : "Manual Mode Only"}
-                      </p>
-                  </div>
-                </div>
-
-                {(!autoRefill || !isActivated) && (
-                    <Button 
-                        variant="default" 
-                        size="sm" 
-                        className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900 rounded-xl mt-4" 
-                        onClick={() => {
-                            if (isActivated) onRequestRefillClick();
-                            else window.dispatchEvent(new CustomEvent('open-subscription-onboarding'));
-                        }}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" /> 
-                        {isActivated ? 'Schedule One-Time' : isPending ? 'Setup Required' : 'Find Water Provider'}
-                    </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoRefill}
+                aria-label="Auto-refill"
+                onClick={() => onSwitchChange(!autoRefill)}
+                className={cn('relative h-7 w-11 shrink-0 rounded-full transition-colors', autoRefill ? 'bg-[#1A2C49]' : 'bg-[#E4E4E7]')}
+              >
+                <span className={cn('absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-sm', autoRefill ? 'right-[3px]' : 'left-[3px]')} />
+              </button>
+            </div>
+          </section>
         </>
       )}
     </div>
