@@ -1,0 +1,14 @@
+/* Peso glyph for the home screen only. Plus Jakarta includes U+20B1; this face
+   wins for that character so the sign stays a peso mark on every device. */
+@font-face {
+  font-family: "Home Peso";
+  src: url("../../fonts/HomePeso-Bold.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+20B1;
+}
+
+.screen {
+  font-family: "Home Peso", var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}

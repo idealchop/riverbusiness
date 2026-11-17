@@ -12,9 +12,8 @@ import {
 import { doc, collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, isWithinInterval, getYear, getMonth, subMonths } from 'date-fns';
 import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, Transaction } from '@/lib/types';
-import { TooltipProvider } from '@/components/ui/tooltip';
-
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import styles from '@/components/dashboard/home-screen.module.css';
 import { ProgressTrack, RbButton } from '@/components/river/ui';
 import { formatSentAt, refillStep } from '@/lib/refill-display';
 import { StatCards } from '@/components/dashboard/StatCards';
@@ -46,8 +45,6 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
     [firestore, authUser]
   );
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
-
-  const [greeting, setGreeting] = useState('');
 
   const isParent = user?.accountType === 'Parent';
 
@@ -132,13 +129,6 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
 
   }, [isParent, transactions, deliveries, user]);
 
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good morning');
-    else if (hour < 18) setGreeting('Good afternoon');
-    else setGreeting('Good evening');
-  }, []);
-
   const handleDispatchDialogEvent = (eventName: string, detail?: any) => {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
   };
@@ -148,43 +138,39 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-col gap-3 sm:gap-8">
-        <DashboardHeader
-          greeting={greeting}
-          userName={user?.businessName}
-          stationStatus={waterStation?.status}
-          onPartnerNoticeClick={() => handleDispatchDialogEvent('open-partner-notice')}
-        />
+    <>
+      <div className={`${styles.screen} grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start lg:gap-6`}>
+        <div className="lg:col-span-12">
+          <DashboardHeader userName={user?.businessName} />
+        </div>
 
-        <RefillRequest
-          active={activeRefillRequest}
-          onSend={() => handleDispatchDialogEvent('request-asap-refill')}
-        />
-        
-        <StatCards
-            user={user}
-            deliveries={deliveries}
-            parentCalculatedBalances={parentCalculatedBalances}
-            onConsumptionHistoryClick={() => handleDispatchDialogEvent('open-consumption-history')}
-            onSaveLitersClick={() => handleDispatchDialogEvent('open-save-liters')}
-            onUpdateScheduleClick={() => handleDispatchDialogEvent('open-update-schedule')}
-            onRequestRefillClick={() => handleDispatchDialogEvent('open-request-refill')}
-        />
+        <div className="flex flex-col gap-3 lg:col-span-7">
+          <RefillRequest
+            active={activeRefillRequest}
+            onSend={() => handleDispatchDialogEvent('request-asap-refill')}
+          />
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-6">
-          <div className="lg:col-span-8">
+          <StatCards
+              user={user}
+              deliveries={deliveries}
+              parentCalculatedBalances={parentCalculatedBalances}
+              onConsumptionHistoryClick={() => handleDispatchDialogEvent('open-consumption-history')}
+              onSaveLitersClick={() => handleDispatchDialogEvent('open-save-liters')}
+              onUpdateScheduleClick={() => handleDispatchDialogEvent('open-update-schedule')}
+              onRequestRefillClick={() => handleDispatchDialogEvent('open-request-refill')}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 lg:col-span-5">
             <ConsumptionAnalytics
                 deliveries={deliveries}
                 onHistoryClick={() => handleDispatchDialogEvent('open-delivery-history')}
                 isParent={isParent}
                 branches={branchUsers}
             />
-          </div>
-          <div className="lg:col-span-4">
             <InfoCards />
-          </div>
         </div>
+      </div>
 
         {showDialogs ? (
           <DashboardDialogs
@@ -203,8 +189,7 @@ export default function DashboardPage({ showDialogs = true }: { showDialogs?: bo
             branchUsers={branchUsers}
           />
         ) : null}
-      </div>
-    </TooltipProvider>
+    </>
   );
 }
 
